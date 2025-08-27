@@ -1,0 +1,57 @@
+﻿# =============== #
+# Unity generated #
+# =============== #
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+MemoryCaptures/
+CrashReports/
+UnityGenerated/
+ProjectSettings/
+UserSettings/
+Packages/
+.vs/
+NPS2/.vsconfig
+ExportedObj/
+*.apk
+*.aab
+*.unitypackage
+
+# ========== #
+# VisualStudio #
+# ========== #
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# ========== #
+# VisualStudio Code #
+# ========== #
+*.vscode
+
+# ========== #
+# OS generated #
+# ========== #
+.DS_Store
+Thumbs.db
+
+# ========== #
+# 기타       #
+# ========== #
+*.log
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+
