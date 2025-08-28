@@ -271,7 +271,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 여러 태그 중 하나라도 보유 확인
         /// </summary>
-        public bool HasAny(params GameplayTag[] tags)
+        public bool HasAny(List<GameplayTag> tags)
         {
             return Container.HasAny(tags);
         }
@@ -279,7 +279,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 여러 태그 모두 보유 확인
         /// </summary>
-        public bool HasAll(params GameplayTag[] tags)
+        public bool HasAll(List<GameplayTag> tags)
         {
             return Container.HasAll(tags);
         }

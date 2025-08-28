@@ -229,6 +229,11 @@ namespace GAS.AttributeSystem
             return attribute;
         }
 
+        public List<BaseAttribute> GetAllAttributes()
+        {
+            return attributes;
+        }
+
         /// <summary>
         /// 속성 보유 확인
         /// </summary>

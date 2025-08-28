@@ -97,6 +97,7 @@ namespace GAS.Core
 
             // Combat Attributes
             AttackPower,
+            DefensePower,
             SpellPower,
             Defense,
             MagicResist,

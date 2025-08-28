@@ -1,6 +1,7 @@
 // 파일 위치: Assets/Scripts/GAS/Core/GASEvents.cs
 using System;
 using UnityEngine;
+using static GAS.Core.GASConstants;
 
 namespace GAS.Core
 {
@@ -41,6 +42,8 @@ namespace GAS.Core
         /// 속성이 0에 도달했을 때 발생
         /// </summary>
         public static event Action<GameObject, string> OnAttributeZero;
+
+        public static event Action<GameObject, AttributeType> OnGlobalAttributeQuery;
         #endregion
 
         #region Effect Events
@@ -204,6 +207,7 @@ namespace GAS.Core
             OnAttributeChanged = null;
             OnAttributeMaxed = null;
             OnAttributeZero = null;
+            OnGlobalAttributeQuery = null;
 
             // Effect Events
             OnEffectApplied = null;

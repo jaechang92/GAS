@@ -142,6 +142,8 @@ namespace GAS.AttributeSystem
             }
         }
 
+        public bool HasMinValue => true; // 항상 최소값이 있음
+
         /// <summary>
         /// 최대값 제한 여부
         /// </summary>
@@ -203,6 +205,7 @@ namespace GAS.AttributeSystem
             baseValue = baseVal;
             currentValue = baseVal;
         }
+
 
         /// <summary>
         /// 범위 지정 생성자
@@ -288,6 +291,18 @@ namespace GAS.AttributeSystem
         {
             SetCurrentValue(minValue);
         }
+
+        public void SetMinValue(float value)
+        {
+            minValue = value;
+        }
+
+        public void SetMaxValue(float value)
+        {
+            maxValue = value;
+            hasMaxValue = true;
+        }
+
         #endregion
 
         #region Modifier Management

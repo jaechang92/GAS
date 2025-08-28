@@ -263,7 +263,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 여러 태그 중 하나라도 있는지 확인
         /// </summary>
-        public bool HasAny(params GameplayTag[] tagsToCheck)
+        public bool HasAny(List<GameplayTag> tagsToCheck)
         {
             foreach (var tag in tagsToCheck)
             {
@@ -275,7 +275,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 여러 태그가 모두 있는지 확인
         /// </summary>
-        public bool HasAll(params GameplayTag[] tagsToCheck)
+        public bool HasAll(List<GameplayTag> tagsToCheck)
         {
             foreach (var tag in tagsToCheck)
             {
@@ -290,7 +290,7 @@ namespace GAS.TagSystem
         public bool HasAny(TagContainer other)
         {
             if (other == null || other.IsEmpty) return false;
-            return HasAny(other.tags.ToArray());
+            return HasAny(other.tags);
         }
 
         /// <summary>
@@ -299,7 +299,7 @@ namespace GAS.TagSystem
         public bool HasAll(TagContainer other)
         {
             if (other == null || other.IsEmpty) return true;
-            return HasAll(other.tags.ToArray());
+            return HasAll(other.tags);
         }
 
         /// <summary>
