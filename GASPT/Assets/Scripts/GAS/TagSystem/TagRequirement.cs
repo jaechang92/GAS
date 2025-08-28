@@ -1,646 +1,449 @@
-// 파일 위치: Assets/Scripts/GAS/Learning/Phase2/TagRequirement.cs
-using UnityEngine;
+// 파일 위치: Assets/Scripts/GAS/TagSystem/TagRequirement.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
-namespace GAS.Learning.Phase2
+namespace GAS.TagSystem
 {
     /// <summary>
-    /// Step 3: TagRequirement - 태그 기반 조건 시스템
+    /// 태그 요구사항을 정의하는 클래스
+    /// 능력이나 효과 활성화 조건 검사에 사용
     /// </summary>
-    public class TagRequirement : MonoBehaviour
+    [Serializable]
+    public class TagRequirement
     {
-        // TagRequirement 구현
-        [Serializable]
-        public class SimpleTagRequirement
+        #region Nested Types
+        /// <summary>
+        /// 태그 조건 타입
+        /// </summary>
+        public enum RequirementType
         {
-            public enum RequirementType
+            RequireAll,     // 모든 태그 필요
+            RequireAny,     // 하나 이상 필요
+            RequireNone,    // 아무것도 없어야 함
+            Custom          // 커스텀 로직
+        }
+
+        /// <summary>
+        /// 태그 조건 항목
+        /// </summary>
+        [Serializable]
+        public class RequirementEntry
+        {
+            [SerializeField] private GameplayTag tag;
+            [SerializeField] private bool matchExact = false;
+            [SerializeField] private bool inverted = false;
+
+            public GameplayTag Tag => tag;
+            public bool MatchExact => matchExact;
+            public bool Inverted => inverted;
+
+            public RequirementEntry(GameplayTag tag, bool matchExact = false, bool inverted = false)
             {
-                RequireAll,    // 모든 태그 필요 (AND)
-                RequireAny,    // 하나라도 있으면 됨 (OR)
-                RequireNone    // 모두 없어야 함 (NOT)
+                this.tag = tag;
+                this.matchExact = matchExact;
+                this.inverted = inverted;
             }
 
-            [SerializeField] private string name;
-            [SerializeField] private RequirementType requirementType = RequirementType.RequireAll;
-
-            [SerializeField] private List<string> requiredTagNames = new List<string>();
-            [SerializeField] private List<string> blockingTagNames = new List<string>();
-            [SerializeField] private List<string> ignoredTagNames = new List<string>();
-
-            // 실제 태그 참조 (런타임)
-            private List<GameplayTag.SimpleGameplayTag> requiredTags = new List<GameplayTag.SimpleGameplayTag>();
-            private List<GameplayTag.SimpleGameplayTag> blockingTags = new List<GameplayTag.SimpleGameplayTag>();
-            private List<GameplayTag.SimpleGameplayTag> ignoredTags = new List<GameplayTag.SimpleGameplayTag>();
-
-            public string Name => name;
-
-            public SimpleTagRequirement(string name, RequirementType type = RequirementType.RequireAll)
+            public bool Check(TagContainer container)
             {
-                this.name = name;
-                this.requirementType = type;
+                if (container == null) return inverted;
+
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
+
+                return inverted ? !hasTag : hasTag;
+            }
+        }
+        #endregion
+
+        #region Serialized Fields
+        [SerializeField] private string requirementName;
+        [SerializeField] private RequirementType type = RequirementType.RequireAll;
+
+        [Header("Required Tags")]
+        [SerializeField] private List<GameplayTag> requiredTags = new List<GameplayTag>();
+
+        [Header("Blocked Tags")]
+        [SerializeField] private List<GameplayTag> blockedTags = new List<GameplayTag>();
+
+        [Header("Advanced Requirements")]
+        [SerializeField] private List<RequirementEntry> advancedRequirements = new List<RequirementEntry>();
+
+        [Header("Options")]
+        [SerializeField] private bool matchExact = false;
+        [SerializeField] private bool ignoreIfEmpty = true;
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// 요구사항 이름
+        /// </summary>
+        public string RequirementName
+        {
+            get => requirementName;
+            set => requirementName = value;
+        }
+
+        /// <summary>
+        /// 요구사항 타입
+        /// </summary>
+        public RequirementType Type
+        {
+            get => type;
+            set => type = value;
+        }
+
+        /// <summary>
+        /// 요구사항이 비어있는지 확인
+        /// </summary>
+        public bool IsEmpty =>
+            requiredTags.Count == 0 &&
+            blockedTags.Count == 0 &&
+            advancedRequirements.Count == 0;
+
+        /// <summary>
+        /// 필수 태그 리스트
+        /// </summary>
+        public IReadOnlyList<GameplayTag> RequiredTags => requiredTags.AsReadOnly();
+
+        /// <summary>
+        /// 차단 태그 리스트
+        /// </summary>
+        public IReadOnlyList<GameplayTag> BlockedTags => blockedTags.AsReadOnly();
+        #endregion
+
+        #region Constructors
+        /// <summary>
+        /// 빈 요구사항 생성
+        /// </summary>
+        public TagRequirement()
+        {
+            requirementName = "New Requirement";
+            type = RequirementType.RequireAll;
+        }
+
+        /// <summary>
+        /// 이름과 타입으로 요구사항 생성
+        /// </summary>
+        public TagRequirement(string name, RequirementType requirementType = RequirementType.RequireAll)
+        {
+            requirementName = name;
+            type = requirementType;
+        }
+
+        /// <summary>
+        /// 태그 배열로 요구사항 생성
+        /// </summary>
+        public TagRequirement(string name, RequirementType requirementType, params GameplayTag[] required)
+        {
+            requirementName = name;
+            type = requirementType;
+            requiredTags = new List<GameplayTag>(required.Where(t => t != null && t.IsValid));
+        }
+        #endregion
+
+        #region Check Methods
+        /// <summary>
+        /// 태그 컨테이너가 요구사항을 만족하는지 검사
+        /// </summary>
+        public bool IsSatisfiedBy(TagContainer container)
+        {
+            // 빈 요구사항 처리
+            if (IsEmpty)
+            {
+                return ignoreIfEmpty;
             }
 
-            // 빌더 패턴
-            public SimpleTagRequirement WithRequiredTags(params string[] tagNames)
+            // 차단 태그 검사 (항상 우선)
+            if (!CheckBlockedTags(container))
             {
-                requiredTagNames.AddRange(tagNames);
-                foreach (var tagName in tagNames)
+                return false;
+            }
+
+            // 고급 요구사항 검사
+            if (advancedRequirements.Count > 0)
+            {
+                if (!CheckAdvancedRequirements(container))
                 {
-                    requiredTags.Add(GameplayTag.SimpleGameplayTag.RegisterTag(tagName));
+                    return false;
                 }
-                return this;
             }
 
-            public SimpleTagRequirement WithBlockingTags(params string[] tagNames)
+            // 필수 태그 검사
+            return CheckRequiredTags(container);
+        }
+
+        /// <summary>
+        /// 필수 태그 검사
+        /// </summary>
+        private bool CheckRequiredTags(TagContainer container)
+        {
+            if (requiredTags.Count == 0) return true;
+
+            switch (type)
             {
-                blockingTagNames.AddRange(tagNames);
-                foreach (var tagName in tagNames)
-                {
-                    blockingTags.Add(GameplayTag.SimpleGameplayTag.RegisterTag(tagName));
-                }
-                return this;
+                case RequirementType.RequireAll:
+                    return CheckRequireAll(container);
+
+                case RequirementType.RequireAny:
+                    return CheckRequireAny(container);
+
+                case RequirementType.RequireNone:
+                    return CheckRequireNone(container);
+
+                case RequirementType.Custom:
+                    return CheckCustom(container);
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool CheckRequireAll(TagContainer container)
+        {
+            if (container == null || container.IsEmpty)
+            {
+                return requiredTags.Count == 0;
             }
 
-            public SimpleTagRequirement WithIgnoredTags(params string[] tagNames)
+            foreach (var tag in requiredTags)
             {
-                ignoredTagNames.AddRange(tagNames);
-                foreach (var tagName in tagNames)
-                {
-                    ignoredTags.Add(GameplayTag.SimpleGameplayTag.RegisterTag(tagName));
-                }
-                return this;
+                if (tag == null || !tag.IsValid) continue;
+
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
+
+                if (!hasTag) return false;
             }
 
-            public SimpleTagRequirement WithRequirementType(RequirementType type)
+            return true;
+        }
+
+        private bool CheckRequireAny(TagContainer container)
+        {
+            if (container == null || container.IsEmpty)
             {
-                this.requirementType = type;
-                return this;
+                return requiredTags.Count == 0;
             }
 
-            // 조건 만족 체크
-            public bool IsSatisfied(TagContainer.SimpleTagContainer container)
+            foreach (var tag in requiredTags)
             {
-                if (container == null) return false;
+                if (tag == null || !tag.IsValid) continue;
 
-                // 1. Blocking 태그 체크 (하나라도 있으면 실패)
-                foreach (var blockingTag in blockingTags)
-                {
-                    if (container.HasTag(blockingTag))
-                    {
-                        Debug.Log($"[Requirement] {name} 실패: 차단 태그 {blockingTag} 발견");
-                        return false;
-                    }
-                }
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
 
-                // 2. Required 태그 체크
-                if (requiredTags.Count > 0)
-                {
-                    switch (requirementType)
-                    {
-                        case RequirementType.RequireAll:
-                            foreach (var tag in requiredTags)
-                            {
-                                if (!container.HasTag(tag))
-                                {
-                                    Debug.Log($"[Requirement] {name} 실패: 필수 태그 {tag} 없음");
-                                    return false;
-                                }
-                            }
-                            break;
+                if (hasTag) return true;
+            }
 
-                        case RequirementType.RequireAny:
-                            bool hasAny = false;
-                            foreach (var tag in requiredTags)
-                            {
-                                if (container.HasTag(tag))
-                                {
-                                    hasAny = true;
-                                    break;
-                                }
-                            }
-                            if (!hasAny)
-                            {
-                                Debug.Log($"[Requirement] {name} 실패: 필수 태그 중 아무것도 없음");
-                                return false;
-                            }
-                            break;
+            return requiredTags.Count == 0;
+        }
 
-                        case RequirementType.RequireNone:
-                            foreach (var tag in requiredTags)
-                            {
-                                if (container.HasTag(tag))
-                                {
-                                    Debug.Log($"[Requirement] {name} 실패: 금지된 태그 {tag} 발견");
-                                    return false;
-                                }
-                            }
-                            break;
-                    }
-                }
-
-                Debug.Log($"[Requirement] {name} 성공!");
+        private bool CheckRequireNone(TagContainer container)
+        {
+            if (container == null || container.IsEmpty)
+            {
                 return true;
             }
 
-            // 부족한 태그 가져오기
-            public List<GameplayTag.SimpleGameplayTag> GetMissingTags(TagContainer.SimpleTagContainer container)
+            foreach (var tag in requiredTags)
             {
-                var missing = new List<GameplayTag.SimpleGameplayTag>();
+                if (tag == null || !tag.IsValid) continue;
 
-                if (requirementType == RequirementType.RequireAll)
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
+
+                if (hasTag) return false;
+            }
+
+            return true;
+        }
+
+        private bool CheckCustom(TagContainer container)
+        {
+            // 커스텀 로직은 상속받아 구현하거나 델리게이트로 처리
+            // 기본적으로는 RequireAll과 동일하게 동작
+            return CheckRequireAll(container);
+        }
+
+        private bool CheckBlockedTags(TagContainer container)
+        {
+            if (blockedTags.Count == 0) return true;
+            if (container == null || container.IsEmpty) return true;
+
+            foreach (var tag in blockedTags)
+            {
+                if (tag == null || !tag.IsValid) continue;
+
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
+
+                if (hasTag) return false;
+            }
+
+            return true;
+        }
+
+        private bool CheckAdvancedRequirements(TagContainer container)
+        {
+            foreach (var requirement in advancedRequirements)
+            {
+                if (!requirement.Check(container))
                 {
-                    foreach (var tag in requiredTags)
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        #endregion
+
+        #region Modification Methods
+        /// <summary>
+        /// 필수 태그 추가
+        /// </summary>
+        public void AddRequiredTag(GameplayTag tag)
+        {
+            if (tag != null && tag.IsValid && !requiredTags.Contains(tag))
+            {
+                requiredTags.Add(tag);
+            }
+        }
+
+        /// <summary>
+        /// 필수 태그 제거
+        /// </summary>
+        public void RemoveRequiredTag(GameplayTag tag)
+        {
+            requiredTags.Remove(tag);
+        }
+
+        /// <summary>
+        /// 차단 태그 추가
+        /// </summary>
+        public void AddBlockedTag(GameplayTag tag)
+        {
+            if (tag != null && tag.IsValid && !blockedTags.Contains(tag))
+            {
+                blockedTags.Add(tag);
+            }
+        }
+
+        /// <summary>
+        /// 차단 태그 제거
+        /// </summary>
+        public void RemoveBlockedTag(GameplayTag tag)
+        {
+            blockedTags.Remove(tag);
+        }
+
+        /// <summary>
+        /// 고급 요구사항 추가
+        /// </summary>
+        public void AddAdvancedRequirement(GameplayTag tag, bool matchExact, bool inverted)
+        {
+            if (tag != null && tag.IsValid)
+            {
+                advancedRequirements.Add(new RequirementEntry(tag, matchExact, inverted));
+            }
+        }
+
+        /// <summary>
+        /// 모든 요구사항 초기화
+        /// </summary>
+        public void Clear()
+        {
+            requiredTags.Clear();
+            blockedTags.Clear();
+            advancedRequirements.Clear();
+        }
+        #endregion
+
+        #region Utility Methods
+        /// <summary>
+        /// 요구사항 복사
+        /// </summary>
+        public TagRequirement Clone()
+        {
+            var clone = new TagRequirement(requirementName, type)
+            {
+                requiredTags = new List<GameplayTag>(requiredTags),
+                blockedTags = new List<GameplayTag>(blockedTags),
+                advancedRequirements = new List<RequirementEntry>(advancedRequirements),
+                matchExact = matchExact,
+                ignoreIfEmpty = ignoreIfEmpty
+            };
+
+            return clone;
+        }
+
+        /// <summary>
+        /// 충족되지 않은 태그 가져오기
+        /// </summary>
+        public List<GameplayTag> GetMissingTags(TagContainer container)
+        {
+            var missing = new List<GameplayTag>();
+
+            if (type == RequirementType.RequireAll)
+            {
+                foreach (var tag in requiredTags)
+                {
+                    if (tag == null || !tag.IsValid) continue;
+
+                    bool hasTag = matchExact ?
+                        container?.HasTagExact(tag) ?? false :
+                        container?.HasTag(tag) ?? false;
+
+                    if (!hasTag)
                     {
-                        if (!container.HasTag(tag))
-                        {
-                            missing.Add(tag);
-                        }
+                        missing.Add(tag);
                     }
                 }
-
-                return missing;
             }
 
-            // 디버그 정보
-            public string GetDebugInfo()
-            {
-                var info = $"[{name}] Type: {requirementType}\n";
-
-                if (requiredTags.Count > 0)
-                    info += $"  Required: {string.Join(", ", requiredTags.Select(t => t.ToString()))}\n";
-
-                if (blockingTags.Count > 0)
-                    info += $"  Blocking: {string.Join(", ", blockingTags.Select(t => t.ToString()))}\n";
-
-                if (ignoredTags.Count > 0)
-                    info += $"  Ignored: {string.Join(", ", ignoredTags.Select(t => t.ToString()))}\n";
-
-                return info;
-            }
+            return missing;
         }
 
-        // 복합 조건 (여러 Requirement 조합)
-        [Serializable]
-        public class CompositeTagRequirement
+        /// <summary>
+        /// 차단된 태그 중 보유한 태그 가져오기
+        /// </summary>
+        public List<GameplayTag> GetBlockingTags(TagContainer container)
         {
-            public enum CompositeType
+            var blocking = new List<GameplayTag>();
+
+            if (container == null || container.IsEmpty) return blocking;
+
+            foreach (var tag in blockedTags)
             {
-                AND,  // 모든 조건 만족
-                OR    // 하나라도 만족
-            }
+                if (tag == null || !tag.IsValid) continue;
 
-            [SerializeField] private string name;
-            [SerializeField] private CompositeType type = CompositeType.AND;
-            [SerializeField] private List<SimpleTagRequirement> requirements = new List<SimpleTagRequirement>();
+                bool hasTag = matchExact ?
+                    container.HasTagExact(tag) :
+                    container.HasTag(tag);
 
-            public CompositeTagRequirement(string name, CompositeType type = CompositeType.AND)
-            {
-                this.name = name;
-                this.type = type;
-            }
-
-            public void AddRequirement(SimpleTagRequirement requirement)
-            {
-                requirements.Add(requirement);
-            }
-
-            public bool IsSatisfied(TagContainer.SimpleTagContainer container)
-            {
-                if (requirements.Count == 0) return true;
-
-                switch (type)
+                if (hasTag)
                 {
-                    case CompositeType.AND:
-                        foreach (var req in requirements)
-                        {
-                            if (!req.IsSatisfied(container))
-                            {
-                                Debug.Log($"[Composite] {name} (AND) 실패: {req.Name} 조건 불만족");
-                                return false;
-                            }
-                        }
-                        Debug.Log($"[Composite] {name} (AND) 성공!");
-                        return true;
-
-                    case CompositeType.OR:
-                        foreach (var req in requirements)
-                        {
-                            if (req.IsSatisfied(container))
-                            {
-                                Debug.Log($"[Composite] {name} (OR) 성공: {req.Name} 조건 만족");
-                                return true;
-                            }
-                        }
-                        Debug.Log($"[Composite] {name} (OR) 실패: 모든 조건 불만족");
-                        return false;
-
-                    default:
-                        return false;
-                }
-            }
-        }
-
-        // 스킬/능력 정의
-        [Serializable]
-        public class AbilityDefinition
-        {
-            public string name;
-            public SimpleTagRequirement activationRequirement;
-            public List<string> grantedTags = new List<string>();
-            public List<string> removedTags = new List<string>();
-
-            public AbilityDefinition(string name)
-            {
-                this.name = name;
-                this.activationRequirement = new SimpleTagRequirement($"{name}_Requirement");
-            }
-
-            public bool CanActivate(TagContainer.SimpleTagContainer container)
-            {
-                return activationRequirement.IsSatisfied(container);
-            }
-
-            public void Execute(TagContainer.SimpleTagContainer container)
-            {
-                if (!CanActivate(container))
-                {
-                    Debug.LogWarning($"[Ability] {name} 활성화 조건 불만족!");
-                    return;
-                }
-
-                Debug.Log($"[Ability] {name} 실행!");
-
-                // 태그 제거
-                foreach (var tagName in removedTags)
-                {
-                    var tag = GameplayTag.SimpleGameplayTag.RegisterTag(tagName);
-                    container.RemoveTag(tag);
-                }
-
-                // 태그 부여
-                foreach (var tagName in grantedTags)
-                {
-                    var tag = GameplayTag.SimpleGameplayTag.RegisterTag(tagName);
-                    container.AddTag(tag);
-                }
-            }
-        }
-
-        [Header("캐릭터 태그")]
-        [SerializeField] private TagContainer.SimpleTagContainer characterTags;
-
-        [Header("능력 정의")]
-        [SerializeField] private List<AbilityDefinition> abilities = new List<AbilityDefinition>();
-
-        [Header("테스트 설정")]
-        [SerializeField] private bool verboseLogging = true;
-
-        private void Start()
-        {
-            InitializeSystem();
-            Debug.Log("=== Phase 2 - Step 3: TagRequirement 테스트 ===");
-            RunRequirementTests();
-        }
-
-        private void InitializeSystem()
-        {
-            characterTags = new TagContainer.SimpleTagContainer();
-            SetupAbilities();
-        }
-
-        private void SetupAbilities()
-        {
-            // 기본 공격
-            var basicAttack = new AbilityDefinition("기본 공격");
-            basicAttack.activationRequirement
-                .WithRequiredTags("State.Combat")
-                .WithBlockingTags("State.Dead", "Status.Stunned")
-                .WithRequirementType(SimpleTagRequirement.RequirementType.RequireAll);
-            basicAttack.grantedTags.Add("State.Combat.Attacking");
-            basicAttack.grantedTags.Add("Cooldown.Attack");
-            abilities.Add(basicAttack);
-
-            // 방어
-            var defend = new AbilityDefinition("방어");
-            defend.activationRequirement
-                .WithRequiredTags("State.Combat")
-                .WithBlockingTags("State.Combat.Attacking", "Status.Stunned")
-                .WithRequirementType(SimpleTagRequirement.RequirementType.RequireAll);
-            defend.grantedTags.Add("State.Combat.Defending");
-            defend.grantedTags.Add("Status.Buff.DefenseUp");
-            abilities.Add(defend);
-
-            // 궁극기
-            var ultimate = new AbilityDefinition("궁극기");
-            ultimate.activationRequirement
-                .WithRequiredTags("State.Combat", "Resource.UltimateReady")
-                .WithBlockingTags("Cooldown.Ultimate", "Status.Silenced")
-                .WithRequirementType(SimpleTagRequirement.RequirementType.RequireAll);
-            ultimate.grantedTags.Add("State.Ultimate");
-            ultimate.grantedTags.Add("Status.Buff.Invincible");
-            ultimate.grantedTags.Add("Cooldown.Ultimate");
-            ultimate.removedTags.Add("Resource.UltimateReady");
-            abilities.Add(ultimate);
-
-            // 도주
-            var flee = new AbilityDefinition("도주");
-            flee.activationRequirement
-                .WithRequiredTags("State.Combat")
-                .WithBlockingTags("Status.Rooted", "State.Combat.Attacking")
-                .WithRequirementType(SimpleTagRequirement.RequirementType.RequireAll);
-            flee.removedTags.Add("State.Combat");
-            flee.grantedTags.Add("State.Fleeing");
-            abilities.Add(flee);
-        }
-
-        private void RunRequirementTests()
-        {
-            TestBasicRequirements();
-            TestComplexRequirements();
-            TestCompositeRequirements();
-            TestAbilitySystem();
-        }
-
-        // 테스트 1: 기본 요구사항
-        private void TestBasicRequirements()
-        {
-            Debug.Log("\n========== 테스트 1: 기본 요구사항 ==========");
-
-            characterTags.Clear();
-
-            // RequireAll 테스트
-            var req1 = new SimpleTagRequirement("전투 준비 체크", SimpleTagRequirement.RequirementType.RequireAll)
-                .WithRequiredTags("State.Combat", "Resource.Mana");
-
-            Debug.Log(req1.GetDebugInfo());
-
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("State.Combat"));
-            Debug.Log($"State.Combat만 있을 때: {req1.IsSatisfied(characterTags)}");
-
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Resource.Mana"));
-            Debug.Log($"모두 있을 때: {req1.IsSatisfied(characterTags)}");
-
-            // RequireAny 테스트
-            var req2 = new SimpleTagRequirement("버프 체크", SimpleTagRequirement.RequirementType.RequireAny)
-                .WithRequiredTags("Status.Buff.Speed", "Status.Buff.Strength");
-
-            Debug.Log($"\n버프 없을 때: {req2.IsSatisfied(characterTags)}");
-
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Status.Buff.Speed"));
-            Debug.Log($"Speed 버프만: {req2.IsSatisfied(characterTags)}");
-        }
-
-        // 테스트 2: 복잡한 요구사항
-        private void TestComplexRequirements()
-        {
-            Debug.Log("\n========== 테스트 2: 복잡한 요구사항 ==========");
-
-            characterTags.Clear();
-
-            // 필수 + 차단 태그
-            var complexReq = new SimpleTagRequirement("스킬 사용 조건", SimpleTagRequirement.RequirementType.RequireAll)
-                .WithRequiredTags("State.Combat", "Resource.Mana")
-                .WithBlockingTags("Status.Silenced", "Cooldown.Skill");
-
-            Debug.Log(complexReq.GetDebugInfo());
-
-            // 조건 충족
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("State.Combat"));
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Resource.Mana"));
-            Debug.Log($"조건 충족: {complexReq.IsSatisfied(characterTags)}");
-
-            // 차단 태그 추가
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Status.Silenced"));
-            Debug.Log($"침묵 상태: {complexReq.IsSatisfied(characterTags)}");
-
-            // 부족한 태그 확인
-            characterTags.Clear();
-            var missing = complexReq.GetMissingTags(characterTags);
-            Debug.Log($"부족한 태그: {string.Join(", ", missing.Select(t => t.ToString()))}");
-        }
-
-        // 테스트 3: 복합 조건
-        private void TestCompositeRequirements()
-        {
-            Debug.Log("\n========== 테스트 3: 복합 조건 ==========");
-
-            characterTags.Clear();
-
-            // OR 복합 조건
-            var composite = new CompositeTagRequirement("특수 공격 조건", CompositeTagRequirement.CompositeType.OR);
-
-            // 조건 1: 버서크 모드
-            var berserkReq = new SimpleTagRequirement("버서크", SimpleTagRequirement.RequirementType.RequireAll)
-                .WithRequiredTags("Status.Berserk");
-
-            // 조건 2: 풀 콤보
-            var comboReq = new SimpleTagRequirement("콤보", SimpleTagRequirement.RequirementType.RequireAll)
-                .WithRequiredTags("Combo.Full");
-
-            // 조건 3: 궁극기 준비
-            var ultReq = new SimpleTagRequirement("궁극기", SimpleTagRequirement.RequirementType.RequireAll)
-                .WithRequiredTags("Resource.UltimateReady");
-
-            composite.AddRequirement(berserkReq);
-            composite.AddRequirement(comboReq);
-            composite.AddRequirement(ultReq);
-
-            Debug.Log("아무 조건도 없을 때: " + composite.IsSatisfied(characterTags));
-
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Combo.Full"));
-            Debug.Log("콤보만 있을 때: " + composite.IsSatisfied(characterTags));
-        }
-
-        // 테스트 4: 능력 시스템
-        private void TestAbilitySystem()
-        {
-            Debug.Log("\n========== 테스트 4: 능력 시스템 ==========");
-
-            characterTags.Clear();
-
-            // 초기 상태 설정
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("State.Combat"));
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Resource.UltimateReady"));
-
-            Debug.Log("초기 태그:");
-            Debug.Log(characterTags.GetDebugInfo());
-
-            // 각 능력 체크
-            Debug.Log("\n=== 능력 사용 가능 체크 ===");
-            foreach (var ability in abilities)
-            {
-                bool canUse = ability.CanActivate(characterTags);
-                Debug.Log($"{ability.name}: {(canUse ? "가능" : "불가능")}");
-
-                if (ability.name == "기본 공격" && canUse)
-                {
-                    ability.Execute(characterTags);
-                    Debug.Log("\n공격 후 태그:");
-                    Debug.Log(characterTags.GetDebugInfo());
+                    blocking.Add(tag);
                 }
             }
 
-            // 궁극기 테스트
-            Debug.Log("\n=== 궁극기 테스트 ===");
-            characterTags.Clear();
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("State.Combat"));
-            characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Resource.UltimateReady"));
-
-            var ultimateAbility = abilities.Find(a => a.name == "궁극기");
-            if (ultimateAbility != null && ultimateAbility.CanActivate(characterTags))
-            {
-                ultimateAbility.Execute(characterTags);
-                Debug.Log("\n궁극기 사용 후 태그:");
-                Debug.Log(characterTags.GetDebugInfo());
-            }
+            return blocking;
         }
 
-        private void Update()
+        /// <summary>
+        /// 디버그용 문자열 출력
+        /// </summary>
+        public override string ToString()
         {
-            HandleInput();
+            return $"{requirementName} [{type}] Required: {requiredTags.Count}, Blocked: {blockedTags.Count}";
         }
-
-        private void HandleInput()
-        {
-            // 능력 사용
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-            {
-                TryUseAbility(0); // 기본 공격
-            }
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                TryUseAbility(1); // 방어
-            }
-            if (Input.GetKeyDown(KeyCode.Alpha3))
-            {
-                TryUseAbility(2); // 궁극기
-            }
-            if (Input.GetKeyDown(KeyCode.Alpha4))
-            {
-                TryUseAbility(3); // 도주
-            }
-
-            // 태그 조작
-            if (Input.GetKeyDown(KeyCode.Q))
-            {
-                characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("State.Combat"));
-                Debug.Log("전투 상태 진입");
-            }
-            if (Input.GetKeyDown(KeyCode.W))
-            {
-                characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Resource.UltimateReady"));
-                Debug.Log("궁극기 준비 완료");
-            }
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                characterTags.AddTag(GameplayTag.SimpleGameplayTag.RegisterTag("Status.Stunned"));
-                Debug.Log("기절 상태");
-            }
-            if (Input.GetKeyDown(KeyCode.R))
-            {
-                characterTags.Clear();
-                Debug.Log("모든 태그 제거");
-            }
-
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                PrintStatus();
-            }
-        }
-
-        private void TryUseAbility(int index)
-        {
-            if (index < 0 || index >= abilities.Count) return;
-
-            var ability = abilities[index];
-            if (ability.CanActivate(characterTags))
-            {
-                ability.Execute(characterTags);
-            }
-            else
-            {
-                Debug.LogWarning($"{ability.name} 사용 불가!");
-
-                // 부족한 태그 표시
-                var missing = ability.activationRequirement.GetMissingTags(characterTags);
-                if (missing.Count > 0)
-                {
-                    Debug.Log($"부족한 태그: {string.Join(", ", missing.Select(t => t.ToString()))}");
-                }
-            }
-        }
-
-        private void PrintStatus()
-        {
-            Debug.Log("\n=== 현재 상태 ===");
-            Debug.Log(characterTags.GetDebugInfo());
-
-            Debug.Log("\n=== 사용 가능한 능력 ===");
-            foreach (var ability in abilities)
-            {
-                if (ability.CanActivate(characterTags))
-                {
-                    Debug.Log($" {ability.name}");
-                }
-            }
-        }
-
-        private void OnGUI()
-        {
-            GUI.Box(new Rect(10, 10, 400, 300), "Phase 2 - TagRequirement");
-
-            int y = 40;
-
-            // 현재 태그
-            GUI.Label(new Rect(20, y, 380, 20), $"=== 현재 태그 ({characterTags?.Count ?? 0}) ===");
-            y += 25;
-
-            if (characterTags != null && characterTags.Count > 0)
-            {
-                var tags = characterTags.GetAllTags();
-                int col = 0;
-                foreach (var tag in tags)
-                {
-                    GUI.Label(new Rect(30 + (col * 180), y, 170, 20), $" {tag}");
-                    col++;
-                    if (col >= 2)
-                    {
-                        col = 0;
-                        y += 20;
-                    }
-                }
-                if (col > 0) y += 20;
-            }
-            else
-            {
-                GUI.Label(new Rect(30, y, 360, 20), "태그 없음");
-                y += 20;
-            }
-
-            // 능력 상태
-            y += 10;
-            GUI.Label(new Rect(20, y, 380, 20), "=== 능력 상태 ===");
-            y += 25;
-
-            for (int i = 0; i < abilities.Count && i < 4; i++)
-            {
-                var ability = abilities[i];
-                bool canUse = ability.CanActivate(characterTags);
-                string status = canUse ? "can Use" : "can't Use";
-                GUI.Label(new Rect(30, y, 360, 20), $"{i + 1}. {ability.name} [{status}]");
-                y += 20;
-            }
-
-            // 조작법
-            y += 10;
-            GUI.Box(new Rect(10, y, 400, 100), "조작법");
-            y += 25;
-            GUI.Label(new Rect(20, y, 380, 70),
-                "능력: 1-기본공격 2-방어 3-궁극기 4-도주\n" +
-                "태그: Q-전투 W-궁극기준비 E-기절 R-초기화\n" +
-                "Space: 상태 출력");
-        }
+        #endregion
     }
 }
