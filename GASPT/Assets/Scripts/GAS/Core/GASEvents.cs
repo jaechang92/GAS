@@ -1,4 +1,6 @@
 // 파일 위치: Assets/Scripts/GAS/Core/GASEvents.cs
+using GAS.AttributeSystem;
+using GAS.EffectSystem;
 using System;
 using UnityEngine;
 using static GAS.Core.GASConstants;
@@ -66,6 +68,7 @@ namespace GAS.Core
         /// 효과가 만료되었을 때 발생
         /// </summary>
         public static event Action<GameObject, string> OnEffectExpired;
+
         #endregion
 
         #region Ability Events

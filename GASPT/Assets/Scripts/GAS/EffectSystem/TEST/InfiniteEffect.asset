@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5f756c1c4f852b468c7afa5e81f0802, type: 3}
+  m_Name: InfiniteEffect
+  m_EditorClassIdentifier: Assembly-CSharp::GAS.EffectSystem.InfiniteEffect
+  effectId: 
+  effectName: 
+  description: 
+  effectType: 3
+  durationPolicy: 2
+  duration: 0
+  period: 1
+  executePeriodicOnApplication: 1
+  stackingPolicy: 0
+  maxStackCount: 1
+  refreshDurationOnStack: 1
+  resetPeriodicOnStack: 0
+  applicationRequirement:
+    requirementName: New Requirement
+    type: 0
+    requiredTags: []
+    blockedTags: []
+    advancedRequirements: []
+    matchExact: 0
+    ignoreIfEmpty: 1
+  ongoingRequirement:
+    requirementName: New Requirement
+    type: 0
+    requiredTags: []
+    blockedTags: []
+    advancedRequirements: []
+    matchExact: 0
+    ignoreIfEmpty: 1
+  removalRequirement:
+    requirementName: New Requirement
+    type: 0
+    requiredTags: []
+    blockedTags: []
+    advancedRequirements: []
+    matchExact: 0
+    ignoreIfEmpty: 1
+  grantedTags:
+    tags: []
+  assetTags:
+    tags: []
+  modifiers: []
+  effectPrefab: {fileID: 0}
+  applicationSound: {fileID: 0}
+  removalSound: {fileID: 0}
+  canBeDispelled: 1
+  persistThroughDeath: 0
+  persistThroughSceneChange: 0
+  dispelResistance: 0
+  autoRemovalCondition:
+    requirementName: New Requirement
+    type: 0
+    requiredTags: []
+    blockedTags: []
+    advancedRequirements: []
+    matchExact: 0
+    ignoreIfEmpty: 1
+  removalTriggerTags: []
+  conditionalCheckInterval: 1
+  useDynamicModifiers: 0
+  modifierGrowthCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0.016666668
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 60
+      value: 2
+      inSlope: 0.016666668
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  growthUpdateInterval: 1
+  maxGrowthMultiplier: 5
+  isAuraEffect: 0
+  auraRadius: 5
+  auraTargetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  auraTargetRequirement:
+    requirementName: New Requirement
+    type: 0
+    requiredTags: []
+    blockedTags: []
+    advancedRequirements: []
+    matchExact: 0
+    ignoreIfEmpty: 1
+  auraGrantedEffect: {fileID: 0}
+  showAsPassive: 1
+  displayPriority: 0
+  passiveIcon: {fileID: 0}

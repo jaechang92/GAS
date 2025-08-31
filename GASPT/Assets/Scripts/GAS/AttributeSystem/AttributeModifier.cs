@@ -163,6 +163,15 @@ namespace GAS.AttributeSystem
             uniqueId = Guid.NewGuid();
         }
 
+        public AttributeModifier(GASConstants.ModifierOperation op, float val, GASConstants.ModifierPriority prio)
+        {
+            modifierName = "New Modifier";
+            operation = op;
+            value = val;
+            priority = prio;
+            uniqueId = Guid.NewGuid();
+        }
+
         /// <summary>
         /// 영구 수정자 생성
         /// </summary>
