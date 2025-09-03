@@ -1,3 +1,6 @@
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Types/InstantEffect.cs
+// ================================
 using GAS.AttributeSystem;
 using GAS.Core;
 using GAS.TagSystem;
@@ -9,467 +12,491 @@ using static GAS.Core.GASConstants;
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// 즉시 적용되고 종료되는 GameplayEffect
-    /// 예: 즉시 데미지, 즉시 회복, 스탯 영구 증가 등
+    /// Effect that applies immediately and doesn't persist
     /// </summary>
-    [CreateAssetMenu(fileName = "InstantEffect", menuName = "GAS/Effects/Instant Effect", order = 1)]
+    [CreateAssetMenu(fileName = "InstantEffect", menuName = "GAS/Effects/Instant Effect")]
     public class InstantEffect : GameplayEffect
     {
-        #region Additional Fields
+        [Header("Instant Effect Settings")]
+        [SerializeField] protected List<AttributeModification> attributeModifications = new List<AttributeModification>();
+        [SerializeField] protected bool scaleWithLevel = true;
+        [SerializeField] protected float levelScaling = 0.1f; // 10% per level
 
-        [Header("=== Instant Effect Settings ===")]
-        [SerializeField] private bool applyModifiersPermanently = false;
-        [SerializeField] private bool triggerGlobalEvents = true;
-        [SerializeField] private bool allowCritical = false;
-        [Range(0f, 1f)]
-        [SerializeField] private float criticalChance = 0.1f;
-        [SerializeField] private float criticalMultiplier = 2f;
+        [Header("Conditional Effects")]
+        [SerializeField] protected List<ConditionalEffect> conditionalEffects = new List<ConditionalEffect>();
 
-        [Header("=== Value Calculation ===")]
-        [SerializeField] private bool useAttributeScaling = false;
-        [SerializeField] private AttributeType scalingAttribute;
-        [SerializeField] private float scalingFactor = 1f;
-        [SerializeField] private AnimationCurve scalingCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [Header("Execute Effects")]
+        [SerializeField] protected List<GameplayEffect> effectsToExecute = new List<GameplayEffect>();
 
-        [Header("=== Conditional Effects ===")]
-        [SerializeField] private List<ConditionalInstantEffect> conditionalEffects = new List<ConditionalInstantEffect>();
+        [Header("Visual/Audio")]
+        [SerializeField] protected GameObject hitEffectPrefab;
+        [SerializeField] protected AudioClip hitSound;
+        [SerializeField] protected float effectScale = 1f;
 
-        #endregion
-
-        #region Nested Types
+        [Header("Events")]
+        [SerializeField] protected bool triggerCombatEvents = true;
+        [SerializeField] protected string customEventName;
 
         /// <summary>
-        /// 조건부 즉시 효과
+        /// Apply the instant effect
         /// </summary>
-        [Serializable]
-        public class ConditionalInstantEffect
+        public override void OnApply(EffectContext context)
         {
-            public TagRequirement condition;
-            public InstantEffect effectToApply;
-            [Range(0f, 1f)]
-            public float applyChance = 1f;
-        }
+            if (context == null || context.target == null) return;
 
-        #endregion
+            // Get target components
+            var targetAttributes = context.target.GetComponent<AttributeSetComponent>();
+            var targetTags = context.target.GetComponent<TagComponent>();
 
-        #region Properties
+            if (targetAttributes == null) return;
 
-        public bool ApplyModifiersPermanently => applyModifiersPermanently;
-        public bool AllowCritical => allowCritical;
-        public float CriticalChance => criticalChance;
-        public float CriticalMultiplier => criticalMultiplier;
+            // Calculate effect multiplier
+            float multiplier = CalculateMultiplier(context);
 
-        #endregion
-
-        #region Constructor
-
-        public InstantEffect()
-        {
-            effectType = EffectType.Instant;
-            durationPolicy = EffectDurationPolicy.Instant;
-            duration = 0f;
-        }
-
-        #endregion
-
-        #region Override Methods
-
-        /// <summary>
-        /// 즉시 효과 적용
-        /// </summary>
-        public override bool Apply(EffectContext context, GameObject target)
-        {
-            if (!CanApply(context, target))
+            // Apply attribute modifications
+            foreach (var modification in attributeModifications)
             {
-                Debug.LogWarning($"[InstantEffect] Cannot apply {effectName} to {target.name}");
-                return false;
+                ApplyAttributeModification(targetAttributes, modification, multiplier, context);
             }
 
-            try
+            // Check and apply conditional effects
+            foreach (var conditional in conditionalEffects)
             {
-                // 효과 강도 계산
-                float finalMagnitude = CalculateFinalMagnitude(context, target);
-
-                // Critical 판정
-                bool isCritical = false;
-                if (allowCritical && UnityEngine.Random.value < criticalChance)
+                if (CheckCondition(conditional, context, targetTags))
                 {
-                    finalMagnitude *= criticalMultiplier;
-                    isCritical = true;
-
-                    // Critical 태그 추가
-                    context.AddContextTag(new GameplayTag("Effect.Critical"));
-                }
-
-                // 1. Modifier 적용
-                ApplyModifiers(context, target, finalMagnitude);
-
-                // 2. 태그 부여 (영구적)
-                GrantTags(target);
-
-                // 3. 시각/청각 효과
-                PlayEffects(context, target, isCritical);
-
-                // 4. 조건부 효과 적용
-                ApplyConditionalEffects(context, target);
-
-                // 5. 이벤트 발생
-                if (triggerGlobalEvents)
-                {
-                    TriggerEvents(context, target, finalMagnitude, isCritical);
-                }
-
-                // 6. 로깅
-                LogApplication(context, target, finalMagnitude, isCritical);
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[InstantEffect] Failed to apply {effectName}: {e.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// InstantEffect는 제거 개념이 없음
-        /// </summary>
-        public override bool Remove(EffectContext context, GameObject target)
-        {
-            Debug.LogWarning($"[InstantEffect] {effectName} is instant and cannot be removed");
-            return false;
-        }
-
-        /// <summary>
-        /// InstantEffect는 주기적 실행이 없음
-        /// </summary>
-        public override bool ExecutePeriodic(EffectContext context, GameObject target)
-        {
-            Debug.LogWarning($"[InstantEffect] {effectName} does not support periodic execution");
-            return false;
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        /// <summary>
-        /// 최종 효과 강도 계산
-        /// </summary>
-        private float CalculateFinalMagnitude(EffectContext context, GameObject target)
-        {
-            float magnitude = context.Magnitude;
-
-            // Attribute scaling 적용
-            if (useAttributeScaling && target != null)
-            {
-                var attributeComponent = target.GetComponent<IAttributeComponent>();
-                if (attributeComponent != null)
-                {
-                    float attributeValue = attributeComponent.GetAttributeValue(scalingAttribute);
-                    float scaledValue = attributeValue * scalingFactor;
-
-                    if (scalingCurve != null && scalingCurve.length > 0)
-                    {
-                        scaledValue = scalingCurve.Evaluate(scaledValue);
-                    }
-
-                    magnitude *= scaledValue;
+                    ApplyAttributeModification(targetAttributes, conditional.modification, multiplier, context);
                 }
             }
 
-            // Stack 기반 scaling
-            if (stackingPolicy == EffectStackingPolicy.Stack)
+            // Execute additional effects
+            ExecuteAdditionalEffects(context);
+
+            // Spawn visual effects
+            SpawnVisualEffects(context);
+
+            // Play audio
+            PlayAudio(context);
+
+            // Fire events
+            if (triggerCombatEvents)
             {
-                magnitude *= context.StackCount;
+                FireCombatEvents(context);
             }
 
-            return magnitude;
+            // Custom event
+            if (!string.IsNullOrEmpty(customEventName))
+            {
+                FireCustomEvent(context);
+            }
         }
 
         /// <summary>
-        /// Modifier 적용
+        /// Instant effects don't need removal
         /// </summary>
-        private void ApplyModifiers(EffectContext context, GameObject target, float magnitude)
+        public override void OnRemove(EffectContext context)
         {
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null || modifiers.Count == 0) return;
+            // Instant effects complete immediately, nothing to remove
+        }
 
-            var createdModifiers = CreateModifiers(context, magnitude);
+        /// <summary>
+        /// Apply a single attribute modification
+        /// </summary>
+        protected virtual void ApplyAttributeModification(
+            AttributeSetComponent attributes,
+            AttributeModification modification,
+            float multiplier,
+            EffectContext context)
+        {
+            if (modification == null) return;
 
-            foreach (var config in modifiers)
+            float value = modification.CalculateValue(context.level) * multiplier * context.magnitude;
+
+            // Check for special handling
+            if (modification.attributeType == AttributeType.Health)
             {
-                if (config == null) continue;
-
-                // Modifier 생성
-                var modifier = new AttributeModifier(
-                    config.operation,
-                    config.value * magnitude,
-                    config.priority
-                );
-
-                // 적용
-                if (applyModifiersPermanently)
+                // Health modification - could be damage or healing
+                if (value < 0)
                 {
-                    // 영구 적용 - source를 null로 설정하여 추적하지 않음
-                    attributeComponent.AddModifier(config.attributeType, modifier, null);
+                    ApplyDamage(attributes, -value, context);
                 }
                 else
                 {
-                    // 임시 적용 - 하지만 InstantEffect이므로 바로 값만 변경
-                    ApplyInstantModifier(attributeComponent, config.attributeType, modifier);
+                    ApplyHealing(attributes, value, context);
                 }
-
-                // Modifier 적용 로그 (이벤트 대신)
-                Debug.Log($"[InstantEffect] Modifier applied: {config.attributeType} {modifier.Operation} {modifier.Value}");
+            }
+            else
+            {
+                // Standard attribute modification
+                attributes.ModifyAttribute(
+                    modification.attributeType,
+                    value,
+                    modification.operation
+                );
             }
         }
 
         /// <summary>
-        /// 즉시 Modifier 적용 (Attribute 값 직접 변경)
+        /// Apply damage with additional processing
         /// </summary>
-        private void ApplyInstantModifier(IAttributeComponent component, AttributeType type, AttributeModifier modifier)
+        protected virtual void ApplyDamage(AttributeSetComponent attributes, float damage, EffectContext context)
         {
-            float currentValue = component.GetAttributeValue(type);
-            float newValue = currentValue;
+            // Check for damage modifiers (armor, resistance, etc.)
+            float finalDamage = CalculateFinalDamage(damage, attributes, context);
 
-            switch (modifier.Operation)
-            {
-                case ModifierOperation.Add:
-                    newValue = currentValue + modifier.Value;
-                    break;
-                case ModifierOperation.Multiply:
-                    newValue = currentValue * modifier.Value;
-                    break;
-                case ModifierOperation.Override:
-                    newValue = modifier.Value;
-                    break;
-            }
+            // Apply the damage
+            attributes.ModifyAttribute(AttributeType.Health, -finalDamage, ModifierOperation.Add);
 
-            // BaseValue 직접 변경
-            if (component is AttributeSetComponent attrComponent)
+            // Fire damage event
+            if (triggerCombatEvents)
             {
-                var attributeSet = attrComponent.GetAttributeSet<AttributeSet>();
-                BaseAttribute attribute = attributeSet.GetAttribute(type);
-                if (attributeSet != null && attribute != null)
+                GASEvents.Trigger(GASEventType.DamageReceived, new DamageEventData
                 {
-                    attribute.BaseValue = newValue;
-
-                    // 변경 이벤트 수동 호출
-                    GASEvents.TriggerAttributeChanged(
-                        attrComponent.gameObject,
-                        type.ToString(),
-                        currentValue,
-                        newValue
-                    );
-                }
+                    source = context.instigator,
+                    target = context.target,
+                    damage = finalDamage,
+                    isCritical = context.isCritical,
+                    damageType = GetDamageType()
+                });
             }
         }
 
         /// <summary>
-        /// 조건부 효과 적용
+        /// Apply healing with additional processing
         /// </summary>
-        private void ApplyConditionalEffects(EffectContext context, GameObject target)
+        protected virtual void ApplyHealing(AttributeSetComponent attributes, float healing, EffectContext context)
         {
-            if (conditionalEffects == null || conditionalEffects.Count == 0) return;
+            // Get current and max health
+            float currentHealth = attributes.GetAttributeValue(AttributeType.Health);
+            float maxHealth = attributes.GetAttributeMaxValue(AttributeType.Health);
 
-            var tagComponent = target.GetComponent<TagComponent>();
+            // Calculate actual healing (can't exceed max)
+            float actualHealing = Mathf.Min(healing, maxHealth - currentHealth);
 
-            foreach (var conditional in conditionalEffects)
+            // Apply the healing
+            attributes.ModifyAttribute(AttributeType.Health, actualHealing, ModifierOperation.Add);
+
+            // Fire healing event
+            if (triggerCombatEvents)
             {
-                if (conditional.effectToApply == null) continue;
-
-                // 조건 확인
-                bool conditionMet = conditional.condition == null ||
-                    (tagComponent != null && tagComponent.SatisfiesRequirement(conditional.condition));
-
-                if (conditionMet)
+                GASEvents.Trigger(GASEventType.HealingReceived, new HealingEventData
                 {
-                    // 확률 판정
-                    if (UnityEngine.Random.value <= conditional.applyChance)
+                    source = context.instigator,
+                    target = context.target,
+                    healing = actualHealing,
+                    isCritical = context.isCritical
+                });
+            }
+        }
+
+        /// <summary>
+        /// Calculate final damage after mitigation
+        /// </summary>
+        protected virtual float CalculateFinalDamage(float baseDamage, AttributeSetComponent attributes, EffectContext context)
+        {
+            float finalDamage = baseDamage;
+
+            // Apply armor reduction (physical damage)
+            if (HasTag("Damage.Physical"))
+            {
+                float armor = attributes.GetAttributeValue(AttributeType.Armor);
+                float armorReduction = armor / (armor + 100f); // Simple armor formula
+                finalDamage *= (1f - armorReduction);
+            }
+
+            // Apply magic resistance (magic damage)
+            if (HasTag("Damage.Magic"))
+            {
+                float magicResist = attributes.GetAttributeValue(AttributeType.MagicResistance);
+                float resistReduction = magicResist / (magicResist + 100f);
+                finalDamage *= (1f - resistReduction);
+            }
+
+            // Check for block
+            if (!context.isBlocked)
+            {
+                float blockChance = attributes.GetAttributeValue(AttributeType.Block);
+                if (UnityEngine.Random.Range(0f, 100f) < blockChance)
+                {
+                    context.isBlocked = true;
+                    finalDamage *= 0.5f; // 50% damage on block
+                }
+            }
+
+            // Check for critical
+            if (!context.isCritical && context.instigator != null)
+            {
+                var sourceAttributes = context.instigator.GetComponent<AttributeSetComponent>();
+                if (sourceAttributes != null)
+                {
+                    float critChance = sourceAttributes.GetAttributeValue(AttributeType.CriticalChance);
+                    if (UnityEngine.Random.Range(0f, 100f) < critChance)
                     {
-                        // 조건부 효과 적용
-                        var newContext = context.Clone();
-                        newContext.SetData("IsConditional", true);
-                        conditional.effectToApply.Apply(newContext, target);
+                        context.isCritical = true;
+                        float critDamage = sourceAttributes.GetAttributeValue(AttributeType.CriticalDamage);
+                        finalDamage *= (1f + critDamage / 100f); // Default 150% for 50% crit damage
                     }
                 }
             }
+
+            return Mathf.Max(1f, finalDamage); // Minimum 1 damage
         }
 
         /// <summary>
-        /// 효과 재생 (시각/청각)
+        /// Calculate effect multiplier based on context
         /// </summary>
-        private void PlayEffects(EffectContext context, GameObject target, bool isCritical)
+        protected virtual float CalculateMultiplier(EffectContext context)
         {
-            // 시각 효과
-            if (effectPrefab != null)
-            {
-                var vfx = CreateVisualEffect(target);
-                if (vfx != null && isCritical)
-                {
-                    // Critical 효과 강화
-                    vfx.transform.localScale *= 1.5f;
-                }
+            float multiplier = 1f;
 
-                // 일정 시간 후 제거 (InstantEffect이므로)
-                if (vfx != null)
-                {
-                    UnityEngine.Object.Destroy(vfx, 2f);
-                }
+            // Level scaling
+            if (scaleWithLevel && context.level > 1)
+            {
+                multiplier += levelScaling * (context.level - 1);
             }
 
-            // 사운드 재생
-            if (applicationSound != null)
+            // Critical multiplier (already applied in damage calculation, but can affect other attributes)
+            if (context.isCritical && !IsHealthModification())
             {
-                PlaySound(applicationSound, target.transform.position);
+                multiplier *= 1.5f;
             }
+
+            return multiplier;
         }
 
         /// <summary>
-        /// 이벤트 발생
+        /// Check if this effect modifies health
         /// </summary>
-        private void TriggerEvents(EffectContext context, GameObject target, float magnitude, bool isCritical)
+        protected bool IsHealthModification()
         {
-            // 기본 Effect 적용 이벤트
-            GASEvents.TriggerEffectApplied(target, effectName);
+            return attributeModifications.Exists(m => m.attributeType == AttributeType.Health);
+        }
 
-            // 데미지/회복 판정 로그
-            bool isDamage = false;
-            bool isHeal = false;
+        /// <summary>
+        /// Check conditional effect requirements
+        /// </summary>
+        protected virtual bool CheckCondition(ConditionalEffect conditional, EffectContext context, TagComponent targetTags)
+        {
+            switch (conditional.conditionType)
+            {
+                case ConditionType.TargetHasTag:
+                    return targetTags != null && targetTags.HasTag(conditional.requiredTag);
 
-            foreach (var modifier in modifiers)
-            {
-                if (modifier.attributeType == AttributeType.Health)
-                {
-                    if (modifier.value < 0) isDamage = true;
-                    else if (modifier.value > 0) isHeal = true;
-                }
-            }
+                case ConditionType.TargetMissingTag:
+                    return targetTags == null || !targetTags.HasTag(conditional.requiredTag);
 
-            // 특수 로그 출력
-            if (isDamage)
-            {
-                Debug.Log($"[InstantEffect] Damage dealt: {effectName} - Magnitude: {magnitude}, Critical: {isCritical}");
-            }
-            else if (isHeal)
-            {
-                Debug.Log($"[InstantEffect] Healing done: {effectName} - Magnitude: {magnitude}");
-            }
+                case ConditionType.HealthBelow:
+                    var attributes = context.target.GetComponent<AttributeSetComponent>();
+                    if (attributes != null)
+                    {
+                        float healthPercent = attributes.GetAttributeValue(AttributeType.HealthPercent);
+                        return healthPercent < conditional.threshold;
+                    }
+                    return false;
 
-            if (isCritical)
-            {
-                Debug.Log($"[InstantEffect] CRITICAL HIT! {effectName} - Multiplier: {criticalMultiplier}x");
+                case ConditionType.Random:
+                    return UnityEngine.Random.Range(0f, 100f) < conditional.threshold;
+
+                default:
+                    return false;
             }
         }
 
         /// <summary>
-        /// 적용 로그
+        /// Execute additional effects
         /// </summary>
-        private void LogApplication(EffectContext context, GameObject target, float magnitude, bool isCritical)
+        protected virtual void ExecuteAdditionalEffects(EffectContext context)
         {
-            if (!Application.isEditor) return;
+            if (effectsToExecute == null || effectsToExecute.Count == 0) return;
 
-            string criticalText = isCritical ? " [CRITICAL]" : "";
-            string log = $"[InstantEffect] Applied {effectName}{criticalText} to {target.name}\n" +
-                        $"  Magnitude: {magnitude:F2}\n" +
-                        $"  Instigator: {context.Instigator?.name ?? "None"}\n";
+            var effectComponent = context.target.GetComponent<EffectComponent>();
+            if (effectComponent == null) return;
 
-            if (modifiers.Count > 0)
+            foreach (var effect in effectsToExecute)
             {
-                log += "  Modifiers:\n";
-                foreach (var mod in modifiers)
+                if (effect != null)
                 {
-                    float value = mod.value * magnitude;
-                    log += $"    - {mod.attributeType}: {mod.operation} {value:F2}\n";
+                    // Create new context for the additional effect
+                    var newContext = new EffectContext(context.instigator, context.target)
+                    {
+                        sourceAbility = context.sourceAbility,
+                        level = context.level,
+                        magnitude = context.magnitude,
+                        effectLocation = context.effectLocation,
+                        isCritical = context.isCritical
+                    };
+
+                    effectComponent.ApplyEffect(effect, newContext);
                 }
             }
-
-            Debug.Log(log);
         }
 
-        #endregion
+        /// <summary>
+        /// Spawn visual effects
+        /// </summary>
+        protected virtual void SpawnVisualEffects(EffectContext context)
+        {
+            if (hitEffectPrefab == null) return;
 
-        #region Static Factory Methods
+            Vector3 spawnPosition = context.hitLocation != Vector3.zero ?
+                context.hitLocation : context.target.transform.position;
+
+            var effect = Instantiate(hitEffectPrefab, spawnPosition, Quaternion.identity);
+            effect.transform.localScale = Vector3.one * effectScale;
+
+            // Auto destroy after 5 seconds if no particle system
+            var particleSystem = effect.GetComponent<ParticleSystem>();
+            if (particleSystem != null)
+            {
+                Destroy(effect, particleSystem.main.duration + particleSystem.main.startLifetime.constantMax);
+            }
+            else
+            {
+                Destroy(effect, 5f);
+            }
+        }
 
         /// <summary>
-        /// 데미지 InstantEffect 생성 헬퍼
+        /// Play audio effects
         /// </summary>
-        public static InstantEffect CreateDamageEffect(float damage, string name = "Damage")
+        protected virtual void PlayAudio(EffectContext context)
         {
-            var effect = CreateInstance<InstantEffect>();
-            effect.effectName = name;
-            effect.effectId = Guid.NewGuid().ToString();
-            effect.modifiers = new List<ModifierConfig>
+            if (hitSound == null) return;
+
+            AudioSource.PlayClipAtPoint(hitSound, context.target.transform.position);
+        }
+
+        /// <summary>
+        /// Fire combat events
+        /// </summary>
+        protected virtual void FireCombatEvents(EffectContext context)
+        {
+            // This is handled in ApplyDamage/ApplyHealing
+        }
+
+        /// <summary>
+        /// Fire custom event
+        /// </summary>
+        protected virtual void FireCustomEvent(EffectContext context)
+        {
+            var eventData = new InstantEffectEventData
             {
-                new ModifierConfig(AttributeType.Health, ModifierOperation.Add, -damage, 0)
+                effect = this,
+                context = context,
+                eventName = customEventName,
+                source = context.target
             };
-            return effect;
+
+            // You can trigger custom event through your event system
+            Debug.Log($"Custom Event Fired: {customEventName}");
         }
 
         /// <summary>
-        /// 회복 InstantEffect 생성 헬퍼
+        /// Check if effect has a specific tag
         /// </summary>
-        public static InstantEffect CreateHealEffect(float healing, string name = "Heal")
+        protected bool HasTag(string tagName)
         {
-            var effect = CreateInstance<InstantEffect>();
-            effect.effectName = name;
-            effect.effectId = Guid.NewGuid().ToString();
-            effect.modifiers = new List<ModifierConfig>
-            {
-                new ModifierConfig(AttributeType.Health, ModifierOperation.Add, healing, 0)
-            };
-            return effect;
+            return grantedTags != null && grantedTags.Exists(t => t.TagName.Contains(tagName));
         }
 
         /// <summary>
-        /// 스탯 부스트 InstantEffect 생성 헬퍼
+        /// Get damage type based on tags
         /// </summary>
-        public static InstantEffect CreateStatBoostEffect(AttributeType stat, float amount, bool permanent = false)
+        protected virtual DamageType GetDamageType()
         {
-            var effect = CreateInstance<InstantEffect>();
-            effect.effectName = $"{stat} Boost";
-            effect.effectId = Guid.NewGuid().ToString();
-            effect.applyModifiersPermanently = permanent;
-            effect.modifiers = new List<ModifierConfig>
-            {
-                new ModifierConfig(stat, ModifierOperation.Add, amount, 0)
-            };
-            return effect;
+            if (HasTag("Damage.Physical")) return DamageType.Physical;
+            if (HasTag("Damage.Magic")) return DamageType.Magic;
+            if (HasTag("Damage.True")) return DamageType.True;
+            return DamageType.Physical;
         }
+    }
 
-        #endregion
+    /// <summary>
+    /// Attribute modification data
+    /// </summary>
+    [Serializable]
+    public class AttributeModification
+    {
+        public AttributeType attributeType;
+        public ModifierOperation operation = ModifierOperation.Add;
+        public float baseValue;
+        public float valuePerLevel;
 
-        #region Editor
-
-#if UNITY_EDITOR
-        protected override void OnValidate()
+        public float CalculateValue(int level)
         {
-            base.OnValidate();
-
-            // InstantEffect 강제 설정
-            effectType = EffectType.Instant;
-            durationPolicy = EffectDurationPolicy.Instant;
-            duration = 0f;
-            period = 0f;
-
-            // Critical 설정 검증
-            if (allowCritical)
-            {
-                criticalChance = Mathf.Clamp01(criticalChance);
-                criticalMultiplier = Mathf.Max(1f, criticalMultiplier);
-            }
-
-            // Scaling 검증
-            if (useAttributeScaling)
-            {
-                scalingFactor = Mathf.Max(0f, scalingFactor);
-            }
+            return baseValue + (valuePerLevel * (level - 1));
         }
-#endif
+    }
 
-        #endregion
+    /// <summary>
+    /// Conditional effect data
+    /// </summary>
+    [Serializable]
+    public class ConditionalEffect
+    {
+        public ConditionType conditionType;
+        public GameplayTag requiredTag;
+        public float threshold;
+        public AttributeModification modification;
+    }
+
+    /// <summary>
+    /// Condition types for conditional effects
+    /// </summary>
+    public enum ConditionType
+    {
+        TargetHasTag,
+        TargetMissingTag,
+        HealthBelow,
+        HealthAbove,
+        ManaBelow,
+        ManaAbove,
+        Random,
+        IsCritical,
+        IsBlocked
+    }
+
+    /// <summary>
+    /// Damage types
+    /// </summary>
+    public enum DamageType
+    {
+        Physical,
+        Magic,
+        True,
+        Mixed
+    }
+
+    /// <summary>
+    /// Event data for instant effects
+    /// </summary>
+    public class InstantEffectEventData : GASEventData
+    {
+        public InstantEffect effect;
+        public EffectContext context;
+        public string eventName;
+    }
+
+    /// <summary>
+    /// Event data for damage
+    /// </summary>
+    public class DamageEventData : GASEventData
+    {
+        public GameObject target;
+        public float damage;
+        public DamageType damageType;
+        public bool isCritical;
+        public bool isBlocked;
+        public bool isDodged;
+    }
+
+    /// <summary>
+    /// Event data for healing
+    /// </summary>
+    public class HealingEventData : GASEventData
+    {
+        public GameObject target;
+        public float healing;
+        public bool isCritical;
+        public bool isOverheal;
     }
 }
-
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Types/InstantEffect.cs

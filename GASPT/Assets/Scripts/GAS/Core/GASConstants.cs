@@ -87,38 +87,61 @@ namespace GAS.Core
         /// </summary>
         public enum AttributeType
         {
-            // Primary Attributes
+            // Core Attributes
             Health,
-            MaxHealth,
+            HealthMax,
+            HealthRegen,
+
             Mana,
-            MaxMana,
+            ManaMax,
+            ManaRegen,
+
             Stamina,
-            MaxStamina,
+            StaminaMax,
+            StaminaRegen,
 
             // Combat Attributes
             AttackPower,
             DefensePower,
-            SpellPower,
-            Defense,
-            MagicResist,
+            MagicPower,
+            MagicResistance,
+
             CriticalChance,
             CriticalDamage,
             AttackSpeed,
-            CastSpeed,
+            MovementSpeed,
 
-            // Movement Attributes
-            MoveSpeed,
-            JumpHeight,
+            // Defensive Attributes
+            Armor,
+            Block,
+            Dodge,
+            Parry,
 
-            // Resource Attributes
-            HealthRegen,
-            ManaRegen,
-            StaminaRegen,
+            // Resource Percentages (Derived)
+            HealthPercent,
+            ManaPercent,
+            StaminaPercent,
 
-            // Resistance Attributes
-            StunResist,
-            SlowResist,
-            KnockbackResist
+            // Cost Percentages (Derived)
+            HealthMax10Pct,
+            HealthMax25Pct,
+            HealthMax50Pct,
+
+            ManaMax10Pct,
+            ManaMax25Pct,
+            ManaMax50Pct,
+
+            StaminaMax10Pct,
+            StaminaMax25Pct,
+            StaminaMax50Pct,
+
+            // Status
+            Level,
+            Experience,
+            Gold,
+
+            // Custom extensible range (for game-specific attributes)
+            Custom_Start = 1000
         }
         #endregion
 

@@ -26,6 +26,8 @@ namespace GAS.EffectSystem
         private Vector3 hitPoint;
         private Vector3 hitNormal;
         private TagContainer contextTags;
+        private int level;
+
 
         #endregion
 
@@ -119,6 +121,12 @@ namespace GAS.EffectSystem
         {
             get => contextTags;
             set => contextTags = value;
+        }
+
+        public int Level
+        {
+            get => level;
+            set => level = Mathf.Max(0, value);
         }
 
         /// <summary>

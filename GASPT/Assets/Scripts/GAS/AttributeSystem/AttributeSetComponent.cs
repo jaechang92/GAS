@@ -1,249 +1,59 @@
+// ================================
+// File: Assets/Scripts/GAS/AttributeSystem/AttributeSetComponent.cs
+// Complete implementation with all features
+// ================================
+using GAS.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static GAS.Core.GASConstants;
+using static Unity.VisualScripting.Member;
 
 namespace GAS.AttributeSystem
 {
     /// <summary>
-    /// GameObject에 Attribute 시스템을 연결하는 컴포넌트
-    /// 여러 AttributeSet을 관리하고 Modifier를 적용합니다
+    /// Component that manages attributes on a GameObject
     /// </summary>
-    public class AttributeSetComponent : MonoBehaviour, IAttributeComponent
+    public class AttributeSetComponent : MonoBehaviour
     {
-        #region Inner Classes
+        [Header("Configuration")]
+        [SerializeField] private AttributeSetData attributeSetData;
 
-        /// <summary>
-        /// Modifier 적용 정보를 추적하는 핸들
-        /// </summary>
-        [Serializable]
-        public class ModifierHandle
-        {
-            public Guid id;
-            public AttributeModifier modifier;
-            public object source; // Effect나 Ability 등 Modifier의 소스
-            public float? expireTime; // null이면 영구 적용
+        [Header("Runtime Data")]
+        [SerializeField] private Dictionary<AttributeType, BaseAttribute> attributes;
+        [SerializeField] private List<AttributeModifier> activeModifiers;
 
-            public ModifierHandle(AttributeModifier modifier, object source = null)
-            {
-                this.id = Guid.NewGuid();
-                this.modifier = modifier;
-                this.source = source;
-                this.expireTime = null;
-            }
-        }
-
-        /// <summary>
-        /// 개별 Attribute 인스턴스 관리
-        /// </summary>
-        [Serializable]
-        public class AttributeInstance
-        {
-            public BaseAttribute baseAttribute;
-            public float baseValue;
-            private List<ModifierHandle> modifiers = new List<ModifierHandle>();
-            private float cachedValue;
-            private bool isDirty = true;
-
-            public AttributeInstance(BaseAttribute attribute)
-            {
-                this.baseAttribute = attribute;
-                this.baseValue = attribute.BaseValue;
-                this.cachedValue = baseValue;
-            }
-
-            /// <summary>
-            /// Modifier 추가
-            /// </summary>
-            public ModifierHandle AddModifier(AttributeModifier modifier, object source = null)
-            {
-                var handle = new ModifierHandle(modifier, source);
-                modifiers.Add(handle);
-                isDirty = true;
-                return handle;
-            }
-
-            /// <summary>
-            /// Modifier 제거
-            /// </summary>
-            public bool RemoveModifier(Guid handleId)
-            {
-                var removed = modifiers.RemoveAll(m => m.id == handleId) > 0;
-                if (removed)
-                {
-                    isDirty = true;
-                }
-                return removed;
-            }
-
-            /// <summary>
-            /// 소스별로 모든 Modifier 제거
-            /// </summary>
-            public int RemoveModifiersBySource(object source)
-            {
-                var removed = modifiers.RemoveAll(m => m.source == source);
-                if (removed > 0)
-                {
-                    isDirty = true;
-                }
-                return removed;
-            }
-
-            /// <summary>
-            /// 만료된 Modifier 정리
-            /// </summary>
-            public int CleanupExpiredModifiers(float currentTime)
-            {
-                var removed = modifiers.RemoveAll(m =>
-                    m.expireTime.HasValue && m.expireTime.Value <= currentTime);
-                if (removed > 0)
-                {
-                    isDirty = true;
-                }
-                return removed;
-            }
-
-            /// <summary>
-            /// 최종 값 계산 (Base -> Add -> Multiply -> Override)
-            /// </summary>
-            public float CalculateFinalValue()
-            {
-                if (!isDirty)
-                {
-                    return cachedValue;
-                }
-
-                // Override가 있으면 가장 높은 우선순위의 Override 값 사용
-                var overrideModifiers = modifiers
-                    .Where(m => m.modifier.Operation == ModifierOperation.Override)
-                    .OrderByDescending(m => m.modifier.Priority)
-                    .ToList();
-
-                if (overrideModifiers.Any())
-                {
-                    cachedValue = overrideModifiers.First().modifier.Value;
-                    isDirty = false;
-                    return cachedValue;
-                }
-
-                // Base 값에서 시작
-                float finalValue = baseValue;
-
-                // Add 적용 (Priority 순서대로)
-                var addModifiers = modifiers
-                    .Where(m => m.modifier.Operation == ModifierOperation.Add)
-                    .OrderBy(m => m.modifier.Priority);
-
-                foreach (var mod in addModifiers)
-                {
-                    finalValue += mod.modifier.Value;
-                }
-
-                // Multiply 적용 (Priority 순서대로)
-                var multiplyModifiers = modifiers
-                    .Where(m => m.modifier.Operation == ModifierOperation.Multiply)
-                    .OrderBy(m => m.modifier.Priority);
-
-                foreach (var mod in multiplyModifiers)
-                {
-                    finalValue *= mod.modifier.Value;
-                }
-
-                // Min/Max 제한 적용
-                if (baseAttribute.HasMinValue)
-                {
-                    finalValue = Mathf.Max(finalValue, baseAttribute.MinValue);
-                }
-                if (baseAttribute.HasMaxValue)
-                {
-                    finalValue = Mathf.Min(finalValue, baseAttribute.MaxValue);
-                }
-
-                cachedValue = finalValue;
-                isDirty = false;
-                return cachedValue;
-            }
-
-            public List<ModifierHandle> GetModifiers() => new List<ModifierHandle>(modifiers);
-
-            public void SetDirty() => isDirty = true;
-        }
-
-        #endregion
-
-        #region Events
-
+        // Events
         public event Action<AttributeType, float, float> OnAttributeChanged;
         public event Action<AttributeType, AttributeModifier> OnModifierAdded;
         public event Action<AttributeType, AttributeModifier> OnModifierRemoved;
 
-        #endregion
-
-        #region Serialized Fields
-
-        [Header("Configuration")]
-        [SerializeField] private List<AttributeSetData> defaultAttributeData;
-
-        [Header("Debug")]
-        [SerializeField] private bool showDebugInfo = false;
-        [SerializeField] private bool logAttributeChanges = false;
-
-        #endregion
-
-        #region Private Fields
-
-        private Dictionary<Type, AttributeSet> attributeSets = new Dictionary<Type, AttributeSet>();
-        private Dictionary<AttributeType, AttributeInstance> attributes = new Dictionary<AttributeType, AttributeInstance>();
-        private float lastCleanupTime;
-        private const float CLEANUP_INTERVAL = 1.0f; // 1초마다 만료된 Modifier 정리
-
-        #endregion
-
-        #region Properties
+        /// <summary>
+        /// Gets all attributes
+        /// </summary>
+        public Dictionary<AttributeType, BaseAttribute> Attributes => attributes;
 
         /// <summary>
-        /// 등록된 모든 AttributeType 목록
+        /// Gets the attribute set data
         /// </summary>
-        public IEnumerable<AttributeType> RegisteredAttributes => attributes.Keys;
-
-        /// <summary>
-        /// 등록된 AttributeSet 타입 목록
-        /// </summary>
-        public IEnumerable<Type> RegisteredSetTypes => attributeSets.Keys;
-
-        #endregion
+        public AttributeSetData AttributeSetData => attributeSetData;
 
         #region Unity Lifecycle
 
         private void Awake()
         {
-            InitializeDefaultAttributes();
-            RegisterToGASManager();
-        }
-
-        private void Start()
-        {
-            // GAS 이벤트 구독
-            GAS.Core.GASEvents.OnGlobalAttributeQuery += HandleGlobalAttributeQuery;
-            
-        }
-
-        private void Update()
-        {
-            // 주기적으로 만료된 Modifier 정리
-            if (Time.time - lastCleanupTime > CLEANUP_INTERVAL)
-            {
-                CleanupExpiredModifiers();
-                lastCleanupTime = Time.time;
-            }
+            InitializeAttributes();
         }
 
         private void OnDestroy()
         {
-            // GAS 이벤트 구독 해제
-            GAS.Core.GASEvents.OnGlobalAttributeQuery -= HandleGlobalAttributeQuery;
-            UnregisterFromGASManager();
+            CleanupAttributes();
+        }
+
+        private void Update()
+        {
+            UpdateTimedModifiers();
         }
 
         #endregion
@@ -251,92 +61,255 @@ namespace GAS.AttributeSystem
         #region Initialization
 
         /// <summary>
-        /// 기본 Attribute 초기화
+        /// Initializes attributes from AttributeSetData
         /// </summary>
-        private void InitializeDefaultAttributes()
+        private void InitializeAttributes()
         {
-            if (defaultAttributeData == null || defaultAttributeData.Count == 0)
+            attributes = new Dictionary<AttributeType, BaseAttribute>();
+            activeModifiers = new List<AttributeModifier>();
+
+            if (attributeSetData != null)
             {
-                Debug.LogWarning($"[GAS] {gameObject.name}: No default AttributeSetData configured");
-                return;
+                attributeSetData.InitializeAttributes(this);
             }
 
-            foreach (var data in defaultAttributeData)
+            // Fire initialization event
+            GASEvents.Trigger(GASEventType.ComponentAdded,
+                new SimpleGASEventData(gameObject, this));
+        }
+
+        /// <summary>
+        /// Cleanup on destroy
+        /// </summary>
+        private void CleanupAttributes()
+        {
+            // Remove all modifiers
+            activeModifiers.Clear();
+
+            // Clear attributes
+            attributes?.Clear();
+
+            // Fire cleanup event
+            GASEvents.Trigger(GASEventType.ComponentRemoved,
+                new SimpleGASEventData(gameObject, this));
+        }
+
+        /// <summary>
+        /// Registers a new attribute at runtime
+        /// </summary>
+        public void RegisterAttribute(AttributeType type, BaseAttribute attribute)
+        {
+            if (attributes == null)
+                attributes = new Dictionary<AttributeType, BaseAttribute>();
+
+            if (!attributes.ContainsKey(type))
             {
-                if (data != null)
+                attribute.Initialize(this);
+                attribute.AttributeType = type;
+                attributes[type] = attribute;
+
+                Debug.Log($"Registered attribute: {type}");
+            }
+            else
+            {
+                Debug.LogWarning($"Attribute {type} already exists!");
+            }
+        }
+
+        #endregion
+
+        #region Attribute Accessors
+
+        /// <summary>
+        /// Gets the current value of an attribute
+        /// </summary>
+        public float GetAttributeValue(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                // For derived attributes, get calculated value
+                if (attribute.IsDerived)
                 {
-                    InitializeFromData(data);
+                    return attribute.GetValue();
                 }
+
+                // For normal attributes, calculate with modifiers
+                return attribute.CalculateFinalValue();
+            }
+
+            Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            return 0f;
+        }
+
+        /// <summary>
+        /// Gets the base value of an attribute (without modifiers)
+        /// </summary>
+        public float GetAttributeBaseValue(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                return attribute.BaseValue;
+            }
+
+            Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            return 0f;
+        }
+
+        /// <summary>
+        /// Gets the current value without recalculation
+        /// </summary>
+        public float GetAttributeCurrentValue(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                return attribute.CurrentValue;
+            }
+
+            Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            return 0f;
+        }
+
+        /// <summary>
+        /// Gets the maximum value of an attribute
+        /// </summary>
+        public float GetAttributeMaxValue(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                return attribute.MaxValue;
+            }
+
+            Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            return 0f;
+        }
+
+        /// <summary>
+        /// Gets the minimum value of an attribute
+        /// </summary>
+        public float GetAttributeMinValue(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                return attribute.MinValue;
+            }
+
+            Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            return 0f;
+        }
+
+        /// <summary>
+        /// Gets an attribute object by type
+        /// </summary>
+        public BaseAttribute GetAttribute(AttributeType type)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                return attribute;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Checks if an attribute exists
+        /// </summary>
+        public bool HasAttribute(AttributeType type)
+        {
+            return attributes != null && attributes.ContainsKey(type);
+        }
+
+        #endregion
+
+        #region Attribute Modification
+
+        /// <summary>
+        /// Sets the current value of an attribute
+        /// </summary>
+        public void SetAttributeValue(AttributeType type, float value)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                if (attribute.IsReadOnly)
+                {
+                    Debug.LogWarning($"[AttributeSetComponent] Cannot set value of read-only attribute: {type}");
+                    return;
+                }
+
+                float oldValue = attribute.CurrentValue;
+                attribute.CurrentValue = Mathf.Clamp(value, attribute.MinValue, attribute.MaxValue);
+
+                if (!Mathf.Approximately(oldValue, attribute.CurrentValue))
+                {
+                    OnAttributeChanged?.Invoke(type, oldValue, attribute.CurrentValue);
+                    FireAttributeChangedEvent(type, oldValue, attribute.CurrentValue);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
             }
         }
 
         /// <summary>
-        /// AttributeSetData로부터 초기화
+        /// Sets the base value of an attribute
         /// </summary>
-        public void InitializeFromData(AttributeSetData data)
+        public void SetAttributeBaseValue(AttributeType type, float value)
         {
-            if (data == null)
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
             {
-                Debug.LogError("[GAS] AttributeSetData is null");
-                return;
-            }
+                if (attribute.IsReadOnly)
+                {
+                    Debug.LogWarning($"[AttributeSetComponent] Cannot set base value of read-only attribute: {type}");
+                    return;
+                }
 
-            // AttributeSet 생성 및 등록
-            var attributeSet = data.CreateAttributeSet();
-            if (attributeSet != null)
+                attribute.BaseValue = value;
+                RecalculateAttribute(type);
+            }
+            else
             {
-                RegisterAttributeSet(attributeSet);
+                Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
             }
         }
 
         /// <summary>
-        /// AttributeSet 등록
+        /// Modifies an attribute value
         /// </summary>
-        public void RegisterAttributeSet(AttributeSet attributeSet)
+        public void ModifyAttribute(AttributeType type, float amount, ModifierOperation operation)
         {
-            if (attributeSet == null)
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
             {
-                Debug.LogError("[GAS] Cannot register null AttributeSet");
-                return;
-            }
-
-            var setType = attributeSet.GetType();
-
-            // 이미 등록된 타입인지 확인
-            if (attributeSets.ContainsKey(setType))
-            {
-                Debug.LogWarning($"[GAS] AttributeSet type {setType.Name} is already registered");
-                return;
-            }
-
-            // AttributeSet 등록
-            attributeSets[setType] = attributeSet;
-
-            // 개별 Attribute 등록
-            foreach (var attribute in attributeSet.GetAllAttributes())
-            {
-                if (attribute != null)
+                if (attribute.IsReadOnly)
                 {
-                    RegisterAttribute(attribute);
+                    Debug.LogWarning($"[AttributeSetComponent] Cannot modify read-only attribute: {type}");
+                    return;
+                }
+
+                float oldValue = attribute.CurrentValue;
+
+                switch (operation)
+                {
+                    case ModifierOperation.Add:
+                        attribute.CurrentValue += amount;
+                        break;
+                    case ModifierOperation.Multiply:
+                        attribute.CurrentValue *= amount;
+                        break;
+                    case ModifierOperation.Override:
+                        attribute.CurrentValue = amount;
+                        break;
+                }
+
+                attribute.CurrentValue = Mathf.Clamp(attribute.CurrentValue, attribute.MinValue, attribute.MaxValue);
+
+                if (!Mathf.Approximately(oldValue, attribute.CurrentValue))
+                {
+                    OnAttributeChanged?.Invoke(type, oldValue, attribute.CurrentValue);
+                    FireAttributeChangedEvent(type, oldValue, attribute.CurrentValue);
                 }
             }
-
-            Debug.Log($"[GAS] Registered AttributeSet: {setType.Name} with {attributeSet.GetAllAttributes().Count()} attributes");
-        }
-
-        /// <summary>
-        /// 개별 Attribute 등록
-        /// </summary>
-        private void RegisterAttribute(BaseAttribute attribute)
-        {
-            if (!attributes.ContainsKey(attribute.AttributeType))
+            else
             {
-                attributes[attribute.AttributeType] = new AttributeInstance(attribute);
-
-                if (logAttributeChanges)
-                {
-                    Debug.Log($"[GAS] Registered Attribute: {attribute.AttributeType} (Base: {attribute.BaseValue})");
-                }
+                Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
             }
         }
 
@@ -345,385 +318,366 @@ namespace GAS.AttributeSystem
         #region Modifier Management
 
         /// <summary>
-        /// Modifier 추가
+        /// Adds a modifier to an attribute
         /// </summary>
-        public Guid AddModifier(AttributeType type, AttributeModifier modifier, object source = null)
+        public void AddModifier(AttributeType type, AttributeModifier modifier)
         {
-            if (!attributes.TryGetValue(type, out var instance))
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
             {
-                Debug.LogWarning($"[GAS] Attribute type {type} not found");
-                return Guid.Empty;
-            }
-
-            float oldValue = instance.CalculateFinalValue();
-            var handle = instance.AddModifier(modifier, source);
-            float newValue = instance.CalculateFinalValue();
-
-            // 이벤트 발생
-            OnModifierAdded?.Invoke(type, modifier);
-
-            if (!Mathf.Approximately(oldValue, newValue))
-            {
-                OnAttributeChanged?.Invoke(type, oldValue, newValue);
-
-                if (logAttributeChanges)
+                if (attribute.IsReadOnly)
                 {
-                    Debug.Log($"[GAS] {type} changed: {oldValue:F2} -> {newValue:F2} (Modifier: {modifier.Operation} {modifier.Value:F2})");
+                    Debug.LogWarning($"[AttributeSetComponent] Cannot add modifier to read-only attribute: {type}");
+                    return;
                 }
-            }
 
-            return handle.id;
-        }
+                modifier.targetAttributeType = type;
+                modifier.appliedTime = Time.time;
+                activeModifiers.Add(modifier);
+                attribute.AddModifier(modifier);
 
-        /// <summary>
-        /// Modifier 제거
-        /// </summary>
-        public bool RemoveModifier(AttributeType type, Guid modifierId)
-        {
-            if (!attributes.TryGetValue(type, out var instance))
-            {
-                return false;
-            }
+                RecalculateAttribute(type);
 
-            float oldValue = instance.CalculateFinalValue();
+                OnModifierAdded?.Invoke(type, modifier);
 
-            // 제거할 Modifier 정보 가져오기
-            var modifierToRemove = instance.GetModifiers()
-                .FirstOrDefault(m => m.id == modifierId);
-
-            if (modifierToRemove == null)
-            {
-                return false;
-            }
-
-            bool removed = instance.RemoveModifier(modifierId);
-
-            if (removed)
-            {
-                float newValue = instance.CalculateFinalValue();
-
-                // 이벤트 발생
-                OnModifierRemoved?.Invoke(type, modifierToRemove.modifier);
-
-                if (!Mathf.Approximately(oldValue, newValue))
-                {
-                    OnAttributeChanged?.Invoke(type, oldValue, newValue);
-
-                    if (logAttributeChanges)
+                GASEvents.Trigger(GASEventType.AttributeModifierAdded,
+                    new AttributeModifierEventData
                     {
-                        Debug.Log($"[GAS] {type} changed: {oldValue:F2} -> {newValue:F2} (Modifier removed)");
-                    }
-                }
+                        attributeType = type,
+                        modifier = modifier,
+                        source = gameObject
+                    });
             }
-
-            return removed;
+            else
+            {
+                Debug.LogWarning($"[AttributeSetComponent] Attribute {type} not found!");
+            }
         }
 
         /// <summary>
-        /// 소스별로 모든 Modifier 제거
+        /// Creates and adds a modifier
+        /// </summary>
+        public AttributeModifier AddModifier(AttributeType type, ModifierOperation operation, float value, object source = null, float duration = -1f)
+        {
+            var modifier = new AttributeModifier(type, operation, value)
+            {
+                source = source,
+                duration = duration
+            };
+
+            AddModifier(type, modifier);
+            return modifier;
+        }
+
+        /// <summary>
+        /// Removes a specific modifier
+        /// </summary>
+        public void RemoveModifier(AttributeType type, AttributeModifier modifier)
+        {
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                activeModifiers.Remove(modifier);
+                attribute.RemoveModifier(modifier);
+
+                RecalculateAttribute(type);
+
+                OnModifierRemoved?.Invoke(type, modifier);
+
+                GASEvents.Trigger(GASEventType.AttributeModifierRemoved,
+                    new AttributeModifierEventData
+                    {
+                        attributeType = type,
+                        modifier = modifier,
+                        source = gameObject
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Removes all modifiers from a specific source
         /// </summary>
         public void RemoveAllModifiersFromSource(object source)
         {
-            foreach (var kvp in attributes)
+            var modifiersToRemove = new List<AttributeModifier>();
+
+            foreach (var modifier in activeModifiers)
             {
-                var type = kvp.Key;
-                var instance = kvp.Value;
-
-                float oldValue = instance.CalculateFinalValue();
-                int removedCount = instance.RemoveModifiersBySource(source);
-
-                if (removedCount > 0)
+                if (modifier.source == source)
                 {
-                    float newValue = instance.CalculateFinalValue();
-
-                    if (!Mathf.Approximately(oldValue, newValue))
-                    {
-                        OnAttributeChanged?.Invoke(type, oldValue, newValue);
-
-                        if (logAttributeChanges)
-                        {
-                            Debug.Log($"[GAS] {type}: Removed {removedCount} modifiers from source");
-                        }
-                    }
+                    modifiersToRemove.Add(modifier);
                 }
+            }
+
+            foreach (var modifier in modifiersToRemove)
+            {
+                RemoveModifier(modifier.targetAttributeType, modifier);
             }
         }
 
         /// <summary>
-        /// 시간 제한이 있는 Modifier 추가
+        /// Removes all modifiers for a specific attribute
         /// </summary>
-        public Guid AddTimedModifier(AttributeType type, AttributeModifier modifier, float duration, object source = null)
+        public void RemoveAllModifiersForAttribute(AttributeType type)
         {
-            var modifierId = AddModifier(type, modifier, source);
+            var modifiersToRemove = activeModifiers
+                .Where(m => m.targetAttributeType == type)
+                .ToList();
 
-            if (modifierId != Guid.Empty && attributes.TryGetValue(type, out var instance))
+            foreach (var modifier in modifiersToRemove)
             {
-                var handle = instance.GetModifiers().FirstOrDefault(m => m.id == modifierId);
-                if (handle != null)
-                {
-                    handle.expireTime = Time.time + duration;
-                }
+                RemoveModifier(type, modifier);
             }
-
-            return modifierId;
         }
 
         /// <summary>
-        /// 만료된 Modifier 정리
+        /// Gets all active modifiers
         /// </summary>
-        private void CleanupExpiredModifiers()
+        public List<AttributeModifier> GetActiveModifiers()
         {
-            foreach (var kvp in attributes)
+            return new List<AttributeModifier>(activeModifiers);
+        }
+
+        /// <summary>
+        /// Gets modifiers for a specific attribute
+        /// </summary>
+        public List<AttributeModifier> GetModifiersForAttribute(AttributeType type)
+        {
+            return activeModifiers.Where(m => m.targetAttributeType == type).ToList();
+        }
+
+        /// <summary>
+        /// Updates timed modifiers
+        /// </summary>
+        private void UpdateTimedModifiers()
+        {
+            var expiredModifiers = new List<AttributeModifier>();
+
+            foreach (var modifier in activeModifiers)
             {
-                var type = kvp.Key;
-                var instance = kvp.Value;
-
-                float oldValue = instance.CalculateFinalValue();
-                int cleanedCount = instance.CleanupExpiredModifiers(Time.time);
-
-                if (cleanedCount > 0)
+                if (modifier.duration > 0)
                 {
-                    float newValue = instance.CalculateFinalValue();
-
-                    if (!Mathf.Approximately(oldValue, newValue))
+                    float elapsed = Time.time - modifier.appliedTime;
+                    if (elapsed >= modifier.duration)
                     {
-                        OnAttributeChanged?.Invoke(type, oldValue, newValue);
-
-                        if (logAttributeChanges)
-                        {
-                            Debug.Log($"[GAS] {type}: Cleaned up {cleanedCount} expired modifiers");
-                        }
+                        expiredModifiers.Add(modifier);
                     }
                 }
+            }
+
+            foreach (var modifier in expiredModifiers)
+            {
+                RemoveModifier(modifier.targetAttributeType, modifier);
             }
         }
 
         #endregion
 
-        #region Attribute Access
+        #region Utility Methods
 
         /// <summary>
-        /// Attribute 값 가져오기
+        /// Recalculates the final value of an attribute
         /// </summary>
-        public float GetAttributeValue(AttributeType type)
+        private void RecalculateAttribute(AttributeType type)
         {
-            if (attributes.TryGetValue(type, out var instance))
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
             {
-                return instance.CalculateFinalValue();
-            }
+                float oldValue = attribute.CurrentValue;
+                float newValue = attribute.CalculateFinalValue();
 
-            Debug.LogWarning($"[GAS] Attribute type {type} not found");
-            return 0f;
-        }
-
-        /// <summary>
-        /// Attribute Base 값 가져오기
-        /// </summary>
-        public float GetAttributeBaseValue(AttributeType type)
-        {
-            if (attributes.TryGetValue(type, out var instance))
-            {
-                return instance.baseValue;
-            }
-
-            return 0f;
-        }
-
-        /// <summary>
-        /// Attribute Base 값 설정
-        /// </summary>
-        public void SetAttributeBaseValue(AttributeType type, float value)
-        {
-            if (!attributes.TryGetValue(type, out var instance))
-            {
-                Debug.LogWarning($"[GAS] Attribute type {type} not found");
-                return;
-            }
-
-            float oldValue = instance.CalculateFinalValue();
-            instance.baseValue = value;
-            instance.SetDirty();
-            float newValue = instance.CalculateFinalValue();
-
-            if (!Mathf.Approximately(oldValue, newValue))
-            {
-                OnAttributeChanged?.Invoke(type, oldValue, newValue);
-
-                if (logAttributeChanges)
+                if (!Mathf.Approximately(oldValue, newValue))
                 {
-                    Debug.Log($"[GAS] {type} base value changed: {oldValue:F2} -> {newValue:F2}");
+                    attribute.CurrentValue = newValue;
+                    OnAttributeChanged?.Invoke(type, oldValue, newValue);
+                    FireAttributeChangedEvent(type, oldValue, newValue);
                 }
             }
         }
 
         /// <summary>
-        /// Attribute 존재 여부 확인
+        /// Recalculates all attributes
         /// </summary>
-        public bool HasAttribute(AttributeType type)
+        public void RecalculateAllAttributes()
         {
-            return attributes.ContainsKey(type);
-        }
-
-        /// <summary>
-        /// AttributeSet 가져오기
-        /// </summary>
-        public T GetAttributeSet<T>() where T : AttributeSet
-        {
-            var type = typeof(T);
-            if (attributeSets.TryGetValue(type, out var set))
+            foreach (var kvp in attributes)
             {
-                return set as T;
+                if (!kvp.Value.IsReadOnly)
+                {
+                    RecalculateAttribute(kvp.Key);
+                }
             }
-            return null;
         }
 
         /// <summary>
-        /// 특정 Attribute의 모든 Modifier 가져오기
-        /// </summary>
-        public List<AttributeModifier> GetModifiers(AttributeType type)
-        {
-            if (attributes.TryGetValue(type, out var instance))
-            {
-                return instance.GetModifiers().Select(h => h.modifier).ToList();
-            }
-            return new List<AttributeModifier>();
-        }
-
-        #endregion
-
-        #region Utility
-
-        /// <summary>
-        /// 모든 Attribute를 초기값으로 리셋
+        /// Resets all attributes to their base values
         /// </summary>
         public void ResetAllAttributes()
         {
+            // Remove all modifiers first
+            activeModifiers.Clear();
+
             foreach (var kvp in attributes)
             {
-                var instance = kvp.Value;
-                float oldValue = instance.CalculateFinalValue();
-
-                // 모든 Modifier 제거
-                instance.GetModifiers().Clear();
-                instance.baseValue = instance.baseAttribute.BaseValue;
-                instance.SetDirty();
-
-                float newValue = instance.CalculateFinalValue();
-
-                if (!Mathf.Approximately(oldValue, newValue))
+                var attribute = kvp.Value;
+                if (!attribute.IsReadOnly)
                 {
-                    OnAttributeChanged?.Invoke(kvp.Key, oldValue, newValue);
-                }
-            }
+                    attribute.ClearModifiers();
 
-            Debug.Log("[GAS] All attributes reset to base values");
-        }
+                    float oldValue = attribute.CurrentValue;
+                    attribute.CurrentValue = attribute.BaseValue;
 
-        /// <summary>
-        /// 모든 일시적 Modifier 제거
-        /// </summary>
-        public void ClearAllTemporaryModifiers()
-        {
-            foreach (var kvp in attributes)
-            {
-                var instance = kvp.Value;
-                float oldValue = instance.CalculateFinalValue();
-
-                // expireTime이 설정된 모든 Modifier 제거
-                instance.GetModifiers().RemoveAll(m => m.expireTime.HasValue);
-                instance.SetDirty();
-
-                float newValue = instance.CalculateFinalValue();
-
-                if (!Mathf.Approximately(oldValue, newValue))
-                {
-                    OnAttributeChanged?.Invoke(kvp.Key, oldValue, newValue);
+                    if (!Mathf.Approximately(oldValue, attribute.CurrentValue))
+                    {
+                        OnAttributeChanged?.Invoke(kvp.Key, oldValue, attribute.CurrentValue);
+                        FireAttributeChangedEvent(kvp.Key, oldValue, attribute.CurrentValue);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Attribute 정보를 문자열로 출력
+        /// Resets a specific attribute to base value
         /// </summary>
-        public string GetAttributeInfo()
+        public void ResetAttribute(AttributeType type)
         {
-            var info = $"[{gameObject.name} Attributes]\n";
+            if (attributes != null && attributes.TryGetValue(type, out var attribute))
+            {
+                if (!attribute.IsReadOnly)
+                {
+                    RemoveAllModifiersForAttribute(type);
+
+                    float oldValue = attribute.CurrentValue;
+                    attribute.CurrentValue = attribute.BaseValue;
+
+                    if (!Mathf.Approximately(oldValue, attribute.CurrentValue))
+                    {
+                        OnAttributeChanged?.Invoke(type, oldValue, attribute.CurrentValue);
+                        FireAttributeChangedEvent(type, oldValue, attribute.CurrentValue);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Fires attribute changed event through GAS event system
+        /// </summary>
+        private void FireAttributeChangedEvent(AttributeType type, float oldValue, float newValue)
+        {
+            GASEvents.Trigger(GASEventType.AttributeChanged,
+                new AttributeChangedEventData
+                {
+                    attributeType = type,
+                    oldValue = oldValue,
+                    newValue = newValue,
+                    delta = newValue - oldValue,
+                    source = gameObject
+                });
+        }
+
+        #endregion
+
+        #region Save/Load
+
+        /// <summary>
+        /// Serializes current attribute values for save/load
+        /// </summary>
+        public AttributeSaveData SerializeAttributeValues()
+        {
+            var saveData = new AttributeSaveData();
 
             foreach (var kvp in attributes)
             {
-                var type = kvp.Key;
-                var instance = kvp.Value;
-                var value = instance.CalculateFinalValue();
-                var modifierCount = instance.GetModifiers().Count;
-
-                info += $"  {type}: {value:F2} (Base: {instance.baseValue:F2}, Modifiers: {modifierCount})\n";
+                if (!kvp.Value.IsReadOnly && !kvp.Value.IsDerived)
+                {
+                    saveData.attributeValues[kvp.Key] = kvp.Value.CurrentValue;
+                    saveData.baseValues[kvp.Key] = kvp.Value.BaseValue;
+                }
             }
 
-            return info;
+            // Save active modifiers if needed
+            foreach (var modifier in activeModifiers)
+            {
+                if (modifier.duration < 0 || (Time.time - modifier.appliedTime) < modifier.duration)
+                {
+                    saveData.modifiers.Add(new ModifierSaveData
+                    {
+                        attributeType = modifier.targetAttributeType,
+                        operation = modifier.operation,
+                        value = modifier.value,
+                        remainingDuration = modifier.duration > 0 ?
+                            modifier.duration - (Time.time - modifier.appliedTime) : -1f
+                    });
+                }
+            }
+
+            return saveData;
+        }
+
+        /// <summary>
+        /// Deserializes attribute values for save/load
+        /// </summary>
+        public void DeserializeAttributeValues(AttributeSaveData saveData)
+        {
+            if (saveData == null) return;
+
+            // Restore base values
+            foreach (var kvp in saveData.baseValues)
+            {
+                SetAttributeBaseValue(kvp.Key, kvp.Value);
+            }
+
+            // Restore current values
+            foreach (var kvp in saveData.attributeValues)
+            {
+                SetAttributeValue(kvp.Key, kvp.Value);
+            }
+
+            // Restore modifiers
+            foreach (var modifierData in saveData.modifiers)
+            {
+                var modifier = new AttributeModifier(
+                    modifierData.attributeType,
+                    modifierData.operation,
+                    modifierData.value
+                )
+                {
+                    duration = modifierData.remainingDuration,
+                    source = "SavedModifier"
+                };
+
+                AddModifier(modifierData.attributeType, modifier);
+            }
         }
 
         #endregion
+    }
 
-        #region GAS Integration
+    #region Save Data Structures
 
-        private void RegisterToGASManager()
-        {
-            // GASManager에 등록 (필요시)
-            var gasManager = GAS.Core.GASManager.Instance;
-            if (gasManager != null)
-            {
-                // 필요한 경우 GASManager에 컴포넌트 등록
-            }
-        }
-
-        private void UnregisterFromGASManager()
-        {
-            // GASManager에서 등록 해제 (필요시)
-            var gasManager = GAS.Core.GASManager.Instance;
-            if (gasManager != null)
-            {
-                // 필요한 경우 GASManager에서 컴포넌트 등록 해제
-            }
-        }
-
-        private void HandleGlobalAttributeQuery(GameObject target, AttributeType type)
-        {
-            // 글로벌 Attribute 쿼리 처리
-            if (target == gameObject && HasAttribute(type))
-            {
-                float value = GetAttributeValue(type);
-                Debug.Log($"[GAS] Query result for {type}: {value:F2}");
-            }
-        }
-
-        #endregion
-
-        #region Debug
-
-        private void OnDrawGizmosSelected()
-        {
-            if (!showDebugInfo)
-                return;
-
-            // Scene 뷰에 Attribute 정보 표시
-            var position = transform.position + Vector3.up * 2f;
-            UnityEditor.Handles.Label(position, GetAttributeInfo());
-        }
-
-        #endregion
+    /// <summary>
+    /// Data structure for saving attribute values
+    /// </summary>
+    [Serializable]
+    public class AttributeSaveData
+    {
+        public Dictionary<AttributeType, float> attributeValues = new Dictionary<AttributeType, float>();
+        public Dictionary<AttributeType, float> baseValues = new Dictionary<AttributeType, float>();
+        public List<ModifierSaveData> modifiers = new List<ModifierSaveData>();
     }
 
     /// <summary>
-    /// AttributeComponent 인터페이스 (Effect System과의 연동용)
+    /// Data structure for saving modifiers
     /// </summary>
-    public interface IAttributeComponent
+    [Serializable]
+    public class ModifierSaveData
     {
-        float GetAttributeValue(AttributeType type);
-        Guid AddModifier(AttributeType type, AttributeModifier modifier, object source = null);
-        bool RemoveModifier(AttributeType type, Guid modifierId);
-        void RemoveAllModifiersFromSource(object source);
-        bool HasAttribute(AttributeType type);
-
-        event Action<AttributeType, float, float> OnAttributeChanged;
+        public AttributeType attributeType;
+        public ModifierOperation operation;
+        public float value;
+        public float remainingDuration;
     }
+
+    #endregion
 }
