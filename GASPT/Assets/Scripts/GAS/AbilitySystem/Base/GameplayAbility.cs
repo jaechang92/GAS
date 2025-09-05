@@ -1,8 +1,10 @@
 // ================================
 // File: Assets/Scripts/GAS/AbilitySystem/Base/GameplayAbility.cs
+// 완전한 수정 버전
 // ================================
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using GAS.Core;
 using GAS.TagSystem;
@@ -190,6 +192,40 @@ namespace GAS.AbilitySystem
         /// Core ability execution logic - must be implemented by derived classes
         /// </summary>
         protected abstract Awaitable<AbilityExecutionResult> ExecuteAbility();
+
+        /// <summary>
+        /// Calculate effect magnitude based on ability level and source attributes
+        /// </summary>
+        protected virtual float CalculateEffectMagnitude()
+        {
+            float baseMagnitude = 1.0f;
+
+            // Level-based scaling
+            if (currentSpec != null)
+            {
+                baseMagnitude *= (1.0f + (currentSpec.level - 1) * 0.1f); // 10% increase per level
+            }
+
+            // Source attribute scaling (optional)
+            if (activationInfo.source?.AttributeComponent != null)
+            {
+                // Example: Scale with attack power for damage abilities
+                if (abilityTags.Any(tag => tag.TagName.Contains("Damage")))
+                {
+                    float attackPower = activationInfo.source.AttributeComponent.GetAttributeValue(AttributeType.AttackPower);
+                    baseMagnitude *= (1.0f + attackPower / 100f);
+                }
+
+                // Example: Scale with spell power for magic abilities
+                if (abilityTags.Any(tag => tag.TagName.Contains("Magic")))
+                {
+                    float magicPower = activationInfo.source.AttributeComponent.GetAttributeValue(AttributeType.MagicPower);
+                    baseMagnitude *= (1.0f + magicPower / 100f);
+                }
+            }
+
+            return baseMagnitude;
+        }
 
         /// <summary>
         /// Ends the ability
@@ -459,7 +495,9 @@ namespace GAS.AbilitySystem
 
             foreach (var cost in costs)
             {
-                result[cost.attributeName] = cost.CalculateCost(level);
+                // Use GetAttributeName() to get the proper name
+                string attributeKey = cost.GetAttributeName();
+                result[attributeKey] = cost.CalculateCost(level);
             }
 
             return result;

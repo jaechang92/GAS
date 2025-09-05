@@ -1,6 +1,8 @@
-// 파일 위치: Assets/Scripts/GAS/TagSystem/TagContainer.cs
+// ================================
+// File: Assets/Scripts/GAS/TagSystem/TagContainer.cs
+// Updated with Clone method
+// ================================
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -8,432 +10,287 @@ using UnityEngine;
 namespace GAS.TagSystem
 {
     /// <summary>
-    /// 여러 GameplayTag를 관리하는 컨테이너
+    /// Container for managing collections of gameplay tags
     /// </summary>
     [Serializable]
-    public class TagContainer : IEnumerable<GameplayTag>
+    [CreateAssetMenu(fileName = "TagContainer", menuName = "GAS/Tag Container")]
+    public class TagContainer : ScriptableObject
     {
-        #region Serialized Fields
+        [Header("Tags")]
         [SerializeField] private List<GameplayTag> tags = new List<GameplayTag>();
-        #endregion
-
-        #region Events
-        /// <summary>
-        /// 태그가 추가되었을 때
-        /// </summary>
-        public event Action<GameplayTag> OnTagAdded;
 
         /// <summary>
-        /// 태그가 제거되었을 때
+        /// Gets or sets the tags list
         /// </summary>
-        public event Action<GameplayTag> OnTagRemoved;
-
-        /// <summary>
-        /// 컨테이너가 변경되었을 때
-        /// </summary>
-        public event Action OnContainerChanged;
-        #endregion
-
-        #region Properties
-        /// <summary>
-        /// 태그 개수
-        /// </summary>
-        public int Count => tags.Count;
-
-        /// <summary>
-        /// 컨테이너가 비어있는지 확인
-        /// </summary>
-        public bool IsEmpty => tags.Count == 0;
-
-        /// <summary>
-        /// 모든 태그 리스트 (읽기 전용)
-        /// </summary>
-        public IReadOnlyList<GameplayTag> Tags => tags.AsReadOnly();
-        #endregion
-
-        #region Constructors
-        /// <summary>
-        /// 빈 컨테이너 생성
-        /// </summary>
-        public TagContainer()
+        public List<GameplayTag> Tags
         {
-            tags = new List<GameplayTag>();
+            get => tags;
+            set => tags = value ?? new List<GameplayTag>();
         }
 
         /// <summary>
-        /// 태그 배열로 컨테이너 생성
+        /// Gets the number of tags in the container
         /// </summary>
-        public TagContainer(params GameplayTag[] initialTags)
-        {
-            tags = new List<GameplayTag>(initialTags.Where(t => t != null && t.IsValid));
-        }
+        public int Count => tags?.Count ?? 0;
 
         /// <summary>
-        /// 태그 문자열 배열로 컨테이너 생성
+        /// Creates a deep copy of this TagContainer
         /// </summary>
-        public TagContainer(params string[] tagStrings)
+        public TagContainer Clone()
         {
-            tags = new List<GameplayTag>();
-            foreach (var tagString in tagStrings)
+            var clone = CreateInstance<TagContainer>();
+
+            // Deep copy the tags list
+            clone.tags = new List<GameplayTag>();
+            if (tags != null)
             {
-                if (!string.IsNullOrEmpty(tagString))
+                foreach (var tag in tags)
                 {
-                    tags.Add(new GameplayTag(tagString));
+                    if (tag != null)
+                    {
+                        // GameplayTag is a ScriptableObject, so we reference the same instances
+                        // (tags are meant to be shared references, not duplicated)
+                        clone.tags.Add(tag);
+                    }
                 }
             }
+
+            return clone;
         }
 
         /// <summary>
-        /// 다른 컨테이너로부터 복사 생성
+        /// Adds a tag to the container
         /// </summary>
-        public TagContainer(TagContainer other)
+        public void AddTag(GameplayTag tag)
         {
-            tags = new List<GameplayTag>(other.tags);
-        }
-        #endregion
+            if (tag == null) return;
 
-        #region Add Methods
-        /// <summary>
-        /// 태그 추가
-        /// </summary>
-        public bool AddTag(GameplayTag tag)
-        {
-            if (tag == null || !tag.IsValid) return false;
-
-            if (!HasTagExact(tag))
+            if (!HasTag(tag))
             {
                 tags.Add(tag);
-                OnTagAdded?.Invoke(tag);
-                OnContainerChanged?.Invoke();
-                return true;
             }
-
-            return false;
         }
 
         /// <summary>
-        /// 문자열로 태그 추가
+        /// Adds multiple tags to the container
         /// </summary>
-        public bool AddTag(string tagString)
+        public void AddTags(IEnumerable<GameplayTag> tagsToAdd)
         {
-            return AddTag(new GameplayTag(tagString));
-        }
+            if (tagsToAdd == null) return;
 
-        /// <summary>
-        /// 여러 태그 추가
-        /// </summary>
-        public void AddTags(params GameplayTag[] tagsToAdd)
-        {
-            bool changed = false;
             foreach (var tag in tagsToAdd)
             {
-                if (AddTag(tag))
-                {
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                OnContainerChanged?.Invoke();
+                AddTag(tag);
             }
         }
 
         /// <summary>
-        /// 다른 컨테이너의 모든 태그 추가
-        /// </summary>
-        public void AddTags(TagContainer other)
-        {
-            if (other == null || other.IsEmpty) return;
-            AddTags(other.tags.ToArray());
-        }
-        #endregion
-
-        #region Remove Methods
-        /// <summary>
-        /// 태그 제거
+        /// Removes a tag from the container
         /// </summary>
         public bool RemoveTag(GameplayTag tag)
         {
             if (tag == null) return false;
-
-            bool removed = tags.Remove(tag);
-            if (removed)
-            {
-                OnTagRemoved?.Invoke(tag);
-                OnContainerChanged?.Invoke();
-            }
-
-            return removed;
+            return tags.Remove(tag);
         }
 
         /// <summary>
-        /// 문자열로 태그 제거
+        /// Removes multiple tags from the container
         /// </summary>
-        public bool RemoveTag(string tagString)
+        public void RemoveTags(IEnumerable<GameplayTag> tagsToRemove)
         {
-            var tag = tags.FirstOrDefault(t => t.TagName == tagString);
-            if (tag != null)
-            {
-                return RemoveTag(tag);
-            }
-            return false;
-        }
+            if (tagsToRemove == null) return;
 
-        /// <summary>
-        /// 여러 태그 제거
-        /// </summary>
-        public void RemoveTags(params GameplayTag[] tagsToRemove)
-        {
-            bool changed = false;
             foreach (var tag in tagsToRemove)
             {
-                if (RemoveTag(tag))
-                {
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                OnContainerChanged?.Invoke();
+                RemoveTag(tag);
             }
         }
 
         /// <summary>
-        /// 다른 컨테이너의 모든 태그 제거
-        /// </summary>
-        public void RemoveTags(TagContainer other)
-        {
-            if (other == null || other.IsEmpty) return;
-            RemoveTags(other.tags.ToArray());
-        }
-
-        /// <summary>
-        /// 부모 태그와 일치하는 모든 태그 제거
-        /// </summary>
-        public void RemoveTagsWithParent(GameplayTag parent)
-        {
-            if (parent == null || !parent.IsValid) return;
-
-            var tagsToRemove = tags.Where(t => t.IsChildOf(parent) || t.MatchesExact(parent)).ToList();
-            RemoveTags(tagsToRemove.ToArray());
-        }
-
-        /// <summary>
-        /// 모든 태그 제거
-        /// </summary>
-        public void Clear()
-        {
-            if (tags.Count > 0)
-            {
-                tags.Clear();
-                OnContainerChanged?.Invoke();
-            }
-        }
-        #endregion
-
-        #region Query Methods
-        /// <summary>
-        /// 정확히 일치하는 태그가 있는지 확인
-        /// </summary>
-        public bool HasTagExact(GameplayTag tag)
-        {
-            if (tag == null || !tag.IsValid) return false;
-            return tags.Any(t => t.MatchesExact(tag));
-        }
-
-        /// <summary>
-        /// 태그 또는 그 자식 태그가 있는지 확인
+        /// Checks if the container has a specific tag
         /// </summary>
         public bool HasTag(GameplayTag tag)
         {
-            if (tag == null || !tag.IsValid) return false;
-            return tags.Any(t => t.Matches(tag));
+            if (tag == null || tags == null) return false;
+            return tags.Contains(tag);
         }
 
         /// <summary>
-        /// 문자열로 태그 확인
+        /// Checks if the container has a tag by name
         /// </summary>
-        public bool HasTag(string tagString)
+        public bool HasTag(string tagName)
         {
-            return HasTag(new GameplayTag(tagString));
+            if (string.IsNullOrEmpty(tagName) || tags == null) return false;
+            return tags.Any(t => t != null && t.TagName == tagName);
         }
 
         /// <summary>
-        /// 여러 태그 중 하나라도 있는지 확인
+        /// Checks if the container has all specified tags
         /// </summary>
-        public bool HasAny(List<GameplayTag> tagsToCheck)
+        public bool HasAllTags(IEnumerable<GameplayTag> tagsToCheck)
         {
+            if (tagsToCheck == null) return true;
+
             foreach (var tag in tagsToCheck)
             {
-                if (HasTag(tag)) return true;
+                if (!HasTag(tag))
+                    return false;
             }
-            return false;
-        }
 
-        /// <summary>
-        /// 여러 태그가 모두 있는지 확인
-        /// </summary>
-        public bool HasAll(List<GameplayTag> tagsToCheck)
-        {
-            foreach (var tag in tagsToCheck)
-            {
-                if (!HasTag(tag)) return false;
-            }
             return true;
         }
 
         /// <summary>
-        /// 다른 컨테이너의 태그 중 하나라도 있는지 확인
+        /// Checks if the container has any of the specified tags
         /// </summary>
-        public bool HasAny(TagContainer other)
+        public bool HasAnyTag(IEnumerable<GameplayTag> tagsToCheck)
         {
-            if (other == null || other.IsEmpty) return false;
-            return HasAny(other.tags);
-        }
+            if (tagsToCheck == null) return false;
 
-        /// <summary>
-        /// 다른 컨테이너의 모든 태그가 있는지 확인
-        /// </summary>
-        public bool HasAll(TagContainer other)
-        {
-            if (other == null || other.IsEmpty) return true;
-            return HasAll(other.tags);
-        }
-
-        /// <summary>
-        /// 특정 부모를 가진 태그들 가져오기
-        /// </summary>
-        public List<GameplayTag> GetTagsWithParent(GameplayTag parent)
-        {
-            if (parent == null || !parent.IsValid) return new List<GameplayTag>();
-            return tags.Where(t => t.IsChildOf(parent)).ToList();
-        }
-
-        /// <summary>
-        /// 특정 깊이의 태그들 가져오기
-        /// </summary>
-        public List<GameplayTag> GetTagsAtDepth(int depth)
-        {
-            return tags.Where(t => t.Depth == depth).ToList();
-        }
-
-        /// <summary>
-        /// 루트 태그들 가져오기
-        /// </summary>
-        public List<GameplayTag> GetRootTags()
-        {
-            return GetTagsAtDepth(1);
-        }
-        #endregion
-
-        #region Set Operations
-        /// <summary>
-        /// 두 컨테이너의 합집합
-        /// </summary>
-        public static TagContainer Union(TagContainer a, TagContainer b)
-        {
-            var result = new TagContainer(a);
-            if (b != null)
+            foreach (var tag in tagsToCheck)
             {
-                result.AddTags(b);
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// 두 컨테이너의 교집합
-        /// </summary>
-        public static TagContainer Intersection(TagContainer a, TagContainer b)
-        {
-            var result = new TagContainer();
-            if (a == null || b == null) return result;
-
-            foreach (var tag in a.tags)
-            {
-                if (b.HasTagExact(tag))
-                {
-                    result.AddTag(tag);
-                }
+                if (HasTag(tag))
+                    return true;
             }
 
-            return result;
+            return false;
         }
 
         /// <summary>
-        /// 두 컨테이너의 차집합 (a - b)
+        /// Checks if the container has exact tags (no more, no less)
         /// </summary>
-        public static TagContainer Difference(TagContainer a, TagContainer b)
+        public bool HasExactTags(IEnumerable<GameplayTag> tagsToCheck)
         {
-            var result = new TagContainer(a);
-            if (b != null)
-            {
-                result.RemoveTags(b);
-            }
-            return result;
-        }
-        #endregion
+            if (tagsToCheck == null)
+                return Count == 0;
 
-        #region Utility Methods
+            var checkList = tagsToCheck.ToList();
+            if (checkList.Count != Count)
+                return false;
+
+            return HasAllTags(checkList);
+        }
+
         /// <summary>
-        /// 컨테이너 복사
+        /// Clears all tags from the container
         /// </summary>
-        public TagContainer Clone()
+        public void Clear()
         {
-            return new TagContainer(this);
+            tags.Clear();
         }
 
         /// <summary>
-        /// 태그 정렬
+        /// Gets all tags that match a category
         /// </summary>
-        public void Sort()
+        public List<GameplayTag> GetTagsByCategory(string category)
         {
-            tags.Sort();
-            OnContainerChanged?.Invoke();
+            if (string.IsNullOrEmpty(category) || tags == null)
+                return new List<GameplayTag>();
+
+            return tags.Where(t => t != null && t.TagName.StartsWith(category + "."))
+                      .ToList();
         }
 
         /// <summary>
-        /// 중복 태그 제거
+        /// Gets a tag by name
         /// </summary>
-        public void RemoveDuplicates()
+        public GameplayTag GetTag(string tagName)
         {
-            var uniqueTags = tags.Distinct().ToList();
-            if (uniqueTags.Count != tags.Count)
-            {
-                tags = uniqueTags;
-                OnContainerChanged?.Invoke();
-            }
+            if (string.IsNullOrEmpty(tagName) || tags == null)
+                return null;
+
+            return tags.FirstOrDefault(t => t != null && t.TagName == tagName);
         }
 
         /// <summary>
-        /// 문자열 배열로 변환
+        /// Combines this container with another
         /// </summary>
-        public string[] ToStringArray()
+        public TagContainer CombineWith(TagContainer other)
         {
-            return tags.Select(t => t.TagName).ToArray();
+            if (other == null) return Clone();
+
+            var combined = Clone();
+            combined.AddTags(other.tags);
+            return combined;
         }
 
         /// <summary>
-        /// 디버그용 문자열 출력
+        /// Creates a new container with tags that exist in both containers
+        /// </summary>
+        public TagContainer IntersectWith(TagContainer other)
+        {
+            var intersection = CreateInstance<TagContainer>();
+
+            if (other == null || tags == null)
+                return intersection;
+
+            intersection.tags = tags.Where(t => other.HasTag(t)).ToList();
+            return intersection;
+        }
+
+        /// <summary>
+        /// Creates a new container with tags from this container that don't exist in the other
+        /// </summary>
+        public TagContainer ExceptWith(TagContainer other)
+        {
+            var difference = CreateInstance<TagContainer>();
+
+            if (tags == null)
+                return difference;
+
+            if (other == null)
+                return Clone();
+
+            difference.tags = tags.Where(t => !other.HasTag(t)).ToList();
+            return difference;
+        }
+
+        /// <summary>
+        /// Checks if this container is a subset of another
+        /// </summary>
+        public bool IsSubsetOf(TagContainer other)
+        {
+            if (other == null) return false;
+            if (tags == null || Count == 0) return true;
+
+            return tags.All(t => other.HasTag(t));
+        }
+
+        /// <summary>
+        /// Checks if this container is a superset of another
+        /// </summary>
+        public bool IsSupersetOf(TagContainer other)
+        {
+            if (other == null) return true;
+            return other.IsSubsetOf(this);
+        }
+
+        /// <summary>
+        /// Converts the container to a formatted string
         /// </summary>
         public override string ToString()
         {
-            if (IsEmpty) return "[]";
-            return $"[{string.Join(", ", tags.Select(t => t.ToString()))}]";
-        }
-        #endregion
+            if (tags == null || Count == 0)
+                return "Empty TagContainer";
 
-        #region IEnumerable Implementation
-        public IEnumerator<GameplayTag> GetEnumerator()
-        {
-            return tags.GetEnumerator();
+            return $"TagContainer({Count} tags): {string.Join(", ", tags.Where(t => t != null).Select(t => t.TagName))}";
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+#if UNITY_EDITOR
+        /// <summary>
+        /// Validates the container in editor
+        /// </summary>
+        public void Validate()
         {
-            return GetEnumerator();
+            // Remove null entries
+            tags?.RemoveAll(t => t == null);
+
+            // Remove duplicates
+            if (tags != null && tags.Count > 0)
+            {
+                tags = tags.Distinct().ToList();
+            }
         }
-        #endregion
+#endif
     }
 }

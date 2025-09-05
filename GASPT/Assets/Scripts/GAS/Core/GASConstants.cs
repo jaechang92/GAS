@@ -87,6 +87,8 @@ namespace GAS.Core
         /// </summary>
         public enum AttributeType
         {
+            None,
+
             // Core Attributes
             Health,
             HealthMax,

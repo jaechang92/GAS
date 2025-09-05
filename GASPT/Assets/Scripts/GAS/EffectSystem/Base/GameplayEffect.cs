@@ -1,5 +1,6 @@
 // ================================
 // File: Assets/Scripts/GAS/EffectSystem/Base/GameplayEffect.cs
+// Complete implementation with Clone method and modification methods
 // ================================
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace GAS.EffectSystem
         [SerializeField] protected string effectName;
         [SerializeField] protected string description;
         [SerializeField] protected Sprite icon;
+        [SerializeField] protected Color effectColor = Color.white;
 
         [Header("Duration Settings")]
         [SerializeField] protected EffectType effectType = EffectType.Instant;
@@ -56,6 +58,7 @@ namespace GAS.EffectSystem
         public string EffectId => effectId;
         public string EffectName => effectName;
         public string Description => description;
+        public Sprite Icon => icon;
         public EffectType EffectType => effectType;
         public DurationPolicy DurationPolicy => durationPolicy;
         public float Duration => duration;
@@ -66,6 +69,238 @@ namespace GAS.EffectSystem
         public TagContainer AssetTags => assetTags;
         public List<AttributeModifier> Modifiers => modifiers;
         public bool RefreshDurationOnStack => refreshDurationOnStack;
+
+        #region Clone and Modification Methods
+
+        /// <summary>
+        /// Creates a deep copy of this effect
+        /// </summary>
+        public virtual GameplayEffect Clone()
+        {
+            // Create instance of the same type
+            var clone = CreateInstance(GetType()) as GameplayEffect;
+
+            // Copy basic fields
+            clone.effectId = effectId;
+            clone.effectName = effectName;
+            clone.description = description;
+            clone.icon = icon;
+
+            // Copy duration settings
+            clone.effectType = effectType;
+            clone.durationPolicy = durationPolicy;
+            clone.duration = duration;
+            clone.period = period;
+            clone.executePeriodicOnApplication = executePeriodicOnApplication;
+
+            // Copy stacking settings
+            clone.stackingPolicy = stackingPolicy;
+            clone.maxStackCount = maxStackCount;
+            clone.refreshDurationOnStack = refreshDurationOnStack;
+            clone.resetPeriodicOnStack = resetPeriodicOnStack;
+
+            // Deep copy tag requirements
+            if (applicationRequirement != null)
+                clone.applicationRequirement = applicationRequirement.Clone();
+            if (ongoingRequirement != null)
+                clone.ongoingRequirement = ongoingRequirement.Clone();
+            if (removalRequirement != null)
+                clone.removalRequirement = removalRequirement.Clone();
+
+            // Deep copy tag containers
+            if (grantedTags != null)
+                clone.grantedTags = CloneTagContainer(grantedTags);
+            if (assetTags != null)
+                clone.assetTags = CloneTagContainer(assetTags);
+
+            // Deep copy modifiers
+            clone.modifiers = new List<AttributeModifier>();
+            if (modifiers != null)
+            {
+                foreach (var modifier in modifiers)
+                {
+                    if (modifier != null)
+                        clone.modifiers.Add(modifier.Clone());
+                }
+            }
+
+            // Copy visual/audio references (these are references, not deep copies)
+            clone.effectPrefab = effectPrefab;
+            clone.applicationSound = applicationSound;
+            clone.removalSound = removalSound;
+
+            // Call virtual method for derived class specific cloning
+            OnClone(clone);
+
+            return clone;
+        }
+
+        /// <summary>
+        /// Override in derived classes to copy specific fields
+        /// </summary>
+        protected virtual void OnClone(GameplayEffect clone)
+        {
+            // Override in derived classes for specific field copying
+        }
+
+        /// <summary>
+        /// Helper method to clone TagContainer
+        /// </summary>
+        private TagContainer CloneTagContainer(TagContainer original)
+        {
+            // Use TagContainer's Clone method
+            return original.Clone();
+        }
+
+        #endregion
+
+        #region Preset Modification Methods
+
+        /// <summary>
+        /// Sets the effect duration
+        /// </summary>
+        public void SetDuration(float value)
+        {
+            duration = Mathf.Max(0f, value);
+        }
+
+        /// <summary>
+        /// Modifies the effect duration by a delta
+        /// </summary>
+        public void ModifyDuration(float delta)
+        {
+            duration = Mathf.Max(0f, duration + delta);
+        }
+
+        /// <summary>
+        /// Sets the effect period for periodic effects
+        /// </summary>
+        public void SetPeriod(float value)
+        {
+            period = Mathf.Max(0.1f, value);
+        }
+
+        /// <summary>
+        /// Modifies the effect period by a delta
+        /// </summary>
+        public void ModifyPeriod(float delta)
+        {
+            period = Mathf.Max(0.1f, period + delta);
+        }
+
+        /// <summary>
+        /// Sets the maximum stack count
+        /// </summary>
+        public void SetMaxStackCount(int value)
+        {
+            maxStackCount = Mathf.Max(1, value);
+        }
+
+        /// <summary>
+        /// Modifies the maximum stack count by a delta
+        /// </summary>
+        public void ModifyMaxStackCount(int delta)
+        {
+            maxStackCount = Mathf.Max(1, maxStackCount + delta);
+        }
+
+        /// <summary>
+        /// Modifies all modifier magnitudes by a multiplier
+        /// </summary>
+        public void ModifyModifierMagnitude(float multiplier)
+        {
+            if (modifiers == null) return;
+
+            foreach (var modifier in modifiers)
+            {
+                if (modifier != null)
+                {
+                    modifier.value *= multiplier;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds modifier magnitude by a flat value
+        /// </summary>
+        public void AddModifierMagnitude(float value)
+        {
+            if (modifiers == null) return;
+
+            foreach (var modifier in modifiers)
+            {
+                if (modifier != null)
+                {
+                    modifier.value += value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the effect name
+        /// </summary>
+        public void SetEffectName(string name)
+        {
+            effectName = name;
+        }
+
+        /// <summary>
+        /// Sets the effect description
+        /// </summary>
+        public void SetDescription(string desc)
+        {
+            description = desc;
+        }
+
+        /// <summary>
+        /// Sets the effect icon
+        /// </summary>
+        public void SetIcon(Sprite newIcon)
+        {
+            icon = newIcon;
+        }
+
+        /// <summary>
+        /// Sets the stacking policy
+        /// </summary>
+        public void SetStackingPolicy(StackingPolicy policy)
+        {
+            stackingPolicy = policy;
+        }
+
+        /// <summary>
+        /// Adds a new modifier to the effect
+        /// </summary>
+        public void AddModifier(AttributeModifier modifier)
+        {
+            if (modifiers == null)
+                modifiers = new List<AttributeModifier>();
+
+            if (modifier != null)
+                modifiers.Add(modifier);
+        }
+
+        /// <summary>
+        /// Removes all modifiers of a specific attribute type
+        /// </summary>
+        public void RemoveModifiersByType(AttributeType type)
+        {
+            if (modifiers == null) return;
+
+            modifiers.RemoveAll(m => m.targetAttributeType == type);
+        }
+
+        /// <summary>
+        /// Clears all modifiers
+        /// </summary>
+        public void ClearModifiers()
+        {
+            modifiers?.Clear();
+        }
+
+        #endregion
+
+        #region Original Abstract Methods
 
         /// <summary>
         /// Checks if the effect can be applied
@@ -153,6 +388,10 @@ namespace GAS.EffectSystem
             return removalRequirement.CheckRequirement(tagComponent);
         }
 
+        #endregion
+
+        #region Helper Methods
+
         /// <summary>
         /// Applies attribute modifiers to the target
         /// </summary>
@@ -208,7 +447,7 @@ namespace GAS.EffectSystem
             {
                 if (tag != null)
                 {
-                    tagComponent.AddTag(tag);
+                    tagComponent.AddTag(tag, this);
                 }
             }
         }
@@ -229,7 +468,7 @@ namespace GAS.EffectSystem
             {
                 if (tag != null)
                 {
-                    tagComponent.RemoveTag(tag);
+                    tagComponent.RemoveTag(tag, this);
                 }
             }
         }
@@ -346,6 +585,15 @@ namespace GAS.EffectSystem
         }
 
         /// <summary>
+        /// Calculates effect magnitude based on context and level
+        /// </summary>
+        protected virtual float CalculateEffectMagnitude()
+        {
+            // Base implementation - can be overridden in derived classes
+            return 1f;
+        }
+
+        /// <summary>
         /// Checks if this effect conflicts with another
         /// </summary>
         public virtual bool ConflictsWith(GameplayEffect other)
@@ -391,7 +639,7 @@ namespace GAS.EffectSystem
 
             // Debuffs show before buffs
             bool isDebuff = assetTags != null &&
-                assetTags.Tags.Contains<GameplayTag>("Debuff");
+                assetTags.Tags.Any(t => t != null && t.TagName.Contains("Debuff"));
 
             return isDebuff ? 100 : 50;
         }
@@ -402,16 +650,91 @@ namespace GAS.EffectSystem
         public virtual Color GetEffectColor()
         {
             // Red for debuffs
-            if (assetTags != null && assetTags.Tags.Contains<GameplayTag>("Debuff"))
+            if (assetTags != null && assetTags.Tags.Any(t => t != null && t.TagName.Contains("Debuff")))
                 return Color.red;
 
             // Green for buffs
-            if (assetTags != null && assetTags.Tags.Contains<GameplayTag>("Buff"))
+            if (assetTags != null && assetTags.Tags.Any(t => t != null && t.TagName.Contains("Buff")))
                 return Color.green;
 
             // Default white
             return Color.white;
         }
+
+        /// <summary>
+        /// Validates the effect configuration
+        /// </summary>
+        public virtual bool ValidateConfiguration()
+        {
+            bool isValid = true;
+
+            // Validate basic info
+            if (string.IsNullOrEmpty(effectName))
+            {
+                Debug.LogWarning($"Effect has no name");
+                isValid = false;
+            }
+
+            // Validate duration settings
+            if (durationPolicy == DurationPolicy.HasDuration && duration <= 0)
+            {
+                Debug.LogWarning($"Effect {effectName} has duration policy but no duration set");
+                isValid = false;
+            }
+
+            // Validate periodic settings
+            if (effectType == EffectType.Periodic && period <= 0)
+            {
+                Debug.LogWarning($"Periodic effect {effectName} has invalid period");
+                isValid = false;
+            }
+
+            // Validate stacking
+            if (stackingPolicy == StackingPolicy.Stack && maxStackCount <= 1)
+            {
+                Debug.LogWarning($"Effect {effectName} has stack policy but max stack count is {maxStackCount}");
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        #endregion
+
+        #region Editor Support
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Called when values are changed in the inspector
+        /// </summary>
+        protected virtual void OnValidate()
+        {
+            // Ensure valid ranges
+            duration = Mathf.Max(0f, duration);
+            period = Mathf.Max(0.1f, period);
+            maxStackCount = Mathf.Max(1, maxStackCount);
+
+            // Auto-set effect type based on configuration
+            if (durationPolicy == DurationPolicy.Instant)
+            {
+                effectType = EffectType.Instant;
+            }
+            else if (durationPolicy == DurationPolicy.Infinite)
+            {
+                effectType = EffectType.Infinite;
+            }
+            else if (period > 0 && period < duration)
+            {
+                effectType = EffectType.Periodic;
+            }
+            else
+            {
+                effectType = EffectType.Duration;
+            }
+        }
+#endif
+
+        #endregion
     }
 
     /// <summary>
@@ -419,8 +742,19 @@ namespace GAS.EffectSystem
     /// </summary>
     public enum DurationPolicy
     {
+        /// <summary>
+        /// Effect applies instantly and doesn't persist
+        /// </summary>
         Instant,
+
+        /// <summary>
+        /// Effect has a specific duration
+        /// </summary>
         HasDuration,
+
+        /// <summary>
+        /// Effect lasts until manually removed
+        /// </summary>
         Infinite
     }
 
@@ -429,9 +763,24 @@ namespace GAS.EffectSystem
     /// </summary>
     public enum StackingPolicy
     {
+        /// <summary>
+        /// Effect cannot stack
+        /// </summary>
         None,
+
+        /// <summary>
+        /// Effect can stack up to max count
+        /// </summary>
         Stack,
+
+        /// <summary>
+        /// New application replaces old one
+        /// </summary>
         Replace,
+
+        /// <summary>
+        /// New application refreshes duration
+        /// </summary>
         Refresh
     }
 
@@ -440,9 +789,24 @@ namespace GAS.EffectSystem
     /// </summary>
     public enum EffectType
     {
+        /// <summary>
+        /// One-time instant effect
+        /// </summary>
         Instant,
+
+        /// <summary>
+        /// Effect that lasts for a duration
+        /// </summary>
         Duration,
+
+        /// <summary>
+        /// Effect that executes periodically
+        /// </summary>
         Periodic,
+
+        /// <summary>
+        /// Effect that lasts forever until removed
+        /// </summary>
         Infinite
     }
 }

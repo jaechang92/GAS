@@ -1,4 +1,6 @@
-// 파일 위치: Assets/Scripts/GAS/TagSystem/TagRequirement.cs
+// ================================
+// File: Assets/Scripts/GAS/TagSystem/TagRequirement.cs
+// ================================
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,297 +9,173 @@ using UnityEngine;
 namespace GAS.TagSystem
 {
     /// <summary>
-    /// 태그 요구사항을 정의하는 클래스
-    /// 능력이나 효과 활성화 조건 검사에 사용
+    /// Defines tag requirements for various game systems
     /// </summary>
     [Serializable]
     public class TagRequirement
     {
-        #region Nested Types
-        /// <summary>
-        /// 태그 조건 타입
-        /// </summary>
-        public enum RequirementType
-        {
-            RequireAll,     // 모든 태그 필요
-            RequireAny,     // 하나 이상 필요
-            RequireNone,    // 아무것도 없어야 함
-            Custom          // 커스텀 로직
-        }
-
-        /// <summary>
-        /// 태그 조건 항목
-        /// </summary>
-        [Serializable]
-        public class RequirementEntry
-        {
-            [SerializeField] private GameplayTag tag;
-            [SerializeField] private bool matchExact = false;
-            [SerializeField] private bool inverted = false;
-
-            public GameplayTag Tag => tag;
-            public bool MatchExact => matchExact;
-            public bool Inverted => inverted;
-
-            public RequirementEntry(GameplayTag tag, bool matchExact = false, bool inverted = false)
-            {
-                this.tag = tag;
-                this.matchExact = matchExact;
-                this.inverted = inverted;
-            }
-
-            public bool Check(TagContainer container)
-            {
-                if (container == null) return inverted;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                return inverted ? !hasTag : hasTag;
-            }
-        }
-        #endregion
-
-        #region Serialized Fields
-        [SerializeField] private string requirementName;
-        [SerializeField] private RequirementType type = RequirementType.RequireAll;
+        [Header("Basic Settings")]
+        [SerializeField] public string requirementName = "New Requirement";
+        [SerializeField] public RequirementType type = RequirementType.RequireAll;
 
         [Header("Required Tags")]
-        [SerializeField] private List<GameplayTag> requiredTags = new List<GameplayTag>();
+        [Tooltip("Tags that must be present")]
+        [SerializeField] public List<GameplayTag> requiredTags = new List<GameplayTag>();
 
         [Header("Blocked Tags")]
-        [SerializeField] private List<GameplayTag> blockedTags = new List<GameplayTag>();
+        [Tooltip("Tags that must NOT be present")]
+        [SerializeField] public List<GameplayTag> blockedTags = new List<GameplayTag>();
 
         [Header("Advanced Requirements")]
-        [SerializeField] private List<RequirementEntry> advancedRequirements = new List<RequirementEntry>();
+        [SerializeField] public List<AdvancedRequirement> advancedRequirements = new List<AdvancedRequirement>();
 
         [Header("Options")]
-        [SerializeField] private bool matchExact = false;
-        [SerializeField] private bool ignoreIfEmpty = true;
-        #endregion
+        [Tooltip("If true, requires exact tag match (no parent/child tags)")]
+        [SerializeField] public bool matchExact = false;
 
-        #region Properties
+        [Tooltip("If true, empty requirements always pass")]
+        [SerializeField] public bool ignoreIfEmpty = true;
+
+        /// <summary>
+        /// Gets whether to ignore if empty
+        /// </summary>
         public bool IgnoreIfEmpty => ignoreIfEmpty;
 
         /// <summary>
-        /// 요구사항 이름
+        /// Check if requirements are met
         /// </summary>
-        public string RequirementName
+        public bool CheckRequirement(TagComponent tagComponent)
         {
-            get => requirementName;
-            set => requirementName = value;
-        }
-
-        /// <summary>
-        /// 요구사항 타입
-        /// </summary>
-        public RequirementType Type
-        {
-            get => type;
-            set => type = value;
-        }
-
-        /// <summary>
-        /// 요구사항이 비어있는지 확인
-        /// </summary>
-        public bool IsEmpty =>
-            requiredTags.Count == 0 &&
-            blockedTags.Count == 0 &&
-            advancedRequirements.Count == 0;
-
-        /// <summary>
-        /// 필수 태그 리스트
-        /// </summary>
-        public IReadOnlyList<GameplayTag> RequiredTags => requiredTags.AsReadOnly();
-
-        /// <summary>
-        /// 차단 태그 리스트
-        /// </summary>
-        public IReadOnlyList<GameplayTag> BlockedTags => blockedTags.AsReadOnly();
-        #endregion
-
-        #region Constructors
-        /// <summary>
-        /// 빈 요구사항 생성
-        /// </summary>
-        public TagRequirement()
-        {
-            requirementName = "New Requirement";
-            type = RequirementType.RequireAll;
-        }
-
-        /// <summary>
-        /// 이름과 타입으로 요구사항 생성
-        /// </summary>
-        public TagRequirement(string name, RequirementType requirementType = RequirementType.RequireAll)
-        {
-            requirementName = name;
-            type = requirementType;
-        }
-
-        /// <summary>
-        /// 태그 배열로 요구사항 생성
-        /// </summary>
-        public TagRequirement(string name, RequirementType requirementType, params GameplayTag[] required)
-        {
-            requirementName = name;
-            type = requirementType;
-            requiredTags = new List<GameplayTag>(required.Where(t => t != null && t.IsValid));
-        }
-        #endregion
-
-        #region Check Methods
-        /// <summary>
-        /// 태그 컨테이너가 요구사항을 만족하는지 검사
-        /// </summary>
-        public bool IsSatisfiedBy(TagContainer container)
-        {
-            // 빈 요구사항 처리
-            if (IsEmpty)
-            {
-                return ignoreIfEmpty;
-            }
-
-            // 차단 태그 검사 (항상 우선)
-            if (!CheckBlockedTags(container))
-            {
+            if (tagComponent == null)
                 return false;
-            }
 
-            // 고급 요구사항 검사
-            if (advancedRequirements.Count > 0)
+            // If ignoreIfEmpty is true and no requirements, pass
+            if (ignoreIfEmpty && IsEmpty())
+                return true;
+
+            // Check blocked tags first (if any blocked tag is present, fail)
+            if (blockedTags != null && blockedTags.Count > 0)
             {
-                if (!CheckAdvancedRequirements(container))
+                foreach (var blockedTag in blockedTags)
                 {
-                    return false;
+                    if (blockedTag != null && tagComponent.HasTag(blockedTag))
+                    {
+                        return false;
+                    }
                 }
             }
 
-            // 필수 태그 검사
-            return CheckRequiredTags(container);
+            // Check required tags based on type
+            bool requirementsMet = CheckRequiredTags(tagComponent);
+
+            // Check advanced requirements if any
+            if (advancedRequirements != null && advancedRequirements.Count > 0)
+            {
+                requirementsMet = requirementsMet && CheckAdvancedRequirements(tagComponent);
+            }
+
+            return requirementsMet;
         }
 
         /// <summary>
-        /// 필수 태그 검사
+        /// Check required tags based on requirement type
         /// </summary>
-        private bool CheckRequiredTags(TagContainer container)
+        private bool CheckRequiredTags(TagComponent tagComponent)
         {
-            if (requiredTags.Count == 0) return true;
+            if (requiredTags == null || requiredTags.Count == 0)
+                return true;
 
             switch (type)
             {
                 case RequirementType.RequireAll:
-                    return CheckRequireAll(container);
+                    return CheckRequireAll(tagComponent);
 
                 case RequirementType.RequireAny:
-                    return CheckRequireAny(container);
+                    return CheckRequireAny(tagComponent);
 
                 case RequirementType.RequireNone:
-                    return CheckRequireNone(container);
+                    return CheckRequireNone(tagComponent);
 
-                case RequirementType.Custom:
-                    return CheckCustom(container);
+                case RequirementType.RequireExact:
+                    return CheckRequireExact(tagComponent);
 
                 default:
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// Check if all required tags are present
+        /// </summary>
+        private bool CheckRequireAll(TagComponent tagComponent)
+        {
+            foreach (var tag in requiredTags)
+            {
+                if (tag != null && !HasTagWithMatch(tagComponent, tag))
+                {
                     return false;
+                }
             }
-        }
-
-        private bool CheckRequireAll(TagContainer container)
-        {
-            if (container == null || container.IsEmpty)
-            {
-                return requiredTags.Count == 0;
-            }
-
-            foreach (var tag in requiredTags)
-            {
-                if (tag == null || !tag.IsValid) continue;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                if (!hasTag) return false;
-            }
-
             return true;
         }
 
-        private bool CheckRequireAny(TagContainer container)
+        /// <summary>
+        /// Check if any required tag is present
+        /// </summary>
+        private bool CheckRequireAny(TagComponent tagComponent)
         {
-            if (container == null || container.IsEmpty)
-            {
-                return requiredTags.Count == 0;
-            }
-
-            foreach (var tag in requiredTags)
-            {
-                if (tag == null || !tag.IsValid) continue;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                if (hasTag) return true;
-            }
-
-            return requiredTags.Count == 0;
-        }
-
-        private bool CheckRequireNone(TagContainer container)
-        {
-            if (container == null || container.IsEmpty)
-            {
+            if (requiredTags.Count == 0)
                 return true;
-            }
 
             foreach (var tag in requiredTags)
             {
-                if (tag == null || !tag.IsValid) continue;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                if (hasTag) return false;
+                if (tag != null && HasTagWithMatch(tagComponent, tag))
+                {
+                    return true;
+                }
             }
+            return false;
+        }
 
+        /// <summary>
+        /// Check if none of the required tags are present
+        /// </summary>
+        private bool CheckRequireNone(TagComponent tagComponent)
+        {
+            foreach (var tag in requiredTags)
+            {
+                if (tag != null && HasTagWithMatch(tagComponent, tag))
+                {
+                    return false;
+                }
+            }
             return true;
         }
 
-        private bool CheckCustom(TagContainer container)
+        /// <summary>
+        /// Check if tags match exactly
+        /// </summary>
+        private bool CheckRequireExact(TagComponent tagComponent)
         {
-            // 커스텀 로직은 상속받아 구현하거나 델리게이트로 처리
-            // 기본적으로는 RequireAll과 동일하게 동작
-            return CheckRequireAll(container);
-        }
+            var componentTags = tagComponent.GetAllTags();
 
-        private bool CheckBlockedTags(TagContainer container)
-        {
-            if (blockedTags.Count == 0) return true;
-            if (container == null || container.IsEmpty) return true;
+            // Must have exact same count
+            if (componentTags.Count != requiredTags.Count)
+                return false;
 
-            foreach (var tag in blockedTags)
+            // All required tags must be present
+            foreach (var tag in requiredTags)
             {
-                if (tag == null || !tag.IsValid) continue;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                if (hasTag) return false;
+                if (tag != null && !componentTags.Any(t => t.TagName == tag.TagName))
+                {
+                    return false;
+                }
             }
 
-            return true;
-        }
-
-        private bool CheckAdvancedRequirements(TagContainer container)
-        {
-            foreach (var requirement in advancedRequirements)
+            // No extra tags allowed
+            foreach (var tag in componentTags)
             {
-                if (!requirement.Check(container))
+                if (!requiredTags.Any(t => t != null && t.TagName == tag.TagName))
                 {
                     return false;
                 }
@@ -305,147 +183,389 @@ namespace GAS.TagSystem
 
             return true;
         }
-        #endregion
 
-        #region Modification Methods
         /// <summary>
-        /// 필수 태그 추가
+        /// Check if tag matches based on match settings
         /// </summary>
-        public void AddRequiredTag(GameplayTag tag)
+        private bool HasTagWithMatch(TagComponent tagComponent, GameplayTag tag)
         {
-            if (tag != null && tag.IsValid && !requiredTags.Contains(tag))
+            if (matchExact)
             {
-                requiredTags.Add(tag);
+                // Exact match - must be the exact tag, not parent/child
+                return tagComponent.HasTag(tag);
+            }
+            else
+            {
+                // Partial match - can match parent/child tags
+                var componentTags = tagComponent.GetAllTags();
+                return componentTags.Any(t =>
+                    t.TagName == tag.TagName ||
+                    t.TagName.StartsWith(tag.TagName + ".") ||
+                    tag.TagName.StartsWith(t.TagName + ".")
+                );
             }
         }
 
         /// <summary>
-        /// 필수 태그 제거
+        /// Check advanced requirements
         /// </summary>
-        public void RemoveRequiredTag(GameplayTag tag)
+        private bool CheckAdvancedRequirements(TagComponent tagComponent)
         {
-            requiredTags.Remove(tag);
-        }
-
-        /// <summary>
-        /// 차단 태그 추가
-        /// </summary>
-        public void AddBlockedTag(GameplayTag tag)
-        {
-            if (tag != null && tag.IsValid && !blockedTags.Contains(tag))
+            foreach (var requirement in advancedRequirements)
             {
-                blockedTags.Add(tag);
+                if (requirement != null && !requirement.CheckRequirement(tagComponent))
+                {
+                    return false;
+                }
             }
+            return true;
         }
 
         /// <summary>
-        /// 차단 태그 제거
+        /// Check if this requirement is empty
         /// </summary>
-        public void RemoveBlockedTag(GameplayTag tag)
+        public bool IsEmpty()
         {
-            blockedTags.Remove(tag);
+            bool hasNoRequired = requiredTags == null || requiredTags.Count == 0 || requiredTags.All(t => t == null);
+            bool hasNoBlocked = blockedTags == null || blockedTags.Count == 0 || blockedTags.All(t => t == null);
+            bool hasNoAdvanced = advancedRequirements == null || advancedRequirements.Count == 0;
+
+            return hasNoRequired && hasNoBlocked && hasNoAdvanced;
         }
 
         /// <summary>
-        /// 고급 요구사항 추가
+        /// Get all tags involved in this requirement
         /// </summary>
-        public void AddAdvancedRequirement(GameplayTag tag, bool matchExact, bool inverted)
+        public List<GameplayTag> GetAllTags()
         {
-            if (tag != null && tag.IsValid)
+            var allTags = new List<GameplayTag>();
+
+            if (requiredTags != null)
+                allTags.AddRange(requiredTags.Where(t => t != null));
+
+            if (blockedTags != null)
+                allTags.AddRange(blockedTags.Where(t => t != null));
+
+            if (advancedRequirements != null)
             {
-                advancedRequirements.Add(new RequirementEntry(tag, matchExact, inverted));
+                foreach (var req in advancedRequirements)
+                {
+                    if (req != null)
+                        allTags.AddRange(req.GetAllTags());
+                }
             }
+
+            return allTags.Distinct().ToList();
         }
 
         /// <summary>
-        /// 모든 요구사항 초기화
-        /// </summary>
-        public void Clear()
-        {
-            requiredTags.Clear();
-            blockedTags.Clear();
-            advancedRequirements.Clear();
-        }
-        #endregion
-
-        #region Utility Methods
-        /// <summary>
-        /// 요구사항 복사
+        /// Clone this requirement
         /// </summary>
         public TagRequirement Clone()
         {
-            var clone = new TagRequirement(requirementName, type)
+            var clone = new TagRequirement
             {
+                requirementName = requirementName,
+                type = type,
                 requiredTags = new List<GameplayTag>(requiredTags),
                 blockedTags = new List<GameplayTag>(blockedTags),
-                advancedRequirements = new List<RequirementEntry>(advancedRequirements),
                 matchExact = matchExact,
                 ignoreIfEmpty = ignoreIfEmpty
             };
+
+            if (advancedRequirements != null)
+            {
+                clone.advancedRequirements = new List<AdvancedRequirement>();
+                foreach (var req in advancedRequirements)
+                {
+                    if (req != null)
+                        clone.advancedRequirements.Add(req.Clone());
+                }
+            }
 
             return clone;
         }
 
         /// <summary>
-        /// 충족되지 않은 태그 가져오기
+        /// Get a description of this requirement
         /// </summary>
-        public List<GameplayTag> GetMissingTags(TagContainer container)
+        public string GetDescription()
         {
-            var missing = new List<GameplayTag>();
+            if (IsEmpty())
+                return "No requirements";
 
-            if (type == RequirementType.RequireAll)
+            var description = $"{requirementName}: ";
+
+            switch (type)
             {
-                foreach (var tag in requiredTags)
-                {
-                    if (tag == null || !tag.IsValid) continue;
-
-                    bool hasTag = matchExact ?
-                        container?.HasTagExact(tag) ?? false :
-                        container?.HasTag(tag) ?? false;
-
-                    if (!hasTag)
-                    {
-                        missing.Add(tag);
-                    }
-                }
+                case RequirementType.RequireAll:
+                    description += "Requires ALL tags";
+                    break;
+                case RequirementType.RequireAny:
+                    description += "Requires ANY tag";
+                    break;
+                case RequirementType.RequireNone:
+                    description += "Requires NONE of tags";
+                    break;
+                case RequirementType.RequireExact:
+                    description += "Requires EXACT tags";
+                    break;
             }
 
-            return missing;
+            if (requiredTags?.Count > 0)
+            {
+                description += "\nRequired: " + string.Join(", ", requiredTags.Where(t => t != null).Select(t => t.TagName));
+            }
+
+            if (blockedTags?.Count > 0)
+            {
+                description += "\nBlocked: " + string.Join(", ", blockedTags.Where(t => t != null).Select(t => t.TagName));
+            }
+
+            return description;
+        }
+    }
+
+    /// <summary>
+    /// Type of tag requirement
+    /// </summary>
+    public enum RequirementType
+    {
+        /// <summary>
+        /// All required tags must be present
+        /// </summary>
+        RequireAll,
+
+        /// <summary>
+        /// At least one required tag must be present
+        /// </summary>
+        RequireAny,
+
+        /// <summary>
+        /// None of the required tags can be present
+        /// </summary>
+        RequireNone,
+
+        /// <summary>
+        /// Tags must match exactly (no more, no less)
+        /// </summary>
+        RequireExact
+    }
+
+    /// <summary>
+    /// Advanced requirement for complex tag logic
+    /// </summary>
+    [Serializable]
+    public class AdvancedRequirement
+    {
+        [Header("Requirement Settings")]
+        [SerializeField] public string name = "Advanced Requirement";
+        [SerializeField] public AdvancedRequirementType type = AdvancedRequirementType.TagCount;
+
+        [Header("Tag Count Requirements")]
+        [Tooltip("For TagCount type")]
+        [SerializeField] public GameplayTag targetTag;
+        [SerializeField] public ComparisonOperator comparison = ComparisonOperator.GreaterOrEqual;
+        [SerializeField] public int count = 1;
+
+        [Header("Category Requirements")]
+        [Tooltip("For CategoryCount type")]
+        [SerializeField] public string categoryName;
+        [SerializeField] public int minCategoryCount = 1;
+
+        [Header("Complex Requirements")]
+        [Tooltip("For nested requirements")]
+        [SerializeField] public List<TagRequirement> nestedRequirements = new List<TagRequirement>();
+        [SerializeField] public LogicalOperator logicalOperator = LogicalOperator.And;
+
+        /// <summary>
+        /// Check if this advanced requirement is met
+        /// </summary>
+        public bool CheckRequirement(TagComponent tagComponent)
+        {
+            if (tagComponent == null)
+                return false;
+
+            switch (type)
+            {
+                case AdvancedRequirementType.TagCount:
+                    return CheckTagCount(tagComponent);
+
+                case AdvancedRequirementType.CategoryCount:
+                    return CheckCategoryCount(tagComponent);
+
+                case AdvancedRequirementType.Nested:
+                    return CheckNestedRequirements(tagComponent);
+
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
-        /// 차단된 태그 중 보유한 태그 가져오기
+        /// Check tag count requirement
         /// </summary>
-        public List<GameplayTag> GetBlockingTags(TagContainer container)
+        private bool CheckTagCount(TagComponent tagComponent)
         {
-            var blocking = new List<GameplayTag>();
+            if (targetTag == null)
+                return false;
 
-            if (container == null || container.IsEmpty) return blocking;
+            int tagCount = tagComponent.GetTagCount(targetTag);
 
-            foreach (var tag in blockedTags)
+            switch (comparison)
             {
-                if (tag == null || !tag.IsValid) continue;
-
-                bool hasTag = matchExact ?
-                    container.HasTagExact(tag) :
-                    container.HasTag(tag);
-
-                if (hasTag)
-                {
-                    blocking.Add(tag);
-                }
+                case ComparisonOperator.Equal:
+                    return tagCount == count;
+                case ComparisonOperator.NotEqual:
+                    return tagCount != count;
+                case ComparisonOperator.Greater:
+                    return tagCount > count;
+                case ComparisonOperator.GreaterOrEqual:
+                    return tagCount >= count;
+                case ComparisonOperator.Less:
+                    return tagCount < count;
+                case ComparisonOperator.LessOrEqual:
+                    return tagCount <= count;
+                default:
+                    return false;
             }
-
-            return blocking;
         }
 
         /// <summary>
-        /// 디버그용 문자열 출력
+        /// Check category count requirement
         /// </summary>
-        public override string ToString()
+        private bool CheckCategoryCount(TagComponent tagComponent)
         {
-            return $"{requirementName} [{type}] Required: {requiredTags.Count}, Blocked: {blockedTags.Count}";
+            if (string.IsNullOrEmpty(categoryName))
+                return false;
+
+            var categoryTags = tagComponent.GetTagsByCategory(categoryName);
+            return categoryTags.Count >= minCategoryCount;
         }
-        #endregion
+
+        /// <summary>
+        /// Check nested requirements
+        /// </summary>
+        private bool CheckNestedRequirements(TagComponent tagComponent)
+        {
+            if (nestedRequirements == null || nestedRequirements.Count == 0)
+                return true;
+
+            if (logicalOperator == LogicalOperator.And)
+            {
+                // All nested requirements must pass
+                foreach (var req in nestedRequirements)
+                {
+                    if (req != null && !req.CheckRequirement(tagComponent))
+                        return false;
+                }
+                return true;
+            }
+            else // LogicalOperator.Or
+            {
+                // At least one nested requirement must pass
+                foreach (var req in nestedRequirements)
+                {
+                    if (req != null && req.CheckRequirement(tagComponent))
+                        return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get all tags from this requirement
+        /// </summary>
+        public List<GameplayTag> GetAllTags()
+        {
+            var tags = new List<GameplayTag>();
+
+            if (targetTag != null)
+                tags.Add(targetTag);
+
+            if (nestedRequirements != null)
+            {
+                foreach (var req in nestedRequirements)
+                {
+                    if (req != null)
+                        tags.AddRange(req.GetAllTags());
+                }
+            }
+
+            return tags;
+        }
+
+        /// <summary>
+        /// Clone this advanced requirement
+        /// </summary>
+        public AdvancedRequirement Clone()
+        {
+            var clone = new AdvancedRequirement
+            {
+                name = name,
+                type = type,
+                targetTag = targetTag,
+                comparison = comparison,
+                count = count,
+                categoryName = categoryName,
+                minCategoryCount = minCategoryCount,
+                logicalOperator = logicalOperator
+            };
+
+            if (nestedRequirements != null)
+            {
+                clone.nestedRequirements = new List<TagRequirement>();
+                foreach (var req in nestedRequirements)
+                {
+                    if (req != null)
+                        clone.nestedRequirements.Add(req.Clone());
+                }
+            }
+
+            return clone;
+        }
+    }
+
+    /// <summary>
+    /// Type of advanced requirement
+    /// </summary>
+    public enum AdvancedRequirementType
+    {
+        /// <summary>
+        /// Check tag stack count
+        /// </summary>
+        TagCount,
+
+        /// <summary>
+        /// Check number of tags in a category
+        /// </summary>
+        CategoryCount,
+
+        /// <summary>
+        /// Check nested requirements
+        /// </summary>
+        Nested
+    }
+
+    /// <summary>
+    /// Comparison operators
+    /// </summary>
+    public enum ComparisonOperator
+    {
+        Equal,
+        NotEqual,
+        Greater,
+        GreaterOrEqual,
+        Less,
+        LessOrEqual
+    }
+
+    /// <summary>
+    /// Logical operators for combining requirements
+    /// </summary>
+    public enum LogicalOperator
+    {
+        And,
+        Or
     }
 }

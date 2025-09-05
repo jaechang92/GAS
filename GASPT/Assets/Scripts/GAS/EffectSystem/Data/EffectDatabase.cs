@@ -1,9 +1,11 @@
 // ================================
 // File: Assets/Scripts/GAS/EffectSystem/Data/EffectDatabase.cs
+// Updated to use Clone method and modification APIs
 // ================================
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace GAS.EffectSystem
@@ -301,10 +303,10 @@ namespace GAS.EffectSystem
             if (baseEffect == null)
                 return null;
 
-            // Create instance from base effect
-            var effect = Instantiate(baseEffect);
+            // Use the Clone method to create a safe copy
+            var effect = baseEffect.Clone();
 
-            // Apply modifications
+            // Apply modifications using the new modification API
             foreach (var mod in modifications)
             {
                 mod.ApplyToEffect(effect, level);
@@ -329,19 +331,116 @@ namespace GAS.EffectSystem
 
         public void ApplyToEffect(GameplayEffect effect, int level)
         {
-            // This would need reflection or specific implementation
-            // based on the modification type
+            if (effect == null) return;
+
             switch (type)
             {
                 case ModificationType.Duration:
-                    // Modify duration
+                    ApplyDurationModification(effect, level);
                     break;
+
                 case ModificationType.Magnitude:
-                    // Modify magnitude
+                    ApplyMagnitudeModification(effect, level);
                     break;
+
                 case ModificationType.StackCount:
-                    // Modify stack count
+                    ApplyStackCountModification(effect, level);
                     break;
+
+                case ModificationType.Period:
+                    ApplyPeriodModification(effect, level);
+                    break;
+
+                case ModificationType.Custom:
+                    ApplyCustomModification(effect, level);
+                    break;
+            }
+        }
+
+        private void ApplyDurationModification(GameplayEffect effect, int level)
+        {
+            switch (curveValue != null && curveValue.keys.Length > 0)
+            {
+                case true:
+                    // Use curve for level-based scaling
+                    float curveValue = this.curveValue.Evaluate((float)level);
+                    effect.SetDuration(floatValue * curveValue);
+                    break;
+                default:
+                    // Simple linear scaling
+                    effect.SetDuration(floatValue * level);
+                    break;
+            }
+        }
+
+        private void ApplyMagnitudeModification(GameplayEffect effect, int level)
+        {
+            switch (curveValue != null && curveValue.keys.Length > 0)
+            {
+                case true:
+                    // Use curve for level-based scaling
+                    float curveMultiplier = this.curveValue.Evaluate((float)level);
+                    effect.ModifyModifierMagnitude(1f + (floatValue * curveMultiplier));
+                    break;
+                default:
+                    // Simple multiplier based on level
+                    float multiplier = 1f + (floatValue * (level - 1));
+                    effect.ModifyModifierMagnitude(multiplier);
+                    break;
+            }
+        }
+
+        private void ApplyStackCountModification(GameplayEffect effect, int level)
+        {
+            // Stack count increases with level
+            int additionalStacks = intValue * (level - 1);
+            effect.ModifyMaxStackCount(additionalStacks);
+        }
+
+        private void ApplyPeriodModification(GameplayEffect effect, int level)
+        {
+            switch (curveValue != null && curveValue.keys.Length > 0)
+            {
+                case true:
+                    // Use curve for period scaling
+                    float curveValue = this.curveValue.Evaluate((float)level);
+                    effect.SetPeriod(floatValue * curveValue);
+                    break;
+                default:
+                    // Period decreases as level increases (faster ticks)
+                    float periodReduction = floatValue * (level - 1) * 0.1f;
+                    effect.ModifyPeriod(-periodReduction);
+                    break;
+            }
+        }
+
+        private void ApplyCustomModification(GameplayEffect effect, int level)
+        {
+            // For custom modifications, you might want to extend this
+            // or create specific modification methods in GameplayEffect
+
+            if (!string.IsNullOrEmpty(propertyName))
+            {
+                // Example custom modifications
+                switch (propertyName.ToLower())
+                {
+                    case "name":
+                        effect.SetEffectName($"{effect.EffectName} Lv.{level}");
+                        break;
+
+                    case "description":
+                        effect.SetDescription($"{effect.Description} (Level {level})");
+                        break;
+
+                    case "refreshduration":
+                        // This would need a setter in GameplayEffect
+                        // effect.SetRefreshDurationOnStack(boolValue);
+                        break;
+
+                    default:
+                        Debug.LogWarning($"Unknown custom property: {propertyName}");
+                        break;
+                }
             }
         }
     }

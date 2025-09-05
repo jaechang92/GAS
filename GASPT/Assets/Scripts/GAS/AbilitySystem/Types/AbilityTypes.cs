@@ -60,6 +60,8 @@ namespace GAS.AbilitySystem
     [Serializable]
     public struct AbilityCostData
     {
+        private string attributeName;
+
         public AttributeType attributeType;
 
         /// <summary>
@@ -75,6 +77,7 @@ namespace GAS.AbilitySystem
 
         public AbilityCostData(AttributeType type, float baseAmount)
         {
+            this.attributeName = type.ToString();
             this.attributeType = type;
             this.baseAmount = baseAmount;
             this.levelMultiplier = 1.0f;
@@ -86,6 +89,15 @@ namespace GAS.AbilitySystem
         public float CalculateCost(int level)
         {
             return baseAmount * Mathf.Pow(levelMultiplier, level - 1);
+        }
+
+        public string GetAttributeName()
+        {
+            if (string.IsNullOrEmpty(attributeName) && attributeType != AttributeType.None)
+            {
+                attributeName = attributeType.ToString();
+            }
+            return attributeName;
         }
     }
 

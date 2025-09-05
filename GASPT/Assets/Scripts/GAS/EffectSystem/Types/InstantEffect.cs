@@ -395,7 +395,7 @@ namespace GAS.EffectSystem
         /// </summary>
         protected bool HasTag(string tagName)
         {
-            return grantedTags != null && grantedTags.Exists(t => t.TagName.Contains(tagName));
+            return grantedTags != null && grantedTags.Tags.Exists(t => t.TagName.Contains(tagName));
         }
 
         /// <summary>
