@@ -18,7 +18,7 @@ namespace GAS.TagSystem
         #endregion
 
         #region Serialized Fields
-        [SerializeField] private string tagString;
+        [SerializeField] private string tagName;
         #endregion
 
         #region Private Fields
@@ -31,7 +31,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 태그 문자열
         /// </summary>
-        public string TagString => tagString;
+        public string TagName => tagName;
 
         /// <summary>
         /// 태그의 깊이 (점으로 구분된 세그먼트 수)
@@ -40,7 +40,7 @@ namespace GAS.TagSystem
         {
             get
             {
-                if (depth == 0 && !string.IsNullOrEmpty(tagString))
+                if (depth == 0 && !string.IsNullOrEmpty(tagName))
                 {
                     ParseTag();
                 }
@@ -55,7 +55,7 @@ namespace GAS.TagSystem
         {
             get
             {
-                if (segments == null && !string.IsNullOrEmpty(tagString))
+                if (segments == null && !string.IsNullOrEmpty(tagName))
                 {
                     ParseTag();
                 }
@@ -66,7 +66,7 @@ namespace GAS.TagSystem
         /// <summary>
         /// 태그가 비어있는지 확인
         /// </summary>
-        public bool IsEmpty => string.IsNullOrEmpty(tagString) || tagString == EMPTY_TAG;
+        public bool IsEmpty => string.IsNullOrEmpty(tagName) || tagName == EMPTY_TAG;
 
         /// <summary>
         /// 태그가 유효한지 확인
@@ -80,7 +80,7 @@ namespace GAS.TagSystem
         /// </summary>
         public GameplayTag()
         {
-            tagString = EMPTY_TAG;
+            tagName = EMPTY_TAG;
             segments = Array.Empty<string>();
             depth = 0;
         }
@@ -92,13 +92,13 @@ namespace GAS.TagSystem
         {
             if (string.IsNullOrEmpty(tag))
             {
-                tagString = EMPTY_TAG;
+                tagName = EMPTY_TAG;
                 segments = Array.Empty<string>();
                 depth = 0;
             }
             else
             {
-                tagString = tag.Trim();
+                tagName = tag.Trim();
                 ParseTag();
             }
         }
@@ -111,7 +111,7 @@ namespace GAS.TagSystem
         public bool MatchesExact(GameplayTag other)
         {
             if (other == null) return false;
-            return string.Equals(tagString, other.tagString, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(tagName, other.tagName, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace GAS.TagSystem
             if (string.IsNullOrEmpty(childSegment)) return this;
             if (IsEmpty) return new GameplayTag(childSegment);
 
-            return new GameplayTag($"{tagString}{SEPARATOR}{childSegment}");
+            return new GameplayTag($"{tagName}{SEPARATOR}{childSegment}");
         }
 
         /// <summary>
@@ -228,14 +228,14 @@ namespace GAS.TagSystem
         #region Private Methods
         private void ParseTag()
         {
-            if (string.IsNullOrEmpty(tagString))
+            if (string.IsNullOrEmpty(tagName))
             {
                 segments = Array.Empty<string>();
                 depth = 0;
                 return;
             }
 
-            segments = tagString.Split(SEPARATOR);
+            segments = tagName.Split(SEPARATOR);
             depth = segments.Length;
 
             // Validate segments
@@ -244,7 +244,7 @@ namespace GAS.TagSystem
                 segments[i] = segments[i].Trim();
                 if (string.IsNullOrEmpty(segments[i]))
                 {
-                    Debug.LogError($"[GAS] Invalid tag format: {tagString}");
+                    Debug.LogError($"[GAS] Invalid tag format: {tagName}");
                     segments = Array.Empty<string>();
                     depth = 0;
                     return;
@@ -252,7 +252,7 @@ namespace GAS.TagSystem
             }
 
             // Cache hash code
-            cachedHashCode = tagString.GetHashCode();
+            cachedHashCode = tagName.GetHashCode();
         }
         #endregion
 
@@ -260,7 +260,7 @@ namespace GAS.TagSystem
         public bool Equals(GameplayTag other)
         {
             if (other == null) return false;
-            return string.Equals(tagString, other.tagString, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(tagName, other.tagName, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)
@@ -270,9 +270,9 @@ namespace GAS.TagSystem
 
         public override int GetHashCode()
         {
-            if (cachedHashCode == 0 && !string.IsNullOrEmpty(tagString))
+            if (cachedHashCode == 0 && !string.IsNullOrEmpty(tagName))
             {
-                cachedHashCode = tagString.GetHashCode();
+                cachedHashCode = tagName.GetHashCode();
             }
             return cachedHashCode;
         }
@@ -280,12 +280,12 @@ namespace GAS.TagSystem
         public int CompareTo(GameplayTag other)
         {
             if (other == null) return 1;
-            return string.Compare(tagString, other.tagString, StringComparison.OrdinalIgnoreCase);
+            return string.Compare(tagName, other.tagName, StringComparison.OrdinalIgnoreCase);
         }
 
         public override string ToString()
         {
-            return tagString ?? EMPTY_TAG;
+            return tagName ?? EMPTY_TAG;
         }
         #endregion
 
@@ -304,7 +304,7 @@ namespace GAS.TagSystem
 
         public static implicit operator string(GameplayTag tag)
         {
-            return tag?.tagString ?? EMPTY_TAG;
+            return tag?.tagName ?? EMPTY_TAG;
         }
 
         public static implicit operator GameplayTag(string tagString)

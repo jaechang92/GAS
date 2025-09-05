@@ -1,447 +1,477 @@
-// 파일 위치: Assets/Scripts/GAS/AttributeSystem/AttributeSet.cs
+// ================================
+// File: Assets/Scripts/GAS/AttributeSystem/AttributeSet.cs
+// ================================
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using GAS.Core;
+using static GAS.Core.GASConstants;
 
 namespace GAS.AttributeSystem
 {
     /// <summary>
-    /// 여러 속성을 관리하는 속성 집합 클래스
+    /// Base class for defining a set of attributes
     /// </summary>
     [Serializable]
-    public class AttributeSet
+    public abstract class AttributeSet
     {
-        #region Serialized Fields
-        [SerializeField] private string setName = "Default Set";
-        [SerializeField] private List<BaseAttribute> attributes = new List<BaseAttribute>();
-        #endregion
+        [Header("Set Information")]
+        [SerializeField] protected string setName;
+        [SerializeField] protected string description;
 
-        #region Private Fields
-        private Dictionary<GASConstants.AttributeType, BaseAttribute> attributeMap;
-        private Dictionary<string, BaseAttribute> attributeNameMap;
-        #endregion
+        // Attribute storage
+        protected Dictionary<AttributeType, BaseAttribute> attributes;
+        protected AttributeSetComponent ownerComponent;
 
-        #region Events
-        /// <summary>
-        /// 속성이 추가되었을 때
-        /// </summary>
-        public event Action<BaseAttribute> OnAttributeAdded;
+        // Properties
+        public string SetName => setName;
+        public string Description => description;
+        public Dictionary<AttributeType, BaseAttribute> Attributes => attributes;
 
         /// <summary>
-        /// 속성이 제거되었을 때
-        /// </summary>
-        public event Action<BaseAttribute> OnAttributeRemoved;
-
-        /// <summary>
-        /// 속성값이 변경되었을 때
-        /// </summary>
-        public event Action<BaseAttribute, float, float> OnAttributeValueChanged;
-        #endregion
-
-        #region Properties
-        /// <summary>
-        /// 속성 집합 이름
-        /// </summary>
-        public string SetName
-        {
-            get => setName;
-            set => setName = value;
-        }
-
-        /// <summary>
-        /// 속성 개수
-        /// </summary>
-        public int Count => attributes.Count;
-
-        /// <summary>
-        /// 속성 리스트 (읽기 전용)
-        /// </summary>
-        public IReadOnlyList<BaseAttribute> Attributes => attributes.AsReadOnly();
-        #endregion
-
-        #region Constructors
-        /// <summary>
-        /// 기본 생성자
+        /// Constructor
         /// </summary>
         public AttributeSet()
         {
-            setName = "New Attribute Set";
-            InitializeMaps();
+            attributes = new Dictionary<AttributeType, BaseAttribute>();
+            InitializeDefaultAttributes();
         }
 
         /// <summary>
-        /// 이름 지정 생성자
+        /// Initialize this attribute set with an owner component
         /// </summary>
-        public AttributeSet(string name)
+        public virtual void Initialize(AttributeSetComponent component)
         {
-            setName = name;
-            InitializeMaps();
-        }
+            ownerComponent = component;
 
-        /// <summary>
-        /// 복사 생성자
-        /// </summary>
-        public AttributeSet(AttributeSet other)
-        {
-            setName = other.setName + " (Copy)";
-            InitializeMaps();
-
-            foreach (var attribute in other.attributes)
+            // Initialize each attribute
+            foreach (var kvp in attributes)
             {
-                AddAttribute(attribute.Clone());
+                kvp.Value.Initialize(component);
+            }
+
+            // Setup attribute relationships
+            SetupAttributeRelationships();
+
+            // Register attributes with component
+            RegisterAttributes();
+        }
+
+        /// <summary>
+        /// Initialize default attributes - Override in derived classes
+        /// </summary>
+        protected abstract void InitializeDefaultAttributes();
+
+        /// <summary>
+        /// Setup relationships between attributes
+        /// </summary>
+        protected virtual void SetupAttributeRelationships()
+        {
+            // Override in derived classes to setup dependencies
+        }
+
+        /// <summary>
+        /// Register attributes with the owner component
+        /// </summary>
+        protected virtual void RegisterAttributes()
+        {
+            if (ownerComponent == null) return;
+
+            foreach (var kvp in attributes)
+            {
+                ownerComponent.RegisterAttribute(kvp.Key, kvp.Value);
             }
         }
-        #endregion
 
-        #region Initialization
-        private void InitializeMaps()
+        /// <summary>
+        /// Add an attribute to this set
+        /// </summary>
+        protected void AddAttribute(AttributeType type, BaseAttribute attribute)
         {
-            attributeMap = new Dictionary<GASConstants.AttributeType, BaseAttribute>();
-            attributeNameMap = new Dictionary<string, BaseAttribute>();
+            if (attribute == null) return;
+
+            attribute.AttributeType = type;
+            attributes[type] = attribute;
         }
 
-        private void RebuildMaps()
+        /// <summary>
+        /// Get an attribute by type
+        /// </summary>
+        public BaseAttribute GetAttribute(AttributeType type)
         {
-            attributeMap.Clear();
-            attributeNameMap.Clear();
+            attributes.TryGetValue(type, out var attribute);
+            return attribute;
+        }
 
-            foreach (var attribute in attributes)
+        /// <summary>
+        /// Check if this set contains an attribute
+        /// </summary>
+        public bool HasAttribute(AttributeType type)
+        {
+            return attributes.ContainsKey(type);
+        }
+
+        /// <summary>
+        /// Pre-attribute change callback
+        /// </summary>
+        public virtual void PreAttributeChange(AttributeType type, float oldValue, float newValue)
+        {
+            // Override in derived classes for custom logic
+        }
+
+        /// <summary>
+        /// Post-attribute change callback
+        /// </summary>
+        public virtual void PostAttributeChange(AttributeType type, float oldValue, float newValue)
+        {
+            // Override in derived classes for custom logic
+        }
+    }
+
+    /// <summary>
+    /// Character attribute set - common RPG attributes
+    /// </summary>
+    [Serializable]
+    public class CharacterAttributeSet : AttributeSet
+    {
+        protected override void InitializeDefaultAttributes()
+        {
+            setName = "Character Attributes";
+            description = "Basic character attributes for RPG gameplay";
+
+            // Vital Attributes
+            AddAttribute(AttributeType.Health, new VitalAttribute
             {
-                if (attribute != null)
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+
+            AddAttribute(AttributeType.HealthMax, new BaseAttribute
+            {
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 1f,
+                MaxValue = 9999f
+            });
+
+            AddAttribute(AttributeType.Mana, new VitalAttribute
+            {
+                BaseValue = 50f,
+                CurrentValue = 50f,
+                MinValue = 0f,
+                MaxValue = 50f
+            });
+
+            AddAttribute(AttributeType.ManaMax, new BaseAttribute
+            {
+                BaseValue = 50f,
+                CurrentValue = 50f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            AddAttribute(AttributeType.Stamina, new VitalAttribute
+            {
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+
+            AddAttribute(AttributeType.StaminaMax, new BaseAttribute
+            {
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            // Combat Attributes
+            AddAttribute(AttributeType.AttackPower, new BaseAttribute
+            {
+                BaseValue = 10f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            AddAttribute(AttributeType.AttackSpeed, new BaseAttribute
+            {
+                BaseValue = 1f,
+                MinValue = 0.1f,
+                MaxValue = 5f
+            });
+
+            AddAttribute(AttributeType.DefensePower, new BaseAttribute
+            {
+                BaseValue = 5f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            AddAttribute(AttributeType.Armor, new BaseAttribute
+            {
+                BaseValue = 10f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            AddAttribute(AttributeType.MagicResistance, new BaseAttribute
+            {
+                BaseValue = 10f,
+                MinValue = 0f,
+                MaxValue = 9999f
+            });
+
+            // Critical Attributes
+            AddAttribute(AttributeType.CriticalChance, new BaseAttribute
+            {
+                BaseValue = 5f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+
+            AddAttribute(AttributeType.CriticalDamage, new BaseAttribute
+            {
+                BaseValue = 50f,
+                MinValue = 0f,
+                MaxValue = 500f
+            });
+
+            // Movement Attributes
+            AddAttribute(AttributeType.MovementSpeed, new BaseAttribute
+            {
+                BaseValue = 5f,
+                MinValue = 0f,
+                MaxValue = 20f
+            });
+
+            // Defensive Attributes
+            AddAttribute(AttributeType.Block, new BaseAttribute
+            {
+                BaseValue = 0f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+
+            AddAttribute(AttributeType.Dodge, new BaseAttribute
+            {
+                BaseValue = 0f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+
+            AddAttribute(AttributeType.Tenacity, new BaseAttribute
+            {
+                BaseValue = 0f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
+        }
+
+        protected override void SetupAttributeRelationships()
+        {
+            // Setup max value relationships
+            if (HasAttribute(AttributeType.Health) && HasAttribute(AttributeType.HealthMax))
+            {
+                var health = GetAttribute(AttributeType.Health);
+                var healthMax = GetAttribute(AttributeType.HealthMax);
+                health.MaxValue = healthMax.CurrentValue;
+            }
+
+            if (HasAttribute(AttributeType.Mana) && HasAttribute(AttributeType.ManaMax))
+            {
+                var mana = GetAttribute(AttributeType.Mana);
+                var manaMax = GetAttribute(AttributeType.ManaMax);
+                mana.MaxValue = manaMax.CurrentValue;
+            }
+
+            if (HasAttribute(AttributeType.Stamina) && HasAttribute(AttributeType.StaminaMax))
+            {
+                var stamina = GetAttribute(AttributeType.Stamina);
+                var staminaMax = GetAttribute(AttributeType.StaminaMax);
+                stamina.MaxValue = staminaMax.CurrentValue;
+            }
+        }
+
+        public override void PostAttributeChange(AttributeType type, float oldValue, float newValue)
+        {
+            // Update max values when max attributes change
+            switch (type)
+            {
+                case AttributeType.HealthMax:
+                    if (HasAttribute(AttributeType.Health))
+                    {
+                        var health = GetAttribute(AttributeType.Health);
+                        health.MaxValue = newValue;
+                        health.CurrentValue = Mathf.Min(health.CurrentValue, newValue);
+                    }
+                    break;
+
+                case AttributeType.ManaMax:
+                    if (HasAttribute(AttributeType.Mana))
+                    {
+                        var mana = GetAttribute(AttributeType.Mana);
+                        mana.MaxValue = newValue;
+                        mana.CurrentValue = Mathf.Min(mana.CurrentValue, newValue);
+                    }
+                    break;
+
+                case AttributeType.StaminaMax:
+                    if (HasAttribute(AttributeType.Stamina))
+                    {
+                        var stamina = GetAttribute(AttributeType.Stamina);
+                        stamina.MaxValue = newValue;
+                        stamina.CurrentValue = Mathf.Min(stamina.CurrentValue, newValue);
+                    }
+                    break;
+
+                case AttributeType.Health:
+                    // Check for death
+                    if (newValue <= 0 && oldValue > 0)
+                    {
+                        FireDeathEvent();
+                    }
+                    // Check for revival
+                    else if (newValue > 0 && oldValue <= 0)
+                    {
+                        FireReviveEvent();
+                    }
+                    break;
+            }
+        }
+
+        private void FireDeathEvent()
+        {
+            if (ownerComponent != null)
+            {
+                GASEvents.Trigger(GASEventType.Death, new DeathEventData
                 {
-                    attributeMap[attribute.AttributeType] = attribute;
-                    attributeNameMap[attribute.AttributeName] = attribute;
+                    source = ownerComponent.gameObject
+                });
+            }
+        }
+
+        private void FireReviveEvent()
+        {
+            if (ownerComponent != null)
+            {
+                GASEvents.Trigger(GASEventType.Respawn, new RespawnEventData
+                {
+                    source = ownerComponent.gameObject,
+                    respawnHealth = GetAttribute(AttributeType.Health)?.CurrentValue ?? 0
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Vital attribute with regeneration support
+    /// </summary>
+    [Serializable]
+    public class VitalAttribute : BaseAttribute
+    {
+        [Header("Regeneration")]
+        [SerializeField] private float baseRegenRate = 0f;
+        [SerializeField] private float regenDelay = 5f;
+        [SerializeField] private float lastDamageTime;
+
+        public float BaseRegenRate
+        {
+            get => baseRegenRate;
+            set => baseRegenRate = value;
+        }
+
+        public float RegenDelay
+        {
+            get => regenDelay;
+            set => regenDelay = value;
+        }
+
+        public override void Initialize(AttributeSetComponent component)
+        {
+            base.Initialize(component);
+            regenerates = baseRegenRate > 0;
+            regenRate = baseRegenRate;
+        }
+
+        public override void ProcessRegeneration(float deltaTime)
+        {
+            if (!regenerates || isReadOnly || isDerived)
+                return;
+
+            // Check regen delay
+            if (Time.time - lastDamageTime < regenDelay)
+                return;
+
+            // Apply regeneration
+            float regenAmount = regenRate * deltaTime;
+            CurrentValue = Mathf.Min(CurrentValue + regenAmount, MaxValue);
+        }
+
+        public void OnDamageTaken()
+        {
+            lastDamageTime = Time.time;
+        }
+    }
+
+    /// <summary>
+    /// Custom attribute set for specific game mechanics
+    /// </summary>
+    [Serializable]
+    public class CustomAttributeSet : AttributeSet
+    {
+        [SerializeField] private List<AttributeDefinition> customAttributes = new List<AttributeDefinition>();
+
+        public CustomAttributeSet(List<AttributeDefinition> definitions)
+        {
+            customAttributes = definitions;
+        }
+
+        protected override void InitializeDefaultAttributes()
+        {
+            setName = "Custom Attributes";
+            description = "Custom attribute set for specific gameplay";
+
+            foreach (var definition in customAttributes)
+            {
+                if (definition != null)
+                {
+                    var attribute = definition.CreateAttribute();
+                    AddAttribute(definition.type, attribute);
                 }
             }
         }
+    }
 
-        /// <summary>
-        /// 기본 속성 세트 초기화 (HP, Mana, Stamina)
-        /// </summary>
-        public void InitializeDefaultAttributes()
+    /// <summary>
+    /// Minimal attribute set for simple entities
+    /// </summary>
+    [Serializable]
+    public class MinimalAttributeSet : AttributeSet
+    {
+        protected override void InitializeDefaultAttributes()
         {
-            AddAttribute(new BaseAttribute("Health", GASConstants.AttributeType.Health, 100f, 0f, 100f));
-            AddAttribute(new BaseAttribute("MaxHealth", GASConstants.AttributeType.MaxHealth, 100f, 1f, 9999f));
+            setName = "Minimal Attributes";
+            description = "Minimal attribute set for simple entities";
 
-            AddAttribute(new BaseAttribute("Mana", GASConstants.AttributeType.Mana, 50f, 0f, 50f));
-            AddAttribute(new BaseAttribute("MaxMana", GASConstants.AttributeType.MaxMana, 50f, 0f, 9999f));
-
-            AddAttribute(new BaseAttribute("Stamina", GASConstants.AttributeType.Stamina, 100f, 0f, 100f));
-            AddAttribute(new BaseAttribute("MaxStamina", GASConstants.AttributeType.MaxStamina, 100f, 0f, 9999f));
-        }
-
-        /// <summary>
-        /// 전투 속성 초기화
-        /// </summary>
-        public void InitializeCombatAttributes()
-        {
-            AddAttribute(new BaseAttribute("AttackPower", GASConstants.AttributeType.AttackPower, 10f, 0f, 9999f));
-            AddAttribute(new BaseAttribute("SpellPower", GASConstants.AttributeType.SpellPower, 10f, 0f, 9999f));
-            AddAttribute(new BaseAttribute("Defense", GASConstants.AttributeType.Defense, 5f, 0f, 9999f));
-            AddAttribute(new BaseAttribute("MagicResist", GASConstants.AttributeType.MagicResist, 5f, 0f, 9999f));
-
-            AddAttribute(new BaseAttribute("CriticalChance", GASConstants.AttributeType.CriticalChance, 5f, 0f, 100f));
-            AddAttribute(new BaseAttribute("CriticalDamage", GASConstants.AttributeType.CriticalDamage, 150f, 100f, 500f));
-            AddAttribute(new BaseAttribute("AttackSpeed", GASConstants.AttributeType.AttackSpeed, 1f, 0.1f, 5f));
-            AddAttribute(new BaseAttribute("CastSpeed", GASConstants.AttributeType.CastSpeed, 1f, 0.1f, 5f));
-        }
-        #endregion
-
-        #region Attribute Management
-        /// <summary>
-        /// 속성 추가
-        /// </summary>
-        public bool AddAttribute(BaseAttribute attribute)
-        {
-            if (attribute == null) return false;
-
-            // 중복 체크
-            if (HasAttribute(attribute.AttributeType))
+            // Only Health
+            AddAttribute(AttributeType.Health, new BaseAttribute
             {
-                Debug.LogWarning($"[GAS] Attribute type {attribute.AttributeType} already exists in set");
-                return false;
-            }
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 0f,
+                MaxValue = 100f
+            });
 
-            attributes.Add(attribute);
-
-            if (attributeMap == null) InitializeMaps();
-            attributeMap[attribute.AttributeType] = attribute;
-            attributeNameMap[attribute.AttributeName] = attribute;
-
-            // 이벤트 연결
-            attribute.OnValueChanged += (oldValue, newValue) => HandleAttributeValueChanged(attribute, oldValue, newValue);
-
-            OnAttributeAdded?.Invoke(attribute);
-
-            return true;
-        }
-
-        /// <summary>
-        /// 속성 제거
-        /// </summary>
-        public bool RemoveAttribute(GASConstants.AttributeType type)
-        {
-            var attribute = GetAttribute(type);
-            if (attribute == null) return false;
-
-            attributes.Remove(attribute);
-            attributeMap.Remove(type);
-            attributeNameMap.Remove(attribute.AttributeName);
-
-            OnAttributeRemoved?.Invoke(attribute);
-
-            return true;
-        }
-
-        /// <summary>
-        /// 모든 속성 제거
-        /// </summary>
-        public void ClearAttributes()
-        {
-            attributes.Clear();
-            attributeMap?.Clear();
-            attributeNameMap?.Clear();
-        }
-        #endregion
-
-        #region Attribute Access
-        /// <summary>
-        /// 타입으로 속성 가져오기
-        /// </summary>
-        public BaseAttribute GetAttribute(GASConstants.AttributeType type)
-        {
-            if (attributeMap == null) RebuildMaps();
-
-            attributeMap.TryGetValue(type, out BaseAttribute attribute);
-            return attribute;
-        }
-
-        /// <summary>
-        /// 이름으로 속성 가져오기
-        /// </summary>
-        public BaseAttribute GetAttribute(string name)
-        {
-            if (attributeNameMap == null) RebuildMaps();
-
-            attributeNameMap.TryGetValue(name, out BaseAttribute attribute);
-            return attribute;
-        }
-
-        public List<BaseAttribute> GetAllAttributes()
-        {
-            return attributes;
-        }
-
-        /// <summary>
-        /// 속성 보유 확인
-        /// </summary>
-        public bool HasAttribute(GASConstants.AttributeType type)
-        {
-            if (attributeMap == null) RebuildMaps();
-            return attributeMap.ContainsKey(type);
-        }
-
-        /// <summary>
-        /// 속성값 가져오기
-        /// </summary>
-        public float GetAttributeValue(GASConstants.AttributeType type)
-        {
-            var attribute = GetAttribute(type);
-            return attribute?.CurrentValue ?? 0f;
-        }
-
-        /// <summary>
-        /// 속성 기본값 가져오기
-        /// </summary>
-        public float GetAttributeBaseValue(GASConstants.AttributeType type)
-        {
-            var attribute = GetAttribute(type);
-            return attribute?.BaseValue ?? 0f;
-        }
-        #endregion
-
-        #region Attribute Modification
-        /// <summary>
-        /// 속성값 설정
-        /// </summary>
-        public bool SetAttributeValue(GASConstants.AttributeType type, float value)
-        {
-            var attribute = GetAttribute(type);
-            if (attribute == null) return false;
-
-            attribute.CurrentValue = value;
-            return true;
-        }
-
-        /// <summary>
-        /// 속성 기본값 설정
-        /// </summary>
-        public bool SetAttributeBaseValue(GASConstants.AttributeType type, float value)
-        {
-            var attribute = GetAttribute(type);
-            if (attribute == null) return false;
-
-            attribute.BaseValue = value;
-            return true;
-        }
-
-        /// <summary>
-        /// 속성값 더하기
-        /// </summary>
-        public bool AddAttributeValue(GASConstants.AttributeType type, float amount)
-        {
-            var attribute = GetAttribute(type);
-            if (attribute == null) return false;
-
-            attribute.AddValue(amount);
-            return true;
-        }
-
-        /// <summary>
-        /// 수정자 적용
-        /// </summary>
-        public bool ApplyModifier(AttributeModifier modifier)
-        {
-            if (modifier == null) return false;
-
-            var attribute = GetAttribute(modifier.TargetAttribute);
-            if (attribute == null) return false;
-
-            attribute.AddModifier(modifier);
-            return true;
-        }
-
-        /// <summary>
-        /// 수정자 제거
-        /// </summary>
-        public bool RemoveModifier(AttributeModifier modifier)
-        {
-            if (modifier == null) return false;
-
-            var attribute = GetAttribute(modifier.TargetAttribute);
-            if (attribute == null) return false;
-
-            return attribute.RemoveModifier(modifier);
-        }
-
-        /// <summary>
-        /// 소스별 모든 수정자 제거
-        /// </summary>
-        public int RemoveAllModifiersFromSource(object source)
-        {
-            int totalRemoved = 0;
-
-            foreach (var attribute in attributes)
+            AddAttribute(AttributeType.HealthMax, new BaseAttribute
             {
-                totalRemoved += attribute.RemoveModifiersBySource(source);
-            }
-
-            return totalRemoved;
+                BaseValue = 100f,
+                CurrentValue = 100f,
+                MinValue = 1f,
+                MaxValue = 9999f
+            });
         }
-
-        /// <summary>
-        /// 모든 수정자 제거
-        /// </summary>
-        public void ClearAllModifiers()
-        {
-            foreach (var attribute in attributes)
-            {
-                attribute.ClearModifiers();
-            }
-        }
-        #endregion
-
-        #region Utility Methods
-        /// <summary>
-        /// 속성 집합 복사
-        /// </summary>
-        public AttributeSet Clone()
-        {
-            return new AttributeSet(this);
-        }
-
-        /// <summary>
-        /// 모든 속성을 기본값으로 리셋
-        /// </summary>
-        public void ResetAllToBase()
-        {
-            foreach (var attribute in attributes)
-            {
-                attribute.ResetToBase();
-            }
-        }
-
-        /// <summary>
-        /// 리소스 속성들을 최대값으로 설정
-        /// </summary>
-        public void RestoreResources()
-        {
-            // Health
-            var health = GetAttribute(GASConstants.AttributeType.Health);
-            var maxHealth = GetAttribute(GASConstants.AttributeType.MaxHealth);
-            if (health != null && maxHealth != null)
-            {
-                health.CurrentValue = maxHealth.CurrentValue;
-            }
-
-            // Mana
-            var mana = GetAttribute(GASConstants.AttributeType.Mana);
-            var maxMana = GetAttribute(GASConstants.AttributeType.MaxMana);
-            if (mana != null && maxMana != null)
-            {
-                mana.CurrentValue = maxMana.CurrentValue;
-            }
-
-            // Stamina
-            var stamina = GetAttribute(GASConstants.AttributeType.Stamina);
-            var maxStamina = GetAttribute(GASConstants.AttributeType.MaxStamina);
-            if (stamina != null && maxStamina != null)
-            {
-                stamina.CurrentValue = maxStamina.CurrentValue;
-            }
-        }
-
-        /// <summary>
-        /// 디버그 정보 출력
-        /// </summary>
-        public void PrintDebugInfo()
-        {
-            Debug.Log($"[GAS] AttributeSet: {setName}");
-            Debug.Log($"  Attributes: {attributes.Count}");
-
-            foreach (var attribute in attributes)
-            {
-                Debug.Log($"  - {attribute}");
-            }
-        }
-
-        public override string ToString()
-        {
-            return $"AttributeSet: {setName} ({attributes.Count} attributes)";
-        }
-        #endregion
-
-        #region Event Handlers
-        private void HandleAttributeValueChanged(BaseAttribute attribute, float oldValue, float newValue)
-        {
-            OnAttributeValueChanged?.Invoke(attribute, oldValue, newValue);
-
-            // GAS 이벤트 시스템에 전파
-            GASEvents.TriggerAttributeChanged(null, attribute.AttributeName, oldValue, newValue);
-
-            // 특수 상태 체크
-            if (attribute.IsAtMax)
-            {
-                GASEvents.TriggerAttributeMaxed(null, attribute.AttributeName);
-            }
-
-            if (attribute.IsAtMin)
-            {
-                GASEvents.TriggerAttributeZero(null, attribute.AttributeName);
-            }
-        }
-        #endregion
     }
 }

@@ -238,20 +238,6 @@ namespace GAS.Core
     }
 
     /// <summary>
-    /// Base class for GAS event data
-    /// </summary>
-    public abstract class GASEventData
-    {
-        public float timestamp;
-        public GameObject source;
-
-        protected GASEventData()
-        {
-            timestamp = Time.time;
-        }
-    }
-
-    /// <summary>
     /// Generic event data for simple events
     /// </summary>
     public class SimpleGASEventData : GASEventData

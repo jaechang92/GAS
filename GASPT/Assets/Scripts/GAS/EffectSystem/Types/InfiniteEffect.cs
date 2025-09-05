@@ -1,787 +1,912 @@
-using GAS.AttributeSystem;
-using GAS.Core;
-using GAS.TagSystem;
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Types/InfiniteEffect.cs
+// ================================
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using UnityEngine;
+using GAS.Core;
+using GAS.TagSystem;
+using GAS.AttributeSystem;
+using static GAS.Core.GASConstants;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// 수동으로 제거하기 전까지 영구적으로 지속되는 GameplayEffect
-    /// 예: 패시브 스킬, 영구 버프, 저주, 장비 효과
+    /// Effect that lasts indefinitely until removed
     /// </summary>
-    [CreateAssetMenu(fileName = "InfiniteEffect", menuName = "GAS/Effects/Infinite Effect", order = 4)]
+    [CreateAssetMenu(fileName = "InfiniteEffect", menuName = "GAS/Effects/Infinite Effect")]
     public class InfiniteEffect : GameplayEffect
     {
-        #region Additional Fields
+        [Header("Infinite Effect Settings")]
+        [SerializeField] protected bool canBeDispelled = true;
+        [SerializeField] protected bool persistThroughDeath = false;
+        [SerializeField] protected bool persistThroughSceneChange = false;
+        [SerializeField] protected float dispelResistance = 0f; // 0-100%
 
-        [Header("=== Infinite Effect Settings ===")]
-        [SerializeField] private bool canBeDispelled = true;
-        [SerializeField] private bool persistThroughDeath = false;
-        [SerializeField] private bool persistThroughSceneChange = false;
-        [SerializeField] private int dispelResistance = 0; // 해제 저항 레벨
+        [Header("Auto-Removal Conditions")]
+        [SerializeField] protected TagRequirement autoRemovalCondition;
+        [SerializeField] protected List<GameplayTag> removalTriggerTags = new List<GameplayTag>();
+        [SerializeField] protected float conditionalCheckInterval = 1f;
 
-        [Header("=== Conditional Removal ===")]
-        [SerializeField] private TagRequirement autoRemovalCondition;
-        [SerializeField] private List<GameplayTag> removalTriggerTags = new List<GameplayTag>();
-        [SerializeField] private float conditionalCheckInterval = 1f;
+        [Header("Dynamic Modifiers")]
+        [SerializeField] protected bool useDynamicModifiers = false;
+        [SerializeField] protected AnimationCurve modifierGrowthCurve;
+        [SerializeField] protected float growthUpdateInterval = 1f;
+        [SerializeField] protected float maxGrowthMultiplier = 5f;
 
-        [Header("=== Dynamic Modifiers ===")]
-        [SerializeField] private bool useDynamicModifiers = false;
-        [SerializeField] private AnimationCurve modifierGrowthCurve = AnimationCurve.Linear(0f, 1f, 60f, 2f);
-        [SerializeField] private float growthUpdateInterval = 1f;
-        [SerializeField] private float maxGrowthMultiplier = 5f;
+        [Header("Aura System")]
+        [SerializeField] protected bool isAuraEffect = false;
+        [SerializeField] protected float auraRadius = 5f;
+        [SerializeField] protected LayerMask auraTargetLayers = -1;
+        [SerializeField] protected TagRequirement auraTargetRequirement;
+        [SerializeField] protected GameplayEffect auraGrantedEffect;
 
-        [Header("=== Aura Effect ===")]
-        [SerializeField] private bool isAuraEffect = false;
-        [SerializeField] private float auraRadius = 5f;
-        [SerializeField] private LayerMask auraTargetLayers = -1;
-        [SerializeField] private TagRequirement auraTargetRequirement;
-        [SerializeField] private InfiniteEffect auraGrantedEffect;
+        [Header("Passive Display")]
+        [SerializeField] protected bool showAsPassive = true;
+        [SerializeField] protected int displayPriority = 0;
+        [SerializeField] protected Sprite passiveIcon;
 
-        [Header("=== UI & Feedback ===")]
-        [SerializeField] private bool showAsPassive = true;
-        [SerializeField] private int displayPriority = 0;
-        [SerializeField] private Sprite passiveIcon;
-
-        #endregion
-
-        #region properties
-
-        public bool CanBeDispelled => canBeDispelled;
-
-        #endregion
-
-        #region Runtime Data
-
-        // 활성 인스턴스 추적
-        private static Dictionary<GameObject, List<EffectInstance>> activeInfiniteEffects =
-            new Dictionary<GameObject, List<EffectInstance>>();
-
-        #endregion
-
-        #region Constructor
-
-        public InfiniteEffect()
-        {
-            effectType = EffectType.Infinite;
-            durationPolicy = EffectDurationPolicy.Infinite;
-            duration = 0f;
-            
-        }
-
-        #endregion
-
-        #region Override Methods
+        // Runtime tracking
+        protected Dictionary<GameObject, InfiniteEffectState> activeStates = new Dictionary<GameObject, InfiniteEffectState>();
+        protected Dictionary<GameObject, List<GameObject>> auraTargets = new Dictionary<GameObject, List<GameObject>>();
 
         /// <summary>
-        /// Infinite 효과 적용
+        /// Apply the infinite effect
         /// </summary>
-        public override bool Apply(EffectContext context, GameObject target)
+        public override void OnApply(EffectContext context)
         {
-            if (!CanApply(context, target))
+            if (context == null || context.target == null) return;
+
+            var state = GetOrCreateState(context.target);
+            state.context = context;
+            state.appliedTime = Time.time;
+            state.lastGrowthUpdate = Time.time;
+            state.lastConditionalCheck = Time.time;
+
+            // Apply granted tags
+            ApplyGrantedTags(context);
+
+            // Apply initial modifiers
+            ApplyInitialModifiers(context, state);
+
+            // Setup aura if enabled
+            if (isAuraEffect)
             {
-                Debug.LogWarning($"[InfiniteEffect] Cannot apply {effectName} to {target.name}");
-                return false;
+                SetupAura(context.target, state);
             }
 
-            try
+            // Spawn visual effects
+            state.visualEffect = SpawnVisualEffect(context);
+            if (state.visualEffect != null)
             {
-                // 기존 인스턴스 확인
-                EffectInstance existingInstance = FindExistingInstance(target);
-
-                if (existingInstance != null)
-                {
-                    return HandleStacking(existingInstance, context, target);
-                }
-
-                // 새 인스턴스 생성
-                var instance = CreateInfiniteInstance(context, target);
-
-                // Modifier 적용
-                ApplyModifiers(instance, context, target);
-
-                // 태그 부여
-                GrantTags(target);
-
-                // 시각/청각 효과
-                PlayApplicationEffects(instance, target);
-
-                // 조건부 제거 추적 시작
-                if (autoRemovalCondition != null || removalTriggerTags.Count > 0)
-                {
-                    StartConditionalTracking(instance, target);
-                }
-
-                // Dynamic modifier 추적 시작
-                if (useDynamicModifiers)
-                {
-                    StartDynamicModifierTracking(instance, target);
-                }
-
-                // Aura 추적 시작
-                if (isAuraEffect)
-                {
-                    StartAuraTracking(instance, target);
-                }
-
-                // 이벤트 발생
-                TriggerApplicationEvents(instance, target);
-
-                // 인스턴스 저장
-                StoreInstance(target, instance);
-
-                Debug.Log($"[InfiniteEffect] Applied {effectName} to {target.name} (Infinite duration)");
-                return true;
+                // Make visual effect persistent
+                DontDestroyOnLoad(state.visualEffect);
             }
-            catch (Exception e)
+
+            // Play application sound
+            PlayApplicationSound(context);
+
+            // Register for persistent events
+            if (!persistThroughDeath)
             {
-                Debug.LogError($"[InfiniteEffect] Failed to apply {effectName}: {e.Message}");
-                return false;
+                RegisterForDeathEvent(context.target);
             }
+
+            if (persistThroughSceneChange)
+            {
+                RegisterForSceneChange(context.target);
+            }
+
+            // Fire applied event
+            FireEffectAppliedEvent(context);
+
+            Debug.Log($"[InfiniteEffect] Applied {effectName} to {context.target.name} (Infinite Duration)");
         }
 
         /// <summary>
-        /// Infinite 효과 제거
+        /// Remove the infinite effect
         /// </summary>
-        public override bool Remove(EffectContext context, GameObject target)
+        public override void OnRemove(EffectContext context)
         {
-            var instance = FindExistingInstance(target);
-            if (instance == null)
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            // Clean up aura
+            if (isAuraEffect)
             {
-                Debug.LogWarning($"[InfiniteEffect] No instance of {effectName} found on {target.name}");
-                return false;
+                CleanupAura(context.target, state);
             }
 
-            // Dispel 가능 여부 확인
+            // Remove modifiers
+            RemoveModifiers(context);
+
+            // Remove granted tags
+            RemoveGrantedTags(context);
+
+            // Clean up visual effects
+            if (state.visualEffect != null)
+            {
+                Destroy(state.visualEffect);
+            }
+
+            // Play removal sound
+            PlayRemovalSound(context);
+
+            // Unregister from events
+            if (!persistThroughDeath)
+            {
+                UnregisterFromDeathEvent(context.target);
+            }
+
+            if (persistThroughSceneChange)
+            {
+                UnregisterFromSceneChange(context.target);
+            }
+
+            // Fire removed event
+            FireEffectRemovedEvent(context);
+
+            // Remove state
+            activeStates.Remove(context.target);
+
+            Debug.Log($"[InfiniteEffect] Removed {effectName} from {context.target.name}");
+        }
+
+        /// <summary>
+        /// Update tick for the infinite effect
+        /// </summary>
+        public override void OnTick(EffectContext context, float deltaTime)
+        {
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            state.elapsedTime += deltaTime;
+
+            // Check conditional removal
+            if (Time.time - state.lastConditionalCheck >= conditionalCheckInterval)
+            {
+                state.lastConditionalCheck = Time.time;
+
+                if (CheckAutoRemovalConditions(context))
+                {
+                    var effectComponent = context.target.GetComponent<EffectComponent>();
+                    effectComponent?.RemoveEffect(this);
+                    return;
+                }
+            }
+
+            // Update dynamic modifiers
+            if (useDynamicModifiers && Time.time - state.lastGrowthUpdate >= growthUpdateInterval)
+            {
+                state.lastGrowthUpdate = Time.time;
+                UpdateDynamicModifiers(context, state);
+            }
+
+            // Update aura
+            if (isAuraEffect)
+            {
+                UpdateAura(context.target, state);
+            }
+
+            // Update visual effect
+            UpdateVisualEffect(state);
+
+            // Check ongoing requirements
+            if (!CheckOngoing(context))
+            {
+                var effectComponent = context.target.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+            }
+        }
+
+        /// <summary>
+        /// Handle periodic execution for infinite effects
+        /// </summary>
+        public override void OnPeriodic(EffectContext context)
+        {
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            // Execute periodic logic
+            ApplyPeriodicModifiers(context, state);
+
+            // Fire periodic event
+            GASEvents.Trigger(GASEventType.EffectPeriodic, new EffectPeriodicEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                tickCount = ++state.periodicCount,
+                source = context.instigator
+            });
+
+            Debug.Log($"[InfiniteEffect] Periodic tick #{state.periodicCount} for {effectName}");
+        }
+
+        /// <summary>
+        /// Handle stacking for infinite effects
+        /// </summary>
+        public override void OnStack(EffectContext context, int newStackCount, int previousStackCount)
+        {
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            state.stackCount = newStackCount;
+
+            // Update modifiers for new stack count
+            UpdateStackModifiers(context, state, newStackCount);
+
+            // Update aura strength if applicable
+            if (isAuraEffect)
+            {
+                state.auraStrength = CalculateAuraStrength(newStackCount);
+            }
+
+            // Fire stack event
+            GASEvents.Trigger(GASEventType.EffectStackChanged, new EffectStackEventData
+            {
+                effect = this,
+                target = context.target,
+                newStackCount = newStackCount,
+                previousStackCount = previousStackCount,
+                source = context.target
+            });
+
+            Debug.Log($"[InfiniteEffect] {effectName} stacked to {newStackCount}x on {context.target.name}");
+        }
+
+        /// <summary>
+        /// Check if this effect can be dispelled
+        /// </summary>
+        public virtual bool CanBeDispelled(float dispelPower = 100f)
+        {
             if (!canBeDispelled)
-            {
-                Debug.LogWarning($"[InfiniteEffect] {effectName} cannot be dispelled");
                 return false;
-            }
 
-            // Dispel 저항 체크
+            // Check dispel resistance
             if (dispelResistance > 0)
             {
-                int dispelPower = context.GetData<int>("DispelPower", 0);
-                if (dispelPower < dispelResistance)
-                {
-                    Debug.Log($"[InfiniteEffect] Dispel failed - Required power: {dispelResistance}, Actual: {dispelPower}");
-                    return false;
-                }
+                float successChance = dispelPower * (1f - dispelResistance / 100f);
+                return UnityEngine.Random.Range(0f, 100f) < successChance;
             }
-
-            return RemoveInstance(instance, target, true);
-        }
-
-        /// <summary>
-        /// InfiniteEffect는 주기적 실행을 지원하지 않음
-        /// </summary>
-        public override bool ExecutePeriodic(EffectContext context, GameObject target)
-        {
-            Debug.LogWarning($"[InfiniteEffect] {effectName} does not support periodic execution");
-            return false;
-        }
-
-        #endregion
-
-        #region Private Methods - Core
-
-        /// <summary>
-        /// Infinite 인스턴스 생성
-        /// </summary>
-        private EffectInstance CreateInfiniteInstance(EffectContext context, GameObject target)
-        {
-            var instance = new EffectInstance(this, context);
-            instance.RemainingDuration = float.MaxValue; // 무한
-            return instance;
-        }
-
-        /// <summary>
-        /// Modifier 적용
-        /// </summary>
-        private void ApplyModifiers(EffectInstance instance, EffectContext context, GameObject target)
-        {
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null || modifiers.Count == 0) return;
-
-            float magnitude = context.Magnitude;
-
-            foreach (var config in modifiers)
-            {
-                if (config == null) continue;
-
-                var modifier = new AttributeModifier(
-                    config.operation,
-                    config.value * magnitude,
-                    config.priority
-                );
-
-                // Modifier 적용 및 ID 저장
-                var modifierId = attributeComponent.AddModifier(
-                    config.attributeType,
-                    modifier,
-                    instance
-                );
-
-                instance.AddModifierId(modifierId);
-
-                Debug.Log($"[InfiniteEffect] Applied infinite modifier to {config.attributeType}: {modifier.Operation} {modifier.Value}");
-            }
-        }
-
-        /// <summary>
-        /// Modifier 제거
-        /// </summary>
-        private void RemoveModifiers(EffectInstance instance, GameObject target)
-        {
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null) return;
-
-            attributeComponent.RemoveAllModifiersFromSource(instance);
-
-            Debug.Log($"[InfiniteEffect] Removed all modifiers from {target.name}");
-        }
-
-        #endregion
-
-        #region Private Methods - Conditional Removal
-
-        /// <summary>
-        /// 조건부 제거 추적
-        /// </summary>
-        private async void StartConditionalTracking(EffectInstance instance, GameObject target)
-        {
-            var cts = new CancellationTokenSource();
-            instance.Context.SetData("ConditionalCancellationToken", cts);
-
-            try
-            {
-                while (!instance.IsExpired)
-                {
-                    await Awaitable.WaitForSecondsAsync(conditionalCheckInterval, cts.Token);
-
-                    if (target == null || instance.IsExpired)
-                        break;
-
-                    // 자동 제거 조건 체크
-                    if (autoRemovalCondition != null)
-                    {
-                        var tagComponent = target.GetComponent<TagComponent>();
-                        if (tagComponent != null && tagComponent.SatisfiesRequirement(autoRemovalCondition))
-                        {
-                            Debug.Log($"[InfiniteEffect] Auto-removal condition met for {effectName}");
-                            RemoveInstance(instance, target, false);
-                            break;
-                        }
-                    }
-
-                    // 제거 트리거 태그 체크
-                    if (removalTriggerTags.Count > 0)
-                    {
-                        var tagComponent = target.GetComponent<TagComponent>();
-                        if (tagComponent != null)
-                        {
-                            foreach (var triggerTag in removalTriggerTags)
-                            {
-                                if (tagComponent.HasTag(triggerTag))
-                                {
-                                    Debug.Log($"[InfiniteEffect] Removal trigger tag found: {triggerTag.TagString}");
-                                    RemoveInstance(instance, target, false);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log($"[InfiniteEffect] Conditional tracking cancelled for {effectName}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[InfiniteEffect] Error in conditional tracking: {e.Message}");
-            }
-            finally
-            {
-                cts?.Dispose();
-            }
-        }
-
-        #endregion
-
-        #region Private Methods - Dynamic Modifiers
-
-        /// <summary>
-        /// Dynamic modifier 추적
-        /// </summary>
-        private async void StartDynamicModifierTracking(EffectInstance instance, GameObject target)
-        {
-            var cts = new CancellationTokenSource();
-            instance.Context.SetData("DynamicCancellationToken", cts);
-
-            try
-            {
-                float elapsedTime = 0f;
-
-                while (!instance.IsExpired)
-                {
-                    await Awaitable.WaitForSecondsAsync(growthUpdateInterval, cts.Token);
-
-                    if (target == null || instance.IsExpired)
-                        break;
-
-                    elapsedTime += growthUpdateInterval;
-
-                    // Growth curve 기반 modifier 업데이트
-                    float growthMultiplier = modifierGrowthCurve.Evaluate(elapsedTime);
-                    growthMultiplier = Mathf.Min(growthMultiplier, maxGrowthMultiplier);
-
-                    UpdateDynamicModifiers(instance, target, growthMultiplier);
-
-                    Debug.Log($"[InfiniteEffect] Dynamic modifier updated: {effectName} - Multiplier: {growthMultiplier:F2}x");
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log($"[InfiniteEffect] Dynamic tracking cancelled for {effectName}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[InfiniteEffect] Error in dynamic tracking: {e.Message}");
-            }
-            finally
-            {
-                cts?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Dynamic modifiers 업데이트
-        /// </summary>
-        private void UpdateDynamicModifiers(EffectInstance instance, GameObject target, float multiplier)
-        {
-            // 기존 modifiers 제거
-            RemoveModifiers(instance, target);
-
-            // 새로운 multiplier로 재적용
-            var context = instance.Context;
-            context.Magnitude = multiplier;
-            ApplyModifiers(instance, context, target);
-        }
-
-        #endregion
-
-        #region Private Methods - Aura System
-
-        /// <summary>
-        /// Aura 추적 시작
-        /// </summary>
-        private async void StartAuraTracking(EffectInstance instance, GameObject target)
-        {
-            var cts = new CancellationTokenSource();
-            instance.Context.SetData("AuraCancellationToken", cts);
-
-            var affectedTargets = new HashSet<GameObject>();
-            instance.Context.SetData("AuraAffectedTargets", affectedTargets);
-
-            try
-            {
-                float checkInterval = 0.5f; // 0.5초마다 체크
-
-                while (!instance.IsExpired)
-                {
-                    await Awaitable.WaitForSecondsAsync(checkInterval, cts.Token);
-
-                    if (target == null || instance.IsExpired)
-                        break;
-
-                    // 범위 내 대상 찾기
-                    var colliders = Physics.OverlapSphere(
-                        target.transform.position,
-                        auraRadius,
-                        auraTargetLayers
-                    );
-
-                    var currentTargets = new HashSet<GameObject>();
-
-                    foreach (var collider in colliders)
-                    {
-                        if (collider.gameObject == target) continue; // 자신 제외
-
-                        var potentialTarget = collider.gameObject;
-
-                        // Tag requirement 체크
-                        if (auraTargetRequirement != null)
-                        {
-                            var tagComponent = potentialTarget.GetComponent<TagComponent>();
-                            if (tagComponent == null || !tagComponent.SatisfiesRequirement(auraTargetRequirement))
-                                continue;
-                        }
-
-                        currentTargets.Add(potentialTarget);
-
-                        // 새로운 대상에게 aura effect 적용
-                        if (!affectedTargets.Contains(potentialTarget))
-                        {
-                            ApplyAuraEffect(potentialTarget, instance);
-                            affectedTargets.Add(potentialTarget);
-                        }
-                    }
-
-                    // 범위를 벗어난 대상에서 aura effect 제거
-                    var targetsToRemove = new List<GameObject>();
-                    foreach (var affected in affectedTargets)
-                    {
-                        if (!currentTargets.Contains(affected))
-                        {
-                            RemoveAuraEffect(affected, instance);
-                            targetsToRemove.Add(affected);
-                        }
-                    }
-
-                    foreach (var toRemove in targetsToRemove)
-                    {
-                        affectedTargets.Remove(toRemove);
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log($"[InfiniteEffect] Aura tracking cancelled for {effectName}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[InfiniteEffect] Error in aura tracking: {e.Message}");
-            }
-            finally
-            {
-                // 모든 aura effect 제거
-                if (instance.Context.HasData("AuraAffectedTargets"))
-                {
-                    var affected = instance.Context.GetData<HashSet<GameObject>>("AuraAffectedTargets");
-                    foreach (var target2 in affected)
-                    {
-                        if (target2 != null)
-                            RemoveAuraEffect(target2, instance);
-                    }
-                }
-
-                cts?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Aura effect 적용
-        /// </summary>
-        private void ApplyAuraEffect(GameObject target, EffectInstance sourceInstance)
-        {
-            if (auraGrantedEffect == null) return;
-
-            var context = new EffectContext(
-                sourceInstance.Context.Target, // Aura 소유자가 instigator
-                target,
-                auraGrantedEffect
-            );
-            context.SetData("IsAuraEffect", true);
-            context.SetData("AuraSourceInstance", sourceInstance);
-
-            auraGrantedEffect.Apply(context, target);
-
-            Debug.Log($"[InfiniteEffect] Aura effect applied to {target.name}");
-        }
-
-        /// <summary>
-        /// Aura effect 제거
-        /// </summary>
-        private void RemoveAuraEffect(GameObject target, EffectInstance sourceInstance)
-        {
-            if (auraGrantedEffect == null) return;
-
-            var context = new EffectContext(
-                sourceInstance.Context.Target,
-                target,
-                auraGrantedEffect
-            );
-
-            auraGrantedEffect.Remove(context, target);
-
-            Debug.Log($"[InfiniteEffect] Aura effect removed from {target.name}");
-        }
-
-        #endregion
-
-        #region Private Methods - Instance Management
-
-        /// <summary>
-        /// 기존 인스턴스 찾기
-        /// </summary>
-        private EffectInstance FindExistingInstance(GameObject target)
-        {
-            if (!activeInfiniteEffects.TryGetValue(target, out var instances))
-                return null;
-
-            return instances.Find(i => i.SourceEffect == this && !i.IsExpired);
-        }
-
-        /// <summary>
-        /// 인스턴스 저장
-        /// </summary>
-        private void StoreInstance(GameObject target, EffectInstance instance)
-        {
-            if (!activeInfiniteEffects.ContainsKey(target))
-            {
-                activeInfiniteEffects[target] = new List<EffectInstance>();
-            }
-
-            activeInfiniteEffects[target].Add(instance);
-        }
-
-        /// <summary>
-        /// 인스턴스 제거
-        /// </summary>
-        private bool RemoveInstance(EffectInstance instance, GameObject target, bool dispelled)
-        {
-            if (instance == null || target == null) return false;
-
-            instance.IsExpired = true;
-
-            // 모든 추적 취소
-            CancelAllTracking(instance);
-
-            // Modifier 제거
-            RemoveModifiers(instance, target);
-
-            // 태그 제거
-            RemoveGrantedTags(target);
-
-            // 시각 효과 제거
-            if (instance.VisualEffect != null)
-            {
-                UnityEngine.Object.Destroy(instance.VisualEffect);
-            }
-
-            // 인스턴스 목록에서 제거
-            if (activeInfiniteEffects.TryGetValue(target, out var instances))
-            {
-                instances.Remove(instance);
-                if (instances.Count == 0)
-                {
-                    activeInfiniteEffects.Remove(target);
-                }
-            }
-
-            // 제거 이벤트
-            TriggerRemovalEvents(instance, target, dispelled);
 
             return true;
         }
 
         /// <summary>
-        /// 모든 추적 취소
+        /// Attempt to dispel this effect
         /// </summary>
-        private void CancelAllTracking(EffectInstance instance)
+        public virtual bool TryDispel(GameObject target, float dispelPower = 100f)
         {
-            // Conditional tracking 취소
-            if (instance.Context.HasData("ConditionalCancellationToken"))
+            if (!CanBeDispelled(dispelPower))
             {
-                var cts = instance.Context.GetData<CancellationTokenSource>("ConditionalCancellationToken");
-                cts?.Cancel();
-                cts?.Dispose();
-            }
-
-            // Dynamic tracking 취소
-            if (instance.Context.HasData("DynamicCancellationToken"))
-            {
-                var cts = instance.Context.GetData<CancellationTokenSource>("DynamicCancellationToken");
-                cts?.Cancel();
-                cts?.Dispose();
-            }
-
-            // Aura tracking 취소
-            if (instance.Context.HasData("AuraCancellationToken"))
-            {
-                var cts = instance.Context.GetData<CancellationTokenSource>("AuraCancellationToken");
-                cts?.Cancel();
-                cts?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// 스택 처리
-        /// </summary>
-        private bool HandleStacking(EffectInstance existingInstance, EffectContext context, GameObject target)
-        {
-            if (!CanStack(this, context))
+                Debug.Log($"[InfiniteEffect] Failed to dispel {effectName} (Resisted)");
                 return false;
-
-            switch (stackingPolicy)
-            {
-                case EffectStackingPolicy.Override:
-                    RemoveInstance(existingInstance, target, false);
-                    return Apply(context, target);
-
-                case EffectStackingPolicy.Stack:
-                    existingInstance.AddStack(1);
-                    context.StackCount = existingInstance.CurrentStack;
-
-                    // Dynamic modifier가 있으면 업데이트
-                    if (useDynamicModifiers)
-                    {
-                        var multiplier = existingInstance.CurrentStack * context.Magnitude;
-                        UpdateDynamicModifiers(existingInstance, target, multiplier);
-                    }
-
-                    TriggerStackEvent(existingInstance, target);
-
-                    Debug.Log($"[InfiniteEffect] Stacked {effectName} on {target.name}. Stack: {existingInstance.CurrentStack}");
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
-        #endregion
-
-        #region Private Methods - Effects & Events
-
-        /// <summary>
-        /// 적용 효과 재생
-        /// </summary>
-        private void PlayApplicationEffects(EffectInstance instance, GameObject target)
-        {
-            // 시각 효과
-            if (effectPrefab != null)
-            {
-                var vfx = CreateVisualEffect(target);
-                instance.VisualEffect = vfx;
             }
 
-            // 사운드
-            if (applicationSound != null)
+            var effectComponent = target.GetComponent<EffectComponent>();
+            if (effectComponent != null)
             {
-                PlaySound(applicationSound, target.transform.position);
+                effectComponent.RemoveEffect(this);
+                return true;
             }
+
+            return false;
         }
 
-        /// <summary>
-        /// 적용 이벤트 발생
-        /// </summary>
-        private void TriggerApplicationEvents(EffectInstance instance, GameObject target)
-        {
-            GASEvents.TriggerEffectApplied(target, effectName);
-
-            string effectTypeText = isAuraEffect ? "Aura" : "Passive";
-            Debug.Log($"[InfiniteEffect] {effectTypeText} applied: {effectName} - Can be dispelled: {canBeDispelled}");
-        }
+        #region Modifier Management
 
         /// <summary>
-        /// 제거 이벤트 발생
+        /// Apply initial modifiers
         /// </summary>
-        private void TriggerRemovalEvents(EffectInstance instance, GameObject target, bool dispelled)
+        protected void ApplyInitialModifiers(EffectContext context, InfiniteEffectState state)
         {
-            GASEvents.TriggerEffectRemoved(target, effectName);
-
-            string removalReason = dispelled ? "dispelled" : "condition met";
-            Debug.Log($"[InfiniteEffect] Removed ({removalReason}): {effectName} from {target.name}");
-        }
-
-        /// <summary>
-        /// 스택 이벤트 발생
-        /// </summary>
-        private void TriggerStackEvent(EffectInstance instance, GameObject target)
-        {
-            GASEvents.TriggerEffectStacked(target, effectName, instance.CurrentStack);
-
-            Debug.Log($"[InfiniteEffect] Stack changed: {effectName} - New stack count: {instance.CurrentStack}");
-        }
-
-        #endregion
-
-        #region Public Static Methods
-
-        /// <summary>
-        /// 특정 타겟의 모든 InfiniteEffect 제거
-        /// </summary>
-        public static void RemoveAllFromTarget(GameObject target, bool dispellableOnly = false)
-        {
-            if (!activeInfiniteEffects.TryGetValue(target, out var instances))
+            if (modifiers == null || modifiers.Count == 0)
                 return;
 
-            var toRemove = new List<EffectInstance>(instances);
-            foreach (var instance in toRemove)
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            state.appliedModifiers.Clear();
+
+            foreach (var modifierTemplate in modifiers)
             {
-                if (instance.SourceEffect is InfiniteEffect infiniteEffect)
+                if (modifierTemplate != null)
                 {
-                    if (!dispellableOnly || infiniteEffect.canBeDispelled)
-                    {
-                        infiniteEffect.RemoveInstance(instance, target, true);
-                    }
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+                    modifier.duration = -1f; // Infinite
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.appliedModifiers.Add(modifier);
                 }
             }
         }
 
         /// <summary>
-        /// 특정 타겟의 InfiniteEffect 개수 확인
+        /// Update dynamic modifiers based on elapsed time
         /// </summary>
-        public static int GetActiveCount(GameObject target)
+        protected void UpdateDynamicModifiers(EffectContext context, InfiniteEffectState state)
         {
-            if (!activeInfiniteEffects.TryGetValue(target, out var instances))
-                return 0;
+            if (modifierGrowthCurve == null || modifierGrowthCurve.keys.Length == 0)
+                return;
 
-            return instances.Count(i => !i.IsExpired);
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            // Calculate growth based on elapsed time
+            float growthTime = state.elapsedTime / 60f; // Convert to minutes
+            float growthMultiplier = Mathf.Min(modifierGrowthCurve.Evaluate(growthTime), maxGrowthMultiplier);
+
+            // Update each modifier's value
+            for (int i = 0; i < modifiers.Count && i < state.appliedModifiers.Count; i++)
+            {
+                var originalModifier = modifiers[i];
+                var appliedModifier = state.appliedModifiers[i];
+
+                if (originalModifier != null && appliedModifier != null)
+                {
+                    // Remove old modifier
+                    attributeComponent.RemoveModifier(appliedModifier.targetAttributeType, appliedModifier);
+
+                    // Update value with growth
+                    appliedModifier.value = originalModifier.value * growthMultiplier;
+
+                    // Re-add modifier
+                    attributeComponent.AddModifier(appliedModifier.targetAttributeType, appliedModifier);
+                }
+            }
+
+            state.currentGrowthMultiplier = growthMultiplier;
+        }
+
+        /// <summary>
+        /// Apply periodic modifiers
+        /// </summary>
+        protected void ApplyPeriodicModifiers(EffectContext context, InfiniteEffectState state)
+        {
+            // Can be overridden to apply periodic damage/healing
+            // This is separate from the persistent modifiers
+        }
+
+        /// <summary>
+        /// Update modifiers for stack changes
+        /// </summary>
+        protected void UpdateStackModifiers(EffectContext context, InfiniteEffectState state, int stacks)
+        {
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            // Remove old modifiers
+            foreach (var modifier in state.appliedModifiers)
+            {
+                if (modifier != null)
+                {
+                    attributeComponent.RemoveModifier(modifier.targetAttributeType, modifier);
+                }
+            }
+
+            state.appliedModifiers.Clear();
+
+            // Apply new modifiers with stack multiplier
+            foreach (var modifierTemplate in modifiers)
+            {
+                if (modifierTemplate != null)
+                {
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+                    modifier.value *= stacks;
+                    modifier.duration = -1f; // Infinite
+
+                    // Apply growth if active
+                    if (useDynamicModifiers && state.currentGrowthMultiplier > 1f)
+                    {
+                        modifier.value *= state.currentGrowthMultiplier;
+                    }
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.appliedModifiers.Add(modifier);
+                }
+            }
         }
 
         #endregion
 
-        #region Editor
+        #region Aura System
 
-#if UNITY_EDITOR
-        protected override void OnValidate()
+        /// <summary>
+        /// Setup aura effect
+        /// </summary>
+        protected void SetupAura(GameObject source, InfiniteEffectState state)
         {
-            base.OnValidate();
+            if (!isAuraEffect || auraGrantedEffect == null)
+                return;
 
-            // InfiniteEffect 강제 설정
-            effectType = EffectType.Infinite;
-            durationPolicy = EffectDurationPolicy.Infinite;
-            duration = 0f;
-            period = 0f;
-
-            // Aura 설정 검증
-            if (isAuraEffect)
+            if (!auraTargets.ContainsKey(source))
             {
-                auraRadius = Mathf.Max(0.1f, auraRadius);
+                auraTargets[source] = new List<GameObject>();
             }
 
-            // Growth 설정 검증
-            if (useDynamicModifiers)
+            state.auraStrength = CalculateAuraStrength(state.stackCount);
+
+            // Create aura visual if needed
+            if (state.auraVisual == null)
             {
-                growthUpdateInterval = Mathf.Max(0.1f, growthUpdateInterval);
-                maxGrowthMultiplier = Mathf.Max(1f, maxGrowthMultiplier);
+                state.auraVisual = CreateAuraVisual(source);
             }
 
-            // Conditional check interval 검증
-            conditionalCheckInterval = Mathf.Max(0.1f, conditionalCheckInterval);
+            Debug.Log($"[InfiniteEffect] Aura setup for {effectName} with radius {auraRadius}");
         }
 
-        private void OnDrawGizmosSelected()
+        /// <summary>
+        /// Update aura effect
+        /// </summary>
+        protected void UpdateAura(GameObject source, InfiniteEffectState state)
         {
-            // Aura 범위 시각화
-            if (isAuraEffect)
+            if (!isAuraEffect || auraGrantedEffect == null)
+                return;
+
+            // Find targets in range
+            var colliders = Physics.OverlapSphere(source.transform.position, auraRadius, auraTargetLayers);
+            var currentTargets = new HashSet<GameObject>();
+
+            foreach (var collider in colliders)
             {
-                Gizmos.color = new Color(0, 1, 1, 0.3f);
-                //Gizmos.DrawWireSphere(transform.position, auraRadius);
+                if (collider.gameObject == source) continue;
+
+                // Check if target meets requirements
+                var targetTags = collider.GetComponent<TagComponent>();
+                if (auraTargetRequirement != null && !auraTargetRequirement.ignoreIfEmpty)
+                {
+                    if (targetTags == null || !auraTargetRequirement.CheckRequirement(targetTags))
+                        continue;
+                }
+
+                currentTargets.Add(collider.gameObject);
+
+                // Apply aura effect if new target
+                if (!auraTargets[source].Contains(collider.gameObject))
+                {
+                    ApplyAuraEffect(collider.gameObject, state);
+                    auraTargets[source].Add(collider.gameObject);
+                }
+            }
+
+            // Remove aura from targets that left range
+            var targetsToRemove = new List<GameObject>();
+            foreach (var target in auraTargets[source])
+            {
+                if (!currentTargets.Contains(target))
+                {
+                    RemoveAuraEffect(target, state);
+                    targetsToRemove.Add(target);
+                }
+            }
+
+            foreach (var target in targetsToRemove)
+            {
+                auraTargets[source].Remove(target);
+            }
+
+            // Update aura visual
+            UpdateAuraVisual(state);
+        }
+
+        /// <summary>
+        /// Apply aura effect to target
+        /// </summary>
+        protected void ApplyAuraEffect(GameObject target, InfiniteEffectState state)
+        {
+            var effectComponent = target.GetComponent<EffectComponent>();
+            if (effectComponent == null) return;
+
+            var auraContext = state.context.Clone();
+            auraContext.target = target;
+            auraContext.sourceEffect = this;
+            auraContext.magnitude = state.auraStrength;
+
+            effectComponent.ApplyEffect(auraGrantedEffect, auraContext);
+
+            Debug.Log($"[InfiniteEffect] Applied aura effect to {target.name}");
+        }
+
+        /// <summary>
+        /// Remove aura effect from target
+        /// </summary>
+        protected void RemoveAuraEffect(GameObject target, InfiniteEffectState state)
+        {
+            var effectComponent = target.GetComponent<EffectComponent>();
+            if (effectComponent == null) return;
+
+            effectComponent.RemoveEffect(auraGrantedEffect);
+
+            Debug.Log($"[InfiniteEffect] Removed aura effect from {target.name}");
+        }
+
+        /// <summary>
+        /// Clean up aura
+        /// </summary>
+        protected void CleanupAura(GameObject source, InfiniteEffectState state)
+        {
+            if (!auraTargets.ContainsKey(source))
+                return;
+
+            // Remove aura from all targets
+            foreach (var target in auraTargets[source])
+            {
+                RemoveAuraEffect(target, state);
+            }
+
+            auraTargets[source].Clear();
+            auraTargets.Remove(source);
+
+            // Destroy aura visual
+            if (state.auraVisual != null)
+            {
+                Destroy(state.auraVisual);
             }
         }
-#endif
+
+        /// <summary>
+        /// Create aura visual effect
+        /// </summary>
+        protected GameObject CreateAuraVisual(GameObject source)
+        {
+            // Create a simple sphere to represent aura radius (can be replaced with actual VFX)
+            var auraVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            auraVisual.name = $"{effectName}_AuraVisual";
+            auraVisual.transform.SetParent(source.transform);
+            auraVisual.transform.localPosition = Vector3.zero;
+            auraVisual.transform.localScale = Vector3.one * (auraRadius * 2f);
+
+            // Make it transparent and non-collidable
+            var renderer = auraVisual.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                var material = renderer.material;
+                material.color = new Color(effectColor.r, effectColor.g, effectColor.b, 0.2f);
+                renderer.material = material;
+            }
+
+            var collider = auraVisual.GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.enabled = false;
+            }
+
+            return auraVisual;
+        }
+
+        /// <summary>
+        /// Update aura visual
+        /// </summary>
+        protected void UpdateAuraVisual(InfiniteEffectState state)
+        {
+            if (state.auraVisual == null) return;
+
+            // Pulse effect based on strength
+            float pulse = Mathf.Sin(Time.time * 2f) * 0.1f + 1f;
+            state.auraVisual.transform.localScale = Vector3.one * (auraRadius * 2f * pulse);
+        }
+
+        /// <summary>
+        /// Calculate aura strength based on stacks
+        /// </summary>
+        protected float CalculateAuraStrength(int stacks)
+        {
+            return 1f + (stacks - 1) * 0.25f; // 25% increase per stack
+        }
+
+        #endregion
+
+        #region Conditional Checks
+
+        /// <summary>
+        /// Check auto-removal conditions
+        /// </summary>
+        protected bool CheckAutoRemovalConditions(EffectContext context)
+        {
+            // Check tag-based removal
+            if (removalTriggerTags != null && removalTriggerTags.Count > 0)
+            {
+                var tagComponent = context.target.GetComponent<TagComponent>();
+                if (tagComponent != null)
+                {
+                    foreach (var tag in removalTriggerTags)
+                    {
+                        if (tagComponent.HasTag(tag))
+                        {
+                            Debug.Log($"[InfiniteEffect] Auto-removing {effectName} due to tag {tag.TagName}");
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Check conditional removal
+            if (autoRemovalCondition != null && !autoRemovalCondition.IgnoreIfEmpty)
+            {
+                var tagComponent = context.target.GetComponent<TagComponent>();
+                if (tagComponent != null && autoRemovalCondition.CheckRequirement(tagComponent))
+                {
+                    Debug.Log($"[InfiniteEffect] Auto-removing {effectName} due to condition");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        /// <summary>
+        /// Register for death events
+        /// </summary>
+        protected void RegisterForDeathEvent(GameObject target)
+        {
+            GASEvents.Subscribe(GASEventType.Death, OnTargetDeath);
+        }
+
+        /// <summary>
+        /// Unregister from death events
+        /// </summary>
+        protected void UnregisterFromDeathEvent(GameObject target)
+        {
+            GASEvents.Unsubscribe(GASEventType.Death, OnTargetDeath);
+        }
+
+        /// <summary>
+        /// Handle target death
+        /// </summary>
+        protected void OnTargetDeath(object data)
+        {
+            if (persistThroughDeath)
+                return;
+
+            if (data is GASEventData eventData && activeStates.ContainsKey(eventData.source))
+            {
+                var effectComponent = eventData.source.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+            }
+        }
+
+        /// <summary>
+        /// Register for scene changes
+        /// </summary>
+        protected void RegisterForSceneChange(GameObject target)
+        {
+            // Would subscribe to scene change events
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        /// <summary>
+        /// Unregister from scene changes
+        /// </summary>
+        protected void UnregisterFromSceneChange(GameObject target)
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        /// <summary>
+        /// Handle scene unload
+        /// </summary>
+        protected void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+        {
+            if (!persistThroughSceneChange)
+            {
+                // Remove from all targets
+                var targetsToRemove = new List<GameObject>(activeStates.Keys);
+                foreach (var target in targetsToRemove)
+                {
+                    if (target != null)
+                    {
+                        var effectComponent = target.GetComponent<EffectComponent>();
+                        effectComponent?.RemoveEffect(this);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Visual Updates
+
+        /// <summary>
+        /// Update visual effect
+        /// </summary>
+        protected void UpdateVisualEffect(InfiniteEffectState state)
+        {
+            if (state.visualEffect == null)
+                return;
+
+            // Update particle effects based on growth/stacks
+            var particleSystems = state.visualEffect.GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in particleSystems)
+            {
+                var emission = ps.emission;
+                emission.rateOverTime = 5f * state.stackCount * state.currentGrowthMultiplier;
+            }
+        }
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Fire effect applied event
+        /// </summary>
+        protected void FireEffectAppliedEvent(EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectApplied, new InfiniteEffectEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                isPassive = showAsPassive,
+                source = context.target
+            });
+        }
+
+        /// <summary>
+        /// Fire effect removed event
+        /// </summary>
+        protected void FireEffectRemovedEvent(EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectRemoved, new InfiniteEffectEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                isPassive = showAsPassive,
+                source = context.target
+            });
+        }
+
+        #endregion
+
+        #region State Management
+
+        /// <summary>
+        /// Get or create state for target
+        /// </summary>
+        protected InfiniteEffectState GetOrCreateState(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+            {
+                state = new InfiniteEffectState();
+                activeStates[target] = state;
+            }
+            return state;
+        }
+
+        #endregion
+
+        #region Display Info
+
+        /// <summary>
+        /// Get display info for UI
+        /// </summary>
+        public InfiniteEffectDisplayInfo GetDisplayInfo(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+                return null;
+
+            return new InfiniteEffectDisplayInfo
+            {
+                effectName = effectName,
+                description = description,
+                icon = passiveIcon ?? icon,
+                color = effectColor,
+                stackCount = state.stackCount,
+                isPassive = showAsPassive,
+                isAura = isAuraEffect,
+                auraRadius = auraRadius,
+                growthMultiplier = state.currentGrowthMultiplier,
+                displayPriority = displayPriority,
+                canBeDispelled = canBeDispelled,
+                dispelResistance = dispelResistance
+            };
+        }
 
         #endregion
     }
-}
 
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Types/InfiniteEffect.cs
+    /// <summary>
+    /// Runtime state for infinite effects
+    /// </summary>
+    [Serializable]
+    public class InfiniteEffectState
+    {
+        public EffectContext context;
+        public float appliedTime;
+        public float elapsedTime;
+        public int stackCount = 1;
+        public int periodicCount = 0;
+        public GameObject visualEffect;
+        public GameObject auraVisual;
+        public List<AttributeModifier> appliedModifiers = new List<AttributeModifier>();
+
+        public float lastGrowthUpdate;
+        public float lastConditionalCheck;
+        public float currentGrowthMultiplier = 1f;
+        public float auraStrength = 1f;
+
+        public float GetElapsedTime()
+        {
+            return elapsedTime;
+        }
+    }
+
+    /// <summary>
+    /// Display info for infinite effect UI
+    /// </summary>
+    [Serializable]
+    public class InfiniteEffectDisplayInfo
+    {
+        public string effectName;
+        public string description;
+        public Sprite icon;
+        public Color color;
+        public int stackCount;
+        public bool isPassive;
+        public bool isAura;
+        public float auraRadius;
+        public float growthMultiplier;
+        public int displayPriority;
+        public bool canBeDispelled;
+        public float dispelResistance;
+
+        public string GetFormattedName()
+        {
+            string name = effectName;
+
+            if (stackCount > 1)
+                name += $" x{stackCount}";
+
+            if (growthMultiplier > 1f)
+                name += $" ({growthMultiplier:F1}x)";
+
+            return name;
+        }
+
+        public string GetFormattedDescription()
+        {
+            string desc = description;
+
+            if (isAura)
+                desc += $"\nAura Radius: {auraRadius}m";
+
+            if (!canBeDispelled)
+                desc += "\n[Cannot be dispelled]";
+            else if (dispelResistance > 0)
+                desc += $"\n[{dispelResistance}% Dispel Resistance]";
+
+            return desc;
+        }
+    }
+
+    /// <summary>
+    /// Event data for infinite effects
+    /// </summary>
+    public class InfiniteEffectEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public EffectContext context;
+        public GameObject target;
+        public bool isPassive;
+    }
+
+}

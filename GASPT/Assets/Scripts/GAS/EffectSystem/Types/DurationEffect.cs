@@ -1,619 +1,594 @@
-using GAS.AttributeSystem;
-using GAS.Core;
-using GAS.TagSystem;
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Types/DurationEffect.cs
+// ================================
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using UnityEngine;
+using GAS.Core;
+using GAS.TagSystem;
+using GAS.AttributeSystem;
+using static GAS.Core.GASConstants;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// 일정 시간 동안 지속되는 GameplayEffect
-    /// 예: 버프, 디버프, 일시적 스탯 증가 등
+    /// Effect that lasts for a specific duration
     /// </summary>
-    [CreateAssetMenu(fileName = "DurationEffect", menuName = "GAS/Effects/Duration Effect", order = 2)]
+    [CreateAssetMenu(fileName = "DurationEffect", menuName = "GAS/Effects/Duration Effect")]
     public class DurationEffect : GameplayEffect
     {
-        #region Additional Fields
+        [Header("Duration Settings")]
+        [SerializeField] protected bool scaleDurationWithStackCount = false;
+        [SerializeField] protected float durationPerStack = 0f;
+        [SerializeField] protected AnimationCurve durationScalingCurve;
 
-        [Header("=== Duration Effect Settings ===")]
-        [SerializeField] private bool scaleDurationWithStackCount = false;
-        [SerializeField] private float durationPerStack = 0f;
-        [SerializeField] private bool removeOnDeath = true;
-        [SerializeField] private bool persistThroughDeath = false;
+        [Header("Behavior")]
+        [SerializeField] protected bool removeOnDeath = true;
+        [SerializeField] protected bool persistThroughDeath = false;
+        [SerializeField] protected bool triggerExpirationEffects = true;
+        [SerializeField] protected List<GameplayEffect> onExpirationEffects = new List<GameplayEffect>();
+        [SerializeField] protected bool removeTagsOnExpiration = true;
 
-        [Header("=== Expiration Settings ===")]
-        [SerializeField] private bool triggerExpirationEffects = true;
-        [SerializeField] private List<InstantEffect> onExpirationEffects = new List<InstantEffect>();
-        [SerializeField] private bool removeTagsOnExpiration = true;
+        [Header("Modifier Scaling")]
+        [SerializeField] protected bool scaleModifiersOverTime = false;
+        [SerializeField] protected AnimationCurve modifierScalingCurve;
 
-        [Header("=== Modifier Scaling ===")]
-        [SerializeField] private bool scaleModifiersOverTime = false;
-        [SerializeField] private AnimationCurve modifierScalingCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+        [Header("UI Display")]
+        [SerializeField] protected bool showInUI = true;
+        [SerializeField] protected Color effectColor = Color.white;
+        [SerializeField] protected bool showTimer = true;
+        [SerializeField] protected bool showStacks = false;
 
-        [Header("=== UI & Feedback ===")]
-        [SerializeField] private bool showInUI = true;
-        [SerializeField] private Color effectColor = Color.white;
-        [SerializeField] private bool showTimer = true;
-        [SerializeField] private bool showStacks = false;
-
-        #endregion
-
-        #region Runtime Data
-
-        // 활성 인스턴스 추적 (런타임용, serialize 안함)
-        private static Dictionary<GameObject, List<EffectInstance>> activeInstances =
-            new Dictionary<GameObject, List<EffectInstance>>();
-
-        #endregion
-
-        #region Constructor
-
-        public DurationEffect()
-        {
-            effectType = EffectType.Duration;
-            durationPolicy = EffectDurationPolicy.HasDuration;
-            duration = 5f; // 기본 5초
-        }
-
-        #endregion
-
-        #region Override Methods
+        // Runtime tracking
+        protected Dictionary<GameObject, DurationEffectState> activeStates = new Dictionary<GameObject, DurationEffectState>();
 
         /// <summary>
-        /// Duration 효과 적용
+        /// Apply the duration effect
         /// </summary>
-        public override bool Apply(EffectContext context, GameObject target)
+        public override void OnApply(EffectContext context)
         {
-            if (!CanApply(context, target))
+            if (context == null || context.target == null) return;
+
+            var state = GetOrCreateState(context.target);
+            state.context = context;
+            state.startTime = Time.time;
+            state.duration = CalculateActualDuration(context);
+
+            // Apply granted tags
+            ApplyGrantedTags(context);
+
+            // Apply initial modifiers
+            ApplyInitialModifiers(context, state);
+
+            // Spawn visual effects
+            state.visualEffect = SpawnVisualEffect(context);
+
+            // Play application sound
+            PlayApplicationSound(context);
+
+            // Register for death events if needed
+            if (removeOnDeath)
             {
-                Debug.LogWarning($"[DurationEffect] Cannot apply {effectName} to {target.name}");
-                return false;
+                RegisterForDeathEvent(context.target);
             }
 
-            try
-            {
-                // 1. 기존 효과와의 스택 처리
-                EffectInstance existingInstance = FindExistingInstance(target);
+            // Fire applied event
+            FireEffectAppliedEvent(context);
 
-                if (existingInstance != null)
-                {
-                    return HandleStacking(existingInstance, context, target);
-                }
-
-                // 2. 새 인스턴스 생성
-                var instance = CreateInstance(context, target);
-
-                // 3. Modifier 적용
-                ApplyModifiers(instance, context, target);
-
-                // 4. 태그 부여
-                GrantTags(target);
-
-                // 5. 시각/청각 효과
-                PlayApplicationEffects(instance, target);
-
-                // 6. Duration 추적 시작
-                StartDurationTracking(instance, target);
-
-                // 7. 이벤트 발생
-                TriggerApplicationEvents(instance, target);
-
-                // 8. 인스턴스 저장
-                StoreInstance(target, instance);
-
-                Debug.Log($"[DurationEffect] Applied {effectName} to {target.name} for {duration}s");
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[DurationEffect] Failed to apply {effectName}: {e.Message}");
-                return false;
-            }
+            Debug.Log($"[DurationEffect] Applied {effectName} to {context.target.name} for {state.duration} seconds");
         }
 
         /// <summary>
-        /// Duration 효과 제거
+        /// Remove the duration effect
         /// </summary>
-        public override bool Remove(EffectContext context, GameObject target)
+        public override void OnRemove(EffectContext context)
         {
-            var instance = FindExistingInstance(target);
-            if (instance == null)
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            // Check if naturally expired
+            bool naturalExpiration = state.IsExpired();
+
+            // Trigger expiration effects if natural expiration
+            if (naturalExpiration && triggerExpirationEffects)
             {
-                Debug.LogWarning($"[DurationEffect] No instance of {effectName} found on {target.name}");
-                return false;
+                ApplyExpirationEffects(context);
             }
 
-            return RemoveInstance(instance, target, true);
-        }
+            // Remove modifiers
+            RemoveModifiers(context);
 
-        /// <summary>
-        /// DurationEffect는 주기적 실행을 지원하지 않음
-        /// </summary>
-        public override bool ExecutePeriodic(EffectContext context, GameObject target)
-        {
-            Debug.LogWarning($"[DurationEffect] {effectName} does not support periodic execution. Use PeriodicEffect instead.");
-            return false;
-        }
-
-        #endregion
-
-        #region Private Methods - Core
-
-        /// <summary>
-        /// Effect 인스턴스 생성
-        /// </summary>
-        private EffectInstance CreateInstance(EffectContext context, GameObject target)
-        {
-            var instance = new EffectInstance(this, context);
-
-            // Duration 계산
-            float finalDuration = CalculateDuration(context);
-            instance.RemainingDuration = finalDuration;
-
-            return instance;
-        }
-
-        /// <summary>
-        /// Duration 계산
-        /// </summary>
-        protected float CalculateDuration(EffectContext context)
-        {
-            float baseDuration = duration;
-
-            // Stack 기반 duration scaling
-            if (scaleDurationWithStackCount && context.StackCount > 1)
-            {
-                baseDuration += durationPerStack * (context.StackCount - 1);
-            }
-
-            // Context magnitude scaling
-            baseDuration *= context.Magnitude;
-
-            return Mathf.Max(0.1f, baseDuration);
-        }
-
-        /// <summary>
-        /// Modifier 적용
-        /// </summary>
-        protected void ApplyModifiers(EffectInstance instance, EffectContext context, GameObject target)
-        {
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null || modifiers.Count == 0) return;
-
-            float magnitude = context.Magnitude;
-
-            // 시간에 따른 scaling 적용
-            if (scaleModifiersOverTime && modifierScalingCurve != null)
-            {
-                magnitude *= modifierScalingCurve.Evaluate(0f);
-            }
-
-            foreach (var config in modifiers)
-            {
-                if (config == null || config.timing != ModifierApplicationTiming.OnApplication)
-                    continue;
-
-                var modifier = new AttributeModifier(
-                    config.operation,
-                    config.value * magnitude,
-                    config.priority
-                );
-
-                // Modifier 적용 및 ID 저장
-                var modifierId = attributeComponent.AddModifier(
-                    config.attributeType,
-                    modifier,
-                    instance
-                );
-
-                instance.AddModifierId(modifierId);
-
-                Debug.Log($"[DurationEffect] Applied modifier to {config.attributeType}: {modifier.Operation} {modifier.Value}");
-            }
-        }
-
-        /// <summary>
-        /// Modifier 제거
-        /// </summary>
-        private void RemoveModifiers(EffectInstance instance, GameObject target)
-        {
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null) return;
-
-            // 모든 modifier를 source(instance)로 제거
-            attributeComponent.RemoveAllModifiersFromSource(instance);
-
-            Debug.Log($"[DurationEffect] Removed all modifiers from {target.name}");
-        }
-
-        #endregion
-
-        #region Private Methods - Duration Tracking
-
-        /// <summary>
-        /// Duration 추적 시작
-        /// </summary>
-        private async void StartDurationTracking(EffectInstance instance, GameObject target)
-        {
-            var cts = new CancellationTokenSource();
-            instance.Context.SetData("CancellationToken", cts);
-
-            try
-            {
-                float updateInterval = 0.1f; // 100ms마다 업데이트
-                float elapsed = 0f;
-
-                while (!instance.IsExpired && instance.RemainingDuration > 0)
-                {
-                    await Awaitable.WaitForSecondsAsync(updateInterval, cts.Token);
-
-                    if (target == null || instance.IsExpired)
-                        break;
-
-                    elapsed += updateInterval;
-                    instance.RemainingDuration -= updateInterval;
-
-                    // 시간에 따른 Modifier scaling 업데이트
-                    if (scaleModifiersOverTime)
-                    {
-                        UpdateModifierScaling(instance, target, instance.Progress);
-                    }
-
-                    // UI 업데이트 로그
-                    if (showInUI && elapsed % 1f < updateInterval) // 1초마다 로그
-                    {
-                        Debug.Log($"[DurationEffect] {effectName} - Remaining: {instance.RemainingDuration:F1}s, Progress: {instance.Progress:P0}");
-                    }
-
-                    // 만료 체크
-                    if (instance.RemainingDuration <= 0)
-                    {
-                        await HandleExpiration(instance, target);
-                        break;
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log($"[DurationEffect] Duration tracking cancelled for {effectName}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[DurationEffect] Error in duration tracking: {e.Message}");
-            }
-            finally
-            {
-                cts?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// 만료 처리
-        /// </summary>
-        protected async Awaitable HandleExpiration(EffectInstance instance, GameObject target)
-        {
-            if (instance.IsExpired) return;
-
-            instance.IsExpired = true;
-
-            Debug.Log($"[DurationEffect] {effectName} expired on {target.name}");
-
-            // 만료 효과 실행
-            if (triggerExpirationEffects)
-            {
-                ExecuteExpirationEffects(instance, target);
-            }
-
-            // 인스턴스 제거
-            RemoveInstance(instance, target, false);
-
-            // 만료 이벤트
-            GASEvents.TriggerEffectRemoved(target, effectName);
-
-            Debug.Log($"[DurationEffect] Effect expired: {effectName} on {target.name}");
-
-            await Awaitable.EndOfFrameAsync();
-        }
-
-        /// <summary>
-        /// Modifier scaling 업데이트
-        /// </summary>
-        private void UpdateModifierScaling(EffectInstance instance, GameObject target, float progress)
-        {
-            if (!scaleModifiersOverTime || modifierScalingCurve == null) return;
-
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null) return;
-
-            float scaleFactor = modifierScalingCurve.Evaluate(progress);
-
-            // 기존 modifier 제거 후 새로운 값으로 재적용
-            RemoveModifiers(instance, target);
-
-            var context = instance.Context;
-            context.Magnitude = scaleFactor;
-            ApplyModifiers(instance, context, target);
-        }
-
-        #endregion
-
-        #region Private Methods - Stacking
-
-        /// <summary>
-        /// 스택 처리
-        /// </summary>
-        protected virtual bool HandleStacking(EffectInstance existingInstance, EffectContext context, GameObject target)
-        {
-            if (!CanStack(this, context))
-                return false;
-
-            switch (stackingPolicy)
-            {
-                case EffectStackingPolicy.Override:
-                    // 기존 효과 제거 후 새로 적용
-                    RemoveInstance(existingInstance, target, false);
-                    return Apply(context, target);
-
-                case EffectStackingPolicy.Stack:
-                    // 스택 증가
-                    existingInstance.AddStack(1);
-                    context.StackCount = existingInstance.CurrentStack;
-
-                    // Duration refresh
-                    if (refreshDurationOnStack)
-                    {
-                        existingInstance.RefreshDuration();
-
-                        // Duration tracking 재시작
-                        CancelDurationTracking(existingInstance);
-                        StartDurationTracking(existingInstance, target);
-                    }
-
-                    // 스택 이벤트
-                    TriggerStackEvent(existingInstance, target);
-
-                    Debug.Log($"[DurationEffect] Stacked {effectName} on {target.name}. Stack: {existingInstance.CurrentStack}");
-                    return true;
-
-                case EffectStackingPolicy.AggregateBySource:
-                case EffectStackingPolicy.AggregateByTarget:
-                    // 동일 source/target의 효과 집계
-                    return HandleAggregation(existingInstance, context, target);
-
-                default:
-                    return false;
-            }
-        }
-
-        /// <summary>
-        /// 집계 처리
-        /// </summary>
-        private bool HandleAggregation(EffectInstance existingInstance, EffectContext context, GameObject target)
-        {
-            // 구현 예정: source/target별 집계 로직
-            Debug.LogWarning($"[DurationEffect] Aggregation not yet implemented for {effectName}");
-            return false;
-        }
-
-        #endregion
-
-        #region Private Methods - Instance Management
-
-        /// <summary>
-        /// 기존 인스턴스 찾기
-        /// </summary>
-        protected EffectInstance FindExistingInstance(GameObject target)
-        {
-            if (!activeInstances.TryGetValue(target, out var instances))
-                return null;
-
-            return instances.Find(i => i.SourceEffect == this && !i.IsExpired);
-        }
-
-        /// <summary>
-        /// 인스턴스 저장
-        /// </summary>
-        protected void StoreInstance(GameObject target, EffectInstance instance)
-        {
-            if (!activeInstances.ContainsKey(target))
-            {
-                activeInstances[target] = new List<EffectInstance>();
-            }
-
-            activeInstances[target].Add(instance);
-        }
-
-        /// <summary>
-        /// 인스턴스 제거
-        /// </summary>
-        private bool RemoveInstance(EffectInstance instance, GameObject target, bool cancelled)
-        {
-            if (instance == null || target == null) return false;
-
-            // Duration tracking 취소
-            CancelDurationTracking(instance);
-
-            // Modifier 제거
-            RemoveModifiers(instance, target);
-
-            // 태그 제거
+            // Remove granted tags if configured
             if (removeTagsOnExpiration)
             {
-                RemoveGrantedTags(target);
+                RemoveGrantedTags(context);
             }
 
-            // 시각 효과 제거
-            if (instance.VisualEffect != null)
+            // Clean up visual effects
+            if (state.visualEffect != null)
             {
-                UnityEngine.Object.Destroy(instance.VisualEffect);
+                Destroy(state.visualEffect);
             }
 
-            // 인스턴스 목록에서 제거
-            if (activeInstances.TryGetValue(target, out var instances))
+            // Play removal sound
+            PlayRemovalSound(context);
+
+            // Unregister from death events
+            if (removeOnDeath)
             {
-                instances.Remove(instance);
-                if (instances.Count == 0)
+                UnregisterFromDeathEvent(context.target);
+            }
+
+            // Fire removed event
+            FireEffectRemovedEvent(context, naturalExpiration);
+
+            // Remove state
+            activeStates.Remove(context.target);
+
+            Debug.Log($"[DurationEffect] Removed {effectName} from {context.target.name} (Natural: {naturalExpiration})");
+        }
+
+        /// <summary>
+        /// Update tick for the duration effect
+        /// </summary>
+        public override void OnTick(EffectContext context, float deltaTime)
+        {
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            // Update elapsed time
+            state.elapsedTime += deltaTime;
+
+            // Check if expired
+            if (state.IsExpired())
+            {
+                // Trigger removal
+                var effectComponent = context.target.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+                return;
+            }
+
+            // Scale modifiers over time if configured
+            if (scaleModifiersOverTime)
+            {
+                UpdateScaledModifiers(context, state);
+            }
+
+            // Update visual effect
+            UpdateVisualEffect(state);
+
+            // Check ongoing requirements
+            if (!CheckOngoing(context))
+            {
+                var effectComponent = context.target.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+            }
+        }
+
+        /// <summary>
+        /// Handle stacking
+        /// </summary>
+        public override void OnStack(EffectContext context, int newStackCount, int previousStackCount)
+        {
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            state.stackCount = newStackCount;
+
+            // Refresh duration based on stacking policy
+            if (refreshDurationOnStack)
+            {
+                state.startTime = Time.time;
+                state.elapsedTime = 0;
+
+                if (scaleDurationWithStackCount)
                 {
-                    activeInstances.Remove(target);
+                    state.duration = CalculateStackedDuration(context, newStackCount);
                 }
             }
 
-            // 제거 이벤트
-            TriggerRemovalEvents(instance, target, cancelled);
+            // Update modifiers for new stack count
+            UpdateStackModifiers(context, state, newStackCount);
 
-            return true;
+            // Fire stack event
+            GASEvents.Trigger(GASEventType.EffectStackChanged, new EffectStackEventData
+            {
+                effect = this,
+                target = context.target,
+                newStackCount = newStackCount,
+                previousStackCount = previousStackCount,
+                source = context.target
+            });
+
+            Debug.Log($"[DurationEffect] {effectName} stacked to {newStackCount}x on {context.target.name}");
         }
 
         /// <summary>
-        /// Duration tracking 취소
+        /// Calculate actual duration
         /// </summary>
-        private void CancelDurationTracking(EffectInstance instance)
+        protected float CalculateActualDuration(EffectContext context)
         {
-            if (instance.Context.HasData("CancellationToken"))
+            float actualDuration = duration;
+
+            // Apply context multiplier
+            actualDuration *= context.durationMultiplier;
+
+            // Apply level scaling
+            if (context.level > 1)
             {
-                var cts = instance.Context.GetData<CancellationTokenSource>("CancellationToken");
-                cts?.Cancel();
-                cts?.Dispose();
-                instance.Context.RemoveData("CancellationToken");
-            }
-        }
-
-        #endregion
-
-        #region Private Methods - Effects & Events
-
-        /// <summary>
-        /// 적용 효과 재생
-        /// </summary>
-        protected void PlayApplicationEffects(EffectInstance instance, GameObject target)
-        {
-            // 시각 효과
-            if (effectPrefab != null)
-            {
-                var vfx = CreateVisualEffect(target);
-                instance.VisualEffect = vfx;
+                actualDuration *= (1f + (context.level - 1) * 0.1f); // 10% per level
             }
 
-            // 사운드
-            if (applicationSound != null)
+            // Apply curve if available
+            if (durationScalingCurve != null && durationScalingCurve.keys.Length > 0)
             {
-                PlaySound(applicationSound, target.transform.position);
+                actualDuration *= durationScalingCurve.Evaluate(context.level);
             }
+
+            return Mathf.Max(0.1f, actualDuration);
         }
 
         /// <summary>
-        /// 만료 효과 실행
+        /// Calculate stacked duration
         /// </summary>
-        private void ExecuteExpirationEffects(EffectInstance instance, GameObject target)
+        protected float CalculateStackedDuration(EffectContext context, int stacks)
         {
+            float baseDuration = CalculateActualDuration(context);
+
+            if (scaleDurationWithStackCount && stacks > 1)
+            {
+                baseDuration += durationPerStack * (stacks - 1);
+            }
+
+            return baseDuration;
+        }
+
+        /// <summary>
+        /// Apply initial modifiers
+        /// </summary>
+        protected void ApplyInitialModifiers(EffectContext context, DurationEffectState state)
+        {
+            if (modifiers == null || modifiers.Count == 0)
+                return;
+
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            state.appliedModifiers.Clear();
+
+            foreach (var modifierTemplate in modifiers)
+            {
+                if (modifierTemplate != null)
+                {
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+
+                    // Apply initial scaling if needed
+                    if (scaleModifiersOverTime && modifierScalingCurve != null)
+                    {
+                        float scale = modifierScalingCurve.Evaluate(0);
+                        modifier.value *= scale;
+                    }
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.appliedModifiers.Add(modifier);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update scaled modifiers over time
+        /// </summary>
+        protected void UpdateScaledModifiers(EffectContext context, DurationEffectState state)
+        {
+            if (modifierScalingCurve == null || modifierScalingCurve.keys.Length == 0)
+                return;
+
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            float progress = state.GetProgress();
+            float scale = modifierScalingCurve.Evaluate(progress);
+
+            // Update each modifier's value
+            for (int i = 0; i < modifiers.Count && i < state.appliedModifiers.Count; i++)
+            {
+                var originalModifier = modifiers[i];
+                var appliedModifier = state.appliedModifiers[i];
+
+                if (originalModifier != null && appliedModifier != null)
+                {
+                    // Remove old modifier
+                    attributeComponent.RemoveModifier(appliedModifier.targetAttributeType, appliedModifier);
+
+                    // Update value
+                    appliedModifier.value = originalModifier.value * scale;
+
+                    // Re-add modifier
+                    attributeComponent.AddModifier(appliedModifier.targetAttributeType, appliedModifier);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update modifiers for stack changes
+        /// </summary>
+        protected void UpdateStackModifiers(EffectContext context, DurationEffectState state, int stacks)
+        {
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            // Remove old modifiers
+            foreach (var modifier in state.appliedModifiers)
+            {
+                if (modifier != null)
+                {
+                    attributeComponent.RemoveModifier(modifier.targetAttributeType, modifier);
+                }
+            }
+
+            state.appliedModifiers.Clear();
+
+            // Apply new modifiers with stack multiplier
+            foreach (var modifierTemplate in modifiers)
+            {
+                if (modifierTemplate != null)
+                {
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+                    modifier.value *= stacks; // Scale with stack count
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.appliedModifiers.Add(modifier);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Apply effects when duration expires
+        /// </summary>
+        protected void ApplyExpirationEffects(EffectContext context)
+        {
+            if (onExpirationEffects == null || onExpirationEffects.Count == 0)
+                return;
+
+            var effectComponent = context.target.GetComponent<EffectComponent>();
+            if (effectComponent == null)
+                return;
+
             foreach (var effect in onExpirationEffects)
             {
                 if (effect != null)
                 {
-                    effect.Apply(instance.Context, target);
+                    var expirationContext = context.Clone();
+                    expirationContext.sourceEffect = this;
+                    effectComponent.ApplyEffect(effect, expirationContext);
                 }
             }
-
-            // 만료 사운드
-            if (removalSound != null)
-            {
-                PlaySound(removalSound, target.transform.position);
-            }
         }
 
         /// <summary>
-        /// 적용 이벤트 발생
+        /// Update visual effect
         /// </summary>
-        protected void TriggerApplicationEvents(EffectInstance instance, GameObject target)
+        protected void UpdateVisualEffect(DurationEffectState state)
         {
-            GASEvents.TriggerEffectApplied(target, effectName);
-
-            Debug.Log($"[DurationEffect] Applied: {effectName} - Duration: {instance.RemainingDuration:F1}s, Stack: {instance.CurrentStack}");
-        }
-
-        /// <summary>
-        /// 제거 이벤트 발생
-        /// </summary>
-        private void TriggerRemovalEvents(EffectInstance instance, GameObject target, bool cancelled)
-        {
-            GASEvents.TriggerEffectRemoved(target, effectName);
-
-            string cancelText = cancelled ? "cancelled" : "expired";
-            Debug.Log($"[DurationEffect] Removed ({cancelText}): {effectName} - Elapsed: {instance.ElapsedTime:F1}s");
-        }
-
-        /// <summary>
-        /// 스택 이벤트 발생
-        /// </summary>
-        private void TriggerStackEvent(EffectInstance instance, GameObject target)
-        {
-            GASEvents.TriggerEffectStacked(target, effectName, instance.CurrentStack);
-
-            Debug.Log($"[DurationEffect] Stack changed: {effectName} - New stack count: {instance.CurrentStack}");
-        }
-
-        #endregion
-
-        #region Public Static Methods
-
-        /// <summary>
-        /// 특정 타겟의 모든 DurationEffect 제거
-        /// </summary>
-        public static void RemoveAllFromTarget(GameObject target)
-        {
-            if (!activeInstances.TryGetValue(target, out var instances))
+            if (state.visualEffect == null)
                 return;
 
-            var toRemove = new List<EffectInstance>(instances);
-            foreach (var instance in toRemove)
+            // Update particle effects based on remaining duration
+            var particleSystems = state.visualEffect.GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in particleSystems)
             {
-                if (instance.SourceEffect is DurationEffect durationEffect)
+                var main = ps.main;
+                float progress = state.GetProgress();
+
+                // Fade out near the end
+                if (progress > 0.8f)
                 {
-                    durationEffect.RemoveInstance(instance, target, true);
+                    float fadeProgress = (progress - 0.8f) / 0.2f;
+                    var col = ps.colorOverLifetime;
+                    col.enabled = true;
                 }
             }
         }
 
         /// <summary>
-        /// 특정 타겟의 DurationEffect 개수 확인
+        /// Register for death events
         /// </summary>
-        public static int GetActiveCount(GameObject target)
+        protected void RegisterForDeathEvent(GameObject target)
         {
-            if (!activeInstances.TryGetValue(target, out var instances))
-                return 0;
-
-            return instances.Count(i => !i.IsExpired);
+            // Would subscribe to death events from health component
+            GASEvents.Subscribe(GASEventType.Death, OnTargetDeath);
         }
 
-        #endregion
-
-        #region Editor
-
-#if UNITY_EDITOR
-        protected override void OnValidate()
+        /// <summary>
+        /// Unregister from death events
+        /// </summary>
+        protected void UnregisterFromDeathEvent(GameObject target)
         {
-            base.OnValidate();
+            GASEvents.Unsubscribe(GASEventType.Death, OnTargetDeath);
+        }
 
-            // DurationEffect 강제 설정
-            effectType = EffectType.Duration;
-            durationPolicy = EffectDurationPolicy.HasDuration;
+        /// <summary>
+        /// Handle target death
+        /// </summary>
+        protected void OnTargetDeath(object data)
+        {
+            if (!removeOnDeath || persistThroughDeath)
+                return;
 
-            // Duration 검증
-            if (duration <= 0f) duration = 1f;
-
-            // Stack duration 검증
-            if (scaleDurationWithStackCount && durationPerStack < 0f)
+            if (data is GASEventData eventData && activeStates.ContainsKey(eventData.source))
             {
-                durationPerStack = 0f;
+                var effectComponent = eventData.source.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
             }
         }
-#endif
 
-        #endregion
+        /// <summary>
+        /// Fire effect applied event
+        /// </summary>
+        protected void FireEffectAppliedEvent(EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectApplied, new EffectEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                source = context.target
+            });
+        }
+
+        /// <summary>
+        /// Fire effect removed event
+        /// </summary>
+        protected void FireEffectRemovedEvent(EffectContext context, bool natural)
+        {
+            GASEvents.Trigger(GASEventType.EffectRemoved, new EffectEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                wasNaturalExpiration = natural,
+                source = context.target
+            });
+        }
+
+        /// <summary>
+        /// Get or create state for target
+        /// </summary>
+        protected DurationEffectState GetOrCreateState(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+            {
+                state = new DurationEffectState();
+                activeStates[target] = state;
+            }
+            return state;
+        }
+
+        /// <summary>
+        /// Get display info for UI
+        /// </summary>
+        public DurationEffectDisplayInfo GetDisplayInfo(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+                return null;
+
+            return new DurationEffectDisplayInfo
+            {
+                effectName = effectName,
+                description = description,
+                icon = icon,
+                color = effectColor,
+                remainingTime = state.GetRemainingTime(),
+                totalDuration = state.duration,
+                progress = state.GetProgress(),
+                stackCount = state.stackCount,
+                showTimer = showTimer,
+                showStacks = showStacks,
+                showInUI = showInUI
+            };
+        }
+    }
+
+    /// <summary>
+    /// Runtime state for duration effects
+    /// </summary>
+    [Serializable]
+    public class DurationEffectState
+    {
+        public EffectContext context;
+        public float startTime;
+        public float duration;
+        public float elapsedTime;
+        public int stackCount = 1;
+        public GameObject visualEffect;
+        public List<AttributeModifier> appliedModifiers = new List<AttributeModifier>();
+
+        public bool IsExpired()
+        {
+            return elapsedTime >= duration;
+        }
+
+        public float GetRemainingTime()
+        {
+            return Mathf.Max(0, duration - elapsedTime);
+        }
+
+        public float GetProgress()
+        {
+            if (duration <= 0) return 1f;
+            return Mathf.Clamp01(elapsedTime / duration);
+        }
+    }
+
+    /// <summary>
+    /// Display info for duration effect UI
+    /// </summary>
+    [Serializable]
+    public class DurationEffectDisplayInfo
+    {
+        public string effectName;
+        public string description;
+        public Sprite icon;
+        public Color color;
+        public float remainingTime;
+        public float totalDuration;
+        public float progress;
+        public int stackCount;
+        public bool showTimer;
+        public bool showStacks;
+        public bool showInUI;
+
+        public string GetFormattedTime()
+        {
+            if (remainingTime < 0)
+                return "∞";
+
+            if (remainingTime < 60)
+                return $"{remainingTime:F1}s";
+
+            int minutes = Mathf.FloorToInt(remainingTime / 60);
+            int seconds = Mathf.FloorToInt(remainingTime % 60);
+            return $"{minutes}:{seconds:D2}";
+        }
+
+        public string GetFormattedName()
+        {
+            if (showStacks && stackCount > 1)
+                return $"{effectName} x{stackCount}";
+            return effectName;
+        }
+    }
+
+    /// <summary>
+    /// Event data for effect events
+    /// </summary>
+    public class EffectEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public EffectContext context;
+        public GameObject target;
+        public bool wasNaturalExpiration;
+    }
+
+    /// <summary>
+    /// Event data for stack changes
+    /// </summary>
+    public class EffectStackEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public GameObject target;
+        public int newStackCount;
+        public int previousStackCount;
     }
 }
-
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Types/DurationEffect.cs

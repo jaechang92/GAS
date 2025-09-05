@@ -140,6 +140,8 @@ namespace GAS.Core
             Experience,
             Gold,
 
+            Tenacity,
+
             // Custom extensible range (for game-specific attributes)
             Custom_Start = 1000
         }

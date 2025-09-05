@@ -172,7 +172,7 @@ namespace GAS.TagSystem
         /// </summary>
         public bool RemoveTag(string tagString)
         {
-            var tag = tags.FirstOrDefault(t => t.TagString == tagString);
+            var tag = tags.FirstOrDefault(t => t.TagName == tagString);
             if (tag != null)
             {
                 return RemoveTag(tag);
@@ -411,7 +411,7 @@ namespace GAS.TagSystem
         /// </summary>
         public string[] ToStringArray()
         {
-            return tags.Select(t => t.TagString).ToArray();
+            return tags.Select(t => t.TagName).ToArray();
         }
 
         /// <summary>

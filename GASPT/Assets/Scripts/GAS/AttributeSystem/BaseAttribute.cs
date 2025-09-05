@@ -75,6 +75,11 @@ namespace GAS.AttributeSystem
         public bool Regenerates => regenerates;
         public float RegenRate => regenRate;
 
+        public BaseAttribute ()
+        {
+
+        }
+
         /// <summary>
         /// Initialize with owner component
         /// </summary>
@@ -113,23 +118,23 @@ namespace GAS.AttributeSystem
 
             // Apply modifiers by priority and operation type
             // First: Add operations
-            var addModifiers = modifiers.Where(m => m.Operation == ModifierOperation.Add)
-                                       .OrderBy(m => m.Priority);
+            var addModifiers = modifiers.Where(m => m.operation == ModifierOperation.Add)
+                                       .OrderBy(m => m.priority);
             foreach (var modifier in addModifiers)
             {
-                finalValue += modifier.Value;
+                finalValue += modifier.value;
             }
 
             // Second: Multiply operations
-            var multiplyModifiers = modifiers.Where(m => m.Operation == ModifierOperation.Multiply)
-                                            .OrderBy(m => m.Priority);
+            var multiplyModifiers = modifiers.Where(m => m.operation == ModifierOperation.Multiply)
+                                            .OrderBy(m => m.priority);
             foreach (var modifier in multiplyModifiers)
             {
-                finalValue *= modifier.Value;
+                finalValue *= modifier.value;
             }
 
             // Last: Override operations (use highest priority override)
-            var overrideModifier = modifiers.Where(m => m.Operation == ModifierOperation.Override)
+            var overrideModifier = modifiers.Where(m => m.operation == ModifierOperation.Override)
                                           .OrderByDescending(m => m.priority)
                                           .FirstOrDefault();
             if (overrideModifier != null)

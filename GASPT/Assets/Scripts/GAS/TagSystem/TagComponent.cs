@@ -1,413 +1,771 @@
-// 파일 위치: Assets/Scripts/GAS/TagSystem/TagComponent.cs
+// ================================
+// File: Assets/Scripts/GAS/TagSystem/TagComponent.cs
+// ================================
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using GAS.Core;
 
 namespace GAS.TagSystem
 {
     /// <summary>
-    /// GameObject에 태그 시스템을 부여하는 컴포넌트
+    /// Component that manages gameplay tags on a GameObject
     /// </summary>
-    [AddComponentMenu("GAS/Tag Component")]
     public class TagComponent : MonoBehaviour
     {
-        #region Serialized Fields
-        [Header("Initial Tags")]
-        [SerializeField] private List<string> initialTags = new List<string>();
-
-        [Header("Settings")]
-        [SerializeField] private bool persistTags = false;
+        [Header("Configuration")]
+        [SerializeField] private List<GameplayTag> initialTags = new List<GameplayTag>();
         [SerializeField] private bool debugMode = false;
-        #endregion
 
-        #region Private Fields
-        private TagContainer container;
-        private Dictionary<GameplayTag, int> tagCountMap = new Dictionary<GameplayTag, int>();
-        #endregion
+        [Header("Tag Limits")]
+        [SerializeField] private int maxTotalTags = 100;
+        [SerializeField] private int maxTagStacks = 99;
 
-        #region Properties
-        /// <summary>
-        /// 태그 컨테이너
-        /// </summary>
-        public TagContainer Container
-        {
-            get
-            {
-                if (container == null)
-                {
-                    container = new TagContainer();
-                }
-                return container;
-            }
-        }
+        [Header("Runtime Tags - Read Only")]
+        [SerializeField] private TagContainer runtimeTags = new TagContainer();
+        [SerializeField] private Dictionary<string, int> tagCounts = new Dictionary<string, int>();
 
-        /// <summary>
-        /// 현재 태그 개수
-        /// </summary>
-        public int TagCount => Container.Count;
+        // Tag tracking
+        private Dictionary<GameplayTag, List<object>> tagSources = new Dictionary<GameplayTag, List<object>>();
+        private Dictionary<string, GameplayTag> tagLookup = new Dictionary<string, GameplayTag>();
+        private HashSet<string> blockedTags = new HashSet<string>();
 
-        /// <summary>
-        /// 태그가 있는지 확인
-        /// </summary>
-        public bool HasTags => !Container.IsEmpty;
-        #endregion
+        // Events
+        public event Action<GameplayTag> TagAdded;
+        public event Action<GameplayTag> TagRemoved;
+        public event Action<GameplayTag, int, int> TagCountChanged;
+        public event Action<List<GameplayTag>> TagsChanged;
+
+        // Properties
+        public TagContainer Tags => runtimeTags;
+        public int TotalTagCount => runtimeTags.Tags.Count;
 
         #region Unity Lifecycle
+
         private void Awake()
         {
-            InitializeContainer();
+            InitializeTags();
         }
 
         private void Start()
         {
-            // GASManager에 등록
-            GASManager.Instance.RegisterObject(gameObject);
-
-            // 초기 태그 적용
             ApplyInitialTags();
+            RegisterEvents();
         }
 
         private void OnDestroy()
         {
-            // GASManager에서 해제
-            if (GASManager.Instance != null)
-            {
-                GASManager.Instance.UnregisterObject(gameObject);
-            }
-
-            // 이벤트 정리
-            if (container != null)
-            {
-                container.OnTagAdded -= HandleTagAdded;
-                container.OnTagRemoved -= HandleTagRemoved;
-                container.OnContainerChanged -= HandleContainerChanged;
-            }
+            UnregisterEvents();
+            CleanupTags();
         }
 
-        private void OnValidate()
-        {
-            // Inspector에서 태그 수정 시 유효성 검사
-            for (int i = initialTags.Count - 1; i >= 0; i--)
-            {
-                if (string.IsNullOrWhiteSpace(initialTags[i]))
-                {
-                    initialTags.RemoveAt(i);
-                }
-            }
-        }
         #endregion
 
         #region Initialization
-        private void InitializeContainer()
-        {
-            container = new TagContainer();
 
-            // 이벤트 연결
-            container.OnTagAdded += HandleTagAdded;
-            container.OnTagRemoved += HandleTagRemoved;
-            container.OnContainerChanged += HandleContainerChanged;
+        /// <summary>
+        /// Initialize the tag system
+        /// </summary>
+        private void InitializeTags()
+        {
+            runtimeTags = new TagContainer();
+            tagCounts = new Dictionary<string, int>();
+            tagSources = new Dictionary<GameplayTag, List<object>>();
+            tagLookup = new Dictionary<string, GameplayTag>();
+            blockedTags = new HashSet<string>();
+
+            GASEvents.Trigger(GASEventType.ComponentAdded,
+                new SimpleGASEventData(gameObject, this));
         }
 
+        /// <summary>
+        /// Apply initial tags
+        /// </summary>
         private void ApplyInitialTags()
         {
-            foreach (var tagString in initialTags)
+            foreach (var tag in initialTags)
             {
-                if (!string.IsNullOrEmpty(tagString))
+                if (tag != null)
                 {
-                    AddTag(tagString);
+                    AddTag(tag, this);
                 }
             }
         }
+
+        /// <summary>
+        /// Register for events
+        /// </summary>
+        private void RegisterEvents()
+        {
+            // Can subscribe to other system events if needed
+        }
+
+        /// <summary>
+        /// Unregister from events
+        /// </summary>
+        private void UnregisterEvents()
+        {
+            // Unsubscribe from events
+        }
+
+        /// <summary>
+        /// Cleanup on destroy
+        /// </summary>
+        private void CleanupTags()
+        {
+            RemoveAllTags();
+
+            GASEvents.Trigger(GASEventType.ComponentRemoved,
+                new SimpleGASEventData(gameObject, this));
+        }
+
         #endregion
 
         #region Tag Management
-        /// <summary>
-        /// 태그 추가
-        /// </summary>
-        public bool AddTag(string tagString)
-        {
-            return AddTag(new GameplayTag(tagString));
-        }
 
         /// <summary>
-        /// 태그 추가 (카운트 지원)
+        /// Add a tag to this component
         /// </summary>
-        public bool AddTag(GameplayTag tag)
+        public bool AddTag(GameplayTag tag, object source = null)
         {
-            if (tag == null || !tag.IsValid) return false;
+            if (!CanAddTag(tag))
+                return false;
 
-            // 태그 카운트 관리
-            if (tagCountMap.ContainsKey(tag))
+            // Check if tag is blocked
+            if (IsTagBlocked(tag))
             {
-                tagCountMap[tag]++;
                 if (debugMode)
+                    Debug.Log($"[TagComponent] Tag {tag.TagName} is blocked on {gameObject.name}");
+                return false;
+            }
+
+            // Check tag limit
+            if (runtimeTags.Tags.Count >= maxTotalTags)
+            {
+                if (debugMode)
+                    Debug.LogWarning($"[TagComponent] Max tag limit reached ({maxTotalTags})");
+                return false;
+            }
+
+            // Track source
+            if (!tagSources.ContainsKey(tag))
+            {
+                tagSources[tag] = new List<object>();
+            }
+            tagSources[tag].Add(source ?? this);
+
+            // Update tag count
+            int previousCount = GetTagCount(tag.TagName);
+
+            if (!tagCounts.ContainsKey(tag.TagName))
+            {
+                tagCounts[tag.TagName] = 0;
+            }
+
+            tagCounts[tag.TagName]++;
+            int newCount = tagCounts[tag.TagName];
+
+            // Check max stacks
+            if (newCount > maxTagStacks)
+            {
+                tagCounts[tag.TagName] = maxTagStacks;
+                newCount = maxTagStacks;
+
+                if (debugMode)
+                    Debug.LogWarning($"[TagComponent] Tag {tag.TagName} reached max stacks ({maxTagStacks})");
+            }
+
+            // Add to container if first instance
+            if (previousCount == 0)
+            {
+                runtimeTags.AddTag(tag);
+                tagLookup[tag.TagName] = tag;
+
+                // Fire events
+                TagAdded?.Invoke(tag);
+                FireTagAddedEvent(tag);
+
+                if (debugMode)
+                    Debug.Log($"[TagComponent] Added tag {tag.TagName} to {gameObject.name}");
+            }
+            else if (newCount != previousCount)
+            {
+                // Fire count changed event
+                TagCountChanged?.Invoke(tag, newCount, previousCount);
+                FireTagCountChangedEvent(tag, newCount, previousCount);
+
+                if (debugMode)
+                    Debug.Log($"[TagComponent] Tag {tag.TagName} count: {previousCount} -> {newCount}");
+            }
+
+            // Fire general tags changed event
+            TagsChanged?.Invoke(runtimeTags.Tags.ToList());
+
+            return true;
+        }
+
+        /// <summary>
+        /// Add multiple tags
+        /// </summary>
+        public void AddTags(List<GameplayTag> tags, object source = null)
+        {
+            foreach (var tag in tags)
+            {
+                if (tag != null)
                 {
-                    Debug.Log($"[GAS] Tag count increased: {tag} x{tagCountMap[tag]} on {name}");
+                    AddTag(tag, source);
                 }
-                return false; // 이미 있는 태그
-            }
-
-            // 새 태그 추가
-            if (Container.AddTag(tag))
-            {
-                tagCountMap[tag] = 1;
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 여러 태그 추가
-        /// </summary>
-        public void AddTags(params string[] tagStrings)
-        {
-            foreach (var tagString in tagStrings)
-            {
-                AddTag(tagString);
             }
         }
 
         /// <summary>
-        /// 태그 제거
+        /// Remove a tag from this component
         /// </summary>
-        public bool RemoveTag(string tagString)
+        public bool RemoveTag(GameplayTag tag, object source = null)
         {
-            return RemoveTag(new GameplayTag(tagString));
-        }
+            if (tag == null || !HasTag(tag))
+                return false;
 
-        /// <summary>
-        /// 태그 제거 (카운트 지원)
-        /// </summary>
-        public bool RemoveTag(GameplayTag tag)
-        {
-            if (tag == null || !tag.IsValid) return false;
-
-            // 태그 카운트 관리
-            if (tagCountMap.ContainsKey(tag))
+            // Remove from source tracking
+            if (tagSources.ContainsKey(tag))
             {
-                tagCountMap[tag]--;
-
-                if (tagCountMap[tag] <= 0)
+                if (source != null)
                 {
-                    tagCountMap.Remove(tag);
-                    return Container.RemoveTag(tag);
+                    tagSources[tag].Remove(source);
                 }
                 else
                 {
-                    if (debugMode)
+                    // Remove one instance if no source specified
+                    if (tagSources[tag].Count > 0)
                     {
-                        Debug.Log($"[GAS] Tag count decreased: {tag} x{tagCountMap[tag]} on {name}");
+                        tagSources[tag].RemoveAt(0);
+                    }
+                }
+
+                // If no more sources, clean up
+                if (tagSources[tag].Count == 0)
+                {
+                    tagSources.Remove(tag);
+                }
+            }
+
+            // Update tag count
+            int previousCount = GetTagCount(tag.TagName);
+
+            if (tagCounts.ContainsKey(tag.TagName))
+            {
+                tagCounts[tag.TagName]--;
+                int newCount = tagCounts[tag.TagName];
+
+                if (newCount <= 0)
+                {
+                    // Remove from container
+                    runtimeTags.RemoveTag(tag);
+                    tagCounts.Remove(tag.TagName);
+                    tagLookup.Remove(tag.TagName);
+
+                    // Fire events
+                    TagRemoved?.Invoke(tag);
+                    FireTagRemovedEvent(tag);
+
+                    if (debugMode)
+                        Debug.Log($"[TagComponent] Removed tag {tag.TagName} from {gameObject.name}");
+                }
+                else
+                {
+                    // Fire count changed event
+                    TagCountChanged?.Invoke(tag, newCount, previousCount);
+                    FireTagCountChangedEvent(tag, newCount, previousCount);
+
+                    if (debugMode)
+                        Debug.Log($"[TagComponent] Tag {tag.TagName} count: {previousCount} -> {newCount}");
+                }
+            }
+
+            // Fire general tags changed event
+            TagsChanged?.Invoke(runtimeTags.Tags.ToList());
+
+            return true;
+        }
+
+        /// <summary>
+        /// Remove multiple tags
+        /// </summary>
+        public void RemoveTags(List<GameplayTag> tags, object source = null)
+        {
+            foreach (var tag in tags)
+            {
+                if (tag != null)
+                {
+                    RemoveTag(tag, source);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Remove all tags from a specific source
+        /// </summary>
+        public void RemoveAllTagsFromSource(object source)
+        {
+            if (source == null) return;
+
+            var tagsToRemove = new List<GameplayTag>();
+
+            foreach (var kvp in tagSources)
+            {
+                if (kvp.Value.Contains(source))
+                {
+                    // Count how many times this source added the tag
+                    int count = kvp.Value.Count(s => s == source);
+
+                    // Remove that many instances
+                    for (int i = 0; i < count; i++)
+                    {
+                        tagsToRemove.Add(kvp.Key);
                     }
                 }
             }
 
+            foreach (var tag in tagsToRemove)
+            {
+                RemoveTag(tag, source);
+            }
+        }
+
+        /// <summary>
+        /// Remove all tags
+        /// </summary>
+        public void RemoveAllTags()
+        {
+            var tagsToRemove = new List<GameplayTag>(runtimeTags.Tags);
+
+            foreach (var tag in tagsToRemove)
+            {
+                // Remove all instances
+                while (HasTag(tag))
+                {
+                    RemoveTag(tag);
+                }
+            }
+
+            // Clear everything
+            runtimeTags.Clear();
+            tagCounts.Clear();
+            tagSources.Clear();
+            tagLookup.Clear();
+        }
+
+        /// <summary>
+        /// Remove tags by category
+        /// </summary>
+        public void RemoveTagsByCategory(string category)
+        {
+            var tagsToRemove = runtimeTags.Tags
+                .Where(t => t.TagName.StartsWith(category))
+                .ToList();
+
+            foreach (var tag in tagsToRemove)
+            {
+                while (HasTag(tag))
+                {
+                    RemoveTag(tag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set tag count to a specific value
+        /// </summary>
+        public void SetTagCount(GameplayTag tag, int count)
+        {
+            if (tag == null) return;
+
+            int currentCount = GetTagCount(tag.TagName);
+            int difference = count - currentCount;
+
+            if (difference > 0)
+            {
+                // Add tags
+                for (int i = 0; i < difference; i++)
+                {
+                    AddTag(tag);
+                }
+            }
+            else if (difference < 0)
+            {
+                // Remove tags
+                for (int i = 0; i < Math.Abs(difference); i++)
+                {
+                    RemoveTag(tag);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Tag Queries
+
+        /// <summary>
+        /// Check if has a specific tag
+        /// </summary>
+        public bool HasTag(GameplayTag tag)
+        {
+            return tag != null && runtimeTags.HasTag(tag);
+        }
+
+        /// <summary>
+        /// Check if has a tag by name
+        /// </summary>
+        public bool HasTag(string tagName)
+        {
+            return !string.IsNullOrEmpty(tagName) && tagCounts.ContainsKey(tagName) && tagCounts[tagName] > 0;
+        }
+
+        /// <summary>
+        /// Check if has all specified tags
+        /// </summary>
+        public bool HasAllTags(List<GameplayTag> tags)
+        {
+            if (tags == null || tags.Count == 0)
+                return true;
+
+            foreach (var tag in tags)
+            {
+                if (!HasTag(tag))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Check if has any of the specified tags
+        /// </summary>
+        public bool HasAnyTag(List<GameplayTag> tags)
+        {
+            if (tags == null || tags.Count == 0)
+                return false;
+
+            foreach (var tag in tags)
+            {
+                if (HasTag(tag))
+                    return true;
+            }
+
             return false;
         }
 
         /// <summary>
-        /// 여러 태그 제거
+        /// Check if has exact tags (no more, no less)
         /// </summary>
-        public void RemoveTags(params string[] tagStrings)
+        public bool HasExactTags(List<GameplayTag> tags)
         {
-            foreach (var tagString in tagStrings)
+            if (tags == null)
+                return runtimeTags.Tags.Count == 0;
+
+            if (tags.Count != runtimeTags.Tags.Count)
+                return false;
+
+            foreach (var tag in tags)
             {
-                RemoveTag(tagString);
+                if (!HasTag(tag))
+                    return false;
             }
+
+            return true;
         }
 
         /// <summary>
-        /// 모든 태그 제거
+        /// Get tag count
         /// </summary>
-        public void ClearTags()
+        public int GetTagCount(string tagName)
         {
-            Container.Clear();
-            tagCountMap.Clear();
-        }
-
-        /// <summary>
-        /// 태그 토글
-        /// </summary>
-        public void ToggleTag(string tagString)
-        {
-            var tag = new GameplayTag(tagString);
-            if (HasTag(tag))
+            if (tagCounts.TryGetValue(tagName, out int count))
             {
-                RemoveTag(tag);
+                return count;
             }
-            else
-            {
-                AddTag(tag);
-            }
-        }
-        #endregion
-
-        #region Tag Queries
-        /// <summary>
-        /// 태그 보유 확인
-        /// </summary>
-        public bool HasTag(string tagString)
-        {
-            return Container.HasTag(tagString);
+            return 0;
         }
 
         /// <summary>
-        /// 태그 보유 확인
-        /// </summary>
-        public bool HasTag(GameplayTag tag)
-        {
-            return Container.HasTag(tag);
-        }
-
-        /// <summary>
-        /// 정확한 태그 일치 확인
-        /// </summary>
-        public bool HasTagExact(GameplayTag tag)
-        {
-            return Container.HasTagExact(tag);
-        }
-
-        /// <summary>
-        /// 여러 태그 중 하나라도 보유 확인
-        /// </summary>
-        public bool HasAny(List<GameplayTag> tags)
-        {
-            return Container.HasAny(tags);
-        }
-
-        /// <summary>
-        /// 여러 태그 모두 보유 확인
-        /// </summary>
-        public bool HasAll(List<GameplayTag> tags)
-        {
-            return Container.HasAll(tags);
-        }
-
-        /// <summary>
-        /// 태그 요구사항 충족 확인
-        /// </summary>
-        public bool SatisfiesRequirement(TagRequirement requirement)
-        {
-            return requirement != null && requirement.IsSatisfiedBy(Container);
-        }
-
-        /// <summary>
-        /// 태그 개수 가져오기
+        /// Get tag count
         /// </summary>
         public int GetTagCount(GameplayTag tag)
         {
-            return tagCountMap.ContainsKey(tag) ? tagCountMap[tag] : 0;
-        }
-        #endregion
-
-        #region Event Handlers
-        private void HandleTagAdded(GameplayTag tag)
-        {
-            GASEvents.TriggerTagAdded(gameObject, tag.TagString);
-
-            if (debugMode)
-            {
-                Debug.Log($"[GAS] Tag added: {tag} to {name}");
-            }
+            if (tag == null) return 0;
+            return GetTagCount(tag.TagName);
         }
 
-        private void HandleTagRemoved(GameplayTag tag)
-        {
-            GASEvents.TriggerTagRemoved(gameObject, tag.TagString);
-
-            if (debugMode)
-            {
-                Debug.Log($"[GAS] Tag removed: {tag} from {name}");
-            }
-        }
-
-        private void HandleContainerChanged()
-        {
-            GASEvents.TriggerTagsChanged(gameObject);
-        }
-        #endregion
-
-        #region Utility Methods
         /// <summary>
-        /// 태그 리스트 가져오기
+        /// Get all tags
         /// </summary>
         public List<GameplayTag> GetAllTags()
         {
-            return new List<GameplayTag>(Container.Tags);
+            return new List<GameplayTag>(runtimeTags.Tags);
         }
 
         /// <summary>
-        /// 태그 문자열 배열 가져오기
+        /// Get tags by category
         /// </summary>
-        public string[] GetTagStrings()
+        public List<GameplayTag> GetTagsByCategory(string category)
         {
-            return Container.ToStringArray();
+            return runtimeTags.Tags
+                .Where(t => t.TagName.StartsWith(category))
+                .ToList();
         }
 
         /// <summary>
-        /// 태그 정보 출력
+        /// Get tag by name
         /// </summary>
-        public void PrintTags()
+        public GameplayTag GetTag(string tagName)
         {
-            Debug.Log($"[GAS] Tags on {name}: {Container}");
+            tagLookup.TryGetValue(tagName, out var tag);
+            return tag;
         }
+
+        /// <summary>
+        /// Get all tag sources for a tag
+        /// </summary>
+        public List<object> GetTagSources(GameplayTag tag)
+        {
+            if (tag != null && tagSources.TryGetValue(tag, out var sources))
+            {
+                return new List<object>(sources);
+            }
+            return new List<object>();
+        }
+
         #endregion
 
-        #region Static Helper Methods
-        /// <summary>
-        /// GameObject에서 TagComponent 가져오기 (없으면 추가)
-        /// </summary>
-        public static TagComponent GetOrAdd(GameObject gameObject)
-        {
-            if (gameObject == null) return null;
-
-            var component = gameObject.GetComponent<TagComponent>();
-            if (component == null)
-            {
-                component = gameObject.AddComponent<TagComponent>();
-            }
-
-            return component;
-        }
+        #region Tag Blocking
 
         /// <summary>
-        /// 특정 태그를 가진 모든 GameObject 찾기
+        /// Block a tag from being added
         /// </summary>
-        public static List<GameObject> FindObjectsWithTag(GameplayTag tag)
+        public void BlockTag(string tagName)
         {
-            var results = new List<GameObject>();
-            var allComponents = FindObjectsByType<TagComponent>(FindObjectsSortMode.None);
-
-            foreach (var component in allComponents)
+            if (!string.IsNullOrEmpty(tagName))
             {
-                if (component.HasTag(tag))
+                blockedTags.Add(tagName);
+
+                // Remove if currently has the tag
+                var tag = GetTag(tagName);
+                if (tag != null)
                 {
-                    results.Add(component.gameObject);
+                    while (HasTag(tag))
+                    {
+                        RemoveTag(tag);
+                    }
                 }
             }
-
-            return results;
         }
 
         /// <summary>
-        /// 태그 요구사항을 만족하는 모든 GameObject 찾기
+        /// Unblock a tag
         /// </summary>
-        public static List<GameObject> FindObjectsSatisfyingRequirement(TagRequirement requirement)
+        public void UnblockTag(string tagName)
         {
-            var results = new List<GameObject>();
-            var allComponents = FindObjectsByType<TagComponent>(FindObjectsSortMode.None);
+            blockedTags.Remove(tagName);
+        }
 
-            foreach (var component in allComponents)
+        /// <summary>
+        /// Check if tag is blocked
+        /// </summary>
+        public bool IsTagBlocked(GameplayTag tag)
+        {
+            return tag != null && blockedTags.Contains(tag.TagName);
+        }
+
+        /// <summary>
+        /// Check if tag is blocked by name
+        /// </summary>
+        public bool IsTagBlocked(string tagName)
+        {
+            return blockedTags.Contains(tagName);
+        }
+
+        /// <summary>
+        /// Clear all blocked tags
+        /// </summary>
+        public void ClearBlockedTags()
+        {
+            blockedTags.Clear();
+        }
+
+        #endregion
+
+        #region Tag Requirements
+
+        /// <summary>
+        /// Check if meets tag requirements
+        /// </summary>
+        public bool MeetsRequirements(TagRequirement requirement)
+        {
+            if (requirement == null || requirement.IgnoreIfEmpty)
+                return true;
+
+            return requirement.CheckRequirement(this);
+        }
+
+        /// <summary>
+        /// Check if meets multiple requirements
+        /// </summary>
+        public bool MeetsAllRequirements(List<TagRequirement> requirements)
+        {
+            if (requirements == null || requirements.Count == 0)
+                return true;
+
+            foreach (var requirement in requirements)
             {
-                if (component.SatisfiesRequirement(requirement))
-                {
-                    results.Add(component.gameObject);
-                }
+                if (!MeetsRequirements(requirement))
+                    return false;
             }
 
-            return results;
+            return true;
         }
+
+        /// <summary>
+        /// Check if meets any requirement
+        /// </summary>
+        public bool MeetsAnyRequirement(List<TagRequirement> requirements)
+        {
+            if (requirements == null || requirements.Count == 0)
+                return false;
+
+            foreach (var requirement in requirements)
+            {
+                if (MeetsRequirements(requirement))
+                    return true;
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Validation
+
+        /// <summary>
+        /// Check if can add tag
+        /// </summary>
+        private bool CanAddTag(GameplayTag tag)
+        {
+            if (tag == null)
+            {
+                if (debugMode)
+                    Debug.LogWarning("[TagComponent] Attempted to add null tag");
+                return false;
+            }
+
+            if (!tag.IsValid)
+            {
+                if (debugMode)
+                    Debug.LogWarning($"[TagComponent] Tag {tag.TagName} is invalid");
+                return false;
+            }
+
+            return true;
+        }
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Fire tag added event
+        /// </summary>
+        private void FireTagAddedEvent(GameplayTag tag)
+        {
+            GASEvents.Trigger(GASEventType.TagAdded, new TagEventData
+            {
+                tag = tag,
+                count = GetTagCount(tag),
+                source = gameObject
+            });
+        }
+
+        /// <summary>
+        /// Fire tag removed event
+        /// </summary>
+        private void FireTagRemovedEvent(GameplayTag tag)
+        {
+            GASEvents.Trigger(GASEventType.TagRemoved, new TagEventData
+            {
+                tag = tag,
+                count = 0,
+                source = gameObject
+            });
+        }
+
+        /// <summary>
+        /// Fire tag count changed event
+        /// </summary>
+        private void FireTagCountChangedEvent(GameplayTag tag, int newCount, int previousCount)
+        {
+            GASEvents.Trigger(GASEventType.TagCountChanged, new TagEventData
+            {
+                tag = tag,
+                count = newCount,
+                previousCount = previousCount,
+                source = gameObject
+            });
+        }
+
+        #endregion
+
+        #region Debug
+
+        /// <summary>
+        /// Get debug info
+        /// </summary>
+        public string GetDebugInfo()
+        {
+            var info = $"TagComponent on {gameObject.name}\n";
+            info += $"Total Tags: {TotalTagCount}\n";
+            info += $"Tags:\n";
+
+            foreach (var tag in runtimeTags.Tags)
+            {
+                int count = GetTagCount(tag);
+                info += $"  - {tag.TagName} x{count}\n";
+            }
+
+            if (blockedTags.Count > 0)
+            {
+                info += $"Blocked Tags: {string.Join(", ", blockedTags)}\n";
+            }
+
+            return info;
+        }
+
+        private void OnGUI()
+        {
+            if (!debugMode) return;
+
+            Vector3 screenPos = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 1.5f);
+            if (screenPos.z < 0) return;
+
+            float yOffset = 0;
+            GUI.Label(new Rect(screenPos.x - 100, Screen.height - screenPos.y - yOffset, 200, 20),
+                $"Tags: {TotalTagCount}");
+
+            yOffset += 20;
+            foreach (var tag in runtimeTags.Tags.Take(5)) // Show first 5 tags
+            {
+                int count = GetTagCount(tag);
+                string tagInfo = count > 1 ? $"{tag.TagName} x{count}" : tag.TagName;
+                GUI.Label(new Rect(screenPos.x - 100, Screen.height - screenPos.y - yOffset, 200, 20), tagInfo);
+                yOffset += 20;
+            }
+
+            if (runtimeTags.Tags.Count > 5)
+            {
+                GUI.Label(new Rect(screenPos.x - 100, Screen.height - screenPos.y - yOffset, 200, 20),
+                    $"... and {runtimeTags.Tags.Count - 5} more");
+            }
+        }
+
         #endregion
     }
 }

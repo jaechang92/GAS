@@ -1,428 +1,403 @@
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Data/EffectData.cs
+// ================================
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using GAS.Core;
-using GAS.AttributeSystem;
 using GAS.TagSystem;
+using GAS.AttributeSystem;
+using static GAS.Core.GASConstants;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// GameplayEffect의 데이터를 정의하는 ScriptableObject
-    /// Inspector에서 Effect를 쉽게 설정할 수 있도록 지원
+    /// Serializable data container for effect configuration
     /// </summary>
-    [CreateAssetMenu(fileName = "NewEffectData", menuName = "GAS/Effect Data", order = 1)]
-    public class EffectData : ScriptableObject
+    [Serializable]
+    public class EffectData
     {
-        #region Nested Types
+        [Header("Basic Information")]
+        public string effectId;
+        public string effectName;
+        public string description;
+        public Sprite icon;
+
+        [Header("Effect Classification")]
+        public EffectType effectType = EffectType.Instant;
+        public DurationPolicy durationPolicy = DurationPolicy.Instant;
+        public List<GameplayTag> effectTags = new List<GameplayTag>();
+
+        [Header("Duration & Period")]
+        public float baseDuration = 0f;
+        public float basePeriod = 1f;
+        public bool scaleWithLevel = false;
+        public float durationPerLevel = 0f;
+        public float periodPerLevel = 0f;
+
+        [Header("Stacking")]
+        public StackingPolicy stackingPolicy = StackingPolicy.None;
+        public int maxStackCount = 1;
+        public StackBehavior stackBehavior = StackBehavior.RefreshDuration;
+        public float stackMagnitudeMultiplier = 1f;
+
+        [Header("Modifiers")]
+        public List<EffectModifierData> modifiers = new List<EffectModifierData>();
+
+        [Header("Conditional Modifiers")]
+        public List<ConditionalModifierData> conditionalModifiers = new List<ConditionalModifierData>();
+
+        [Header("Tags")]
+        public List<GameplayTag> grantedTags = new List<GameplayTag>();
+        public List<GameplayTag> requiredTags = new List<GameplayTag>();
+        public List<GameplayTag> blockedTags = new List<GameplayTag>();
+        public List<GameplayTag> removalTags = new List<GameplayTag>();
+
+        [Header("Visual & Audio")]
+        public GameObject effectPrefab;
+        public GameObject impactPrefab;
+        public AudioClip applicationSound;
+        public AudioClip periodicSound;
+        public AudioClip removalSound;
+        public Color effectColor = Color.white;
+
+        [Header("UI Display")]
+        public bool showInUI = true;
+        public int displayPriority = 0;
+        public bool showStacks = true;
+        public bool showDuration = true;
+        public string displayFormat = "{name} ({stacks}x) - {duration}s";
 
         /// <summary>
-        /// 조건부 Effect 적용을 위한 규칙
+        /// Creates a runtime effect instance from this data
         /// </summary>
-        [Serializable]
-        public class ConditionalEffect
+        public virtual EffectSpec CreateSpec(EffectContext context)
         {
-            [Header("Condition")]
-            public TagRequirement condition;
-
-            [Header("Effects to Apply")]
-            public List<EffectData> effectsToApply = new List<EffectData>();
-
-            [Header("Chance")]
-            [Range(0f, 1f)]
-            public float applyChance = 1f;
-        }
-
-        /// <summary>
-        /// Modifier의 확장 설정
-        /// </summary>
-        [Serializable]
-        public class ExtendedModifierConfig : ModifierConfig
-        {
-            [Header("Curve Settings")]
-            public bool useCurve = false;
-            public AnimationCurve valueCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-
-            [Header("Stack Scaling")]
-            public bool scaleWithStack = false;
-            public float stackScalingFactor = 1f;
-
-            [Header("Conditional")]
-            public bool hasCondition = false;
-            public TagRequirement applyCondition;
-        }
-
-        /// <summary>
-        /// 시각/청각 효과 설정
-        /// </summary>
-        [Serializable]
-        public class EffectPresentation
-        {
-            [Header("Visual Effects")]
-            public GameObject effectPrefab;
-            public Vector3 effectOffset = Vector3.zero;
-            public bool attachToTarget = true;
-            public float effectScale = 1f;
-
-            [Header("Audio")]
-            public AudioClip applicationSound;
-            public AudioClip loopSound;
-            public AudioClip removalSound;
-            [Range(0f, 1f)]
-            public float soundVolume = 1f;
-
-            [Header("UI")]
-            public Sprite effectIcon;
-            public Color effectColor = Color.white;
-            public string displayName;
-            [TextArea(2, 3)]
-            public string displayDescription;
-
-            [Header("Animation")]
-            public string animationTrigger;
-            public bool loopAnimation = false;
-        }
-
-        #endregion
-
-        #region Core Settings
-
-        [Header("=== Effect Identity ===")]
-        [SerializeField] private string effectId;
-        [SerializeField] private string effectName;
-        [TextArea(3, 5)]
-        [SerializeField] private string description;
-        [SerializeField] private Sprite icon;
-
-        [Header("=== Effect Classification ===")]
-        [SerializeField] private EffectType effectType = EffectType.Instant;
-        [SerializeField] private EffectDurationPolicy durationPolicy = EffectDurationPolicy.Instant;
-        [SerializeField] private List<GameplayTag> effectTags = new List<GameplayTag>();
-
-        #endregion
-
-        #region Duration & Timing
-
-        [Header("=== Duration & Timing ===")]
-        [SerializeField] private float baseDuration = 1f;
-        [SerializeField] private bool canRefreshDuration = true;
-        [SerializeField] private AnimationCurve durationScaling = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-
-        [Header("Periodic Settings")]
-        [SerializeField] private float period = 1f;
-        [SerializeField] private int maxPeriodicTicks = -1;
-        [SerializeField] private bool executeOnApplication = true;
-        [SerializeField] private bool executeOnExpiration = false;
-
-        #endregion
-
-        #region Stacking
-
-        [Header("=== Stack Configuration ===")]
-        [SerializeField] private EffectStackingPolicy stackingPolicy = EffectStackingPolicy.None;
-        [SerializeField] private int maxStackCount = 1;
-        [SerializeField] private bool refreshDurationOnStack = true;
-        [SerializeField] private bool resetPeriodicOnStack = false;
-        [SerializeField] private bool independentStackDuration = false;
-
-        #endregion
-
-        #region Requirements & Immunity
-
-        [Header("=== Requirements & Immunity ===")]
-        [SerializeField] private TagRequirement applicationRequirement;
-        [SerializeField] private TagRequirement ongoingRequirement;
-        [SerializeField] private TagRequirement removalRequirement;
-
-        [Header("Immunity Tags")]
-        [SerializeField] private List<GameplayTag> immunityTags = new List<GameplayTag>();
-        [SerializeField] private List<GameplayTag> immunityGrantingTags = new List<GameplayTag>();
-
-        #endregion
-
-        #region Tags
-
-        [Header("=== Tag Management ===")]
-        [SerializeField] private TagContainer grantedTags;
-        [SerializeField] private TagContainer requiredSourceTags;
-        [SerializeField] private TagContainer blockedSourceTags;
-
-        #endregion
-
-        #region Modifiers
-
-        [Header("=== Attribute Modifiers ===")]
-        [SerializeField] private List<ExtendedModifierConfig> modifiers = new List<ExtendedModifierConfig>();
-        [SerializeField] private bool removeModifiersOnExpiration = true;
-
-        #endregion
-
-        #region Conditional Effects
-
-        [Header("=== Conditional Effects ===")]
-        [SerializeField] private List<ConditionalEffect> conditionalEffects = new List<ConditionalEffect>();
-        [SerializeField] private List<EffectData> onApplicationEffects = new List<EffectData>();
-        [SerializeField] private List<EffectData> onExpirationEffects = new List<EffectData>();
-        [SerializeField] private List<EffectData> onStackEffects = new List<EffectData>();
-
-        #endregion
-
-        #region Presentation
-
-        [Header("=== Presentation ===")]
-        [SerializeField] private EffectPresentation presentation = new EffectPresentation();
-
-        #endregion
-
-        #region Advanced Settings
-
-        [Header("=== Advanced Settings ===")]
-        [SerializeField] private bool canBePurged = true;
-        [SerializeField] private bool canBeBlocked = true;
-        [SerializeField] private int priority = 0;
-        [SerializeField] private float magnitudeScaling = 1f;
-
-        [Header("Network")]
-        [SerializeField] private bool replicateToClients = true;
-        [SerializeField] private bool predictOnClient = false;
-
-        #endregion
-
-        #region Properties
-
-        public string EffectId => effectId;
-        public string EffectName => effectName;
-        public string Description => description;
-        public Sprite Icon => icon;
-        public EffectType Type => effectType;
-        public EffectDurationPolicy DurationPolicy => durationPolicy;
-        public float BaseDuration => baseDuration;
-        public float Period => period;
-        public EffectStackingPolicy StackingPolicy => stackingPolicy;
-        public int MaxStackCount => maxStackCount;
-        public TagRequirement ApplicationRequirement => applicationRequirement;
-        public TagRequirement OngoingRequirement => ongoingRequirement;
-        public TagContainer GrantedTags => grantedTags;
-        public List<ExtendedModifierConfig> Modifiers => modifiers;
-        public EffectPresentation Presentation => presentation;
-        public int Priority => priority;
-        public bool CanBePurged => canBePurged;
-        public bool CanBeBlocked => canBeBlocked;
-        public List<GameplayTag> EffectTags => effectTags;
-        public List<ConditionalEffect> ConditionalEffects => conditionalEffects;
-
-        #endregion
-
-        #region Public Methods
-
-        /// <summary>
-        /// GameplayEffect 인스턴스 생성
-        /// </summary>
-        public GameplayEffect CreateEffect()
-        {
-            // 타입에 따라 적절한 Effect 생성 (Phase 2 후속 구현)
-            switch (effectType)
+            var spec = new EffectSpec
             {
-                case EffectType.Instant:
-                    return CreateInstantEffect();
-                case EffectType.Duration:
-                    return CreateDurationEffect();
-                case EffectType.Periodic:
-                    return CreatePeriodicEffect();
-                case EffectType.Infinite:
-                    return CreateInfiniteEffect();
-                default:
-                    Debug.LogError($"Unknown effect type: {effectType}");
-                    return null;
+                data = this,
+                level = context?.level ?? 1,
+                magnitude = context?.magnitude ?? 1f,
+                source = context?.instigator,
+                appliedTime = Time.time
+            };
+
+            // Calculate actual duration
+            spec.duration = CalculateDuration(spec.level);
+            spec.period = CalculatePeriod(spec.level);
+
+            return spec;
+        }
+
+        /// <summary>
+        /// Calculates actual duration for a level
+        /// </summary>
+        public float CalculateDuration(int level)
+        {
+            if (durationPolicy == DurationPolicy.Instant)
+                return 0f;
+            if (durationPolicy == DurationPolicy.Infinite)
+                return -1f;
+
+            float duration = baseDuration;
+            if (scaleWithLevel && level > 1)
+            {
+                duration += durationPerLevel * (level - 1);
             }
+            return duration;
         }
 
         /// <summary>
-        /// 대상이 이 Effect에 면역인지 확인
+        /// Calculates actual period for a level
         /// </summary>
-        public bool IsTargetImmune(GameObject target)
+        public float CalculatePeriod(int level)
         {
-            if (target == null || immunityTags.Count == 0) return false;
-
-            var tagComponent = target.GetComponent<TagComponent>();
-            if (tagComponent == null) return false;
-
-            foreach (var immunityTag in immunityTags)
+            float period = basePeriod;
+            if (scaleWithLevel && level > 1 && periodPerLevel != 0)
             {
-                if (tagComponent.HasTag(immunityTag))
-                {
-                    return true;
-                }
+                period += periodPerLevel * (level - 1);
+            }
+            return Mathf.Max(0.1f, period);
+        }
+
+        /// <summary>
+        /// Checks if requirements are met
+        /// </summary>
+        public bool CheckRequirements(TagComponent targetTags)
+        {
+            if (targetTags == null)
+                return requiredTags.Count == 0;
+
+            // Check required tags
+            foreach (var tag in requiredTags)
+            {
+                if (!targetTags.HasTag(tag))
+                    return false;
             }
 
-            return false;
-        }
-
-        /// <summary>
-        /// Source가 이 Effect를 적용할 수 있는지 확인
-        /// </summary>
-        public bool CanSourceApply(GameObject source)
-        {
-            if (source == null) return true;
-
-            var tagComponent = source.GetComponent<TagComponent>();
-            if (tagComponent == null) return true;
-
-            // Required source tags 확인
-            if (requiredSourceTags != null && !requiredSourceTags.IsEmpty)
+            // Check blocked tags
+            foreach (var tag in blockedTags)
             {
-                foreach (var tag in requiredSourceTags.Tags)
-                {
-                    if (!tagComponent.HasTag(tag))
-                        return false;
-                }
-            }
-
-            // Blocked source tags 확인
-            if (blockedSourceTags != null && !blockedSourceTags.IsEmpty)
-            {
-                foreach (var tag in blockedSourceTags.Tags)
-                {
-                    if (tagComponent.HasTag(tag))
-                        return false;
-                }
+                if (targetTags.HasTag(tag))
+                    return false;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Duration 계산 (scaling 적용)
+        /// Checks if effect should be removed
         /// </summary>
-        public float CalculateDuration(float scaleFactor = 1f)
+        public bool CheckRemovalConditions(TagComponent targetTags)
         {
-            if (durationPolicy == EffectDurationPolicy.Instant) return 0f;
-            if (durationPolicy == EffectDurationPolicy.Infinite) return float.MaxValue;
+            if (targetTags == null || removalTags.Count == 0)
+                return false;
 
-            float scaled = baseDuration * scaleFactor;
-            if (durationScaling != null && durationScaling.length > 0)
+            foreach (var tag in removalTags)
             {
-                scaled *= durationScaling.Evaluate(scaleFactor);
+                if (targetTags.HasTag(tag))
+                    return true;
             }
 
-            return Mathf.Max(0f, scaled);
+            return false;
         }
 
         /// <summary>
-        /// Modifier 값 계산
+        /// Gets display information for UI
         /// </summary>
-        public float CalculateModifierValue(ExtendedModifierConfig config, float magnitude, int stackCount = 1)
+        public EffectDisplayInfo GetDisplayInfo(EffectSpec spec)
         {
-            float value = config.value * magnitude;
-
-            // Curve 적용
-            if (config.useCurve && config.valueCurve != null)
+            return new EffectDisplayInfo
             {
-                value *= config.valueCurve.Evaluate(magnitude);
-            }
+                name = effectName,
+                description = description,
+                icon = icon,
+                color = effectColor,
+                duration = spec.GetRemainingDuration(),
+                stacks = spec.stackCount,
+                showInUI = showInUI,
+                priority = displayPriority,
+                formattedText = FormatDisplayText(spec)
+            };
+        }
 
-            // Stack scaling 적용
-            if (config.scaleWithStack)
+        /// <summary>
+        /// Formats display text for UI
+        /// </summary>
+        private string FormatDisplayText(EffectSpec spec)
+        {
+            string text = displayFormat;
+            text = text.Replace("{name}", effectName);
+            text = text.Replace("{stacks}", spec.stackCount.ToString());
+            text = text.Replace("{duration}", spec.GetRemainingDuration().ToString("F1"));
+            text = text.Replace("{level}", spec.level.ToString());
+            return text;
+        }
+    }
+
+    /// <summary>
+    /// Data for effect modifiers
+    /// </summary>
+    [Serializable]
+    public class EffectModifierData
+    {
+        public AttributeType attributeType;
+        public ModifierOperation operation = ModifierOperation.Add;
+        public float baseValue;
+        public float valuePerLevel;
+        public float valuePerStack;
+        public AnimationCurve scalingCurve;
+        public bool isPermanent = false;
+
+        public float CalculateValue(int level, int stacks = 1)
+        {
+            float value = baseValue;
+            value += valuePerLevel * (level - 1);
+            value += valuePerStack * (stacks - 1);
+
+            if (scalingCurve != null && scalingCurve.keys.Length > 0)
             {
-                value *= 1f + (config.stackScalingFactor * (stackCount - 1));
+                value *= scalingCurve.Evaluate(level);
             }
 
             return value;
         }
+    }
 
-        #endregion
+    /// <summary>
+    /// Conditional modifier data
+    /// </summary>
+    [Serializable]
+    public class ConditionalModifierData
+    {
+        public EffectConditionType conditionType;
+        public float threshold;
+        public GameplayTag requiredTag;
+        public AttributeType checkAttribute;
+        public ComparisonOperator comparisonOperator;
+        public EffectModifierData modifier;
 
-        #region Private Methods
-
-        private GameplayEffect CreateInstantEffect()
+        public bool CheckCondition(GameObject target)
         {
-            // InstantEffect 생성 로직 (후속 구현)
-            Debug.Log($"Creating InstantEffect from {effectName}");
-            return null;
-        }
-
-        private GameplayEffect CreateDurationEffect()
-        {
-            // DurationEffect 생성 로직 (후속 구현)
-            Debug.Log($"Creating DurationEffect from {effectName}");
-            return null;
-        }
-
-        private GameplayEffect CreatePeriodicEffect()
-        {
-            // PeriodicEffect 생성 로직 (후속 구현)
-            Debug.Log($"Creating PeriodicEffect from {effectName}");
-            return null;
-        }
-
-        private GameplayEffect CreateInfiniteEffect()
-        {
-            // InfiniteEffect 생성 로직 (후속 구현)
-            Debug.Log($"Creating InfiniteEffect from {effectName}");
-            return null;
-        }
-
-        #endregion
-
-        #region Editor
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            // 자동 ID 생성
-            if (string.IsNullOrEmpty(effectId))
+            switch (conditionType)
             {
-                effectId = Guid.NewGuid().ToString();
-            }
+                case EffectConditionType.HasTag:
+                    var tagComponent = target.GetComponent<TagComponent>();
+                    return tagComponent != null && tagComponent.HasTag(requiredTag);
 
-            // 이름 자동 설정
-            if (string.IsNullOrEmpty(effectName))
-            {
-                effectName = name;
-            }
+                case EffectConditionType.AttributeThreshold:
+                    var attributes = target.GetComponent<AttributeSetComponent>();
+                    if (attributes == null) return false;
+                    float value = attributes.GetAttributeValue(checkAttribute);
+                    return CompareValue(value, threshold, comparisonOperator);
 
-            // Duration 검증
-            if (baseDuration < 0f) baseDuration = 0f;
-            if (period <= 0f) period = 1f;
+                case EffectConditionType.Random:
+                    return UnityEngine.Random.Range(0f, 100f) < threshold;
 
-            // Stack 검증
-            if (maxStackCount < 1) maxStackCount = 1;
+                case EffectConditionType.HealthPercentage:
+                    var healthAttrs = target.GetComponent<AttributeSetComponent>();
+                    if (healthAttrs == null) return false;
+                    float healthPercent = healthAttrs.GetAttributeValue(AttributeType.HealthPercent);
+                    return CompareValue(healthPercent, threshold, comparisonOperator);
 
-            // Type에 따른 설정 조정
-            switch (effectType)
-            {
-                case EffectType.Instant:
-                    durationPolicy = EffectDurationPolicy.Instant;
-                    baseDuration = 0f;
-                    break;
-                case EffectType.Duration:
-                    durationPolicy = EffectDurationPolicy.HasDuration;
-                    if (baseDuration <= 0f) baseDuration = 1f;
-                    break;
-                case EffectType.Periodic:
-                    durationPolicy = EffectDurationPolicy.HasDuration;
-                    if (baseDuration <= 0f) baseDuration = period * 3f;
-                    break;
-                case EffectType.Infinite:
-                    durationPolicy = EffectDurationPolicy.Infinite;
-                    break;
+                default:
+                    return false;
             }
         }
 
-        private void Reset()
+        private bool CompareValue(float value, float threshold, ComparisonOperator op)
         {
-            effectId = Guid.NewGuid().ToString();
-            effectName = name;
-            effectTags = new List<GameplayTag>();
-            modifiers = new List<ExtendedModifierConfig>();
-            conditionalEffects = new List<ConditionalEffect>();
-            presentation = new EffectPresentation();
-            grantedTags = new TagContainer();
+            switch (op)
+            {
+                case ComparisonOperator.Equal:
+                    return Mathf.Approximately(value, threshold);
+                case ComparisonOperator.NotEqual:
+                    return !Mathf.Approximately(value, threshold);
+                case ComparisonOperator.Greater:
+                    return value > threshold;
+                case ComparisonOperator.GreaterOrEqual:
+                    return value >= threshold;
+                case ComparisonOperator.Less:
+                    return value < threshold;
+                case ComparisonOperator.LessOrEqual:
+                    return value <= threshold;
+                default:
+                    return false;
+            }
         }
-#endif
+    }
 
-        #endregion
+    /// <summary>
+    /// Runtime specification of an effect
+    /// </summary>
+    [Serializable]
+    public class EffectSpec
+    {
+        public EffectData data;
+        public int level;
+        public float magnitude;
+        public float duration;
+        public float period;
+        public int stackCount = 1;
+        public float appliedTime;
+        public float lastPeriodicTime;
+        public GameObject source;
+        public object customData;
+
+        public float GetRemainingDuration()
+        {
+            if (duration < 0) return -1f;
+            float elapsed = Time.time - appliedTime;
+            return Mathf.Max(0, duration - elapsed);
+        }
+
+        public float GetProgress()
+        {
+            if (duration <= 0) return 0f;
+            float elapsed = Time.time - appliedTime;
+            return Mathf.Clamp01(elapsed / duration);
+        }
+
+        public bool IsExpired()
+        {
+            if (duration < 0) return false;
+            return Time.time - appliedTime >= duration;
+        }
+
+        public bool IsPeriodicReady()
+        {
+            return Time.time - lastPeriodicTime >= period;
+        }
+
+        public void UpdatePeriodicTime()
+        {
+            lastPeriodicTime = Time.time;
+        }
+
+        public void RefreshDuration()
+        {
+            appliedTime = Time.time;
+        }
+
+        public void AddStacks(int amount)
+        {
+            stackCount = Mathf.Min(stackCount + amount, data.maxStackCount);
+        }
+    }
+
+    /// <summary>
+    /// UI display information for effects
+    /// </summary>
+    [Serializable]
+    public class EffectDisplayInfo
+    {
+        public string name;
+        public string description;
+        public Sprite icon;
+        public Color color;
+        public float duration;
+        public int stacks;
+        public bool showInUI;
+        public int priority;
+        public string formattedText;
+    }
+
+    /// <summary>
+    /// Stack behavior options
+    /// </summary>
+    public enum StackBehavior
+    {
+        RefreshDuration,
+        AddDuration,
+        Independent,
+        Replace
+    }
+
+    /// <summary>
+    /// Effect condition types
+    /// </summary>
+    public enum EffectConditionType
+    {
+        None,
+        HasTag,
+        MissingTag,
+        AttributeThreshold,
+        HealthPercentage,
+        ManaPercentage,
+        Random,
+        TimeElapsed,
+        StackCount
+    }
+
+    /// <summary>
+    /// Comparison operators for conditions
+    /// </summary>
+    public enum ComparisonOperator
+    {
+        Equal,
+        NotEqual,
+        Greater,
+        GreaterOrEqual,
+        Less,
+        LessOrEqual
     }
 }
-
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Data/EffectData.cs

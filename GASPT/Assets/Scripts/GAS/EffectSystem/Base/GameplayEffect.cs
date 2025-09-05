@@ -1,243 +1,212 @@
-using GAS.AttributeSystem;
-using GAS.Core;
-using GAS.TagSystem;
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Base/GameplayEffect.cs
+// ================================
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using GAS.TagSystem;
+using GAS.AttributeSystem;
 using static GAS.Core.GASConstants;
+using System.Linq;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// GameplayEffect의 타입을 정의
-    /// </summary>
-    public enum EffectType
-    {
-        Instant,    // 즉시 적용 후 종료
-        Duration,   // 일정 시간 지속
-        Periodic,   // 주기적으로 틱 발생
-        Infinite    // 수동 제거까지 영구 지속
-    }
-
-    /// <summary>
-    /// Effect의 스택 정책을 정의
-    /// </summary>
-    public enum EffectStackingPolicy
-    {
-        None,               // 스택 불가 (기존 Effect 유지)
-        Override,           // 기존 Effect를 새 Effect로 덮어쓰기
-        Stack,              // 개별 Effect로 스택 (각각 독립적으로 동작)
-        AggregateBySource,  // 같은 source의 Effect는 하나로 합침
-        AggregateByTarget   // 같은 target의 Effect는 하나로 합침
-    }
-
-    /// <summary>
-    /// Effect의 지속시간 정책을 정의
-    /// </summary>
-    public enum EffectDurationPolicy
-    {
-        Instant,        // 즉시 적용
-        HasDuration,    // 지속 시간 있음
-        Infinite        // 무한 지속
-    }
-
-    /// <summary>
-    /// Modifier 적용 시점을 정의
-    /// </summary>
-    public enum ModifierApplicationTiming
-    {
-        OnApplication,  // Effect 적용 시점
-        OnPeriodic,     // 주기적 틱 시점
-        OnRemoval,      // Effect 제거 시점
-        OnStack         // 스택 변경 시점
-    }
-
-    /// <summary>
-    /// GameplayEffect의 베이스 클래스
-    /// 모든 Effect 타입의 기반이 되는 추상 클래스
+    /// Base class for all gameplay effects
     /// </summary>
     public abstract class GameplayEffect : ScriptableObject
     {
-        #region Serialized Fields
-
-        [Header("=== Effect Identity ===")]
+        [Header("Basic Info")]
         [SerializeField] protected string effectId;
         [SerializeField] protected string effectName;
-        [TextArea(2, 4)]
         [SerializeField] protected string description;
+        [SerializeField] protected Sprite icon;
 
-        [Header("=== Effect Type ===")]
+        [Header("Duration Settings")]
         [SerializeField] protected EffectType effectType = EffectType.Instant;
-        [SerializeField] protected EffectDurationPolicy durationPolicy = EffectDurationPolicy.Instant;
-
-        [Header("=== Duration Settings ===")]
-        [SerializeField] protected float duration = 1f;
+        [SerializeField] protected DurationPolicy durationPolicy = DurationPolicy.Instant;
+        [SerializeField] protected float duration = 0f;
         [SerializeField] protected float period = 1f;
         [SerializeField] protected bool executePeriodicOnApplication = true;
 
-        [Header("=== Stack Settings ===")]
-        [SerializeField] protected EffectStackingPolicy stackingPolicy = EffectStackingPolicy.None;
+        [Header("Stacking")]
+        [SerializeField] protected StackingPolicy stackingPolicy = StackingPolicy.None;
         [SerializeField] protected int maxStackCount = 1;
         [SerializeField] protected bool refreshDurationOnStack = true;
         [SerializeField] protected bool resetPeriodicOnStack = false;
 
-        [Header("=== Tag Requirements ===")]
+        [Header("Tag Requirements")]
         [SerializeField] protected TagRequirement applicationRequirement;
         [SerializeField] protected TagRequirement ongoingRequirement;
         [SerializeField] protected TagRequirement removalRequirement;
 
-        [Header("=== Effect Tags ===")]
+        [Header("Tags")]
         [SerializeField] protected TagContainer grantedTags;
         [SerializeField] protected TagContainer assetTags;
 
-        [Header("=== Modifiers ===")]
-        [SerializeField] protected List<ModifierConfig> modifiers = new List<ModifierConfig>();
+        [Header("Modifiers")]
+        [SerializeField] protected List<AttributeModifier> modifiers = new List<AttributeModifier>();
 
-        [Header("=== Visual & Audio ===")]
+        [Header("Visual & Audio")]
         [SerializeField] protected GameObject effectPrefab;
         [SerializeField] protected AudioClip applicationSound;
         [SerializeField] protected AudioClip removalSound;
 
-        #endregion
-
-        #region Properties
-
+        // Properties
         public string EffectId => effectId;
         public string EffectName => effectName;
         public string Description => description;
-        public EffectType Type => effectType;
-        public EffectDurationPolicy DurationPolicy => durationPolicy;
+        public EffectType EffectType => effectType;
+        public DurationPolicy DurationPolicy => durationPolicy;
         public float Duration => duration;
         public float Period => period;
-        public EffectStackingPolicy StackingPolicy => stackingPolicy;
+        public StackingPolicy StackingPolicy => stackingPolicy;
         public int MaxStackCount => maxStackCount;
-        public TagRequirement ApplicationRequirement => applicationRequirement;
-        public TagRequirement OngoingRequirement => ongoingRequirement;
         public TagContainer GrantedTags => grantedTags;
         public TagContainer AssetTags => assetTags;
-        public List<ModifierConfig> Modifiers => modifiers;
-        public GameObject EffectPrefab => effectPrefab;
-
-        #endregion
-
-        #region Abstract Methods
+        public List<AttributeModifier> Modifiers => modifiers;
+        public bool RefreshDurationOnStack => refreshDurationOnStack;
 
         /// <summary>
-        /// Effect를 대상에 적용
+        /// Checks if the effect can be applied
         /// </summary>
-        /// <param name="context">Effect 실행 컨텍스트</param>
-        /// <param name="target">적용 대상</param>
-        /// <returns>적용 성공 여부</returns>
-        public abstract bool Apply(EffectContext context, GameObject target);
-
-        /// <summary>
-        /// Effect를 대상에서 제거
-        /// </summary>
-        /// <param name="context">Effect 실행 컨텍스트</param>
-        /// <param name="target">제거 대상</param>
-        /// <returns>제거 성공 여부</returns>
-        public abstract bool Remove(EffectContext context, GameObject target);
-
-        /// <summary>
-        /// 주기적 Effect 실행 (Periodic 타입용)
-        /// </summary>
-        /// <param name="context">Effect 실행 컨텍스트</param>
-        /// <param name="target">실행 대상</param>
-        /// <returns>실행 성공 여부</returns>
-        public abstract bool ExecutePeriodic(EffectContext context, GameObject target);
-
-        #endregion
-
-        #region Virtual Methods
-
-        /// <summary>
-        /// Effect 적용 가능 여부 검사
-        /// </summary>
-        public virtual bool CanApply(EffectContext context, GameObject target)
+        public virtual bool CanApply(EffectContext context)
         {
-            if (target == null) return false;
-
-            // Tag requirement 검사
-            if (applicationRequirement != null)
-            {
-                var tagComponent = target.GetComponent<TagComponent>();
-                if (tagComponent != null && !tagComponent.SatisfiesRequirement(applicationRequirement))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Effect 지속 가능 여부 검사 (Duration/Infinite 타입용)
-        /// </summary>
-        public virtual bool CanContinue(EffectContext context, GameObject target)
-        {
-            if (target == null) return false;
-
-            // Ongoing requirement 검사
-            if (ongoingRequirement != null)
-            {
-                var tagComponent = target.GetComponent<TagComponent>();
-                if (tagComponent != null && !tagComponent.SatisfiesRequirement(ongoingRequirement))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Effect 스택 가능 여부 검사
-        /// </summary>
-        public virtual bool CanStack(GameplayEffect existingEffect, EffectContext context)
-        {
-            if (stackingPolicy == EffectStackingPolicy.None)
+            if (context == null || context.target == null)
                 return false;
 
-            if (existingEffect == null || existingEffect.effectId != effectId)
-                return false;
+            // Check application requirements
+            if (applicationRequirement != null && !applicationRequirement.IgnoreIfEmpty)
+            {
+                var tagComponent = context.target.GetComponent<TagComponent>();
+                if (tagComponent == null)
+                    return false;
+
+                if (!applicationRequirement.CheckRequirement(tagComponent))
+                    return false;
+            }
 
             return true;
         }
 
         /// <summary>
-        /// Modifier 생성
+        /// Called when the effect is applied
         /// </summary>
-        protected virtual List<AttributeModifier> CreateModifiers(EffectContext context, float magnitude = 1f)
+        public abstract void OnApply(EffectContext context);
+
+        /// <summary>
+        /// Called when the effect is removed
+        /// </summary>
+        public abstract void OnRemove(EffectContext context);
+
+        /// <summary>
+        /// Called periodically for periodic effects
+        /// </summary>
+        public virtual void OnPeriodic(EffectContext context)
         {
-            var createdModifiers = new List<AttributeModifier>();
-
-            foreach (var config in modifiers)
-            {
-                if (config == null) continue;
-
-                var modifier = new AttributeModifier(
-                    config.operation,
-                    config.value * magnitude,
-                    config.priority
-                );
-
-                createdModifiers.Add(modifier);
-            }
-
-            return createdModifiers;
+            // Override in derived classes for periodic behavior
         }
 
         /// <summary>
-        /// 태그 부여
+        /// Called each frame for duration-based effects
         /// </summary>
-        protected virtual void GrantTags(GameObject target)
+        public virtual void OnTick(EffectContext context, float deltaTime)
         {
-            if (grantedTags == null || grantedTags.IsEmpty) return;
+            // Override in derived classes for per-frame updates
+        }
 
-            var tagComponent = target.GetComponent<TagComponent>();
-            if (tagComponent != null)
+        /// <summary>
+        /// Called when the effect stacks
+        /// </summary>
+        public virtual void OnStack(EffectContext context, int newStackCount, int previousStackCount)
+        {
+            // Override in derived classes for stacking behavior
+        }
+
+        /// <summary>
+        /// Checks if the effect should continue
+        /// </summary>
+        public virtual bool CheckOngoing(EffectContext context)
+        {
+            if (ongoingRequirement == null || ongoingRequirement.IgnoreIfEmpty)
+                return true;
+
+            var tagComponent = context.target?.GetComponent<TagComponent>();
+            if (tagComponent == null)
+                return false;
+
+            return ongoingRequirement.CheckRequirement(tagComponent);
+        }
+
+        /// <summary>
+        /// Checks if the effect should be removed
+        /// </summary>
+        public virtual bool CheckRemoval(EffectContext context)
+        {
+            if (removalRequirement == null || removalRequirement.IgnoreIfEmpty)
+                return false;
+
+            var tagComponent = context.target?.GetComponent<TagComponent>();
+            if (tagComponent == null)
+                return false;
+
+            return removalRequirement.CheckRequirement(tagComponent);
+        }
+
+        /// <summary>
+        /// Applies attribute modifiers to the target
+        /// </summary>
+        protected virtual void ApplyModifiers(EffectContext context)
+        {
+            if (modifiers == null || modifiers.Count == 0)
+                return;
+
+            var attributeComponent = context.target?.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            foreach (var modifier in modifiers)
             {
-                foreach (var tag in grantedTags.Tags)
+                if (modifier != null)
+                {
+                    var modifierCopy = modifier.Clone();
+                    modifierCopy.source = this;
+                    modifierCopy.sourceName = effectName;
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifierCopy);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes attribute modifiers from the target
+        /// </summary>
+        protected virtual void RemoveModifiers(EffectContext context)
+        {
+            if (modifiers == null || modifiers.Count == 0)
+                return;
+
+            var attributeComponent = context.target?.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            attributeComponent.RemoveAllModifiersFromSource(this);
+        }
+
+        /// <summary>
+        /// Applies granted tags to the target
+        /// </summary>
+        protected virtual void ApplyGrantedTags(EffectContext context)
+        {
+            if (grantedTags == null || grantedTags.Tags.Count == 0)
+                return;
+
+            var tagComponent = context.target?.GetComponent<TagComponent>();
+            if (tagComponent == null)
+                return;
+
+            foreach (var tag in grantedTags.Tags)
+            {
+                if (tag != null)
                 {
                     tagComponent.AddTag(tag);
                 }
@@ -245,16 +214,20 @@ namespace GAS.EffectSystem
         }
 
         /// <summary>
-        /// 부여된 태그 제거
+        /// Removes granted tags from the target
         /// </summary>
-        protected virtual void RemoveGrantedTags(GameObject target)
+        protected virtual void RemoveGrantedTags(EffectContext context)
         {
-            if (grantedTags == null || grantedTags.IsEmpty) return;
+            if (grantedTags == null || grantedTags.Tags.Count == 0)
+                return;
 
-            var tagComponent = target.GetComponent<TagComponent>();
-            if (tagComponent != null)
+            var tagComponent = context.target?.GetComponent<TagComponent>();
+            if (tagComponent == null)
+                return;
+
+            foreach (var tag in grantedTags.Tags)
             {
-                foreach (var tag in grantedTags.Tags)
+                if (tag != null)
                 {
                     tagComponent.RemoveTag(tag);
                 }
@@ -262,119 +235,214 @@ namespace GAS.EffectSystem
         }
 
         /// <summary>
-        /// Effect 시각 효과 생성
+        /// Spawns visual effects
         /// </summary>
-        protected virtual GameObject CreateVisualEffect(GameObject target)
+        protected virtual GameObject SpawnVisualEffect(EffectContext context)
         {
-            if (effectPrefab == null) return null;
+            if (effectPrefab == null)
+                return null;
 
-            return Instantiate(effectPrefab, target.transform.position, Quaternion.identity, target.transform);
+            var position = context.effectLocation != Vector3.zero ?
+                context.effectLocation : context.target.transform.position;
+
+            var effect = Instantiate(effectPrefab, position, Quaternion.identity);
+
+            // Parent to target if it's a persistent effect
+            if (durationPolicy != DurationPolicy.Instant && context.target != null)
+            {
+                effect.transform.SetParent(context.target.transform);
+                effect.transform.localPosition = Vector3.zero;
+            }
+
+            return effect;
         }
 
         /// <summary>
-        /// 사운드 재생
+        /// Plays application sound
         /// </summary>
-        protected virtual void PlaySound(AudioClip clip, Vector3 position)
+        protected virtual void PlayApplicationSound(EffectContext context)
         {
-            if (clip == null) return;
+            if (applicationSound == null)
+                return;
 
-            // AudioSource를 통한 사운드 재생 (구현 필요)
-            // AudioSource.PlayClipAtPoint(clip, position);
-        }
+            var position = context.target != null ?
+                context.target.transform.position : context.effectLocation;
 
-        #endregion
-
-        #region Helper Methods
-
-        /// <summary>
-        /// Effect ID 생성 (GUID)
-        /// </summary>
-        protected virtual void GenerateEffectId()
-        {
-            if (string.IsNullOrEmpty(effectId))
-            {
-                effectId = Guid.NewGuid().ToString();
-            }
+            AudioSource.PlayClipAtPoint(applicationSound, position);
         }
 
         /// <summary>
-        /// Effect 정보 문자열 반환
+        /// Plays removal sound
         /// </summary>
-        public override string ToString()
+        protected virtual void PlayRemovalSound(EffectContext context)
         {
-            return $"[{effectType}] {effectName} (ID: {effectId})";
+            if (removalSound == null)
+                return;
+
+            var position = context.target != null ?
+                context.target.transform.position : context.effectLocation;
+
+            AudioSource.PlayClipAtPoint(removalSound, position);
         }
 
-        #endregion
-
-        #region Editor
-
-#if UNITY_EDITOR
-        protected virtual void OnValidate()
+        /// <summary>
+        /// Creates an effect instance for runtime tracking
+        /// </summary>
+        public virtual EffectInstance CreateInstance(EffectContext context)
         {
-            // 자동 ID 생성
-            GenerateEffectId();
+            var instance = new EffectInstance
+            {
+                effect = this,
+                context = context,
+                startTime = Time.time,
+                lastPeriodicTime = Time.time,
+                stackCount = 1,
+                instanceId = Guid.NewGuid()
+            };
 
-            // Duration 설정 검증
-            if (durationPolicy == EffectDurationPolicy.Instant)
+            // Calculate actual duration based on context
+            if (durationPolicy == DurationPolicy.HasDuration)
             {
-                duration = 0f;
+                instance.duration = CalculateDuration(context);
             }
-            else if (duration < 0f)
+            else if (durationPolicy == DurationPolicy.Infinite)
             {
-                duration = 0f;
-            }
-
-            // Period 검증
-            if (effectType == EffectType.Periodic && period <= 0f)
-            {
-                period = 1f;
+                instance.duration = -1f;
             }
 
-            // Stack 설정 검증
-            if (maxStackCount < 1)
-            {
-                maxStackCount = 1;
-            }
+            return instance;
         }
-#endif
 
-        #endregion
+        /// <summary>
+        /// Calculates the actual duration based on context
+        /// </summary>
+        protected virtual float CalculateDuration(EffectContext context)
+        {
+            float actualDuration = duration;
+
+            // Apply duration modifiers from context
+            if (context.durationMultiplier != 1f)
+            {
+                actualDuration *= context.durationMultiplier;
+            }
+
+            return Mathf.Max(0.1f, actualDuration);
+        }
+
+        /// <summary>
+        /// Calculates the actual period based on context
+        /// </summary>
+        protected virtual float CalculatePeriod(EffectContext context)
+        {
+            float actualPeriod = period;
+
+            // Apply period modifiers from context
+            if (context.periodMultiplier != 1f)
+            {
+                actualPeriod *= context.periodMultiplier;
+            }
+
+            return Mathf.Max(0.1f, actualPeriod);
+        }
+
+        /// <summary>
+        /// Checks if this effect conflicts with another
+        /// </summary>
+        public virtual bool ConflictsWith(GameplayEffect other)
+        {
+            if (other == null)
+                return false;
+
+            // Same effect always conflicts based on stacking policy
+            if (other == this)
+            {
+                return stackingPolicy == StackingPolicy.None;
+            }
+
+            // Check if effects share exclusive tags
+            if (assetTags != null && other.assetTags != null)
+            {
+                foreach (var tag in assetTags.Tags)
+                {
+                    if (tag != null && tag.TagName.Contains("Exclusive"))
+                    {
+                        foreach (var otherTag in other.assetTags.Tags)
+                        {
+                            if (otherTag != null && otherTag.TagName == tag.TagName)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the display priority for UI
+        /// </summary>
+        public virtual int GetDisplayPriority()
+        {
+            // Instant effects don't display
+            if (durationPolicy == DurationPolicy.Instant)
+                return -1;
+
+            // Debuffs show before buffs
+            bool isDebuff = assetTags != null &&
+                assetTags.Tags.Contains<GameplayTag>("Debuff");
+
+            return isDebuff ? 100 : 50;
+        }
+
+        /// <summary>
+        /// Gets the effect color for UI
+        /// </summary>
+        public virtual Color GetEffectColor()
+        {
+            // Red for debuffs
+            if (assetTags != null && assetTags.Tags.Contains<GameplayTag>("Debuff"))
+                return Color.red;
+
+            // Green for buffs
+            if (assetTags != null && assetTags.Tags.Contains<GameplayTag>("Buff"))
+                return Color.green;
+
+            // Default white
+            return Color.white;
+        }
     }
 
     /// <summary>
-    /// Modifier 설정 구조체
+    /// Duration policy for effects
     /// </summary>
-    [Serializable]
-    public class ModifierConfig
+    public enum DurationPolicy
     {
-        [Header("Modifier Settings")]
-        public AttributeType attributeType;
-        public ModifierOperation operation = ModifierOperation.Add;
-        public float value;
-        public ModifierPriority priority = ModifierPriority.Normal;
-        public ModifierApplicationTiming timing = ModifierApplicationTiming.OnApplication;
+        Instant,
+        HasDuration,
+        Infinite
+    }
 
-        [Header("Scaling")]
-        public bool useContextScaling = false;
-        public float scalingFactor = 1f;
+    /// <summary>
+    /// Effect stacking policy
+    /// </summary>
+    public enum StackingPolicy
+    {
+        None,
+        Stack,
+        Replace,
+        Refresh
+    }
 
-        public ModifierConfig()
-        {
-            operation = ModifierOperation.Add;
-            priority = 0;
-            timing = ModifierApplicationTiming.OnApplication;
-            scalingFactor = 1f;
-        }
-
-        public ModifierConfig(AttributeType type, ModifierOperation op, float val, ModifierPriority prio = 0)
-        {
-            attributeType = type;
-            operation = op;
-            value = val;
-            priority = prio;
-            timing = ModifierApplicationTiming.OnApplication;
-            scalingFactor = 1f;
-        }
+    /// <summary>
+    /// Effect type classification
+    /// </summary>
+    public enum EffectType
+    {
+        Instant,
+        Duration,
+        Periodic,
+        Infinite
     }
 }

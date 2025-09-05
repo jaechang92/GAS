@@ -1,454 +1,268 @@
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Base/EffectContext.cs
+// ================================
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using GAS.Core;
-using GAS.TagSystem;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// Effect 실행 시 필요한 컨텍스트 정보를 담는 클래스
-    /// Instigator(시전자), Target(대상), 추가 파라미터 등을 관리
+    /// Contains context information for effect application
     /// </summary>
     [Serializable]
     public class EffectContext
     {
-        #region Fields
-
-        private GameObject instigator;
-        private GameObject target;
-        private GameplayEffect sourceEffect;
-        private object sourceAbility;
-        private float magnitude;
-        private int stackCount;
-        private float elapsedTime;
-        private Dictionary<string, object> additionalData;
-        private Vector3 hitPoint;
-        private Vector3 hitNormal;
-        private TagContainer contextTags;
-        private int level;
-
-
-        #endregion
-
-        #region Properties
+        /// <summary>
+        /// The GameObject that initiated the effect
+        /// </summary>
+        public GameObject instigator;
 
         /// <summary>
-        /// Effect 시전자
+        /// The target GameObject of the effect
         /// </summary>
-        public GameObject Instigator
-        {
-            get => instigator;
-            set => instigator = value;
-        }
+        public GameObject target;
 
         /// <summary>
-        /// Effect 대상
+        /// The ability that triggered this effect (if any)
         /// </summary>
-        public GameObject Target
-        {
-            get => target;
-            set => target = value;
-        }
+        public object sourceAbility;
 
         /// <summary>
-        /// 원본 Effect
+        /// The level of the effect or ability
         /// </summary>
-        public GameplayEffect SourceEffect
-        {
-            get => sourceEffect;
-            set => sourceEffect = value;
-        }
+        public int level = 1;
 
         /// <summary>
-        /// Effect를 발생시킨 Ability (Phase 3에서 사용)
+        /// Magnitude multiplier for the effect
         /// </summary>
-        public object SourceAbility
-        {
-            get => sourceAbility;
-            set => sourceAbility = value;
-        }
+        public float magnitude = 1f;
 
         /// <summary>
-        /// Effect 강도 배수
+        /// Location where the effect should be applied
         /// </summary>
-        public float Magnitude
-        {
-            get => magnitude;
-            set => magnitude = Mathf.Max(0f, value);
-        }
+        public Vector3 effectLocation;
 
         /// <summary>
-        /// 현재 스택 수
+        /// Hit location for targeted effects
         /// </summary>
-        public int StackCount
-        {
-            get => stackCount;
-            set => stackCount = Mathf.Max(0, value);
-        }
+        public Vector3 hitLocation;
 
         /// <summary>
-        /// Effect 경과 시간
+        /// Direction of the effect
         /// </summary>
-        public float ElapsedTime
-        {
-            get => elapsedTime;
-            set => elapsedTime = Mathf.Max(0f, value);
-        }
+        public Vector3 direction;
 
         /// <summary>
-        /// 충돌 지점 (투사체 등에서 사용)
+        /// Is this a critical effect?
         /// </summary>
-        public Vector3 HitPoint
-        {
-            get => hitPoint;
-            set => hitPoint = value;
-        }
+        public bool isCritical;
 
         /// <summary>
-        /// 충돌 표면 법선
+        /// Was the effect blocked?
         /// </summary>
-        public Vector3 HitNormal
-        {
-            get => hitNormal;
-            set => hitNormal = value;
-        }
+        public bool isBlocked;
 
         /// <summary>
-        /// 컨텍스트 태그
+        /// Was the effect dodged?
         /// </summary>
-        public TagContainer ContextTags
-        {
-            get => contextTags;
-            set => contextTags = value;
-        }
-
-        public int Level
-        {
-            get => level;
-            set => level = Mathf.Max(0, value);
-        }
+        public bool isDodged;
 
         /// <summary>
-        /// 추가 데이터 딕셔너리
+        /// Duration multiplier
         /// </summary>
-        public Dictionary<string, object> AdditionalData
-        {
-            get => additionalData ??= new Dictionary<string, object>();
-        }
-
-        #endregion
-
-        #region Constructors
+        public float durationMultiplier = 1f;
 
         /// <summary>
-        /// 기본 생성자
+        /// Period multiplier for periodic effects
         /// </summary>
-        public EffectContext()
-        {
-            magnitude = 1f;
-            stackCount = 1;
-            elapsedTime = 0f;
-            additionalData = new Dictionary<string, object>();
-            contextTags = new TagContainer();
-        }
+        public float periodMultiplier = 1f;
 
         /// <summary>
-        /// 필수 파라미터를 받는 생성자
+        /// Custom data for specific effects
         /// </summary>
-        /// <param name="instigator">시전자</param>
-        /// <param name="target">대상</param>
-        /// <param name="sourceEffect">원본 Effect</param>
-        public EffectContext(GameObject instigator, GameObject target, GameplayEffect sourceEffect) : this()
+        public object customData;
+
+        /// <summary>
+        /// Time when the context was created
+        /// </summary>
+        public float timestamp;
+
+        /// <summary>
+        /// Source effect that created this context (for chained effects)
+        /// </summary>
+        public GameplayEffect sourceEffect;
+
+        /// <summary>
+        /// Tags to ignore during application
+        /// </summary>
+        public string[] ignoreTags;
+
+        /// <summary>
+        /// Additional targets for area effects
+        /// </summary>
+        public GameObject[] additionalTargets;
+
+        /// <summary>
+        /// Constructor with basic parameters
+        /// </summary>
+        public EffectContext(GameObject instigator, GameObject target)
         {
             this.instigator = instigator;
             this.target = target;
-            this.sourceEffect = sourceEffect;
+            this.timestamp = Time.time;
+            this.effectLocation = target != null ? target.transform.position : Vector3.zero;
         }
 
         /// <summary>
-        /// 전체 파라미터를 받는 생성자
+        /// Constructor with full parameters
         /// </summary>
-        public EffectContext(
-            GameObject instigator,
-            GameObject target,
-            GameplayEffect sourceEffect,
-            float magnitude = 1f,
-            int stackCount = 1) : this(instigator, target, sourceEffect)
+        public EffectContext(GameObject instigator, GameObject target, Vector3 location, int level = 1)
         {
-            this.magnitude = magnitude;
-            this.stackCount = stackCount;
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        /// <summary>
-        /// 추가 데이터 설정
-        /// </summary>
-        public void SetData(string key, object value)
-        {
-            if (string.IsNullOrEmpty(key)) return;
-
-            AdditionalData[key] = value;
+            this.instigator = instigator;
+            this.target = target;
+            this.effectLocation = location;
+            this.level = level;
+            this.timestamp = Time.time;
         }
 
         /// <summary>
-        /// 추가 데이터 가져오기
-        /// </summary>
-        public T GetData<T>(string key, T defaultValue = default)
-        {
-            if (string.IsNullOrEmpty(key)) return defaultValue;
-
-            if (AdditionalData.TryGetValue(key, out var value) && value is T typedValue)
-            {
-                return typedValue;
-            }
-
-            return defaultValue;
-        }
-
-        /// <summary>
-        /// 추가 데이터 존재 여부 확인
-        /// </summary>
-        public bool HasData(string key)
-        {
-            return !string.IsNullOrEmpty(key) && AdditionalData.ContainsKey(key);
-        }
-
-        /// <summary>
-        /// 추가 데이터 제거
-        /// </summary>
-        public bool RemoveData(string key)
-        {
-            if (string.IsNullOrEmpty(key)) return false;
-
-            return AdditionalData.Remove(key);
-        }
-
-        /// <summary>
-        /// 모든 추가 데이터 제거
-        /// </summary>
-        public void ClearData()
-        {
-            AdditionalData.Clear();
-        }
-
-        /// <summary>
-        /// 컨텍스트 태그 추가
-        /// </summary>
-        public void AddContextTag(GameplayTag tag)
-        {
-            contextTags?.AddTag(tag);
-        }
-
-        /// <summary>
-        /// 컨텍스트 태그 제거
-        /// </summary>
-        public void RemoveContextTag(GameplayTag tag)
-        {
-            contextTags?.RemoveTag(tag);
-        }
-
-        /// <summary>
-        /// 컨텍스트 태그 확인
-        /// </summary>
-        public bool HasContextTag(GameplayTag tag)
-        {
-            return contextTags?.HasTag(tag) ?? false;
-        }
-
-        /// <summary>
-        /// 컨텍스트 복사 (Deep Copy)
+        /// Creates a copy of this context
         /// </summary>
         public EffectContext Clone()
         {
-            var clone = new EffectContext
+            return new EffectContext(instigator, target)
             {
-                instigator = instigator,
-                target = target,
-                sourceEffect = sourceEffect,
                 sourceAbility = sourceAbility,
+                level = level,
                 magnitude = magnitude,
-                stackCount = stackCount,
-                elapsedTime = elapsedTime,
-                hitPoint = hitPoint,
-                hitNormal = hitNormal,
-                contextTags = contextTags?.Clone()
+                effectLocation = effectLocation,
+                hitLocation = hitLocation,
+                direction = direction,
+                isCritical = isCritical,
+                isBlocked = isBlocked,
+                isDodged = isDodged,
+                durationMultiplier = durationMultiplier,
+                periodMultiplier = periodMultiplier,
+                customData = customData,
+                timestamp = timestamp,
+                sourceEffect = sourceEffect,
+                ignoreTags = ignoreTags,
+                additionalTargets = additionalTargets
             };
-
-            // 추가 데이터 복사
-            foreach (var kvp in AdditionalData)
-            {
-                clone.AdditionalData[kvp.Key] = kvp.Value;
-            }
-
-            return clone;
         }
 
         /// <summary>
-        /// 컨텍스트 리셋
+        /// Creates a context for a secondary target
         /// </summary>
-        public void Reset()
+        public EffectContext CreateForTarget(GameObject newTarget)
         {
-            instigator = null;
-            target = null;
-            sourceEffect = null;
-            sourceAbility = null;
-            magnitude = 1f;
-            stackCount = 1;
-            elapsedTime = 0f;
-            hitPoint = Vector3.zero;
-            hitNormal = Vector3.up;
-            contextTags?.Clear();
-            AdditionalData.Clear();
+            var newContext = Clone();
+            newContext.target = newTarget;
+            newContext.effectLocation = newTarget.transform.position;
+            return newContext;
         }
 
         /// <summary>
-        /// 유효성 검증
+        /// Checks if the context is valid
         /// </summary>
         public bool IsValid()
         {
-            // 최소한 target은 있어야 함
-            return target != null && sourceEffect != null;
+            return target != null && target.activeInHierarchy;
         }
 
         /// <summary>
-        /// Instigator와 Target이 같은지 확인
-        /// </summary>
-        public bool IsSelfTarget()
-        {
-            return instigator != null && target != null && instigator == target;
-        }
-
-        /// <summary>
-        /// 거리 계산 (Instigator와 Target 간)
+        /// Gets the distance between instigator and target
         /// </summary>
         public float GetDistance()
         {
-            if (instigator == null || target == null) return 0f;
+            if (instigator == null || target == null)
+                return 0;
 
             return Vector3.Distance(instigator.transform.position, target.transform.position);
         }
 
         /// <summary>
-        /// 방향 벡터 계산 (Instigator에서 Target으로)
+        /// Gets the direction from instigator to target
         /// </summary>
         public Vector3 GetDirection()
         {
-            if (instigator == null || target == null) return Vector3.forward;
+            if (direction != Vector3.zero)
+                return direction;
+
+            if (instigator == null || target == null)
+                return Vector3.forward;
 
             return (target.transform.position - instigator.transform.position).normalized;
         }
 
         /// <summary>
-        /// 컨텍스트 정보 문자열 반환
+        /// Sets hit information
         /// </summary>
-        public override string ToString()
+        public void SetHitInfo(RaycastHit hit)
         {
-            return $"EffectContext: {sourceEffect?.name ?? "Unknown"} " +
-                   $"[{instigator?.name ?? "None"} -> {target?.name ?? "None"}] " +
-                   $"Mag: {magnitude:F2}, Stack: {stackCount}";
-        }
-
-        #endregion
-
-        #region Static Factory Methods
-
-        /// <summary>
-        /// Self-target 컨텍스트 생성
-        /// </summary>
-        public static EffectContext CreateSelfContext(GameObject self, GameplayEffect effect)
-        {
-            return new EffectContext(self, self, effect);
+            hitLocation = hit.point;
+            direction = hit.normal;
         }
 
         /// <summary>
-        /// AOE 컨텍스트 생성
+        /// Adds additional context data
         /// </summary>
-        public static EffectContext CreateAOEContext(GameObject instigator, GameObject target, GameplayEffect effect, Vector3 center)
+        public void AddCustomData(string key, object value)
         {
-            var context = new EffectContext(instigator, target, effect);
-            context.SetData("AOECenter", center);
-            context.SetData("AOERadius", 5f); // 기본값
-            return context;
-        }
-
-        /// <summary>
-        /// 투사체 컨텍스트 생성
-        /// </summary>
-        public static EffectContext CreateProjectileContext(
-            GameObject instigator,
-            GameObject target,
-            GameplayEffect effect,
-            Vector3 hitPoint,
-            Vector3 hitNormal)
-        {
-            var context = new EffectContext(instigator, target, effect)
+            if (customData == null)
             {
-                hitPoint = hitPoint,
-                hitNormal = hitNormal
-            };
-            context.AddContextTag(new GameplayTag("Effect.Source.Projectile"));
-            return context;
+                customData = new System.Collections.Generic.Dictionary<string, object>();
+            }
+
+            if (customData is System.Collections.Generic.Dictionary<string, object> dict)
+            {
+                dict[key] = value;
+            }
         }
 
-        #endregion
+        /// <summary>
+        /// Gets custom data by key
+        /// </summary>
+        public T GetCustomData<T>(string key)
+        {
+            if (customData is System.Collections.Generic.Dictionary<string, object> dict)
+            {
+                if (dict.TryGetValue(key, out object value))
+                {
+                    return (T)value;
+                }
+            }
+            return default(T);
+        }
     }
 
     /// <summary>
-    /// EffectContext Pool을 위한 정적 클래스
-    /// 메모리 할당 최적화
+    /// Extension class for effect context creation
     /// </summary>
-    public static class EffectContextPool
+    public static class EffectContextExtensions
     {
-        private static readonly Stack<EffectContext> pool = new Stack<EffectContext>();
-        private const int MaxPoolSize = 50;
-
         /// <summary>
-        /// Pool에서 Context 가져오기
+        /// Creates a basic effect context
         /// </summary>
-        public static EffectContext Get()
+        public static EffectContext CreateEffectContext(this GameObject instigator, GameObject target)
         {
-            if (pool.Count > 0)
-            {
-                var context = pool.Pop();
-                context.Reset();
-                return context;
-            }
-
-            return new EffectContext();
+            return new EffectContext(instigator, target);
         }
 
         /// <summary>
-        /// Pool에 Context 반환
+        /// Creates an effect context with location
         /// </summary>
-        public static void Return(EffectContext context)
+        public static EffectContext CreateEffectContext(this GameObject instigator, GameObject target, Vector3 location)
         {
-            if (context == null || pool.Count >= MaxPoolSize) return;
-
-            context.Reset();
-            pool.Push(context);
+            return new EffectContext(instigator, target, location);
         }
 
         /// <summary>
-        /// Pool 초기화
+        /// Creates a self-targeted effect context
         /// </summary>
-        public static void Clear()
+        public static EffectContext CreateSelfEffectContext(this GameObject gameObject)
         {
-            pool.Clear();
-        }
-
-        /// <summary>
-        /// Pool 사전 할당
-        /// </summary>
-        public static void Prewarm(int count)
-        {
-            for (int i = 0; i < count && pool.Count < MaxPoolSize; i++)
-            {
-                pool.Push(new EffectContext());
-            }
+            return new EffectContext(gameObject, gameObject);
         }
     }
 }

@@ -78,6 +78,8 @@ namespace GAS.TagSystem
         #endregion
 
         #region Properties
+        public bool IgnoreIfEmpty => ignoreIfEmpty;
+
         /// <summary>
         /// 요구사항 이름
         /// </summary>

@@ -1,590 +1,921 @@
-using GAS.AttributeSystem;
-using GAS.Core;
-using GAS.TagSystem;
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Types/PeriodicEffect.cs
+// ================================
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
+using GAS.Core;
+using GAS.TagSystem;
+using GAS.AttributeSystem;
 using static GAS.Core.GASConstants;
+using System.Linq;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// 주기적으로 효과가 발생하는 GameplayEffect
-    /// 예: 독, 화상, 재생, DOT(Damage Over Time), HOT(Heal Over Time)
+    /// Effect that executes periodically over time
     /// </summary>
-    [CreateAssetMenu(fileName = "PeriodicEffect", menuName = "GAS/Effects/Periodic Effect", order = 3)]
-    public class PeriodicEffect : DurationEffect
+    [CreateAssetMenu(fileName = "PeriodicEffect", menuName = "GAS/Effects/Periodic Effect")]
+    public class PeriodicEffect : GameplayEffect
     {
-        #region Additional Fields
+        [Header("Periodic Execution")]
+        [SerializeField] protected int maxTicks = -1; // -1 for unlimited
+        [SerializeField] protected bool executeOnFirstApplication = true;
+        [SerializeField] protected bool executeOnLastTick = true;
+        [SerializeField] protected bool scaleTickWithStack = true;
 
-        [Header("=== Periodic Settings ===")]
-        [SerializeField] private int maxTicks = -1; // -1 = 무제한
-        [SerializeField] private bool executeOnFirstApplication = true;
-        [SerializeField] private bool executeOnLastTick = true;
-        [SerializeField] private bool scaleTickWithStack = true;
+        [Header("Tick Modifiers")]
+        [SerializeField] protected List<AttributeModification> tickModifiers = new List<AttributeModification>();
+        [SerializeField] protected AnimationCurve tickDamageCurve;
 
-        [Header("=== Tick Modifiers ===")]
-        [SerializeField] private List<ModifierConfig> tickModifiers = new List<ModifierConfig>();
-        [SerializeField] private AnimationCurve tickDamageCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+        [Header("Tick Effects")]
+        [SerializeField] protected List<GameplayEffect> onTickEffects = new List<GameplayEffect>();
+        [SerializeField] protected bool useRandomTickEffect = false;
 
-        [Header("=== Tick Effects ===")]
-        [SerializeField] private List<InstantEffect> onTickEffects = new List<InstantEffect>();
-        [SerializeField] private bool useRandomTickEffect = false;
+        [Header("Visual & Audio")]
+        [SerializeField] protected GameObject tickVisualPrefab;
+        [SerializeField] protected AudioClip tickSound;
+        [SerializeField] protected float tickVisualDuration = 0.5f;
 
-        [Header("=== Tick Visuals ===")]
-        [SerializeField] private GameObject tickVisualPrefab;
-        [SerializeField] private AudioClip tickSound;
-        [SerializeField] private float tickVisualDuration = 0.5f;
+        [Header("Variable Period")]
+        [SerializeField] protected bool variablePeriod = false;
+        [SerializeField] protected float periodVariance = 0.1f; // 10% variance
+        [SerializeField] protected bool accelerateOverTime = false;
+        [SerializeField] protected float accelerationRate = 0.9f; // Multiplier per tick
 
-        [Header("=== Advanced Periodic ===")]
-        [SerializeField] private bool variablePeriod = false;
-        [SerializeField] private float periodVariance = 0.1f;
-        [SerializeField] private bool accelerateOverTime = false;
-        [SerializeField] private float accelerationRate = 0.9f;
+        [Header("UI Display")]
+        [SerializeField] protected bool showInUI = true;
+        [SerializeField] protected Color effectColor = Color.white;
 
-        #endregion
-
-        #region Constructor
-
-        public PeriodicEffect()
-        {
-            effectType = EffectType.Periodic;
-            durationPolicy = EffectDurationPolicy.HasDuration;
-            period = 1f; // 기본 1초마다 틱
-            duration = 5f; // 기본 5초 지속
-        }
-
-        #endregion
-
-        #region Override Methods
+        // Runtime tracking
+        protected Dictionary<GameObject, PeriodicEffectState> activeStates = new Dictionary<GameObject, PeriodicEffectState>();
 
         /// <summary>
-        /// Periodic 효과 적용
+        /// Apply the periodic effect
         /// </summary>
-        public override bool Apply(EffectContext context, GameObject target)
+        public override void OnApply(EffectContext context)
         {
-            if (!CanApply(context, target))
+            if (context == null || context.target == null) return;
+
+            var state = GetOrCreateState(context.target);
+            state.context = context;
+            state.startTime = Time.time;
+            state.lastTickTime = Time.time;
+            state.currentPeriod = CalculateInitialPeriod(context);
+            state.duration = CalculateActualDuration(context);
+            state.maxTicksLimit = maxTicks;
+
+            // Apply granted tags
+            ApplyGrantedTags(context);
+
+            // Apply persistent modifiers (if any)
+            ApplyPersistentModifiers(context, state);
+
+            // Execute first tick if configured
+            if (executeOnFirstApplication)
             {
-                Debug.LogWarning($"[PeriodicEffect] Cannot apply {effectName} to {target.name}");
-                return false;
+                ExecuteTick(context, state, true);
+                state.tickCount++;
             }
 
-            try
-            {
-                // 기존 인스턴스 확인
-                EffectInstance existingInstance = FindExistingInstance(target);
+            // Spawn visual effects
+            state.visualEffect = SpawnVisualEffect(context);
 
-                if (existingInstance != null)
+            // Play application sound
+            PlayApplicationSound(context);
+
+            // Fire applied event
+            FireEffectAppliedEvent(context);
+
+            Debug.Log($"[PeriodicEffect] Applied {effectName} to {context.target.name} (Period: {state.currentPeriod}s)");
+        }
+
+        /// <summary>
+        /// Remove the periodic effect
+        /// </summary>
+        public override void OnRemove(EffectContext context)
+        {
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            // Execute last tick if configured and not at max ticks
+            if (executeOnLastTick && !state.HasReachedMaxTicks())
+            {
+                ExecuteTick(context, state, false, true);
+            }
+
+            // Remove persistent modifiers
+            RemovePersistentModifiers(context, state);
+
+            // Remove granted tags
+            RemoveGrantedTags(context);
+
+            // Clean up visual effects
+            if (state.visualEffect != null)
+            {
+                Destroy(state.visualEffect);
+            }
+
+            // Clean up tick visuals
+            CleanupTickVisuals(state);
+
+            // Play removal sound
+            PlayRemovalSound(context);
+
+            // Fire removed event
+            FireEffectRemovedEvent(context);
+
+            // Remove state
+            activeStates.Remove(context.target);
+
+            Debug.Log($"[PeriodicEffect] Removed {effectName} from {context.target.name} (Total ticks: {state.tickCount})");
+        }
+
+        /// <summary>
+        /// Update tick for the periodic effect
+        /// </summary>
+        public override void OnTick(EffectContext context, float deltaTime)
+        {
+            if (context == null || context.target == null) return;
+
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            state.elapsedTime += deltaTime;
+
+            // Check if duration expired
+            if (state.duration > 0 && state.elapsedTime >= state.duration)
+            {
+                var effectComponent = context.target.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+                return;
+            }
+
+            // Check if periodic execution is due
+            float timeSinceLastTick = Time.time - state.lastTickTime;
+            if (timeSinceLastTick >= state.currentPeriod)
+            {
+                // Check max ticks
+                if (state.HasReachedMaxTicks())
                 {
-                    return HandleStacking(existingInstance, context, target);
+                    var effectComponent = context.target.GetComponent<EffectComponent>();
+                    effectComponent?.RemoveEffect(this);
+                    return;
                 }
 
-                // 새 인스턴스 생성
-                var instance = CreatePeriodicInstance(context, target);
+                // Execute periodic tick
+                ExecuteTick(context, state, false);
+                state.lastTickTime = Time.time;
+                state.tickCount++;
 
-                // 초기 Modifier 적용 (Duration 효과)
-                if (modifiers.Count > 0)
+                // Update period for next tick
+                UpdatePeriod(state);
+            }
+
+            // Update visual effect
+            UpdateVisualEffect(state);
+
+            // Check ongoing requirements
+            if (!CheckOngoing(context))
+            {
+                var effectComponent = context.target.GetComponent<EffectComponent>();
+                effectComponent?.RemoveEffect(this);
+            }
+        }
+
+        /// <summary>
+        /// Handle periodic execution
+        /// </summary>
+        public override void OnPeriodic(EffectContext context)
+        {
+            // This is called by the base system, but we handle periodics in OnTick
+            // Can be used for additional periodic logic if needed
+        }
+
+        /// <summary>
+        /// Handle stacking
+        /// </summary>
+        public override void OnStack(EffectContext context, int newStackCount, int previousStackCount)
+        {
+            if (!activeStates.TryGetValue(context.target, out var state))
+                return;
+
+            state.stackCount = newStackCount;
+
+            // Refresh duration if configured
+            if (refreshDurationOnStack)
+            {
+                state.startTime = Time.time;
+                state.elapsedTime = 0;
+            }
+
+            // Reset periodic if configured
+            if (resetPeriodicOnStack)
+            {
+                state.lastTickTime = Time.time;
+                state.currentPeriod = CalculateInitialPeriod(context);
+            }
+
+            // Update persistent modifiers for new stack count
+            UpdateStackModifiers(context, state, newStackCount);
+
+            // Fire stack event
+            FireStackEvent(context, newStackCount, previousStackCount);
+
+            Debug.Log($"[PeriodicEffect] {effectName} stacked to {newStackCount}x on {context.target.name}");
+        }
+
+        #region Tick Execution
+
+        /// <summary>
+        /// Execute a periodic tick
+        /// </summary>
+        protected virtual void ExecuteTick(EffectContext context, PeriodicEffectState state, bool isFirst = false, bool isLast = false)
+        {
+            // Calculate tick strength
+            float tickStrength = CalculateTickStrength(state, isFirst, isLast);
+
+            // Apply tick modifiers
+            ApplyTickModifiers(context, state, tickStrength);
+
+            // Execute tick effects
+            ExecuteTickEffects(context, state);
+
+            // Spawn tick visual
+            SpawnTickVisual(context, state);
+
+            // Play tick sound
+            PlayTickSound(context);
+
+            // Fire periodic event
+            FirePeriodicEvent(context, state);
+
+            Debug.Log($"[PeriodicEffect] Tick #{state.tickCount} executed for {effectName} (Strength: {tickStrength:F2})");
+        }
+
+        /// <summary>
+        /// Apply modifiers for this tick
+        /// </summary>
+        protected virtual void ApplyTickModifiers(EffectContext context, PeriodicEffectState state, float strength)
+        {
+            if (tickModifiers == null || tickModifiers.Count == 0)
+                return;
+
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            foreach (var modification in tickModifiers)
+            {
+                if (modification == null) continue;
+
+                float value = modification.CalculateValue(context.level);
+
+                // Scale with stack count if configured
+                if (scaleTickWithStack && state.stackCount > 1)
                 {
-                    ApplyModifiers(instance, context, target);
+                    value *= state.stackCount;
                 }
 
-                // 태그 부여
-                GrantTags(target);
+                // Apply strength multiplier
+                value *= strength;
 
-                // 시각/청각 효과
-                PlayApplicationEffects(instance, target);
-
-                // 첫 틱 즉시 실행
-                if (executeOnFirstApplication)
+                // Apply tick damage curve if available
+                if (tickDamageCurve != null && tickDamageCurve.keys.Length > 0)
                 {
-                    ExecutePeriodicTick(instance, context, target);
+                    float progress = state.GetProgress();
+                    value *= tickDamageCurve.Evaluate(progress);
                 }
 
-                // Periodic 추적 시작
-                StartPeriodicTracking(instance, target);
-
-                // 이벤트 발생
-                TriggerApplicationEvents(instance, target);
-
-                // 인스턴스 저장
-                StoreInstance(target, instance);
-
-                int expectedTicks = CalculateExpectedTicks(instance);
-                Debug.Log($"[PeriodicEffect] Applied {effectName} to {target.name} - Period: {period}s, Expected ticks: {expectedTicks}");
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[PeriodicEffect] Failed to apply {effectName}: {e.Message}");
-                return false;
+                // Apply the modification
+                ApplyAttributeModification(attributeComponent, modification, value, context);
             }
         }
 
         /// <summary>
-        /// 주기적 실행 (DurationEffect override)
+        /// Apply a single attribute modification
         /// </summary>
-        public override bool ExecutePeriodic(EffectContext context, GameObject target)
+        protected virtual void ApplyAttributeModification(
+            AttributeSetComponent attributes,
+            AttributeModification modification,
+            float value,
+            EffectContext context)
         {
-            var instance = FindExistingInstance(target);
-            if (instance == null)
+            // Special handling for health
+            if (modification.attributeType == AttributeType.Health)
             {
-                Debug.LogWarning($"[PeriodicEffect] No instance found for periodic execution");
-                return false;
-            }
-
-            return ExecutePeriodicTick(instance, context, target);
-        }
-
-        #endregion
-
-        #region Private Methods - Periodic Logic
-
-        /// <summary>
-        /// Periodic 인스턴스 생성
-        /// </summary>
-        private EffectInstance CreatePeriodicInstance(EffectContext context, GameObject target)
-        {
-            var instance = new EffectInstance(this, context);
-
-            // Duration 계산
-            float finalDuration = CalculateDuration(context);
-            instance.RemainingDuration = finalDuration;
-
-            // 다음 틱 시간 설정
-            float nextPeriod = CalculateNextPeriod(0);
-            instance.NextPeriodicTime = Time.time + nextPeriod;
-
-            return instance;
-        }
-
-        /// <summary>
-        /// Periodic 추적 시작
-        /// </summary>
-        private async void StartPeriodicTracking(EffectInstance instance, GameObject target)
-        {
-            var cts = new CancellationTokenSource();
-            instance.Context.SetData("PeriodicCancellationToken", cts);
-
-            try
-            {
-                float updateInterval = 0.05f; // 50ms 정밀도
-                float currentPeriod = period;
-                int tickCount = executeOnFirstApplication ? 1 : 0;
-
-                while (!instance.IsExpired && instance.RemainingDuration > 0)
+                if (value < 0)
                 {
-                    await Awaitable.WaitForSecondsAsync(updateInterval, cts.Token);
-
-                    if (target == null || instance.IsExpired)
-                        break;
-
-                    // Duration 감소
-                    instance.RemainingDuration -= updateInterval;
-
-                    // 주기 체크
-                    if (Time.time >= instance.NextPeriodicTime)
-                    {
-                        // 최대 틱 체크
-                        if (maxTicks > 0 && tickCount >= maxTicks)
-                        {
-                            Debug.Log($"[PeriodicEffect] Max ticks ({maxTicks}) reached for {effectName}");
-                            break;
-                        }
-
-                        // 틱 실행
-                        bool success = ExecutePeriodicTick(instance, instance.Context, target);
-                        if (!success)
-                        {
-                            Debug.LogWarning($"[PeriodicEffect] Tick execution failed for {effectName}");
-                        }
-
-                        tickCount++;
-
-                        // 다음 주기 계산
-                        currentPeriod = CalculateNextPeriod(tickCount);
-                        instance.NextPeriodicTime = Time.time + currentPeriod;
-
-                        // 가속 적용
-                        if (accelerateOverTime)
-                        {
-                            currentPeriod *= accelerationRate;
-                            currentPeriod = Mathf.Max(0.1f, currentPeriod);
-                        }
-                    }
-
-                    // 만료 직전 마지막 틱
-                    if (instance.RemainingDuration <= updateInterval && executeOnLastTick)
-                    {
-                        if (tickCount == 0 || Time.time - instance.NextPeriodicTime + currentPeriod > updateInterval)
-                        {
-                            ExecutePeriodicTick(instance, instance.Context, target);
-                            Debug.Log($"[PeriodicEffect] Final tick executed for {effectName}");
-                        }
-                    }
-
-                    // 만료 체크
-                    if (instance.RemainingDuration <= 0)
-                    {
-                        await HandleExpiration(instance, target);
-                        break;
-                    }
+                    ApplyDamage(attributes, -value, context);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log($"[PeriodicEffect] Periodic tracking cancelled for {effectName}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[PeriodicEffect] Error in periodic tracking: {e.Message}");
-            }
-            finally
-            {
-                cts?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// 주기적 틱 실행
-        /// </summary>
-        private bool ExecutePeriodicTick(EffectInstance instance, EffectContext context, GameObject target)
-        {
-            if (target == null) return false;
-
-            instance.IncrementPeriodicCount();
-
-            Debug.Log($"[PeriodicEffect] Tick #{instance.PeriodicExecutionCount} for {effectName} on {target.name}");
-
-            try
-            {
-                // 틱 강도 계산
-                float tickMagnitude = CalculateTickMagnitude(instance, context);
-
-                // 1. Tick Modifiers 적용
-                ApplyTickModifiers(target, tickMagnitude, instance);
-
-                // 2. Tick Effects 적용
-                ApplyTickEffects(target, context, instance);
-
-                // 3. 시각/청각 효과
-                PlayTickEffects(target);
-
-                // 4. 이벤트 발생
-                TriggerTickEvent(instance, target, tickMagnitude);
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[PeriodicEffect] Failed to execute tick: {e.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// 틱 강도 계산
-        /// </summary>
-        private float CalculateTickMagnitude(EffectInstance instance, EffectContext context)
-        {
-            float magnitude = context.Magnitude;
-
-            // 스택 기반 scaling
-            if (scaleTickWithStack && instance.CurrentStack > 1)
-            {
-                magnitude *= instance.CurrentStack;
-            }
-
-            // 시간 기반 curve
-            if (tickDamageCurve != null && tickDamageCurve.length > 0)
-            {
-                float progress = instance.Progress;
-                magnitude *= tickDamageCurve.Evaluate(progress);
-            }
-
-            return magnitude;
-        }
-
-        /// <summary>
-        /// Tick Modifiers 적용
-        /// </summary>
-        private void ApplyTickModifiers(GameObject target, float magnitude, EffectInstance instance)
-        {
-            if (tickModifiers == null || tickModifiers.Count == 0) return;
-
-            var attributeComponent = target.GetComponent<IAttributeComponent>();
-            if (attributeComponent == null) return;
-
-            foreach (var config in tickModifiers)
-            {
-                if (config == null) continue;
-
-                // 즉시 적용 modifier (tick은 영구적이지 않음)
-                float currentValue = attributeComponent.GetAttributeValue(config.attributeType);
-                float modifiedValue = currentValue;
-
-                switch (config.operation)
+                else
                 {
-                    case ModifierOperation.Add:
-                        modifiedValue = currentValue + (config.value * magnitude);
-                        break;
-                    case ModifierOperation.Multiply:
-                        modifiedValue = currentValue * (config.value * magnitude);
-                        break;
-                    case ModifierOperation.Override:
-                        modifiedValue = config.value * magnitude;
-                        break;
-                }
-
-                // AttributeSetComponent의 BaseValue 직접 변경
-                if (attributeComponent is AttributeSetComponent attrComponent)
-                {
-                    var attributeSet = attrComponent.GetAttributeSet<AttributeSet>();
-                    BaseAttribute attribute = attributeSet.GetAttribute(config.attributeType);
-                    if (attributeSet != null && attribute != null)
-                    {
-                        attribute.BaseValue = modifiedValue;
-
-                        // 변경 이벤트
-                        GASEvents.TriggerAttributeChanged(
-                            target,
-                            config.attributeType.ToString(),
-                            currentValue,
-                            modifiedValue
-                        );
-
-                        // 틱 데미지/힐 로그
-                        float changeAmount = modifiedValue - currentValue;
-                        string changeType = changeAmount < 0 ? "damage" : "heal";
-                        Debug.Log($"[PeriodicEffect] Tick {changeType}: {config.attributeType} {changeAmount:+0.##}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Tick Effects 적용
-        /// </summary>
-        private void ApplyTickEffects(GameObject target, EffectContext context, EffectInstance instance)
-        {
-            if (onTickEffects == null || onTickEffects.Count == 0) return;
-
-            if (useRandomTickEffect)
-            {
-                // 랜덤하게 하나 선택
-                int randomIndex = UnityEngine.Random.Range(0, onTickEffects.Count);
-                var effect = onTickEffects[randomIndex];
-                if (effect != null)
-                {
-                    var tickContext = context.Clone();
-                    tickContext.SetData("TickNumber", instance.PeriodicExecutionCount);
-                    effect.Apply(tickContext, target);
+                    ApplyHealing(attributes, value, context);
                 }
             }
             else
             {
-                // 모든 tick effect 적용
+                attributes.ModifyAttribute(
+                    modification.attributeType,
+                    value,
+                    modification.operation
+                );
+            }
+        }
+
+        /// <summary>
+        /// Apply damage with processing
+        /// </summary>
+        protected virtual void ApplyDamage(AttributeSetComponent attributes, float damage, EffectContext context)
+        {
+            // Apply damage
+            attributes.ModifyAttribute(AttributeType.Health, -damage, ModifierOperation.Add);
+
+            // Fire damage event
+            GASEvents.Trigger(GASEventType.DamageReceived, new DamageEventData
+            {
+                source = context.instigator,
+                target = context.target,
+                damage = damage,
+                isCritical = context.isCritical,
+                damageType = GetDamageType()
+            });
+        }
+
+        /// <summary>
+        /// Apply healing with processing
+        /// </summary>
+        protected virtual void ApplyHealing(AttributeSetComponent attributes, float healing, EffectContext context)
+        {
+            float currentHealth = attributes.GetAttributeValue(AttributeType.Health);
+            float maxHealth = attributes.GetAttributeMaxValue(AttributeType.Health);
+            float actualHealing = Mathf.Min(healing, maxHealth - currentHealth);
+
+            attributes.ModifyAttribute(AttributeType.Health, actualHealing, ModifierOperation.Add);
+
+            // Fire healing event
+            GASEvents.Trigger(GASEventType.HealingReceived, new HealingEventData
+            {
+                source = context.instigator,
+                target = context.target,
+                healing = actualHealing,
+                isCritical = context.isCritical
+            });
+        }
+
+        /// <summary>
+        /// Execute tick effects
+        /// </summary>
+        protected virtual void ExecuteTickEffects(EffectContext context, PeriodicEffectState state)
+        {
+            if (onTickEffects == null || onTickEffects.Count == 0)
+                return;
+
+            var effectComponent = context.target.GetComponent<EffectComponent>();
+            if (effectComponent == null)
+                return;
+
+            if (useRandomTickEffect && onTickEffects.Count > 0)
+            {
+                // Apply random effect
+                int randomIndex = UnityEngine.Random.Range(0, onTickEffects.Count);
+                var randomEffect = onTickEffects[randomIndex];
+                if (randomEffect != null)
+                {
+                    var tickContext = CreateTickContext(context, state);
+                    effectComponent.ApplyEffect(randomEffect, tickContext);
+                }
+            }
+            else
+            {
+                // Apply all effects
                 foreach (var effect in onTickEffects)
                 {
                     if (effect != null)
                     {
-                        var tickContext = context.Clone();
-                        tickContext.SetData("TickNumber", instance.PeriodicExecutionCount);
-                        effect.Apply(tickContext, target);
+                        var tickContext = CreateTickContext(context, state);
+                        effectComponent.ApplyEffect(effect, tickContext);
                     }
                 }
             }
         }
 
         /// <summary>
-        /// 다음 주기 계산
+        /// Create context for tick effects
         /// </summary>
-        private float CalculateNextPeriod(int tickCount)
+        protected virtual EffectContext CreateTickContext(EffectContext originalContext, PeriodicEffectState state)
         {
-            float nextPeriod = period;
-
-            // 가변 주기
-            if (variablePeriod)
+            var tickContext = originalContext.Clone();
+            tickContext.sourceEffect = this;
+            tickContext.customData = new PeriodicTickData
             {
-                float variance = UnityEngine.Random.Range(-periodVariance, periodVariance);
-                nextPeriod += nextPeriod * variance;
-            }
-
-            // 가속
-            if (accelerateOverTime && tickCount > 0)
-            {
-                nextPeriod *= Mathf.Pow(accelerationRate, tickCount);
-            }
-
-            return Mathf.Max(0.1f, nextPeriod);
+                tickNumber = state.tickCount,
+                tickStrength = CalculateTickStrength(state),
+                isLastTick = state.HasReachedMaxTicks()
+            };
+            return tickContext;
         }
 
         /// <summary>
-        /// 예상 틱 횟수 계산
+        /// Calculate tick strength
         /// </summary>
-        private int CalculateExpectedTicks(EffectInstance instance)
+        protected virtual float CalculateTickStrength(PeriodicEffectState state, bool isFirst = false, bool isLast = false)
         {
-            if (maxTicks > 0) return maxTicks;
+            float strength = 1f;
 
-            int ticks = Mathf.FloorToInt(instance.RemainingDuration / period);
-            if (executeOnFirstApplication) ticks++;
-            if (executeOnLastTick && instance.RemainingDuration % period > 0.01f) ticks++;
+            // Apply stack multiplier
+            if (scaleTickWithStack && state.stackCount > 1)
+            {
+                strength *= state.stackCount;
+            }
 
-            return ticks;
+            // Apply tick curve
+            if (tickDamageCurve != null && tickDamageCurve.keys.Length > 0)
+            {
+                float progress = state.GetProgress();
+                strength *= tickDamageCurve.Evaluate(progress);
+            }
+
+            // Special multipliers for first/last tick
+            if (isFirst)
+            {
+                strength *= 0.5f; // Half damage on first tick
+            }
+            else if (isLast)
+            {
+                strength *= 1.5f; // Bonus damage on last tick
+            }
+
+            return strength;
         }
 
         #endregion
 
-        #region Private Methods - Effects
+        #region Persistent Modifiers
 
         /// <summary>
-        /// 틱 효과 재생
+        /// Apply persistent modifiers that last for the effect duration
         /// </summary>
-        private void PlayTickEffects(GameObject target)
+        protected virtual void ApplyPersistentModifiers(EffectContext context, PeriodicEffectState state)
         {
-            // 시각 효과
-            if (tickVisualPrefab != null)
-            {
-                var vfx = Instantiate(tickVisualPrefab, target.transform.position, Quaternion.identity);
-                vfx.transform.SetParent(target.transform);
-                Destroy(vfx, tickVisualDuration);
-            }
+            if (modifiers == null || modifiers.Count == 0)
+                return;
 
-            // 사운드
-            if (tickSound != null)
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            state.persistentModifiers.Clear();
+
+            foreach (var modifierTemplate in modifiers)
             {
-                PlaySound(tickSound, target.transform.position);
+                if (modifierTemplate != null)
+                {
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.persistentModifiers.Add(modifier);
+                }
             }
         }
 
         /// <summary>
-        /// 틱 이벤트 발생
+        /// Remove persistent modifiers
         /// </summary>
-        private void TriggerTickEvent(EffectInstance instance, GameObject target, float magnitude)
+        protected virtual void RemovePersistentModifiers(EffectContext context, PeriodicEffectState state)
         {
-            Debug.Log($"[PeriodicEffect] Tick event: {effectName} - Tick #{instance.PeriodicExecutionCount}, Magnitude: {magnitude:F2}");
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
 
-            // 데미지/힐 판정
-            bool isDamage = false;
-            bool isHeal = false;
-
-            foreach (var modifier in tickModifiers)
+            foreach (var modifier in state.persistentModifiers)
             {
-                if (modifier.attributeType == AttributeType.Health)
+                if (modifier != null)
                 {
-                    if (modifier.value < 0) isDamage = true;
-                    else if (modifier.value > 0) isHeal = true;
+                    attributeComponent.RemoveModifier(modifier.targetAttributeType, modifier);
                 }
             }
 
-            if (isDamage)
+            state.persistentModifiers.Clear();
+        }
+
+        /// <summary>
+        /// Update modifiers for stack changes
+        /// </summary>
+        protected virtual void UpdateStackModifiers(EffectContext context, PeriodicEffectState state, int stacks)
+        {
+            var attributeComponent = context.target.GetComponent<AttributeSetComponent>();
+            if (attributeComponent == null)
+                return;
+
+            // Remove old modifiers
+            foreach (var modifier in state.persistentModifiers)
             {
-                Debug.Log($"[PeriodicEffect] DOT tick: {effectName} - Damage: {magnitude:F2}");
+                if (modifier != null)
+                {
+                    attributeComponent.RemoveModifier(modifier.targetAttributeType, modifier);
+                }
             }
-            else if (isHeal)
+
+            state.persistentModifiers.Clear();
+
+            // Apply new modifiers with stack multiplier
+            foreach (var modifierTemplate in modifiers)
             {
-                Debug.Log($"[PeriodicEffect] HOT tick: {effectName} - Healing: {magnitude:F2}");
+                if (modifierTemplate != null)
+                {
+                    var modifier = modifierTemplate.Clone();
+                    modifier.source = this;
+                    modifier.sourceName = effectName;
+                    modifier.value *= stacks;
+
+                    attributeComponent.AddModifier(modifier.targetAttributeType, modifier);
+                    state.persistentModifiers.Add(modifier);
+                }
             }
         }
 
         #endregion
 
-        #region Override Stacking
+        #region Period Management
 
         /// <summary>
-        /// 스택 처리 (override)
+        /// Calculate initial period
         /// </summary>
-        protected override bool HandleStacking(EffectInstance existingInstance, EffectContext context, GameObject target)
+        protected virtual float CalculateInitialPeriod(EffectContext context)
         {
-            bool result = base.HandleStacking(existingInstance, context, target);
+            float initialPeriod = period;
 
-            if (result && resetPeriodicOnStack)
+            // Apply context multiplier
+            initialPeriod *= context.periodMultiplier;
+
+            // Apply variance if configured
+            if (variablePeriod && periodVariance > 0)
             {
-                // Periodic 타이머 리셋
-                existingInstance.ResetPeriodicTimer();
-                existingInstance.Context.SetData("PeriodicExecutionCount", 0);
-
-                Debug.Log($"[PeriodicEffect] Stack applied, periodic timer reset for {effectName}");
+                float variance = UnityEngine.Random.Range(-periodVariance, periodVariance);
+                initialPeriod *= (1f + variance);
             }
 
-            return result;
+            return Mathf.Max(0.1f, initialPeriod);
+        }
+
+        /// <summary>
+        /// Update period for next tick
+        /// </summary>
+        protected virtual void UpdatePeriod(PeriodicEffectState state)
+        {
+            // Apply acceleration if configured
+            if (accelerateOverTime && accelerationRate > 0 && accelerationRate < 1)
+            {
+                state.currentPeriod *= accelerationRate;
+                state.currentPeriod = Mathf.Max(0.1f, state.currentPeriod);
+            }
+
+            // Apply variance for next tick
+            if (variablePeriod && periodVariance > 0)
+            {
+                float basePeriod = state.currentPeriod / (1f + state.lastVariance); // Remove last variance
+                float variance = UnityEngine.Random.Range(-periodVariance, periodVariance);
+                state.currentPeriod = basePeriod * (1f + variance);
+                state.lastVariance = variance;
+            }
+        }
+
+        /// <summary>
+        /// Calculate actual duration
+        /// </summary>
+        protected virtual float CalculateActualDuration(EffectContext context)
+        {
+            if (durationPolicy == DurationPolicy.Infinite)
+                return -1f;
+
+            if (durationPolicy == DurationPolicy.Instant)
+                return 0f;
+
+            float actualDuration = duration;
+
+            // Apply context multiplier
+            actualDuration *= context.durationMultiplier;
+
+            // If max ticks is set, calculate duration based on ticks
+            if (maxTicks > 0)
+            {
+                float tickDuration = maxTicks * CalculateInitialPeriod(context);
+                actualDuration = Mathf.Min(actualDuration, tickDuration);
+            }
+
+            return actualDuration;
         }
 
         #endregion
 
-        #region Static Factory Methods
+        #region Visual & Audio
 
         /// <summary>
-        /// DOT(Damage Over Time) Effect 생성
+        /// Spawn tick visual effect
         /// </summary>
-        public static PeriodicEffect CreateDOT(string name, float damage, float duration, float period)
+        protected virtual void SpawnTickVisual(EffectContext context, PeriodicEffectState state)
         {
-            var effect = CreateInstance<PeriodicEffect>();
-            effect.effectName = name;
-            effect.effectId = Guid.NewGuid().ToString();
-            effect.duration = duration;
-            effect.period = period;
-            effect.tickModifiers = new List<ModifierConfig>
+            if (tickVisualPrefab == null)
+                return;
+
+            Vector3 spawnPosition = context.hitLocation != Vector3.zero ?
+                context.hitLocation : context.target.transform.position;
+
+            var tickVisual = Instantiate(tickVisualPrefab, spawnPosition, Quaternion.identity);
+
+            // Add to tracking for cleanup
+            state.tickVisuals.Add(new TickVisualInfo
             {
-                new ModifierConfig(AttributeType.Health, ModifierOperation.Add, -damage, 0)
+                visual = tickVisual,
+                spawnTime = Time.time,
+                duration = tickVisualDuration
+            });
+
+            // Auto destroy
+            Destroy(tickVisual, tickVisualDuration);
+        }
+
+        /// <summary>
+        /// Play tick sound
+        /// </summary>
+        protected virtual void PlayTickSound(EffectContext context)
+        {
+            if (tickSound == null)
+                return;
+
+            AudioSource.PlayClipAtPoint(tickSound, context.target.transform.position);
+        }
+
+        /// <summary>
+        /// Update visual effect
+        /// </summary>
+        protected virtual void UpdateVisualEffect(PeriodicEffectState state)
+        {
+            if (state.visualEffect == null)
+                return;
+
+            // Pulse effect based on time until next tick
+            float timeUntilNextTick = state.currentPeriod - (Time.time - state.lastTickTime);
+            float pulseProgress = 1f - (timeUntilNextTick / state.currentPeriod);
+
+            // Update particle systems
+            var particleSystems = state.visualEffect.GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in particleSystems)
+            {
+                var emission = ps.emission;
+                emission.rateOverTime = 5f + (10f * pulseProgress);
+            }
+        }
+
+        /// <summary>
+        /// Clean up tick visuals
+        /// </summary>
+        protected virtual void CleanupTickVisuals(PeriodicEffectState state)
+        {
+            foreach (var tickVisual in state.tickVisuals)
+            {
+                if (tickVisual.visual != null)
+                {
+                    Destroy(tickVisual.visual);
+                }
+            }
+            state.tickVisuals.Clear();
+        }
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Fire effect applied event
+        /// </summary>
+        protected virtual void FireEffectAppliedEvent(EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectApplied, new EffectAppliedEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                source = context.instigator
+            });
+        }
+
+        /// <summary>
+        /// Fire effect removed event
+        /// </summary>
+        protected virtual void FireEffectRemovedEvent(EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectRemoved, new EffectRemovedEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                source = context.instigator
+            });
+        }
+
+        /// <summary>
+        /// Fire periodic event
+        /// </summary>
+        protected virtual void FirePeriodicEvent(EffectContext context, PeriodicEffectState state)
+        {
+            GASEvents.Trigger(GASEventType.EffectPeriodic, new EffectPeriodicEventData
+            {
+                effect = this,
+                context = context,
+                target = context.target,
+                tickCount = state.tickCount,
+                source = context.instigator
+            });
+        }
+
+        /// <summary>
+        /// Fire stack event
+        /// </summary>
+        protected virtual void FireStackEvent(EffectContext context, int newStack, int oldStack)
+        {
+            GASEvents.Trigger(GASEventType.EffectStackChanged, new EffectStackEventData
+            {
+                effect = this,
+                target = context.target,
+                newStackCount = newStack,
+                previousStackCount = oldStack,
+                source = context.instigator
+            });
+        }
+
+        #endregion
+
+        #region State Management
+
+        /// <summary>
+        /// Get or create state for target
+        /// </summary>
+        protected PeriodicEffectState GetOrCreateState(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+            {
+                state = new PeriodicEffectState();
+                activeStates[target] = state;
+            }
+            return state;
+        }
+
+        #endregion
+
+        #region Utility
+
+        /// <summary>
+        /// Get damage type based on tags
+        /// </summary>
+        protected virtual DamageType GetDamageType()
+        {
+            if (assetTags?.Tags.Contains<GameplayTag>("Physical") == true)
+                return DamageType.Physical;
+            if (assetTags?.Tags.Contains<GameplayTag>("Magic") == true)
+                return DamageType.Magic;
+            if (assetTags?.Tags.Contains<GameplayTag>("True") == true)
+                return DamageType.True;
+            return DamageType.Physical;
+        }
+
+        #endregion
+
+        #region Display Info
+
+        /// <summary>
+        /// Get display info for UI
+        /// </summary>
+        public PeriodicEffectDisplayInfo GetDisplayInfo(GameObject target)
+        {
+            if (!activeStates.TryGetValue(target, out var state))
+                return null;
+
+            return new PeriodicEffectDisplayInfo
+            {
+                effectName = effectName,
+                description = description,
+                icon = icon,
+                color = effectColor,
+                tickCount = state.tickCount,
+                maxTicks = state.maxTicksLimit,
+                currentPeriod = state.currentPeriod,
+                timeUntilNextTick = state.currentPeriod - (Time.time - state.lastTickTime),
+                remainingDuration = state.GetRemainingDuration(),
+                stackCount = state.stackCount,
+                showInUI = showInUI
             };
-            return effect;
         }
-
-        /// <summary>
-        /// HOT(Heal Over Time) Effect 생성
-        /// </summary>
-        public static PeriodicEffect CreateHOT(string name, float healing, float duration, float period)
-        {
-            var effect = CreateInstance<PeriodicEffect>();
-            effect.effectName = name;
-            effect.effectId = Guid.NewGuid().ToString();
-            effect.duration = duration;
-            effect.period = period;
-            effect.tickModifiers = new List<ModifierConfig>
-            {
-                new ModifierConfig(AttributeType.Health, ModifierOperation.Add, healing, 0)
-            };
-            return effect;
-        }
-
-        #endregion
-
-        #region Editor
-
-#if UNITY_EDITOR
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-
-            // PeriodicEffect 강제 설정
-            effectType = EffectType.Periodic;
-
-            // Period 검증
-            if (period <= 0f) period = 1f;
-
-            // Duration이 period보다 짧으면 조정
-            if (duration < period && duration > 0)
-            {
-                duration = period * 3; // 최소 3틱
-            }
-
-            // Max ticks 검증
-            if (maxTicks == 0) maxTicks = -1;
-
-            // Acceleration 검증
-            if (accelerateOverTime)
-            {
-                accelerationRate = Mathf.Clamp(accelerationRate, 0.1f, 1f);
-            }
-
-            // Period variance 검증
-            periodVariance = Mathf.Clamp01(periodVariance);
-        }
-#endif
 
         #endregion
     }
-}
 
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Types/PeriodicEffect.cs
+    /// <summary>
+    /// Runtime state for periodic effects
+    /// </summary>
+    [Serializable]
+    public class PeriodicEffectState
+    {
+        public EffectContext context;
+        public float startTime;
+        public float elapsedTime;
+        public float duration;
+        public float lastTickTime;
+        public float currentPeriod;
+        public float lastVariance;
+        public int tickCount = 0;
+        public int stackCount = 1;
+        public int maxTicksLimit = -1;
+        public GameObject visualEffect;
+        public List<AttributeModifier> persistentModifiers = new List<AttributeModifier>();
+        public List<TickVisualInfo> tickVisuals = new List<TickVisualInfo>();
+
+        public bool HasReachedMaxTicks()
+        {
+            return maxTicksLimit > 0 && tickCount >= maxTicksLimit;
+        }
+
+        public float GetRemainingDuration()
+        {
+            if (duration < 0) return -1f;
+            return Mathf.Max(0, duration - elapsedTime);
+        }
+
+        public float GetProgress()
+        {
+            if (duration <= 0) return 0f;
+            return Mathf.Clamp01(elapsedTime / duration);
+        }
+    }
+
+    /// <summary>
+    /// Info for tick visuals
+    /// </summary>
+    [Serializable]
+    public class TickVisualInfo
+    {
+        public GameObject visual;
+        public float spawnTime;
+        public float duration;
+    }
+
+    /// <summary>
+    /// Data passed to tick effects
+    /// </summary>
+    [Serializable]
+    public class PeriodicTickData
+    {
+        public int tickNumber;
+        public float tickStrength;
+        public bool isLastTick;
+    }
+
+    /// <summary>
+    /// Display info for periodic effect UI
+    /// </summary>
+    [Serializable]
+    public class PeriodicEffectDisplayInfo
+    {
+        public string effectName;
+        public string description;
+        public Sprite icon;
+        public Color color;
+        public int tickCount;
+        public int maxTicks;
+        public float currentPeriod;
+        public float timeUntilNextTick;
+        public float remainingDuration;
+        public int stackCount;
+        public bool showInUI;
+
+        public string GetFormattedName()
+        {
+            string name = effectName;
+
+            if (stackCount > 1)
+                name += $" x{stackCount}";
+
+            if (maxTicks > 0)
+                name += $" ({tickCount}/{maxTicks})";
+
+            return name;
+        }
+
+        public string GetTickProgress()
+        {
+            if (maxTicks > 0)
+                return $"Tick {tickCount}/{maxTicks}";
+            return $"Tick {tickCount}";
+        }
+
+        public string GetNextTickTime()
+        {
+            return $"Next: {timeUntilNextTick:F1}s";
+        }
+    }
+}

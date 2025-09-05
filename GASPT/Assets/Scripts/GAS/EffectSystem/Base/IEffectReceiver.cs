@@ -1,354 +1,228 @@
-using System;
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/Base/IEffectReceiver.cs
+// ================================
 using System.Collections.Generic;
 using UnityEngine;
-using GAS.TagSystem;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// GameplayEffect를 수신하고 처리할 수 있는 객체를 정의하는 인터페이스
+    /// Interface for GameObjects that can receive effects
     /// </summary>
     public interface IEffectReceiver
     {
         /// <summary>
-        /// 활성화된 Effect 인스턴스 목록
+        /// GameObject that implements this interface
         /// </summary>
-        IReadOnlyList<EffectInstance> ActiveEffects { get; }
+        GameObject GameObject { get; }
 
         /// <summary>
-        /// Effect 적용 가능 여부 확인
+        /// Transform of the receiver
         /// </summary>
-        /// <param name="effect">확인할 Effect</param>
-        /// <param name="context">Effect 컨텍스트</param>
-        /// <returns>적용 가능 여부</returns>
-        bool CanReceiveEffect(GameplayEffect effect, EffectContext context);
+        Transform Transform { get; }
 
         /// <summary>
-        /// Effect 적용
+        /// Can this receiver currently receive effects?
         /// </summary>
-        /// <param name="effect">적용할 Effect</param>
-        /// <param name="context">Effect 컨텍스트</param>
-        /// <returns>생성된 Effect 인스턴스 (실패시 null)</returns>
-        EffectInstance ApplyEffect(GameplayEffect effect, EffectContext context);
+        bool CanReceiveEffects { get; }
 
         /// <summary>
-        /// Effect 제거
+        /// Is the receiver immune to effects?
         /// </summary>
-        /// <param name="instance">제거할 Effect 인스턴스</param>
-        /// <returns>제거 성공 여부</returns>
-        bool RemoveEffect(EffectInstance instance);
+        bool IsImmune { get; }
 
         /// <summary>
-        /// Effect ID로 제거
+        /// Called before an effect is applied
         /// </summary>
-        /// <param name="effectId">제거할 Effect ID</param>
-        /// <returns>제거된 Effect 개수</returns>
-        int RemoveEffectById(string effectId);
+        void OnPreEffectApply(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 특정 Source의 모든 Effect 제거
+        /// Called after an effect is applied
         /// </summary>
-        /// <param name="source">Effect source</param>
-        /// <returns>제거된 Effect 개수</returns>
-        int RemoveEffectsFromSource(object source);
+        void OnPostEffectApply(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 모든 Effect 제거
+        /// Called before an effect is removed
         /// </summary>
-        void RemoveAllEffects();
+        void OnPreEffectRemove(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 특정 ID의 활성 Effect 인스턴스 가져오기
+        /// Called after an effect is removed
         /// </summary>
-        /// <param name="effectId">찾을 Effect ID</param>
-        /// <returns>Effect 인스턴스 목록</returns>
-        List<EffectInstance> GetActiveEffectsByID(string effectId);
+        void OnPostEffectRemove(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 특정 태그를 가진 Effect 인스턴스 가져오기
+        /// Gets immunity tags (effects with these tags are ignored)
         /// </summary>
-        /// <param name="tag">찾을 태그</param>
-        /// <returns>Effect 인스턴스 목록</returns>
-        List<EffectInstance> GetActiveEffectsByTag(GameplayTag tag);
+        List<string> GetImmunityTags();
 
         /// <summary>
-        /// Effect 스택 수 가져오기
+        /// Checks if immune to a specific effect
         /// </summary>
-        /// <param name="effectId">Effect ID</param>
-        /// <returns>스택 수</returns>
-        int GetEffectStackCount(string effectId);
+        bool IsImmuneToEffect(GameplayEffect effect);
 
         /// <summary>
-        /// Effect 적용 시 발생하는 이벤트
+        /// Gets effect resistance percentage (0-100)
         /// </summary>
-        event Action<EffectInstance> OnEffectApplied;
+        float GetEffectResistance(GameplayEffect effect);
 
         /// <summary>
-        /// Effect 제거 시 발생하는 이벤트
+        /// Modifies incoming effect context
         /// </summary>
-        event Action<EffectInstance> OnEffectRemoved;
-
-        /// <summary>
-        /// Effect 스택 변경 시 발생하는 이벤트
-        /// </summary>
-        event Action<EffectInstance, int> OnEffectStackChanged;
-
-        /// <summary>
-        /// Effect 만료 시 발생하는 이벤트
-        /// </summary>
-        event Action<EffectInstance> OnEffectExpired;
+        void ModifyIncomingEffect(GameplayEffect effect, ref EffectContext context);
     }
 
     /// <summary>
-    /// 활성화된 GameplayEffect의 런타임 인스턴스
+    /// Optional interface for advanced effect handling
     /// </summary>
-    public class EffectInstance
+    public interface IAdvancedEffectReceiver : IEffectReceiver
     {
-        #region Fields
-
-        private readonly string instanceId;
-        private readonly GameplayEffect sourceEffect;
-        private readonly EffectContext context;
-        private readonly float startTime;
-        private float remainingDuration;
-        private float nextPeriodicTime;
-        private int currentStack;
-        private int periodicExecutionCount;
-        private bool isExpired;
-        private List<Guid> appliedModifierIds;
-        private GameObject visualEffect;
-
-        #endregion
-
-        #region Properties
+        /// <summary>
+        /// Called when an effect stacks
+        /// </summary>
+        void OnEffectStack(GameplayEffect effect, int newStackCount, int previousStackCount);
 
         /// <summary>
-        /// 인스턴스 고유 ID
+        /// Called periodically for periodic effects
         /// </summary>
-        public string InstanceId => instanceId;
+        void OnEffectPeriodic(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 원본 Effect
+        /// Called when an effect expires naturally
         /// </summary>
-        public GameplayEffect SourceEffect => sourceEffect;
+        void OnEffectExpired(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// Effect 컨텍스트
+        /// Called when an effect is dispelled
         /// </summary>
-        public EffectContext Context => context;
+        void OnEffectDispelled(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 시작 시간
+        /// Called when an effect is refreshed
         /// </summary>
-        public float StartTime => startTime;
+        void OnEffectRefreshed(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 남은 지속 시간
+        /// Validates if an effect can be applied
         /// </summary>
-        public float RemainingDuration
-        {
-            get => remainingDuration;
-            set => remainingDuration = Mathf.Max(0f, value);
-        }
+        bool ValidateEffectApplication(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 다음 주기 실행 시간
+        /// Gets the maximum stack count override for an effect
         /// </summary>
-        public float NextPeriodicTime
-        {
-            get => nextPeriodicTime;
-            set => nextPeriodicTime = value;
-        }
+        int GetMaxStackOverride(GameplayEffect effect);
 
         /// <summary>
-        /// 현재 스택 수
+        /// Gets duration modifier for incoming effects
         /// </summary>
-        public int CurrentStack
-        {
-            get => currentStack;
-            set => currentStack = Mathf.Max(1, value);
-        }
+        float GetDurationModifier(GameplayEffect effect);
 
         /// <summary>
-        /// 주기적 실행 횟수
+        /// Gets magnitude modifier for incoming effects
         /// </summary>
-        public int PeriodicExecutionCount => periodicExecutionCount;
+        float GetMagnitudeModifier(GameplayEffect effect);
+    }
+
+    /// <summary>
+    /// Interface for objects that can grant effects to others
+    /// </summary>
+    public interface IEffectGranter
+    {
+        /// <summary>
+        /// GameObject that grants effects
+        /// </summary>
+        GameObject GameObject { get; }
 
         /// <summary>
-        /// 만료 여부
+        /// Gets bonus effect power
         /// </summary>
-        public bool IsExpired
-        {
-            get => isExpired;
-            set => isExpired = value;
-        }
+        float GetEffectPower();
 
         /// <summary>
-        /// 무한 지속 여부
+        /// Gets bonus effect duration
         /// </summary>
-        public bool IsInfinite => sourceEffect.DurationPolicy == EffectDurationPolicy.Infinite;
+        float GetEffectDurationBonus();
 
         /// <summary>
-        /// 주기적 Effect 여부
+        /// Modifies outgoing effect context
         /// </summary>
-        public bool IsPeriodic => sourceEffect.Type == EffectType.Periodic;
+        void ModifyOutgoingEffect(GameplayEffect effect, ref EffectContext context);
 
         /// <summary>
-        /// 적용된 Modifier ID 목록
+        /// Called when an effect is successfully granted
         /// </summary>
-        public List<Guid> AppliedModifierIds => appliedModifierIds;
+        void OnEffectGranted(GameObject target, GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// 시각 효과 GameObject
+        /// Called when an effect grant fails
         /// </summary>
-        public GameObject VisualEffect
-        {
-            get => visualEffect;
-            set => visualEffect = value;
-        }
+        void OnEffectGrantFailed(GameObject target, GameplayEffect effect, string reason);
 
         /// <summary>
-        /// 경과 시간
+        /// Gets additional effects to apply with the main effect
         /// </summary>
-        public float ElapsedTime => Time.time - startTime;
+        List<GameplayEffect> GetAdditionalEffects(GameplayEffect mainEffect);
+    }
+
+    /// <summary>
+    /// Interface for objects that can reflect effects
+    /// </summary>
+    public interface IEffectReflector
+    {
+        /// <summary>
+        /// Chance to reflect effects (0-100)
+        /// </summary>
+        float ReflectChance { get; }
 
         /// <summary>
-        /// 진행률 (0~1)
+        /// Can this effect be reflected?
         /// </summary>
-        public float Progress
-        {
-            get
-            {
-                if (IsInfinite) return 0f;
-                if (sourceEffect.Duration <= 0f) return 1f;
-                return 1f - (remainingDuration / sourceEffect.Duration);
-            }
-        }
-
-        #endregion
-
-        #region Constructors
+        bool CanReflect(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// EffectInstance 생성자
+        /// Called when an effect is reflected
         /// </summary>
-        public EffectInstance(GameplayEffect effect, EffectContext context)
-        {
-            instanceId = Guid.NewGuid().ToString();
-            sourceEffect = effect;
-            this.context = context.Clone();
-            startTime = Time.time;
-
-            // Duration 설정
-            if (effect.DurationPolicy == EffectDurationPolicy.HasDuration)
-            {
-                remainingDuration = effect.Duration;
-            }
-            else if (effect.DurationPolicy == EffectDurationPolicy.Infinite)
-            {
-                remainingDuration = float.MaxValue;
-            }
-            else
-            {
-                remainingDuration = 0f;
-            }
-
-            // Periodic 설정
-            if (effect.Type == EffectType.Periodic)
-            {
-                nextPeriodicTime = startTime + effect.Period;
-            }
-
-            currentStack = 1;
-            periodicExecutionCount = 0;
-            isExpired = false;
-            appliedModifierIds = new List<Guid>();
-        }
-
-        #endregion
-
-        #region Public Methods
+        void OnEffectReflected(GameplayEffect effect, EffectContext originalContext, GameObject newTarget);
 
         /// <summary>
-        /// 주기 실행 카운트 증가
+        /// Modifies the reflected effect context
         /// </summary>
-        public void IncrementPeriodicCount()
-        {
-            periodicExecutionCount++;
-        }
+        EffectContext ModifyReflectedContext(EffectContext originalContext, GameObject newTarget);
+    }
+
+    /// <summary>
+    /// Interface for objects that can absorb effects
+    /// </summary>
+    public interface IEffectAbsorber
+    {
+        /// <summary>
+        /// Maximum absorption amount
+        /// </summary>
+        float MaxAbsorption { get; }
 
         /// <summary>
-        /// 스택 추가
+        /// Current absorption remaining
         /// </summary>
-        public void AddStack(int amount = 1)
-        {
-            currentStack += amount;
-            currentStack = Mathf.Min(currentStack, sourceEffect.MaxStackCount);
-        }
+        float CurrentAbsorption { get; }
 
         /// <summary>
-        /// Duration 갱신
+        /// Can this effect be absorbed?
         /// </summary>
-        public void RefreshDuration()
-        {
-            if (sourceEffect.DurationPolicy == EffectDurationPolicy.HasDuration)
-            {
-                remainingDuration = sourceEffect.Duration;
-            }
-        }
+        bool CanAbsorb(GameplayEffect effect, EffectContext context);
 
         /// <summary>
-        /// Periodic 타이머 리셋
+        /// Absorbs damage/effect magnitude
         /// </summary>
-        public void ResetPeriodicTimer()
-        {
-            if (sourceEffect.Type == EffectType.Periodic)
-            {
-                nextPeriodicTime = Time.time + sourceEffect.Period;
-            }
-        }
+        float AbsorbMagnitude(float magnitude, GameplayEffect effect);
 
         /// <summary>
-        /// Modifier ID 추가
+        /// Called when absorption shield breaks
         /// </summary>
-        public void AddModifierId(Guid modifierId)
-        {
-            if (!appliedModifierIds.Contains(modifierId))
-            {
-                appliedModifierIds.Add(modifierId);
-            }
-        }
+        void OnAbsorptionDepleted();
 
         /// <summary>
-        /// Modifier ID 제거
+        /// Called when effect is absorbed
         /// </summary>
-        public bool RemoveModifierId(Guid modifierId)
-        {
-            return appliedModifierIds.Remove(modifierId);
-        }
-
-        /// <summary>
-        /// 모든 Modifier ID 제거
-        /// </summary>
-        public void ClearModifierIds()
-        {
-            appliedModifierIds.Clear();
-        }
-
-        /// <summary>
-        /// 인스턴스 정보 문자열
-        /// </summary>
-        public override string ToString()
-        {
-            return $"EffectInstance [{sourceEffect.EffectName}] " +
-                   $"Stack: {currentStack}, " +
-                   $"Duration: {remainingDuration:F1}s, " +
-                   $"Expired: {isExpired}";
-        }
-
-        #endregion
+        void OnEffectAbsorbed(GameplayEffect effect, float absorbedAmount);
     }
 }
-
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/Base/IEffectReceiver.cs
-// 기존 IEffectComponent.cs 파일을 이 내용으로 교체

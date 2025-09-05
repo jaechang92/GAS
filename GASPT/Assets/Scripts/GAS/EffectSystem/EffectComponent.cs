@@ -1,80 +1,243 @@
+// ================================
+// File: Assets/Scripts/GAS/EffectSystem/EffectComponent.cs
+// ================================
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using GAS.Core;
-using GAS.AttributeSystem;
 using GAS.TagSystem;
+using GAS.AttributeSystem;
+using static GAS.Core.GASConstants;
 
 namespace GAS.EffectSystem
 {
     /// <summary>
-    /// GameObject에 Effect를 적용하고 관리하는 컴포넌트
-    /// IEffectReceiver 인터페이스를 구현하여 Effect 시스템과 통합
+    /// Component that manages effects on a GameObject
     /// </summary>
-    [RequireComponent(typeof(TagComponent))]
-    public class EffectComponent : MonoBehaviour, IEffectReceiver
+    public class EffectComponent : MonoBehaviour, IEffectReceiver, IAdvancedEffectReceiver
     {
-        #region Fields
-
-        [Header("=== Effect Settings ===")]
-        [SerializeField] private bool acceptEffects = true;
-        [SerializeField] private int maxActiveEffects = 50;
+        [Header("Configuration")]
+        [SerializeField] private bool canReceiveEffects = true;
         [SerializeField] private bool debugMode = false;
 
-        [Header("=== Immunity Settings ===")]
+        [Header("Immunities")]
         [SerializeField] private List<GameplayTag> immunityTags = new List<GameplayTag>();
-        [SerializeField] private float immunityDuration = 0f;
+        [SerializeField] private float globalEffectResistance = 0f; // 0-100%
 
-        [Header("=== Effect Filters ===")]
-        [SerializeField] private TagRequirement effectApplicationFilter;
-        [SerializeField] private List<string> blacklistedEffectIds = new List<string>();
+        [Header("Limits")]
+        [SerializeField] private int maxActiveEffects = 50;
+        [SerializeField] private int maxBuffs = 20;
+        [SerializeField] private int maxDebuffs = 20;
 
-        [Header("=== Runtime Info (Read Only) ===")]
+        [Header("Runtime Info - Read Only")]
         [SerializeField] private List<EffectInstance> activeEffects = new List<EffectInstance>();
-        [SerializeField] private int currentEffectCount = 0;
+        [SerializeField] private int activeBuffCount;
+        [SerializeField] private int activeDebuffCount;
 
-        // 컴포넌트 캐시
+        // Component references
         private TagComponent tagComponent;
         private AttributeSetComponent attributeComponent;
 
-        // Immunity 관리
-        private Dictionary<string, float> immunityTimers = new Dictionary<string, float>();
+        // Effect tracking
+        private Dictionary<GameplayEffect, EffectInstance> effectLookup = new Dictionary<GameplayEffect, EffectInstance>();
+        private Dictionary<string, List<EffectInstance>> effectsByTag = new Dictionary<string, List<EffectInstance>>();
+        private List<EffectInstance> periodicEffects = new List<EffectInstance>();
+        private List<EffectInstance> effectsToRemove = new List<EffectInstance>();
 
-        // Effect 그룹 관리 (같은 ID의 Effect들)
-        private Dictionary<string, List<EffectInstance>> effectGroups = new Dictionary<string, List<EffectInstance>>();
+        // Events
+        public event Action<GameplayEffect, EffectContext> EffectApplied;
+        public event Action<GameplayEffect, EffectContext> EffectRemoved;
+        public event Action<GameplayEffect, int> EffectStacked;
+        public event Action<GameplayEffect> EffectExpired;
+        public event Action<GameplayEffect> EffectBlocked;
 
-        #endregion
+        #region IEffectReceiver Implementation
 
-        #region Properties
+        public GameObject GameObject => gameObject;
+        public Transform Transform => transform;
+        public bool CanReceiveEffects => canReceiveEffects && isActiveAndEnabled;
+        public bool IsImmune => false; // Can be overridden based on state
 
-        /// <summary>
-        /// 활성화된 Effect 인스턴스 목록 (읽기 전용)
-        /// </summary>
-        public IReadOnlyList<EffectInstance> ActiveEffects => activeEffects.AsReadOnly();
-
-        /// <summary>
-        /// Effect 수신 가능 여부
-        /// </summary>
-        public bool AcceptEffects
+        public void OnPreEffectApply(GameplayEffect effect, EffectContext context)
         {
-            get => acceptEffects;
-            set => acceptEffects = value;
+            if (debugMode)
+                Debug.Log($"[EffectComponent] Pre-applying {effect.EffectName} to {gameObject.name}");
         }
 
-        /// <summary>
-        /// 현재 활성 Effect 개수
-        /// </summary>
-        public int ActiveEffectCount => activeEffects.Count(e => !e.IsExpired);
+        public void OnPostEffectApply(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] Post-applied {effect.EffectName} to {gameObject.name}");
+
+            EffectApplied?.Invoke(effect, context);
+        }
+
+        public void OnPreEffectRemove(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] Pre-removing {effect.EffectName} from {gameObject.name}");
+        }
+
+        public void OnPostEffectRemove(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] Post-removed {effect.EffectName} from {gameObject.name}");
+
+            EffectRemoved?.Invoke(effect, context);
+        }
+
+        public List<string> GetImmunityTags()
+        {
+            return immunityTags.Select(t => t.TagName).ToList();
+        }
+
+        public bool IsImmuneToEffect(GameplayEffect effect)
+        {
+            if (effect == null) return true;
+
+            // Check immunity tags
+            if (effect.AssetTags != null)
+            {
+                foreach (var effectTag in effect.AssetTags.Tags)
+                {
+                    if (immunityTags.Any(immuneTag => immuneTag.TagName == effectTag.TagName))
+                    {
+                        if (debugMode)
+                            Debug.Log($"[EffectComponent] Immune to {effect.EffectName} due to tag {effectTag.TagName}");
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public float GetEffectResistance(GameplayEffect effect)
+        {
+            float resistance = globalEffectResistance;
+
+            // Add specific resistances based on effect type
+            if (attributeComponent != null)
+            {
+                if (effect.AssetTags?.Tags.Any(t => t.TagName.Contains("Magic")) == true)
+                {
+                    resistance += attributeComponent.GetAttributeValue(AttributeType.MagicResistance);
+                }
+                else if (effect.AssetTags?.Tags.Any(t => t.TagName.Contains("Physical")) == true)
+                {
+                    resistance += attributeComponent.GetAttributeValue(AttributeType.Armor) * 0.5f;
+                }
+            }
+
+            return Mathf.Clamp(resistance, 0, 100);
+        }
+
+        public void ModifyIncomingEffect(GameplayEffect effect, ref EffectContext context)
+        {
+            // Apply resistance to duration
+            float resistance = GetEffectResistance(effect) / 100f;
+            context.durationMultiplier *= (1f - resistance * 0.5f); // 50% max duration reduction
+            context.magnitude *= (1f - resistance * 0.3f); // 30% max magnitude reduction
+        }
 
         #endregion
 
-        #region Events
+        #region IAdvancedEffectReceiver Implementation
 
-        public event Action<EffectInstance> OnEffectApplied;
-        public event Action<EffectInstance> OnEffectRemoved;
-        public event Action<EffectInstance, int> OnEffectStackChanged;
-        public event Action<EffectInstance> OnEffectExpired;
+        public void OnEffectStack(GameplayEffect effect, int newStackCount, int previousStackCount)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] {effect.EffectName} stacked: {previousStackCount} -> {newStackCount}");
+
+            EffectStacked?.Invoke(effect, newStackCount);
+        }
+
+        public void OnEffectPeriodic(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] Periodic tick for {effect.EffectName}");
+        }
+
+        public void OnEffectExpired(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] {effect.EffectName} expired naturally");
+
+            EffectExpired?.Invoke(effect);
+        }
+
+        public void OnEffectDispelled(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] {effect.EffectName} was dispelled");
+        }
+
+        public void OnEffectRefreshed(GameplayEffect effect, EffectContext context)
+        {
+            if (debugMode)
+                Debug.Log($"[EffectComponent] {effect.EffectName} duration refreshed");
+        }
+
+        public bool ValidateEffectApplication(GameplayEffect effect, EffectContext context)
+        {
+            // Check max effect limits
+            if (activeEffects.Count >= maxActiveEffects)
+            {
+                if (debugMode)
+                    Debug.LogWarning($"[EffectComponent] Max active effects reached ({maxActiveEffects})");
+                return false;
+            }
+
+            // Check buff/debuff limits
+            bool isBuff = effect.AssetTags?.Tags.Any(t => t.TagName.Contains("Buff")) == true;
+            bool isDebuff = effect.AssetTags?.Tags.Any(t => t.TagName.Contains("Debuff")) == true;
+
+            if (isBuff && activeBuffCount >= maxBuffs)
+            {
+                if (debugMode)
+                    Debug.LogWarning($"[EffectComponent] Max buffs reached ({maxBuffs})");
+                return false;
+            }
+
+            if (isDebuff && activeDebuffCount >= maxDebuffs)
+            {
+                if (debugMode)
+                    Debug.LogWarning($"[EffectComponent] Max debuffs reached ({maxDebuffs})");
+                return false;
+            }
+
+            return true;
+        }
+
+        public int GetMaxStackOverride(GameplayEffect effect)
+        {
+            // Can be overridden based on attributes or other conditions
+            return effect.MaxStackCount;
+        }
+
+        public float GetDurationModifier(GameplayEffect effect)
+        {
+            // Can modify based on attributes
+            float modifier = 1f;
+
+            if (attributeComponent != null)
+            {
+                // Example: Tenacity reduces debuff duration
+                if (effect.AssetTags?.Tags.Any(t => t.TagName.Contains("Debuff")) == true)
+                {
+                    float tenacity = attributeComponent.GetAttributeValue(AttributeType.Tenacity);
+                    modifier *= (1f - tenacity / 200f); // Max 50% reduction at 100 tenacity
+                }
+            }
+
+            return modifier;
+        }
+
+        public float GetMagnitudeModifier(GameplayEffect effect)
+        {
+            return 1f; // Can be modified based on attributes
+        }
 
         #endregion
 
@@ -82,541 +245,715 @@ namespace GAS.EffectSystem
 
         private void Awake()
         {
-            // 컴포넌트 캐시
-            tagComponent = GetComponent<TagComponent>();
-            if (tagComponent == null)
-            {
-                tagComponent = gameObject.AddComponent<TagComponent>();
-            }
-
-            attributeComponent = GetComponent<AttributeSetComponent>();
-
-            // 초기화
-            activeEffects = new List<EffectInstance>();
-            effectGroups = new Dictionary<string, List<EffectInstance>>();
-            immunityTimers = new Dictionary<string, float>();
+            InitializeComponent();
         }
 
         private void Start()
         {
-            // GAS Manager에 등록
-            if (GASManager.Instance != null)
-            {
-                Debug.Log($"[EffectComponent] Registered on {gameObject.name}");
-            }
+            RegisterEvents();
         }
 
         private void Update()
         {
-            // Immunity 타이머 업데이트
-            UpdateImmunityTimers();
-
-            // Debug 표시
-            if (debugMode)
-            {
-                currentEffectCount = ActiveEffectCount;
-            }
+            UpdateEffects();
+            ProcessPeriodicEffects();
+            RemoveExpiredEffects();
         }
 
         private void OnDestroy()
         {
-            // 모든 Effect 정리
+            UnregisterEvents();
             RemoveAllEffects();
         }
 
         #endregion
 
-        #region IEffectReceiver Implementation
+        #region Initialization
+
+        private void InitializeComponent()
+        {
+            tagComponent = GetComponent<TagComponent>();
+            attributeComponent = GetComponent<AttributeSetComponent>();
+
+            activeEffects = new List<EffectInstance>();
+            effectLookup = new Dictionary<GameplayEffect, EffectInstance>();
+            effectsByTag = new Dictionary<string, List<EffectInstance>>();
+            periodicEffects = new List<EffectInstance>();
+
+            GASEvents.Trigger(GASEventType.ComponentAdded,
+                new SimpleGASEventData(gameObject, this));
+        }
+
+        private void RegisterEvents()
+        {
+            GASEvents.Subscribe(GASEventType.Death, OnDeath);
+            GASEvents.Subscribe(GASEventType.Respawn, OnRespawn);
+        }
+
+        private void UnregisterEvents()
+        {
+            GASEvents.Unsubscribe(GASEventType.Death, OnDeath);
+            GASEvents.Unsubscribe(GASEventType.Respawn, OnRespawn);
+        }
+
+        #endregion
+
+        #region Effect Application
 
         /// <summary>
-        /// Effect 적용 가능 여부 확인
+        /// Apply an effect to this component
         /// </summary>
-        public bool CanReceiveEffect(GameplayEffect effect, EffectContext context)
+        public bool ApplyEffect(GameplayEffect effect, EffectContext context = null)
         {
-            if (!acceptEffects)
+            if (!CanApplyEffect(effect, context))
+                return false;
+
+            // Create context if not provided
+            if (context == null)
             {
-                Debug.Log($"[EffectComponent] {gameObject.name} is not accepting effects");
+                context = new EffectContext(null, gameObject);
+            }
+            else if (context.target == null)
+            {
+                context.target = gameObject;
+            }
+
+            // Modify incoming effect
+            ModifyIncomingEffect(effect, ref context);
+
+            // Check for existing instance (stacking)
+            if (effectLookup.TryGetValue(effect, out var existingInstance))
+            {
+                return HandleEffectStacking(effect, existingInstance, context);
+            }
+
+            // Create new instance
+            var instance = CreateEffectInstance(effect, context);
+            if (instance == null)
+                return false;
+
+            // Add to tracking
+            AddEffectInstance(instance);
+
+            // Pre-apply callback
+            OnPreEffectApply(effect, context);
+
+            // Apply the effect
+            effect.OnApply(context);
+
+            // Post-apply callback
+            OnPostEffectApply(effect, context);
+
+            // Fire events
+            FireEffectAppliedEvent(effect, context);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Apply multiple effects
+        /// </summary>
+        public void ApplyEffects(List<GameplayEffect> effects, EffectContext context = null)
+        {
+            foreach (var effect in effects)
+            {
+                if (effect != null)
+                {
+                    ApplyEffect(effect, context?.Clone());
+                }
+            }
+        }
+
+        /// <summary>
+        /// Check if effect can be applied
+        /// </summary>
+        private bool CanApplyEffect(GameplayEffect effect, EffectContext context)
+        {
+            if (effect == null)
+                return false;
+
+            if (!CanReceiveEffects)
+            {
+                EffectBlocked?.Invoke(effect);
                 return false;
             }
 
-            if (effect == null || context == null)
-                return false;
-
-            // 최대 Effect 수 체크
-            if (activeEffects.Count >= maxActiveEffects)
-            {
-                Debug.LogWarning($"[EffectComponent] Max effect limit reached on {gameObject.name}");
-                return false;
-            }
-
-            // 블랙리스트 체크
-            if (blacklistedEffectIds.Contains(effect.EffectId))
-            {
-                Debug.Log($"[EffectComponent] Effect {effect.EffectName} is blacklisted");
-                return false;
-            }
-
-            // Immunity 체크
             if (IsImmuneToEffect(effect))
             {
-                Debug.Log($"[EffectComponent] {gameObject.name} is immune to {effect.EffectName}");
+                EffectBlocked?.Invoke(effect);
                 return false;
             }
 
-            // Effect의 적용 조건 체크
-            if (!effect.CanApply(context, gameObject))
+            if (!effect.CanApply(context))
             {
+                EffectBlocked?.Invoke(effect);
                 return false;
             }
 
-            // 필터 체크
-            if (effectApplicationFilter != null)
+            if (!ValidateEffectApplication(effect, context))
             {
-                var effectTags = new TagContainer();
-                if (effect.AssetTags != null)
-                {
-                    foreach (var tag in effect.AssetTags.Tags)
-                    {
-                        effectTags.AddTag(tag);
-                    }
-                }
-
-                // Effect의 태그가 필터 조건을 만족하는지 확인
-                bool satisfiesFilter = true;
-                if (effectApplicationFilter.RequiredTags != null)
-                {
-                    foreach (var requiredTag in effectApplicationFilter.RequiredTags)
-                    {
-                        if (!effectTags.HasTag(requiredTag))
-                        {
-                            satisfiesFilter = false;
-                            break;
-                        }
-                    }
-                }
-
-                if (!satisfiesFilter)
-                {
-                    Debug.Log($"[EffectComponent] Effect {effect.EffectName} doesn't satisfy filter requirements");
-                    return false;
-                }
+                EffectBlocked?.Invoke(effect);
+                return false;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Effect 적용
+        /// Handle effect stacking
         /// </summary>
-        public EffectInstance ApplyEffect(GameplayEffect effect, EffectContext context)
+        private bool HandleEffectStacking(GameplayEffect effect, EffectInstance existingInstance, EffectContext context)
         {
-            if (!CanReceiveEffect(effect, context))
-                return null;
-
-            try
+            switch (effect.StackingPolicy)
             {
-                // Context의 Target이 현재 GameObject인지 확인
-                if (context.Target != gameObject)
-                {
-                    context.Target = gameObject;
-                }
+                case StackingPolicy.None:
+                    if (debugMode)
+                        Debug.Log($"[EffectComponent] {effect.EffectName} does not stack");
+                    return false;
 
-                // Effect 적용
-                bool success = effect.Apply(context, gameObject);
-                if (!success)
-                {
-                    Debug.LogWarning($"[EffectComponent] Failed to apply {effect.EffectName} to {gameObject.name}");
-                    return null;
-                }
+                case StackingPolicy.Replace:
+                    RemoveEffectInstance(existingInstance);
+                    return ApplyEffect(effect, context);
 
-                // 새 인스턴스 생성 (Effect 타입에 따라 다르게 처리)
-                var instance = new EffectInstance(effect, context);
+                case StackingPolicy.Stack:
+                    if (existingInstance.stackCount >= effect.MaxStackCount)
+                    {
+                        if (debugMode)
+                            Debug.Log($"[EffectComponent] {effect.EffectName} at max stacks ({effect.MaxStackCount})");
 
-                // 인스턴스 등록
-                RegisterInstance(instance);
+                        // Refresh duration if configured
+                        if (effect.RefreshDurationOnStack)
+                        {
+                            existingInstance.RefreshDuration();
+                            OnEffectRefreshed(effect, context);
+                        }
+                        return false;
+                    }
 
-                // 이벤트 발생
-                OnEffectApplied?.Invoke(instance);
-                GASEvents.TriggerEffectApplied(gameObject, effect.EffectName);
+                    int previousStacks = existingInstance.stackCount;
+                    existingInstance.AddStack();
 
-                if (debugMode)
-                {
-                    Debug.Log($"[EffectComponent] Applied {effect.EffectName} to {gameObject.name}");
-                }
+                    effect.OnStack(context, existingInstance.stackCount, previousStacks);
+                    OnEffectStack(effect, existingInstance.stackCount, previousStacks);
+                    return true;
 
-                return instance;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[EffectComponent] Error applying effect: {e.Message}");
-                return null;
+                case StackingPolicy.Refresh:
+                    existingInstance.RefreshDuration();
+                    OnEffectRefreshed(effect, context);
+                    return true;
+
+                default:
+                    return false;
             }
         }
 
         /// <summary>
-        /// Effect 제거
+        /// Create effect instance
         /// </summary>
-        public bool RemoveEffect(EffectInstance instance)
+        private EffectInstance CreateEffectInstance(GameplayEffect effect, EffectContext context)
         {
-            if (instance == null || !activeEffects.Contains(instance))
+            var instance = effect.CreateInstance(context);
+
+            // Apply duration modifier
+            float durationModifier = GetDurationModifier(effect);
+            if (instance.duration > 0)
+            {
+                instance.duration *= durationModifier;
+            }
+
+            // Check if periodic
+            if (effect.EffectType == EffectType.Periodic && effect.Period > 0)
+            {
+                periodicEffects.Add(instance);
+            }
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Add effect instance to tracking
+        /// </summary>
+        private void AddEffectInstance(EffectInstance instance)
+        {
+            activeEffects.Add(instance);
+            effectLookup[instance.effect] = instance;
+
+            // Track by tags
+            if (instance.effect.AssetTags != null)
+            {
+                foreach (var tag in instance.effect.AssetTags.Tags)
+                {
+                    if (!effectsByTag.ContainsKey(tag.TagName))
+                    {
+                        effectsByTag[tag.TagName] = new List<EffectInstance>();
+                    }
+                    effectsByTag[tag.TagName].Add(instance);
+                }
+
+                // Update buff/debuff counts
+                if (instance.effect.AssetTags.Tags.Any(t => t.TagName.Contains("Buff")))
+                    activeBuffCount++;
+                if (instance.effect.AssetTags.Tags.Any(t => t.TagName.Contains("Debuff")))
+                    activeDebuffCount++;
+            }
+        }
+
+        #endregion
+
+        #region Effect Removal
+
+        /// <summary>
+        /// Remove a specific effect
+        /// </summary>
+        public bool RemoveEffect(GameplayEffect effect)
+        {
+            if (!effectLookup.TryGetValue(effect, out var instance))
                 return false;
 
-            try
-            {
-                // Effect 제거 호출
-                instance.SourceEffect.Remove(instance.Context, gameObject);
-
-                // 인스턴스 등록 해제
-                UnregisterInstance(instance);
-
-                // 이벤트 발생
-                OnEffectRemoved?.Invoke(instance);
-                GASEvents.TriggerEffectRemoved(gameObject, instance.SourceEffect.EffectName);
-
-                if (debugMode)
-                {
-                    Debug.Log($"[EffectComponent] Removed {instance.SourceEffect.EffectName} from {gameObject.name}");
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[EffectComponent] Error removing effect: {e.Message}");
-                return false;
-            }
+            RemoveEffectInstance(instance);
+            return true;
         }
 
         /// <summary>
-        /// Effect ID로 제거
+        /// Remove all effects with a specific tag
         /// </summary>
-        public int RemoveEffectById(string effectId)
+        public void RemoveEffectsByTag(string tagName)
         {
-            if (string.IsNullOrEmpty(effectId))
-                return 0;
+            if (!effectsByTag.TryGetValue(tagName, out var instances))
+                return;
 
-            var toRemove = activeEffects
-                .Where(e => e.SourceEffect.EffectId == effectId)
-                .ToList();
-
-            int removedCount = 0;
-            foreach (var instance in toRemove)
+            var instancesToRemove = new List<EffectInstance>(instances);
+            foreach (var instance in instancesToRemove)
             {
-                if (RemoveEffect(instance))
-                    removedCount++;
+                RemoveEffectInstance(instance);
             }
-
-            return removedCount;
         }
 
         /// <summary>
-        /// 특정 Source의 모든 Effect 제거
+        /// Remove all debuffs
         /// </summary>
-        public int RemoveEffectsFromSource(object source)
+        public void RemoveAllDebuffs()
         {
-            if (source == null)
-                return 0;
-
-            var toRemove = activeEffects
-                .Where(e => e.Context.Instigator == source || e.Context.SourceAbility == source)
-                .ToList();
-
-            int removedCount = 0;
-            foreach (var instance in toRemove)
-            {
-                if (RemoveEffect(instance))
-                    removedCount++;
-            }
-
-            return removedCount;
+            RemoveEffectsByTag("Debuff");
         }
 
         /// <summary>
-        /// 모든 Effect 제거
+        /// Remove all buffs
+        /// </summary>
+        public void RemoveAllBuffs()
+        {
+            RemoveEffectsByTag("Buff");
+        }
+
+        /// <summary>
+        /// Remove all effects
         /// </summary>
         public void RemoveAllEffects()
         {
-            var toRemove = new List<EffectInstance>(activeEffects);
-
-            foreach (var instance in toRemove)
+            var instancesToRemove = new List<EffectInstance>(activeEffects);
+            foreach (var instance in instancesToRemove)
             {
-                RemoveEffect(instance);
-            }
-
-            activeEffects.Clear();
-            effectGroups.Clear();
-
-            Debug.Log($"[EffectComponent] All effects removed from {gameObject.name}");
-        }
-
-        /// <summary>
-        /// 특정 ID의 활성 Effect 인스턴스 가져오기
-        /// </summary>
-        public List<EffectInstance> GetActiveEffectsByID(string effectId)
-        {
-            if (string.IsNullOrEmpty(effectId))
-                return new List<EffectInstance>();
-
-            if (effectGroups.TryGetValue(effectId, out var instances))
-            {
-                return instances.Where(e => !e.IsExpired).ToList();
-            }
-
-            return new List<EffectInstance>();
-        }
-
-        /// <summary>
-        /// 특정 태그를 가진 Effect 인스턴스 가져오기
-        /// </summary>
-        public List<EffectInstance> GetActiveEffectsByTag(GameplayTag tag)
-        {
-            if (tag == null)
-                return new List<EffectInstance>();
-
-            return activeEffects
-                .Where(e => !e.IsExpired && e.SourceEffect.AssetTags != null &&
-                       e.SourceEffect.AssetTags.HasTag(tag))
-                .ToList();
-        }
-
-        /// <summary>
-        /// Effect 스택 수 가져오기
-        /// </summary>
-        public int GetEffectStackCount(string effectId)
-        {
-            var effects = GetActiveEffectsByID(effectId);
-
-            if (effects.Count == 0)
-                return 0;
-
-            // 스택 정책에 따라 다르게 계산
-            var firstEffect = effects.First();
-            if (firstEffect.SourceEffect.StackingPolicy == EffectStackingPolicy.Stack)
-            {
-                return firstEffect.CurrentStack;
-            }
-            else
-            {
-                return effects.Count;
+                RemoveEffectInstance(instance);
             }
         }
 
-        #endregion
+        /// <summary>
+        /// Dispel random debuff
+        /// </summary>
+        public bool DispelRandomDebuff()
+        {
+            if (!effectsByTag.TryGetValue("Debuff", out var debuffs) || debuffs.Count == 0)
+                return false;
 
-        #region Public Methods
+            var randomDebuff = debuffs[UnityEngine.Random.Range(0, debuffs.Count)];
+
+            OnEffectDispelled(randomDebuff.effect, randomDebuff.context);
+            RemoveEffectInstance(randomDebuff);
+            return true;
+        }
 
         /// <summary>
-        /// 특정 Effect에 대한 면역 부여
+        /// Remove effect instance
         /// </summary>
-        public void GrantImmunity(string effectId, float duration)
+        private void RemoveEffectInstance(EffectInstance instance)
         {
-            if (string.IsNullOrEmpty(effectId))
+            if (instance == null || !activeEffects.Contains(instance))
                 return;
 
-            immunityTimers[effectId] = Time.time + duration;
+            // Pre-remove callback
+            OnPreEffectRemove(instance.effect, instance.context);
 
-            Debug.Log($"[EffectComponent] Granted immunity to {effectId} for {duration}s");
-        }
+            // Remove the effect
+            instance.effect.OnRemove(instance.context);
 
-        /// <summary>
-        /// 디버프 제거 (Purge)
-        /// </summary>
-        public int PurgeDebuffs(int purgeLevel = 1)
-        {
-            var debuffs = activeEffects
-                .Where(e => !e.IsExpired &&
-                       e.SourceEffect.AssetTags != null &&
-                       e.SourceEffect.AssetTags.HasTag(new GameplayTag("Effect.Type.Debuff")))
-                .ToList();
-
-            int purgedCount = 0;
-            foreach (var debuff in debuffs)
-            {
-                // Purge 가능 여부 체크
-                if (debuff.SourceEffect is InfiniteEffect infinite && !infinite.CanBeDispelled)
-                    continue;
-
-                var context = debuff.Context.Clone();
-                context.SetData("DispelPower", purgeLevel);
-
-                if (RemoveEffect(debuff))
-                    purgedCount++;
-            }
-
-            Debug.Log($"[EffectComponent] Purged {purgedCount} debuffs from {gameObject.name}");
-            return purgedCount;
-        }
-
-        /// <summary>
-        /// 버프 제거 (Dispel)
-        /// </summary>
-        public int DispelBuffs(int dispelLevel = 1)
-        {
-            var buffs = activeEffects
-                .Where(e => !e.IsExpired &&
-                       e.SourceEffect.AssetTags != null &&
-                       e.SourceEffect.AssetTags.HasTag(new GameplayTag("Effect.Type.Buff")))
-                .ToList();
-
-            int dispelledCount = 0;
-            foreach (var buff in buffs)
-            {
-                // Dispel 가능 여부 체크
-                if (buff.SourceEffect is InfiniteEffect infinite && !infinite.CanBeDispelled)
-                    continue;
-
-                var context = buff.Context.Clone();
-                context.SetData("DispelPower", dispelLevel);
-
-                if (RemoveEffect(buff))
-                    dispelledCount++;
-            }
-
-            Debug.Log($"[EffectComponent] Dispelled {dispelledCount} buffs from {gameObject.name}");
-            return dispelledCount;
-        }
-
-        /// <summary>
-        /// Effect 존재 여부 확인
-        /// </summary>
-        public bool HasEffect(string effectId)
-        {
-            return GetActiveEffectsByID(effectId).Count > 0;
-        }
-
-        /// <summary>
-        /// 특정 태그를 가진 Effect 존재 여부
-        /// </summary>
-        public bool HasEffectWithTag(GameplayTag tag)
-        {
-            return GetActiveEffectsByTag(tag).Count > 0;
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        /// <summary>
-        /// 인스턴스 등록
-        /// </summary>
-        private void RegisterInstance(EffectInstance instance)
-        {
-            if (instance == null) return;
-
-            activeEffects.Add(instance);
-
-            // Effect 그룹에 추가
-            string effectId = instance.SourceEffect.EffectId;
-            if (!effectGroups.ContainsKey(effectId))
-            {
-                effectGroups[effectId] = new List<EffectInstance>();
-            }
-            effectGroups[effectId].Add(instance);
-        }
-
-        /// <summary>
-        /// 인스턴스 등록 해제
-        /// </summary>
-        private void UnregisterInstance(EffectInstance instance)
-        {
-            if (instance == null) return;
-
+            // Remove from tracking
             activeEffects.Remove(instance);
+            effectLookup.Remove(instance.effect);
+            periodicEffects.Remove(instance);
 
-            // Effect 그룹에서 제거
-            string effectId = instance.SourceEffect.EffectId;
-            if (effectGroups.TryGetValue(effectId, out var group))
+            // Remove from tag tracking
+            if (instance.effect.AssetTags != null)
             {
-                group.Remove(instance);
-                if (group.Count == 0)
+                foreach (var tag in instance.effect.AssetTags.Tags)
                 {
-                    effectGroups.Remove(effectId);
+                    if (effectsByTag.ContainsKey(tag.TagName))
+                    {
+                        effectsByTag[tag.TagName].Remove(instance);
+                        if (effectsByTag[tag.TagName].Count == 0)
+                        {
+                            effectsByTag.Remove(tag.TagName);
+                        }
+                    }
                 }
-            }
-        }
 
-        /// <summary>
-        /// Effect 면역 확인
-        /// </summary>
-        private bool IsImmuneToEffect(GameplayEffect effect)
-        {
-            // Effect ID 기반 면역
-            if (immunityTimers.ContainsKey(effect.EffectId))
+                // Update buff/debuff counts
+                if (instance.effect.AssetTags.Tags.Any(t => t.TagName.Contains("Buff")))
+                    activeBuffCount = Mathf.Max(0, activeBuffCount - 1);
+                if (instance.effect.AssetTags.Tags.Any(t => t.TagName.Contains("Debuff")))
+                    activeDebuffCount = Mathf.Max(0, activeDebuffCount - 1);
+            }
+
+            // Clean up visual effect
+            if (instance.visualEffect != null)
             {
-                if (immunityTimers[effect.EffectId] > Time.time)
-                    return true;
+                Destroy(instance.visualEffect);
             }
 
-            // 태그 기반 면역
-            if (effect.AssetTags != null)
-            {
-                foreach (var immunityTag in immunityTags)
-                {
-                    if (effect.AssetTags.HasTag(immunityTag))
-                        return true;
-                }
-            }
+            // Post-remove callback
+            OnPostEffectRemove(instance.effect, instance.context);
 
-            return false;
-        }
-
-        /// <summary>
-        /// 면역 타이머 업데이트
-        /// </summary>
-        private void UpdateImmunityTimers()
-        {
-            var expiredImmunities = new List<string>();
-
-            foreach (var kvp in immunityTimers)
-            {
-                if (kvp.Value <= Time.time)
-                {
-                    expiredImmunities.Add(kvp.Key);
-                }
-            }
-
-            foreach (var key in expiredImmunities)
-            {
-                immunityTimers.Remove(key);
-                Debug.Log($"[EffectComponent] Immunity to {key} expired");
-            }
+            // Fire events
+            FireEffectRemovedEvent(instance.effect, instance.context);
         }
 
         #endregion
 
-        #region Editor
+        #region Effect Updates
 
-#if UNITY_EDITOR
-        private void OnValidate()
+        /// <summary>
+        /// Update all active effects
+        /// </summary>
+        private void UpdateEffects()
         {
-            maxActiveEffects = Mathf.Max(1, maxActiveEffects);
-            immunityDuration = Mathf.Max(0f, immunityDuration);
-        }
-
-        private void OnDrawGizmosSelected()
-        {
-            // Active effects 시각화
-            if (activeEffects != null && activeEffects.Count > 0)
+            foreach (var instance in activeEffects)
             {
-                Gizmos.color = Color.green;
-                float offset = 0.5f;
-                foreach (var effect in activeEffects)
+                if (instance.effect != null && !instance.isPaused)
                 {
-                    if (effect != null && !effect.IsExpired)
+                    instance.effect.OnTick(instance.context, Time.deltaTime);
+
+                    // Check ongoing requirements
+                    if (!instance.effect.CheckOngoing(instance.context))
                     {
-                        Gizmos.DrawWireCube(
-                            transform.position + Vector3.up * offset,
-                            Vector3.one * 0.1f
-                        );
-                        offset += 0.2f;
+                        effectsToRemove.Add(instance);
+                    }
+
+                    // Check removal conditions
+                    if (instance.effect.CheckRemoval(instance.context))
+                    {
+                        effectsToRemove.Add(instance);
                     }
                 }
             }
         }
-#endif
+
+        /// <summary>
+        /// Process periodic effects
+        /// </summary>
+        private void ProcessPeriodicEffects()
+        {
+            foreach (var instance in periodicEffects)
+            {
+                if (instance.effect != null &&
+                    !instance.isPaused &&
+                    instance.IsPeriodicDue(instance.effect.Period))
+                {
+                    instance.UpdatePeriodicTime();
+                    instance.effect.OnPeriodic(instance.context);
+                    OnEffectPeriodic(instance.effect, instance.context);
+
+                    FirePeriodicEvent(instance.effect, instance.context);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Remove expired effects
+        /// </summary>
+        private void RemoveExpiredEffects()
+        {
+            // Check for expired effects
+            foreach (var instance in activeEffects)
+            {
+                if (instance.IsExpired())
+                {
+                    effectsToRemove.Add(instance);
+                    OnEffectExpired(instance.effect, instance.context);
+                }
+            }
+
+            // Remove collected effects
+            foreach (var instance in effectsToRemove)
+            {
+                RemoveEffectInstance(instance);
+            }
+
+            effectsToRemove.Clear();
+        }
+
+        #endregion
+
+        #region Effect Queries
+
+        /// <summary>
+        /// Get all active effects
+        /// </summary>
+        public List<EffectInstance> GetActiveEffects()
+        {
+            return new List<EffectInstance>(activeEffects);
+        }
+
+        /// <summary>
+        /// Get effects by tag
+        /// </summary>
+        public List<EffectInstance> GetEffectsByTag(string tagName)
+        {
+            if (effectsByTag.TryGetValue(tagName, out var instances))
+            {
+                return new List<EffectInstance>(instances);
+            }
+            return new List<EffectInstance>();
+        }
+
+        /// <summary>
+        /// Has effect?
+        /// </summary>
+        public bool HasEffect(GameplayEffect effect)
+        {
+            return effectLookup.ContainsKey(effect);
+        }
+
+        /// <summary>
+        /// Has effect with tag?
+        /// </summary>
+        public bool HasEffectWithTag(string tagName)
+        {
+            return effectsByTag.ContainsKey(tagName) && effectsByTag[tagName].Count > 0;
+        }
+
+        /// <summary>
+        /// Get effect instance
+        /// </summary>
+        public EffectInstance GetEffectInstance(GameplayEffect effect)
+        {
+            effectLookup.TryGetValue(effect, out var instance);
+            return instance;
+        }
+
+        /// <summary>
+        /// Get stack count for effect
+        /// </summary>
+        public int GetEffectStackCount(GameplayEffect effect)
+        {
+            if (effectLookup.TryGetValue(effect, out var instance))
+            {
+                return instance.stackCount;
+            }
+            return 0;
+        }
+
+        #endregion
+
+        #region Effect Control
+
+        /// <summary>
+        /// Pause an effect
+        /// </summary>
+        public void PauseEffect(GameplayEffect effect)
+        {
+            if (effectLookup.TryGetValue(effect, out var instance))
+            {
+                instance.Pause();
+            }
+        }
+
+        /// <summary>
+        /// Resume an effect
+        /// </summary>
+        public void ResumeEffect(GameplayEffect effect)
+        {
+            if (effectLookup.TryGetValue(effect, out var instance))
+            {
+                instance.Resume();
+            }
+        }
+
+        /// <summary>
+        /// Pause all effects
+        /// </summary>
+        public void PauseAllEffects()
+        {
+            foreach (var instance in activeEffects)
+            {
+                instance.Pause();
+            }
+        }
+
+        /// <summary>
+        /// Resume all effects
+        /// </summary>
+        public void ResumeAllEffects()
+        {
+            foreach (var instance in activeEffects)
+            {
+                instance.Resume();
+            }
+        }
+
+        /// <summary>
+        /// Extend effect duration
+        /// </summary>
+        public void ExtendEffectDuration(GameplayEffect effect, float additionalDuration)
+        {
+            if (effectLookup.TryGetValue(effect, out var instance) && instance.duration > 0)
+            {
+                instance.duration += additionalDuration;
+            }
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void OnDeath(object data)
+        {
+            if (data is GASEventData eventData && eventData.source == gameObject)
+            {
+                // Remove effects that should be removed on death
+                var instancesToCheck = new List<EffectInstance>(activeEffects);
+                foreach (var instance in instancesToCheck)
+                {
+                    if (instance.effect.AssetTags?.Tags.Any(t => t.TagName.Contains("RemoveOnDeath")) == true)
+                    {
+                        RemoveEffectInstance(instance);
+                    }
+                }
+
+                // Pause remaining effects
+                PauseAllEffects();
+            }
+        }
+
+        private void OnRespawn(object data)
+        {
+            if (data is GASEventData eventData && eventData.source == gameObject)
+            {
+                // Resume paused effects
+                ResumeAllEffects();
+
+                // Remove effects that don't persist through death
+                var instancesToCheck = new List<EffectInstance>(activeEffects);
+                foreach (var instance in instancesToCheck)
+                {
+                    if (instance.effect.AssetTags?.Tags.Any(t => t.TagName.Contains("NoRespawnPersist")) == true)
+                    {
+                        RemoveEffectInstance(instance);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Events
+
+        private void FireEffectAppliedEvent(GameplayEffect effect, EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectApplied, new EffectAppliedEventData
+            {
+                effect = effect,
+                context = context,
+                target = gameObject,
+                source = context.instigator
+            });
+        }
+
+        private void FireEffectRemovedEvent(GameplayEffect effect, EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectRemoved, new EffectRemovedEventData
+            {
+                effect = effect,
+                context = context,
+                target = gameObject,
+                source = context.instigator
+            });
+        }
+
+        private void FirePeriodicEvent(GameplayEffect effect, EffectContext context)
+        {
+            GASEvents.Trigger(GASEventType.EffectPeriodic, new EffectPeriodicEventData
+            {
+                effect = effect,
+                context = context,
+                target = gameObject,
+                source = context.instigator
+            });
+        }
+
+        #endregion
+
+        #region Debug
+
+        private void OnGUI()
+        {
+            if (!debugMode) return;
+
+            Vector3 screenPos = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 2);
+            if (screenPos.z < 0) return;
+
+            float yOffset = 0;
+            GUI.Label(new Rect(screenPos.x - 100, Screen.height - screenPos.y - yOffset, 200, 20),
+                $"Effects: {activeEffects.Count} (B:{activeBuffCount} D:{activeDebuffCount})");
+
+            yOffset += 20;
+            foreach (var instance in activeEffects)
+            {
+                string effectInfo = $"{instance.effect.EffectName}";
+                if (instance.stackCount > 1)
+                    effectInfo += $" x{instance.stackCount}";
+                if (instance.duration > 0)
+                    effectInfo += $" ({instance.RemainingDuration:F1}s)";
+
+                GUI.Label(new Rect(screenPos.x - 100, Screen.height - screenPos.y - yOffset, 200, 20), effectInfo);
+                yOffset += 20;
+            }
+        }
 
         #endregion
     }
-}
 
-// 파일 위치: Assets/Scripts/GAS/EffectSystem/EffectComponent.cs
+    #region Event Data Classes
+
+    public class EffectAppliedEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public EffectContext context;
+        public GameObject target;
+    }
+
+    public class EffectRemovedEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public EffectContext context;
+        public GameObject target;
+    }
+
+    public class EffectPeriodicEventData : GASEventData
+    {
+        public GameplayEffect effect;
+        public EffectContext context;
+        public GameObject target;
+        public int tickCount;
+    }
+
+    #endregion
+}
