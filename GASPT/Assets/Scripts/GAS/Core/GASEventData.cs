@@ -386,15 +386,4 @@ namespace GAS.Core
     }
 
     #endregion
-
-    /// <summary>
-    /// Damage types
-    /// </summary>
-    public enum DamageType
-    {
-        Physical,
-        Magic,
-        True,
-        Mixed
-    }
 }

@@ -778,7 +778,7 @@ namespace GAS.EffectSystem
             if (assetTags?.Tags.Contains<GameplayTag>("Physical") == true)
                 return DamageType.Physical;
             if (assetTags?.Tags.Contains<GameplayTag>("Magic") == true)
-                return DamageType.Magic;
+                return DamageType.Magical;
             if (assetTags?.Tags.Contains<GameplayTag>("True") == true)
                 return DamageType.True;
             return DamageType.Physical;

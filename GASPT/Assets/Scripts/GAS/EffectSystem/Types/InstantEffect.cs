@@ -404,7 +404,7 @@ namespace GAS.EffectSystem
         protected virtual DamageType GetDamageType()
         {
             if (HasTag("Damage.Physical")) return DamageType.Physical;
-            if (HasTag("Damage.Magic")) return DamageType.Magic;
+            if (HasTag("Damage.Magic")) return DamageType.Magical;
             if (HasTag("Damage.True")) return DamageType.True;
             return DamageType.Physical;
         }
@@ -455,16 +455,6 @@ namespace GAS.EffectSystem
         IsBlocked
     }
 
-    /// <summary>
-    /// Damage types
-    /// </summary>
-    public enum DamageType
-    {
-        Physical,
-        Magic,
-        True,
-        Mixed
-    }
 
     /// <summary>
     /// Event data for instant effects
@@ -476,18 +466,7 @@ namespace GAS.EffectSystem
         public string eventName;
     }
 
-    /// <summary>
-    /// Event data for damage
-    /// </summary>
-    public class DamageEventData : GASEventData
-    {
-        public GameObject target;
-        public float damage;
-        public DamageType damageType;
-        public bool isCritical;
-        public bool isBlocked;
-        public bool isDodged;
-    }
+
 
     /// <summary>
     /// Event data for healing
