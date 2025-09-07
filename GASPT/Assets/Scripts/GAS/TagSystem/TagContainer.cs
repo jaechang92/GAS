@@ -1,6 +1,6 @@
 // ================================
 // File: Assets/Scripts/GAS/TagSystem/TagContainer.cs
-// Updated with Clone method
+// 일반 클래스 버전 - ScriptableObject 제거
 // ================================
 using System;
 using System.Collections.Generic;
@@ -11,10 +11,10 @@ namespace GAS.TagSystem
 {
     /// <summary>
     /// Container for managing collections of gameplay tags
+    /// 일반 클래스로 변경하여 MonoBehaviour에서 자유롭게 생성 가능
     /// </summary>
     [Serializable]
-    [CreateAssetMenu(fileName = "TagContainer", menuName = "GAS/Tag Container")]
-    public class TagContainer : ScriptableObject
+    public class TagContainer
     {
         [Header("Tags")]
         [SerializeField] private List<GameplayTag> tags = new List<GameplayTag>();
@@ -34,14 +34,29 @@ namespace GAS.TagSystem
         public int Count => tags?.Count ?? 0;
 
         /// <summary>
+        /// Default constructor
+        /// </summary>
+        public TagContainer()
+        {
+            tags = new List<GameplayTag>();
+        }
+
+        /// <summary>
+        /// Constructor with initial tags
+        /// </summary>
+        public TagContainer(List<GameplayTag> initialTags)
+        {
+            tags = initialTags != null ? new List<GameplayTag>(initialTags) : new List<GameplayTag>();
+        }
+
+        /// <summary>
         /// Creates a deep copy of this TagContainer
         /// </summary>
         public TagContainer Clone()
         {
-            var clone = CreateInstance<TagContainer>();
+            var clone = new TagContainer();
 
             // Deep copy the tags list
-            clone.tags = new List<GameplayTag>();
             if (tags != null)
             {
                 foreach (var tag in tags)
@@ -87,10 +102,10 @@ namespace GAS.TagSystem
         /// <summary>
         /// Removes a tag from the container
         /// </summary>
-        public bool RemoveTag(GameplayTag tag)
+        public void RemoveTag(GameplayTag tag)
         {
-            if (tag == null) return false;
-            return tags.Remove(tag);
+            if (tag == null) return;
+            tags.Remove(tag);
         }
 
         /// <summary>
@@ -107,20 +122,32 @@ namespace GAS.TagSystem
         }
 
         /// <summary>
+        /// Clears all tags from the container
+        /// </summary>
+        public void Clear()
+        {
+            tags.Clear();
+        }
+
+        /// <summary>
         /// Checks if the container has a specific tag
         /// </summary>
         public bool HasTag(GameplayTag tag)
         {
-            if (tag == null || tags == null) return false;
+            if (tag == null || tags == null)
+                return false;
+
             return tags.Contains(tag);
         }
 
         /// <summary>
-        /// Checks if the container has a tag by name
+        /// Checks if the container has a tag with the specified name
         /// </summary>
         public bool HasTag(string tagName)
         {
-            if (string.IsNullOrEmpty(tagName) || tags == null) return false;
+            if (string.IsNullOrEmpty(tagName) || tags == null)
+                return false;
+
             return tags.Any(t => t != null && t.TagName == tagName);
         }
 
@@ -129,7 +156,8 @@ namespace GAS.TagSystem
         /// </summary>
         public bool HasAllTags(IEnumerable<GameplayTag> tagsToCheck)
         {
-            if (tagsToCheck == null) return true;
+            if (tagsToCheck == null)
+                return false;
 
             foreach (var tag in tagsToCheck)
             {
@@ -145,7 +173,8 @@ namespace GAS.TagSystem
         /// </summary>
         public bool HasAnyTag(IEnumerable<GameplayTag> tagsToCheck)
         {
-            if (tagsToCheck == null) return false;
+            if (tagsToCheck == null)
+                return false;
 
             foreach (var tag in tagsToCheck)
             {
@@ -157,38 +186,11 @@ namespace GAS.TagSystem
         }
 
         /// <summary>
-        /// Checks if the container has exact tags (no more, no less)
+        /// Gets all tags as a list
         /// </summary>
-        public bool HasExactTags(IEnumerable<GameplayTag> tagsToCheck)
+        public List<GameplayTag> ToList()
         {
-            if (tagsToCheck == null)
-                return Count == 0;
-
-            var checkList = tagsToCheck.ToList();
-            if (checkList.Count != Count)
-                return false;
-
-            return HasAllTags(checkList);
-        }
-
-        /// <summary>
-        /// Clears all tags from the container
-        /// </summary>
-        public void Clear()
-        {
-            tags.Clear();
-        }
-
-        /// <summary>
-        /// Gets all tags that match a category
-        /// </summary>
-        public List<GameplayTag> GetTagsByCategory(string category)
-        {
-            if (string.IsNullOrEmpty(category) || tags == null)
-                return new List<GameplayTag>();
-
-            return tags.Where(t => t != null && t.TagName.StartsWith(category + "."))
-                      .ToList();
+            return tags?.ToList() ?? new List<GameplayTag>();
         }
 
         /// <summary>
@@ -219,7 +221,7 @@ namespace GAS.TagSystem
         /// </summary>
         public TagContainer IntersectWith(TagContainer other)
         {
-            var intersection = CreateInstance<TagContainer>();
+            var intersection = new TagContainer();
 
             if (other == null || tags == null)
                 return intersection;
@@ -233,7 +235,7 @@ namespace GAS.TagSystem
         /// </summary>
         public TagContainer ExceptWith(TagContainer other)
         {
-            var difference = CreateInstance<TagContainer>();
+            var difference = new TagContainer();
 
             if (tags == null)
                 return difference;
@@ -276,9 +278,8 @@ namespace GAS.TagSystem
             return $"TagContainer({Count} tags): {string.Join(", ", tags.Where(t => t != null).Select(t => t.TagName))}";
         }
 
-#if UNITY_EDITOR
         /// <summary>
-        /// Validates the container in editor
+        /// Validates the container
         /// </summary>
         public void Validate()
         {
@@ -291,6 +292,5 @@ namespace GAS.TagSystem
                 tags = tags.Distinct().ToList();
             }
         }
-#endif
     }
 }

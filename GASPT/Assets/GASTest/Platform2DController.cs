@@ -1,17 +1,16 @@
 // ================================
-// File: Assets/Scripts/TestScene/Platform2DController.cs
+// File: Assets/GASTest/Platform2DController.cs
 // 2D 플랫포머 플레이어 컨트롤러
 // ================================
+using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
-using GAS.AbilitySystem;
-using GAS.AttributeSystem;
-using GAS.TagSystem;
-using static GAS.Core.GASConstants;
+using UnityEngine.InputSystem;
 
 namespace TestScene
 {
     /// <summary>
-    /// 2D 플랫포머 플레이어 이동 및 입력 처리
+    /// 2D 플랫포머 캐릭터 컨트롤러
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
@@ -21,81 +20,68 @@ namespace TestScene
         [SerializeField] private float moveSpeed = 8f;
         [SerializeField] private float jumpForce = 12f;
         [SerializeField] private float airControl = 0.5f;
-        [SerializeField] private int maxJumps = 2; // 더블 점프
+        [SerializeField] private int maxJumps = 2;
 
         [Header("Ground Check")]
-        [SerializeField] private LayerMask groundLayer = 1 << 10; // Platform layer
+        [SerializeField] private LayerMask groundLayer;
         [SerializeField] private float groundCheckRadius = 0.3f;
         [SerializeField] private Vector2 groundCheckOffset = new Vector2(0, -1f);
 
-        [Header("Combat")]
+        [Header("Combat Settings")]
         [SerializeField] private float attackRange = 3f;
-        [SerializeField] private LayerMask enemyLayer = 1 << 9; // Enemy layer
+        [SerializeField] private LayerMask enemyLayer;
 
-        [Header("Animation")]
+        [Header("Visual Settings")]
         [SerializeField] private bool flipSpriteOnDirection = true;
-
-        [Header("Debug")]
         [SerializeField] private bool showDebugInfo = true;
         [SerializeField] private bool showGizmos = true;
 
         // Components
-        private Rigidbody2D rb2d;
-        private Collider2D coll2d;
-        private AbilitySystemComponent abilitySystem;
-        private AttributeSetComponent attributes;
-        private TagComponent tags;
+        private Rigidbody2D rb;
+        private Collider2D col;
         private SpriteRenderer spriteRenderer;
 
-        // State
-        private bool isGrounded;
-        private int currentJumps;
-        private float horizontalInput;
-        private bool jumpInput;
-        private bool facingRight = true;
-        private GameObject currentTarget;
+        // Input
+        private PlayerInput playerInput;
+        private InputAction moveAction;
+        private InputAction jumpAction;
+        private InputAction attackAction;
 
-        // Ability input mapping
-        private const int ABILITY_SLOT_1 = 1; // Q or 1
-        private const int ABILITY_SLOT_2 = 2; // W or 2
-        private const int ABILITY_SLOT_3 = 3; // E or 3
+        // State
+        private float moveInput;
+        private int currentJumpCount;
+        private bool isGrounded;
+        private bool wasGroundedLastFrame;
+        private bool isFacingRight = true;
+        private float coyoteTimeCounter;
+        private float jumpBufferCounter;
+
+        // Constants
+        private const float COYOTE_TIME = 0.15f;
+        private const float JUMP_BUFFER_TIME = 0.2f;
+        private const float GROUND_CHECK_DELAY = 0.1f;
+
+        #region Unity Lifecycle
 
         private void Awake()
         {
-            rb2d = GetComponent<Rigidbody2D>();
-            coll2d = GetComponent<Collider2D>();
-            abilitySystem = GetComponent<AbilitySystemComponent>();
-            attributes = GetComponent<AttributeSetComponent>();
-            tags = GetComponent<TagComponent>();
-            spriteRenderer = GetComponent<SpriteRenderer>();
-
-            // 스프라이트 렌더러가 없으면 자식에서 찾기
-            if (spriteRenderer == null)
-            {
-                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            }
+            InitializeComponents();
+            InitializeInput();
         }
 
         private void Start()
         {
-            // 플레이어 태그 추가
-            if (tags != null)
-            {
-                // tags.AddTag("Player"); // GameplayTag가 필요
-            }
+            SetupInitialState();
         }
 
         private void Update()
         {
-            HandleInput();
-            CheckGround();
-            UpdateFacing();
-            UpdateTarget();
-
-            if (showDebugInfo)
-            {
-                ShowDebugInfo();
-            }
+            UpdateInput();
+            UpdateGroundCheck();
+            UpdateTimers();
+            HandleJump();
+            HandleAttack();
+            UpdateVisuals();
         }
 
         private void FixedUpdate()
@@ -103,338 +89,290 @@ namespace TestScene
             HandleMovement();
         }
 
-        /// <summary>
-        /// 입력 처리
-        /// </summary>
-        private void HandleInput()
+        private void OnDestroy()
+        {
+            CleanupInput();
+        }
+
+        #endregion
+
+        #region Initialization
+
+        private void InitializeComponents()
+        {
+            rb = GetComponent<Rigidbody2D>();
+            col = GetComponent<Collider2D>();
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+            // Rigidbody2D 설정
+            rb.gravityScale = 1f;
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        }
+
+        private void InitializeInput()
+        {
+            playerInput = GetComponent<PlayerInput>();
+            if (playerInput == null)
+            {
+                playerInput = gameObject.AddComponent<PlayerInput>();
+            }
+
+            // Input Actions 설정
+            var actionMap = playerInput.currentActionMap;
+            if (actionMap != null)
+            {
+                moveAction = actionMap.FindAction("Move");
+                jumpAction = actionMap.FindAction("Jump");
+                attackAction = actionMap.FindAction("Attack");
+            }
+        }
+
+        private void SetupInitialState()
+        {
+            currentJumpCount = 0;
+            isGrounded = false;
+            isFacingRight = true;
+        }
+
+        #endregion
+
+        #region Input Handling
+
+        private void UpdateInput()
         {
             // 이동 입력
-            horizontalInput = Input.GetAxisRaw("Horizontal");
-
-            // 점프 입력
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (moveAction != null)
             {
-                jumpInput = true;
-            }
-
-            // 능력 입력 (숫자키 또는 Q,W,E)
-            HandleAbilityInput();
-
-            // 마우스 클릭으로 타겟 지정
-            if (Input.GetMouseButtonDown(0))
-            {
-                HandleMouseTargeting();
-            }
-        }
-
-        /// <summary>
-        /// 능력 입력 처리
-        /// </summary>
-        private async void HandleAbilityInput()
-        {
-            if (abilitySystem == null) return;
-
-            // Slot 1: Q or 1
-            if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.Alpha1))
-            {
-                await TryActivateAbility(ABILITY_SLOT_1);
-            }
-
-            // Slot 2: W or 2
-            if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                await TryActivateAbility(ABILITY_SLOT_2);
-            }
-
-            // Slot 3: E or 3
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Alpha3))
-            {
-                await TryActivateAbility(ABILITY_SLOT_3);
-            }
-
-            // Ultimate: R or 4
-            if (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Alpha4))
-            {
-                await TryActivateAbility(4);
-            }
-        }
-
-        /// <summary>
-        /// 능력 활성화 시도
-        /// </summary>
-        private async Awaitable TryActivateAbility(int slotId)
-        {
-            // 타겟이 있으면 타겟 능력 사용
-            if (currentTarget != null)
-            {
-                bool success = await abilitySystem.TryActivateAbilityByInput(slotId);
-                if (!success && showDebugInfo)
-                {
-                    Debug.Log($"[Platform2DController] Failed to activate ability in slot {slotId}");
-                }
+                moveInput = moveAction.ReadValue<Vector2>().x;
             }
             else
             {
-                // 타겟이 없으면 자동 타겟 찾기
-                FindNearestTarget();
-                if (currentTarget != null)
-                {
-                    await abilitySystem.TryActivateAbilityByInput(slotId);
-                }
-                else
-                {
-                    // 논타겟 능력 실행
-                    await abilitySystem.TryActivateAbilityByInput(slotId);
-                }
+                // Fallback to legacy input
+                moveInput = Input.GetAxisRaw("Horizontal");
+            }
+
+            // 점프 버퍼링
+            if ((jumpAction != null && jumpAction.WasPressedThisFrame()) ||
+                Input.GetButtonDown("Jump"))
+            {
+                jumpBufferCounter = JUMP_BUFFER_TIME;
             }
         }
 
-        /// <summary>
-        /// 마우스 클릭 타겟팅
-        /// </summary>
-        private void HandleMouseTargeting()
-        {
-            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero, 0f, enemyLayer);
+        #endregion
 
-            if (hit.collider != null)
-            {
-                SetTarget(hit.collider.gameObject);
-            }
-            else
-            {
-                // 클릭 위치로 능력 사용 (Point 타입)
-                Vector3 worldPos = new Vector3(mousePos.x, mousePos.y, 0);
-                // abilitySystem.TryActivateAbilityAtPosition(ability, worldPos);
-            }
-        }
+        #region Movement
 
-        /// <summary>
-        /// 이동 처리
-        /// </summary>
         private void HandleMovement()
         {
-            // 수평 이동
-            float targetVelocityX = horizontalInput * moveSpeed;
+            float targetVelocity = moveInput * moveSpeed;
+            float smoothing = isGrounded ? 0.05f : airControl;
 
-            if (isGrounded)
+            // 속도 보간
+            rb.linearVelocity = new Vector2(
+                Mathf.Lerp(rb.linearVelocity.x, targetVelocity, smoothing),
+                rb.linearVelocity.y
+            );
+
+            // 방향 전환
+            if (flipSpriteOnDirection && moveInput != 0)
             {
-                // 지상에서 정확한 제어
-                rb2d.velocity = new Vector2(targetVelocityX, rb2d.linearVelocityY);
+                bool shouldFaceRight = moveInput > 0;
+                if (shouldFaceRight != isFacingRight)
+                {
+                    Flip();
+                }
+            }
+        }
+
+        private void Flip()
+        {
+            isFacingRight = !isFacingRight;
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.flipX = !isFacingRight;
             }
             else
             {
-                // 공중에서 부분적인 제어
-                float currentVelocityX = rb2d.linearVelocityX;
-                float newVelocityX = Mathf.Lerp(currentVelocityX, targetVelocityX, airControl * Time.fixedDeltaTime);
-                rb2d.linearVelocity = new Vector2(newVelocityX, rb2d.linearVelocityY);
+                Vector3 scale = transform.localScale;
+                scale.x *= -1;
+                transform.localScale = scale;
             }
+        }
 
-            // 점프 처리
-            if (jumpInput && CanJump())
+        #endregion
+
+        #region Jump System
+
+        private void HandleJump()
+        {
+            // 점프 버퍼 체크
+            if (jumpBufferCounter > 0)
             {
-                Jump();
+                // 바닥에 있거나 코요테 타임 중
+                if (isGrounded || coyoteTimeCounter > 0)
+                {
+                    PerformJump();
+                    jumpBufferCounter = 0;
+                }
+                // 공중 점프
+                else if (currentJumpCount < maxJumps)
+                {
+                    PerformJump();
+                    jumpBufferCounter = 0;
+                }
             }
-            jumpInput = false;
         }
 
-        /// <summary>
-        /// 점프 가능 여부 확인
-        /// </summary>
-        private bool CanJump()
+        private void PerformJump()
         {
-            return currentJumps < maxJumps;
-        }
-
-        /// <summary>
-        /// 점프 실행
-        /// </summary>
-        private void Jump()
-        {
-            rb2d.linearVelocity = new Vector2(rb2d.linearVelocityX, 0); // Y 속도 리셋
-            rb2d.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            currentJumps++;
+            rb.linearVelocity = new Vector2(rb.linearVelocityX, jumpForce);
+            currentJumpCount++;
+            coyoteTimeCounter = 0;
 
             if (showDebugInfo)
             {
-                Debug.Log($"[Platform2DController] Jump {currentJumps}/{maxJumps}");
+                Debug.Log($"Jump performed! Count: {currentJumpCount}/{maxJumps}");
             }
         }
 
-        /// <summary>
-        /// 지면 체크
-        /// </summary>
-        private void CheckGround()
+        #endregion
+
+        #region Ground Check
+
+        private void UpdateGroundCheck()
         {
+            wasGroundedLastFrame = isGrounded;
+
             Vector2 checkPosition = (Vector2)transform.position + groundCheckOffset;
-            bool wasGrounded = isGrounded;
             isGrounded = Physics2D.OverlapCircle(checkPosition, groundCheckRadius, groundLayer);
 
-            // 착지 시
-            if (!wasGrounded && isGrounded)
+            // 착지 감지
+            if (isGrounded && !wasGroundedLastFrame)
             {
-                currentJumps = 0;
                 OnLanded();
             }
-            // 떨어질 때
-            else if (wasGrounded && !isGrounded)
+            // 공중으로 전환
+            else if (!isGrounded && wasGroundedLastFrame)
             {
-                // 점프 없이 떨어진 경우 점프 카운트 1 사용
-                if (currentJumps == 0)
-                {
-                    currentJumps = 1;
-                }
+                OnBecameAirborne();
             }
         }
 
-        /// <summary>
-        /// 착지 이벤트
-        /// </summary>
         private void OnLanded()
         {
+            currentJumpCount = 0;
+
             if (showDebugInfo)
             {
-                Debug.Log("[Platform2DController] Landed");
+                Debug.Log("Landed!");
             }
         }
 
-        /// <summary>
-        /// 방향 업데이트
-        /// </summary>
-        private void UpdateFacing()
+        private void OnBecameAirborne()
         {
-            if (horizontalInput != 0)
+            // 점프로 인한 것이 아니면 코요테 타임 시작
+            if (currentJumpCount == 0)
             {
-                facingRight = horizontalInput > 0;
-
-                if (flipSpriteOnDirection && spriteRenderer != null)
-                {
-                    spriteRenderer.flipX = !facingRight;
-                }
+                coyoteTimeCounter = COYOTE_TIME;
+                currentJumpCount = 1; // 첫 점프는 이미 사용
             }
         }
 
-        /// <summary>
-        /// 타겟 업데이트
-        /// </summary>
-        private void UpdateTarget()
+        #endregion
+
+        #region Combat
+
+        private void HandleAttack()
         {
-            if (currentTarget != null)
+            if ((attackAction != null && attackAction.WasPressedThisFrame()) ||
+                Input.GetButtonDown("Fire1"))
             {
-                // 타겟이 죽었거나 범위를 벗어났는지 확인
-                float distance = Vector2.Distance(transform.position, currentTarget.transform.position);
-                if (distance > attackRange * 2)
-                {
-                    ClearTarget();
-                }
-
-                // 타겟의 체력 확인
-                var targetAttributes = currentTarget.GetComponent<AttributeSetComponent>();
-                if (targetAttributes != null)
-                {
-                    float health = targetAttributes.GetAttributeValue(AttributeType.Health);
-                    if (health <= 0)
-                    {
-                        ClearTarget();
-                    }
-                }
+                PerformAttack();
             }
         }
 
-        /// <summary>
-        /// 가장 가까운 타겟 찾기
-        /// </summary>
-        private void FindNearestTarget()
+        private async void PerformAttack()
         {
-            Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayer);
+            // 공격 범위 내 적 탐색
+            Vector2 attackPosition = transform.position + (isFacingRight ? Vector3.right : Vector3.left) * (attackRange / 2);
+            Collider2D[] enemies = Physics2D.OverlapCircleAll(attackPosition, attackRange / 2, enemyLayer);
 
-            GameObject nearestEnemy = null;
-            float nearestDistance = float.MaxValue;
+            if (showDebugInfo)
+            {
+                Debug.Log($"Attack! Hit {enemies.Length} enemies");
+            }
 
+            // 적에게 데미지 처리 (GAS 시스템 연동 시 구현)
             foreach (var enemy in enemies)
             {
-                float distance = Vector2.Distance(transform.position, enemy.transform.position);
-                if (distance < nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearestEnemy = enemy.gameObject;
-                }
+                // TODO: Apply damage effect through GAS
             }
 
-            if (nearestEnemy != null)
-            {
-                SetTarget(nearestEnemy);
-            }
+            // 공격 애니메이션 대기
+            await Task.Delay(300);
         }
 
-        /// <summary>
-        /// 타겟 설정
-        /// </summary>
-        private void SetTarget(GameObject target)
+        #endregion
+
+        #region Timers
+
+        private void UpdateTimers()
         {
-            currentTarget = target;
-
-            if (showDebugInfo)
+            // 코요테 타임
+            if (coyoteTimeCounter > 0)
             {
-                Debug.Log($"[Platform2DController] Target set: {target.name}");
+                coyoteTimeCounter -= Time.deltaTime;
+            }
+
+            // 점프 버퍼
+            if (jumpBufferCounter > 0)
+            {
+                jumpBufferCounter -= Time.deltaTime;
             }
         }
 
-        /// <summary>
-        /// 타겟 해제
-        /// </summary>
-        private void ClearTarget()
+        #endregion
+
+        #region Visual Updates
+
+        private void UpdateVisuals()
         {
-            if (currentTarget != null && showDebugInfo)
-            {
-                Debug.Log($"[Platform2DController] Target cleared: {currentTarget.name}");
-            }
-            currentTarget = null;
+            // 추가 시각적 업데이트 (애니메이션 등)
         }
 
-        /// <summary>
-        /// 디버그 정보 표시
-        /// </summary>
-        private void ShowDebugInfo()
+        #endregion
+
+        #region Cleanup
+
+        private void CleanupInput()
         {
-            if (Input.GetKeyDown(KeyCode.F1))
-            {
-                Debug.Log($"=== Platform2D Controller Debug ===");
-                Debug.Log($"Position: {transform.position}");
-                Debug.Log($"Velocity: {rb2d.linearVelocity}");
-                Debug.Log($"Grounded: {isGrounded}");
-                Debug.Log($"Jumps: {currentJumps}/{maxJumps}");
-                Debug.Log($"Facing: {(facingRight ? "Right" : "Left")}");
-                Debug.Log($"Target: {(currentTarget != null ? currentTarget.name : "None")}");
-
-                if (attributes != null)
-                {
-                    Debug.Log($"Health: {attributes.GetAttributeValue(AttributeType.Health)}/{attributes.GetAttributeMaxValue(AttributeType.Health)}");
-                    Debug.Log($"Mana: {attributes.GetAttributeValue(AttributeType.Mana)}/{attributes.GetAttributeMaxValue(AttributeType.Mana)}");
-                }
-                Debug.Log("===================================");
-            }
+            if (moveAction != null) moveAction.Disable();
+            if (jumpAction != null) jumpAction.Disable();
+            if (attackAction != null) attackAction.Disable();
         }
+
+        #endregion
+
+        #region Debug
 
         private void OnDrawGizmos()
         {
             if (!showGizmos) return;
 
-            // Ground check 표시
+            // Ground check
             Gizmos.color = isGrounded ? Color.green : Color.red;
-            Gizmos.DrawWireSphere((Vector2)transform.position + groundCheckOffset, groundCheckRadius);
+            Vector3 groundCheckPos = transform.position + (Vector3)groundCheckOffset;
+            Gizmos.DrawWireSphere(groundCheckPos, groundCheckRadius);
 
-            // Attack range 표시
+            // Attack range
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, attackRange);
-
-            // Target 표시
-            if (currentTarget != null)
-            {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(transform.position, currentTarget.transform.position);
-                Gizmos.DrawWireSphere(currentTarget.transform.position, 0.5f);
-            }
+            Vector3 attackPos = transform.position + (isFacingRight ? Vector3.right : Vector3.left) * (attackRange / 2);
+            Gizmos.DrawWireSphere(attackPos, attackRange / 2);
         }
+
+        #endregion
     }
 }

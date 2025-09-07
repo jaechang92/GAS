@@ -1,14 +1,15 @@
 // ================================
-// File: Assets/Scripts/TestScene/Camera2DFollow.cs
-// 2D 플랫포머 카메라 팔로우 시스템
+// File: Assets/GASTest/Camera2DFollow.cs
+// 2D 카메라 추적 시스템
 // ================================
 using UnityEngine;
 
 namespace TestScene
 {
     /// <summary>
-    /// 2D 플랫포머용 카메라 팔로우 시스템
+    /// 2D 플랫포머용 카메라 추적 시스템
     /// </summary>
+    [RequireComponent(typeof(Camera))]
     public class Camera2DFollow : MonoBehaviour
     {
         [Header("Target")]
@@ -16,251 +17,204 @@ namespace TestScene
         [SerializeField] private bool autoFindPlayer = true;
 
         [Header("Follow Settings")]
-        [SerializeField] private float smoothSpeed = 5f;
-        [SerializeField] private Vector2 offset = new Vector2(0, 2f);
-        [SerializeField] private bool followX = true;
-        [SerializeField] private bool followY = true;
+        [SerializeField] private Vector3 offset = new Vector3(0, 2, -10);
+        [SerializeField] private float smoothSpeed = 0.125f;
+        [SerializeField] private bool lockYAxis = false;
+        [SerializeField] private float yLockPosition = 0f;
 
-        [Header("Dead Zone")]
-        [SerializeField] private bool useDeadZone = true;
-        [SerializeField] private Vector2 deadZoneSize = new Vector2(2f, 2f);
-
-        [Header("Bounds")]
+        [Header("Camera Bounds")]
         [SerializeField] private bool useBounds = true;
-        [SerializeField] private Vector2 minBounds = new Vector2(-30f, -10f);
-        [SerializeField] private Vector2 maxBounds = new Vector2(30f, 20f);
+        [SerializeField] private Vector2 minBounds = new Vector2(-20, -5);
+        [SerializeField] private Vector2 maxBounds = new Vector2(20, 10);
 
         [Header("Look Ahead")]
         [SerializeField] private bool useLookAhead = true;
-        [SerializeField] private float lookAheadDistance = 3f;
+        [SerializeField] private float lookAheadDistance = 2f;
         [SerializeField] private float lookAheadSpeed = 2f;
 
+        [Header("Dead Zone")]
+        [SerializeField] private bool useDeadZone = false;
+        [SerializeField] private Vector2 deadZoneSize = new Vector2(2, 1);
+
         [Header("Camera Shake")]
-        [SerializeField] private float shakeDecay = 2f;
-
-        [Header("Debug")]
-        [SerializeField] private bool showDebugInfo = false;
-        [SerializeField] private bool showGizmos = true;
-
-        // Internal state
-        private Camera cam;
-        private Vector3 desiredPosition;
-        private Vector3 smoothedPosition;
-        private Vector3 currentVelocity;
-        private float currentLookAhead = 0f;
-        private Vector2 lastTargetPosition;
-
-        // Camera shake
+        [SerializeField] private float shakeDecay = 0.5f;
         private float shakeIntensity = 0f;
-        private float shakeTime = 0f;
+        private Vector3 shakeOffset;
+
+        // Runtime
+        private Camera cam;
+        private Vector3 velocity = Vector3.zero;
+        private Vector3 desiredPosition;
+        private float currentLookAheadX;
+        private Vector3 lastTargetPosition;
+
+        #region Unity Lifecycle
 
         private void Awake()
         {
             cam = GetComponent<Camera>();
-            if (cam == null)
-            {
-                cam = Camera.main;
-            }
         }
 
         private void Start()
         {
             if (autoFindPlayer && target == null)
             {
-                GameObject player = GameObject.FindWithTag("Player");
-                if (player != null)
-                {
-                    SetTarget(player.transform);
-                }
+                FindPlayer();
             }
 
             if (target != null)
             {
-                // 즉시 타겟 위치로 이동
-                transform.position = GetTargetPosition();
                 lastTargetPosition = target.position;
+                transform.position = GetDesiredPosition();
             }
         }
 
         private void LateUpdate()
         {
-            if (target == null) return;
+            if (target == null)
+            {
+                if (autoFindPlayer)
+                {
+                    FindPlayer();
+                }
+                return;
+            }
 
             UpdateCameraPosition();
             UpdateCameraShake();
-
-            if (showDebugInfo && Input.GetKeyDown(KeyCode.F2))
-            {
-                PrintDebugInfo();
-            }
         }
 
-        /// <summary>
-        /// 카메라 위치 업데이트
-        /// </summary>
+        #endregion
+
+        #region Camera Movement
+
         private void UpdateCameraPosition()
         {
-            Vector3 targetPos = GetTargetPosition();
-
-            // Dead Zone 적용
-            if (useDeadZone)
-            {
-                targetPos = ApplyDeadZone(targetPos);
-            }
+            // 목표 위치 계산
+            desiredPosition = GetDesiredPosition();
 
             // Look Ahead 적용
             if (useLookAhead)
             {
-                targetPos = ApplyLookAhead(targetPos);
+                ApplyLookAhead();
             }
 
-            // Bounds 적용
+            // Dead Zone 적용
+            if (useDeadZone)
+            {
+                ApplyDeadZone();
+            }
+
+            // Y축 잠금
+            if (lockYAxis)
+            {
+                desiredPosition.y = yLockPosition + offset.y;
+            }
+
+            // 경계 제한
             if (useBounds)
             {
-                targetPos = ApplyBounds(targetPos);
+                ApplyBounds();
             }
 
-            // Smooth 이동
-            desiredPosition = targetPos;
-            smoothedPosition = Vector3.SmoothDamp(
-                transform.position,
-                desiredPosition,
-                ref currentVelocity,
-                1f / smoothSpeed
-            );
+            // 부드러운 이동
+            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
 
-            transform.position = smoothedPosition;
+            // 카메라 흔들림 적용
+            transform.position = smoothedPosition + shakeOffset;
 
-            // 타겟 위치 저장
+            // 마지막 위치 저장
             lastTargetPosition = target.position;
         }
 
-        /// <summary>
-        /// 타겟 위치 계산
-        /// </summary>
-        private Vector3 GetTargetPosition()
+        private Vector3 GetDesiredPosition()
         {
-            Vector3 targetPos = target.position;
-
-            // 오프셋 적용
-            targetPos.x += offset.x;
-            targetPos.y += offset.y;
-
-            // 축별 팔로우 설정
-            if (!followX)
-            {
-                targetPos.x = transform.position.x;
-            }
-
-            if (!followY)
-            {
-                targetPos.y = transform.position.y;
-            }
-
-            // Z 위치는 카메라 위치 유지
-            targetPos.z = transform.position.z;
-
-            return targetPos;
+            return target.position + offset;
         }
 
-        /// <summary>
-        /// Dead Zone 적용
-        /// </summary>
-        private Vector3 ApplyDeadZone(Vector3 targetPos)
+        private void ApplyLookAhead()
+        {
+            // 타겟의 이동 방향 감지
+            float targetVelocityX = (target.position.x - lastTargetPosition.x) / Time.deltaTime;
+
+            // Look ahead 값 부드럽게 전환
+            float targetLookAheadX = Mathf.Sign(targetVelocityX) * lookAheadDistance;
+            currentLookAheadX = Mathf.Lerp(currentLookAheadX, targetLookAheadX, Time.deltaTime * lookAheadSpeed);
+
+            // 적용
+            desiredPosition.x += currentLookAheadX;
+        }
+
+        private void ApplyDeadZone()
         {
             Vector3 currentPos = transform.position;
+            Vector3 targetPos = target.position;
 
-            // X축 Dead Zone
+            // X축 데드존
             float deltaX = targetPos.x - currentPos.x;
-            if (Mathf.Abs(deltaX) < deadZoneSize.x / 2f)
+            if (Mathf.Abs(deltaX) > deadZoneSize.x / 2)
             {
-                targetPos.x = currentPos.x;
+                float direction = Mathf.Sign(deltaX);
+                desiredPosition.x = targetPos.x - direction * (deadZoneSize.x / 2) + offset.x;
             }
             else
             {
-                float sign = Mathf.Sign(deltaX);
-                targetPos.x = currentPos.x + sign * (Mathf.Abs(deltaX) - deadZoneSize.x / 2f);
+                desiredPosition.x = currentPos.x;
             }
 
-            // Y축 Dead Zone
-            float deltaY = targetPos.y - currentPos.y;
-            if (Mathf.Abs(deltaY) < deadZoneSize.y / 2f)
+            // Y축 데드존
+            if (!lockYAxis)
             {
-                targetPos.y = currentPos.y;
-            }
-            else
-            {
-                float sign = Mathf.Sign(deltaY);
-                targetPos.y = currentPos.y + sign * (Mathf.Abs(deltaY) - deadZoneSize.y / 2f);
-            }
-
-            return targetPos;
-        }
-
-        /// <summary>
-        /// Look Ahead 적용
-        /// </summary>
-        private Vector3 ApplyLookAhead(Vector3 targetPos)
-        {
-            // 타겟의 이동 방향 계산
-            Vector2 targetVelocity = ((Vector2)target.position - lastTargetPosition) / Time.deltaTime;
-
-            if (targetVelocity.magnitude > 0.1f)
-            {
-                // 이동 중일 때 Look Ahead 적용
-                float targetLookAhead = Mathf.Sign(targetVelocity.x) * lookAheadDistance;
-                currentLookAhead = Mathf.Lerp(currentLookAhead, targetLookAhead, lookAheadSpeed * Time.deltaTime);
-            }
-            else
-            {
-                // 정지 시 Look Ahead 감소
-                currentLookAhead = Mathf.Lerp(currentLookAhead, 0, lookAheadSpeed * Time.deltaTime);
-            }
-
-            targetPos.x += currentLookAhead;
-
-            return targetPos;
-        }
-
-        /// <summary>
-        /// Bounds 적용
-        /// </summary>
-        private Vector3 ApplyBounds(Vector3 targetPos)
-        {
-            // 카메라 뷰포트 크기 계산
-            float halfHeight = cam.orthographicSize;
-            float halfWidth = halfHeight * cam.aspect;
-
-            // 바운드 내로 제한
-            targetPos.x = Mathf.Clamp(targetPos.x, minBounds.x + halfWidth, maxBounds.x - halfWidth);
-            targetPos.y = Mathf.Clamp(targetPos.y, minBounds.y + halfHeight, maxBounds.y - halfHeight);
-
-            return targetPos;
-        }
-
-        /// <summary>
-        /// 카메라 흔들기 업데이트
-        /// </summary>
-        private void UpdateCameraShake()
-        {
-            if (shakeIntensity > 0)
-            {
-                Vector3 shakeOffset = Random.insideUnitCircle * shakeIntensity;
-                transform.position += shakeOffset;
-
-                shakeIntensity = Mathf.Lerp(shakeIntensity, 0, shakeDecay * Time.deltaTime);
-                shakeTime -= Time.deltaTime;
-
-                if (shakeTime <= 0)
+                float deltaY = targetPos.y - currentPos.y;
+                if (Mathf.Abs(deltaY) > deadZoneSize.y / 2)
                 {
-                    shakeIntensity = 0;
+                    float direction = Mathf.Sign(deltaY);
+                    desiredPosition.y = targetPos.y - direction * (deadZoneSize.y / 2) + offset.y;
+                }
+                else
+                {
+                    desiredPosition.y = currentPos.y;
                 }
             }
         }
 
-        /// <summary>
-        /// 타겟 설정
-        /// </summary>
+        private void ApplyBounds()
+        {
+            desiredPosition.x = Mathf.Clamp(desiredPosition.x, minBounds.x, maxBounds.x);
+            desiredPosition.y = Mathf.Clamp(desiredPosition.y, minBounds.y, maxBounds.y);
+        }
+
+        #endregion
+
+        #region Camera Shake
+
+        public void ShakeCamera(float intensity, float duration = 0.5f)
+        {
+            shakeIntensity = intensity;
+            shakeDecay = duration;
+        }
+
+        private void UpdateCameraShake()
+        {
+            if (shakeIntensity > 0)
+            {
+                shakeOffset = Random.insideUnitSphere * shakeIntensity;
+                shakeOffset.z = 0; // 2D이므로 Z축 제거
+
+                shakeIntensity -= shakeDecay * Time.deltaTime;
+
+                if (shakeIntensity <= 0)
+                {
+                    shakeIntensity = 0;
+                    shakeOffset = Vector3.zero;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Public Methods
+
         public void SetTarget(Transform newTarget)
         {
             target = newTarget;
@@ -270,66 +224,49 @@ namespace TestScene
             }
         }
 
-        /// <summary>
-        /// 카메라 흔들기
-        /// </summary>
-        public void Shake(float intensity, float duration)
+        public void FindPlayer()
         {
-            shakeIntensity = intensity;
-            shakeTime = duration;
-        }
-
-        /// <summary>
-        /// 특정 위치로 즉시 이동
-        /// </summary>
-        public void SnapToTarget()
-        {
-            if (target != null)
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null)
             {
-                transform.position = GetTargetPosition();
-                currentVelocity = Vector3.zero;
-                currentLookAhead = 0;
+                player = GameObject.Find("Player");
+            }
+
+            if (player != null)
+            {
+                SetTarget(player.transform);
+                Debug.Log("[Camera2DFollow] Player found and set as target");
             }
         }
 
-        /// <summary>
-        /// 디버그 정보 출력
-        /// </summary>
-        private void PrintDebugInfo()
+        public void SetBounds(Vector2 min, Vector2 max)
         {
-            Debug.Log("=== Camera2D Follow Debug ===");
-            Debug.Log($"Camera Position: {transform.position}");
-            Debug.Log($"Target Position: {(target != null ? target.position.ToString() : "None")}");
-            Debug.Log($"Desired Position: {desiredPosition}");
-            Debug.Log($"Current Velocity: {currentVelocity}");
-            Debug.Log($"Look Ahead: {currentLookAhead}");
-            Debug.Log($"Shake Intensity: {shakeIntensity}");
-            Debug.Log("==============================");
+            minBounds = min;
+            maxBounds = max;
+            useBounds = true;
         }
+
+        public void DisableBounds()
+        {
+            useBounds = false;
+        }
+
+        #endregion
+
+        #region Debug
 
         private void OnDrawGizmos()
         {
-            if (!showGizmos) return;
+            if (!Application.isPlaying) return;
 
-            Camera gizmoCam = cam != null ? cam : Camera.main;
-            if (gizmoCam == null) return;
-
-            // Dead Zone 표시
-            if (useDeadZone)
-            {
-                Gizmos.color = new Color(1, 1, 0, 0.3f);
-                Vector3 center = Application.isPlaying ? transform.position : gizmoCam.transform.position;
-                Gizmos.DrawCube(center, new Vector3(deadZoneSize.x, deadZoneSize.y, 0.1f));
-            }
-
-            // Bounds 표시
+            // 카메라 경계
             if (useBounds)
             {
-                Gizmos.color = Color.red;
-                Vector3 bottomLeft = new Vector3(minBounds.x, minBounds.y, 0);
-                Vector3 bottomRight = new Vector3(maxBounds.x, minBounds.y, 0);
-                Vector3 topRight = new Vector3(maxBounds.x, maxBounds.y, 0);
-                Vector3 topLeft = new Vector3(minBounds.x, maxBounds.y, 0);
+                Gizmos.color = Color.yellow;
+                Vector3 bottomLeft = new Vector3(minBounds.x, minBounds.y, transform.position.z);
+                Vector3 bottomRight = new Vector3(maxBounds.x, minBounds.y, transform.position.z);
+                Vector3 topLeft = new Vector3(minBounds.x, maxBounds.y, transform.position.z);
+                Vector3 topRight = new Vector3(maxBounds.x, maxBounds.y, transform.position.z);
 
                 Gizmos.DrawLine(bottomLeft, bottomRight);
                 Gizmos.DrawLine(bottomRight, topRight);
@@ -337,36 +274,23 @@ namespace TestScene
                 Gizmos.DrawLine(topLeft, bottomLeft);
             }
 
-            // Camera View 표시
-            if (gizmoCam.orthographic)
+            // 데드존
+            if (useDeadZone)
             {
-                float halfHeight = gizmoCam.orthographicSize;
-                float halfWidth = halfHeight * gizmoCam.aspect;
-
-                Gizmos.color = Color.white;
-                Vector3 camPos = gizmoCam.transform.position;
-                Vector3 bl = camPos + new Vector3(-halfWidth, -halfHeight, 0);
-                Vector3 br = camPos + new Vector3(halfWidth, -halfHeight, 0);
-                Vector3 tr = camPos + new Vector3(halfWidth, halfHeight, 0);
-                Vector3 tl = camPos + new Vector3(-halfWidth, halfHeight, 0);
-
-                Gizmos.DrawLine(bl, br);
-                Gizmos.DrawLine(br, tr);
-                Gizmos.DrawLine(tr, tl);
-                Gizmos.DrawLine(tl, bl);
+                Gizmos.color = new Color(1, 0, 0, 0.3f);
+                Vector3 center = transform.position;
+                center.z = 0;
+                Gizmos.DrawWireCube(center, new Vector3(deadZoneSize.x, deadZoneSize.y, 0));
             }
 
-            // Target 표시
+            // 타겟 연결선
             if (target != null)
             {
                 Gizmos.color = Color.green;
-                Gizmos.DrawWireSphere(target.position, 0.5f);
-
-                if (Application.isPlaying)
-                {
-                    Gizmos.DrawLine(transform.position, target.position);
-                }
+                Gizmos.DrawLine(transform.position, target.position);
             }
         }
+
+        #endregion
     }
 }

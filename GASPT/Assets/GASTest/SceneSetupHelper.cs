@@ -1,34 +1,30 @@
 // ================================
-// File: Assets/Scripts/TestScene/SceneSetupHelper.cs
-// 2D 플랫포머 테스트 씬 자동 구성 도구
+// File: Assets/GASTest/SceneSetupHelper.cs
+// 테스트 씬 자동 설정 헬퍼
 // ================================
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
-using GAS.Core;
-using GAS.AttributeSystem;
-using GAS.TagSystem;
-using GAS.EffectSystem;
-using GAS.AbilitySystem;
-using System.Collections.Generic;
 
 namespace TestScene
 {
     /// <summary>
-    /// 2D 플랫포머 테스트 씬을 자동으로 구성하는 헬퍼 클래스
+    /// 2D 플랫포머 테스트 씬 자동 설정
     /// </summary>
     public class SceneSetupHelper : MonoBehaviour
     {
-        [Header("Scene Configuration")]
+        [Header("Setup Options")]
         [SerializeField] private bool autoSetupOnStart = true;
         [SerializeField] private bool create2DPhysics = true;
 
-        [Header("Prefab References")]
+        [Header("Prefabs")]
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private GameObject enemyPrefab;
         [SerializeField] private GameObject platformPrefab;
         [SerializeField] private GameObject uiCanvasPrefab;
 
-        [Header("Level Design")]
+        [Header("Platform Generation")]
         [SerializeField] private int platformCount = 10;
         [SerializeField] private float platformSpacing = 3f;
         [SerializeField] private Vector2 platformSizeRange = new Vector2(3f, 8f);
@@ -38,385 +34,417 @@ namespace TestScene
         [SerializeField] private int enemyCount = 5;
         [SerializeField] private float enemySpawnHeight = 1f;
 
-        private GameObject player;
-        private List<GameObject> enemies = new List<GameObject>();
+        // Runtime
+        private GameObject playerInstance;
         private List<GameObject> platforms = new List<GameObject>();
-        private GameObject uiCanvas;
+        private List<GameObject> enemies = new List<GameObject>();
+        private Camera mainCamera;
 
-        private void Start()
+        #region Unity Lifecycle
+
+        private async void Start()
         {
             if (autoSetupOnStart)
             {
-                SetupScene();
+                await SetupScene();
             }
         }
 
-        /// <summary>
-        /// 테스트 씬 전체 설정
-        /// </summary>
-        public void SetupScene()
-        {
-            Debug.Log("[SceneSetupHelper] Starting 2D platformer scene setup...");
+        #endregion
 
-            Setup2DPhysics();
+        #region Scene Setup
+
+        public async Task SetupScene()
+        {
+            Debug.Log("[SceneSetupHelper] Starting scene setup...");
+
+            // 1. Physics 설정
+            if (create2DPhysics)
+            {
+                SetupPhysics2D();
+            }
+
+            // 2. 카메라 설정
             SetupCamera();
-            CreatePlatforms();
+
+            // 3. 플랫폼 생성
+            await CreatePlatforms();
+
+            // 4. 플레이어 생성
             SpawnPlayer();
-            SpawnEnemies();
-            CreateUI();
-            SetupLighting();
+
+            // 5. 적 생성
+            await SpawnEnemies();
+
+            // 6. UI 생성
+            SetupUI();
 
             Debug.Log("[SceneSetupHelper] Scene setup complete!");
         }
 
-        /// <summary>
-        /// 2D 물리 설정
-        /// </summary>
-        private void Setup2DPhysics()
+        private void SetupPhysics2D()
         {
-            if (!create2DPhysics) return;
+            // Layer 설정
+            int groundLayer = 10;
+            int enemyLayer = 9;
+            int playerLayer = 8;
 
-            // 2D 중력 설정
+            // Layer 이름 설정 (에디터에서만)
+#if UNITY_EDITOR
+            SetLayerName(groundLayer, "Ground");
+            SetLayerName(enemyLayer, "Enemy");
+            SetLayerName(playerLayer, "Player");
+#endif
+
+            // Physics2D 설정
             Physics2D.gravity = new Vector2(0, -20f);
 
-            // 충돌 레이어 설정
-            SetupCollisionLayers();
+            // Layer 충돌 설정
+            Physics2D.IgnoreLayerCollision(enemyLayer, enemyLayer); // 적끼리는 충돌 안함
 
-            Debug.Log("[SceneSetupHelper] 2D physics configured");
+            Debug.Log("[SceneSetupHelper] Physics2D setup complete");
         }
 
-        /// <summary>
-        /// 충돌 레이어 설정
-        /// </summary>
-        private void SetupCollisionLayers()
-        {
-            // Layer 설정 (에디터에서 미리 설정되어 있어야 함)
-            // 8: Player
-            // 9: Enemy
-            // 10: Platform
-            // 11: Projectile
-
-            // Player는 Platform과 Enemy와 충돌
-            Physics2D.IgnoreLayerCollision(8, 11, false); // Player-Projectile
-
-            // Enemy는 Platform과 충돌, 서로는 통과
-            Physics2D.IgnoreLayerCollision(9, 9, true); // Enemy-Enemy
-
-            // Projectile은 Platform과 충돌
-            Physics2D.IgnoreLayerCollision(11, 10, false); // Projectile-Platform
-        }
-
-        /// <summary>
-        /// 카메라 설정 (2D 용)
-        /// </summary>
         private void SetupCamera()
         {
-            Camera mainCamera = Camera.main;
+            mainCamera = Camera.main;
             if (mainCamera == null)
             {
-                GameObject cameraObject = new GameObject("Main Camera");
-                mainCamera = cameraObject.AddComponent<Camera>();
-                cameraObject.AddComponent<AudioListener>();
-                cameraObject.tag = "MainCamera";
+                GameObject camObj = new GameObject("Main Camera");
+                mainCamera = camObj.AddComponent<Camera>();
+                camObj.AddComponent<AudioListener>();
+                camObj.tag = "MainCamera";
             }
 
             // 2D 카메라 설정
             mainCamera.orthographic = true;
-            mainCamera.orthographicSize = 10f;
-            mainCamera.transform.position = new Vector3(0, 5, -10);
-            mainCamera.backgroundColor = new Color(0.2f, 0.3f, 0.5f); // 하늘색 배경
+            mainCamera.orthographicSize = 5f;
+            mainCamera.transform.position = new Vector3(0, 0, -10);
 
-            // 카메라 팔로우 컴포넌트 추가 (나중에 구현)
-            if (mainCamera.GetComponent<Camera2DFollow>() == null)
-            {
-                mainCamera.gameObject.AddComponent<Camera2DFollow>();
-            }
-
-            Debug.Log("[SceneSetupHelper] Camera configured for 2D");
+            Debug.Log("[SceneSetupHelper] Camera setup complete");
         }
 
-        /// <summary>
-        /// 플랫폼 생성
-        /// </summary>
-        private void CreatePlatforms()
-        {
-            // 바닥 플랫폼 생성
-            CreateGroundPlatform();
+        #endregion
 
-            // 공중 플랫폼들 생성
+        #region Platform Generation
+
+        private async Task CreatePlatforms()
+        {
+            ClearPlatforms();
+
+            // 메인 플랫폼 (바닥)
+            GameObject mainPlatform = CreatePlatform(
+                new Vector3(0, -3, 0),
+                new Vector3(levelWidth, 1, 1)
+            );
+            mainPlatform.name = "Main Platform";
+            platforms.Add(mainPlatform);
+
+            // 추가 플랫폼들
             for (int i = 0; i < platformCount; i++)
             {
-                CreatePlatform(i);
+                float xPos = Random.Range(-levelWidth / 2 + 5, levelWidth / 2 - 5);
+                float yPos = Random.Range(-1f, 5f);
+                float width = Random.Range(platformSizeRange.x, platformSizeRange.y);
+
+                GameObject platform = CreatePlatform(
+                    new Vector3(xPos, yPos, 0),
+                    new Vector3(width, 0.5f, 1)
+                );
+                platform.name = $"Platform_{i}";
+                platforms.Add(platform);
+
+                await Task.Delay(50); // 시각적 효과
             }
 
-            Debug.Log($"[SceneSetupHelper] Created {platformCount + 1} platforms");
+            Debug.Log($"[SceneSetupHelper] Created {platforms.Count} platforms");
         }
 
-        /// <summary>
-        /// 바닥 플랫폼 생성
-        /// </summary>
-        private void CreateGroundPlatform()
-        {
-            GameObject ground = CreatePlatformObject("Ground", new Vector3(0, -5, 0));
-            ground.transform.localScale = new Vector3(levelWidth * 2, 1, 1);
-            platforms.Add(ground);
-        }
-
-        /// <summary>
-        /// 개별 플랫폼 생성
-        /// </summary>
-        private void CreatePlatform(int index)
-        {
-            float xPos = -levelWidth / 2 + (levelWidth / platformCount) * index + Random.Range(-1f, 1f);
-            float yPos = Random.Range(-2f, 8f);
-            float width = Random.Range(platformSizeRange.x, platformSizeRange.y);
-
-            Vector3 position = new Vector3(xPos, yPos, 0);
-            GameObject platform = CreatePlatformObject($"Platform_{index}", position);
-            platform.transform.localScale = new Vector3(width, 0.5f, 1);
-
-            platforms.Add(platform);
-        }
-
-        /// <summary>
-        /// 플랫폼 오브젝트 생성
-        /// </summary>
-        private GameObject CreatePlatformObject(string name, Vector3 position)
+        private GameObject CreatePlatform(Vector3 position, Vector3 size)
         {
             GameObject platform;
 
             if (platformPrefab != null)
             {
                 platform = Instantiate(platformPrefab, position, Quaternion.identity);
-                platform.name = name;
+                platform.transform.localScale = size;
             }
             else
             {
                 // 프리팹이 없으면 기본 큐브로 생성
                 platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                platform.name = name;
                 platform.transform.position = position;
+                platform.transform.localScale = size;
 
                 // 2D 설정
                 Destroy(platform.GetComponent<BoxCollider>());
                 platform.AddComponent<BoxCollider2D>();
 
-                // 머티리얼 설정
+                // Material 설정
                 Renderer renderer = platform.GetComponent<Renderer>();
                 renderer.material.color = new Color(0.5f, 0.3f, 0.1f); // 갈색
             }
 
-            platform.layer = 10; // Platform layer
-            platform.tag = "Platform";
+            // Layer 설정
+            platform.layer = 10; // Ground Layer
+
+            // Static 설정 (최적화)
+            platform.isStatic = true;
 
             return platform;
         }
 
-        /// <summary>
-        /// 플레이어 생성
-        /// </summary>
+        private void ClearPlatforms()
+        {
+            foreach (var platform in platforms)
+            {
+                if (platform != null)
+                {
+                    DestroyImmediate(platform);
+                }
+            }
+            platforms.Clear();
+        }
+
+        #endregion
+
+        #region Player Spawning
+
         private void SpawnPlayer()
         {
-            Vector3 spawnPosition = new Vector3(-levelWidth / 3, 0, 0);
+            if (playerInstance != null)
+            {
+                DestroyImmediate(playerInstance);
+            }
+
+            Vector3 spawnPosition = new Vector3(0, 0, 0);
 
             if (playerPrefab != null)
             {
-                player = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-                player.name = "Player";
+                playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+                playerInstance.name = "Player";
             }
             else
             {
-                player = CreateDefaultPlayer(spawnPosition);
+                // 프리팹이 없으면 기본 플레이어 생성
+                playerInstance = CreateDefaultPlayer(spawnPosition);
             }
 
-            // 카메라가 플레이어를 따라가도록 설정
-            Camera2DFollow cameraFollow = Camera.main.GetComponent<Camera2DFollow>();
-            if (cameraFollow != null)
-            {
-                cameraFollow.SetTarget(player.transform);
-            }
+            // 카메라 팔로우 설정
+            SetupCameraFollow(playerInstance);
 
             Debug.Log("[SceneSetupHelper] Player spawned");
         }
 
-        /// <summary>
-        /// 기본 플레이어 생성 (프리팹이 없을 때)
-        /// </summary>
         private GameObject CreateDefaultPlayer(Vector3 position)
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
             player.transform.position = position;
-            player.transform.localScale = new Vector3(1, 2, 1);
+            player.transform.localScale = new Vector3(1, 1, 1);
 
             // 2D 컴포넌트 설정
             Destroy(player.GetComponent<CapsuleCollider>());
-            CapsuleCollider2D collider2D = player.AddComponent<CapsuleCollider2D>();
-            collider2D.size = new Vector2(1, 2);
+            player.AddComponent<CapsuleCollider2D>();
 
-            Rigidbody2D rb2d = player.AddComponent<Rigidbody2D>();
-            rb2d.gravityScale = 2f;
-            rb2d.freezeRotation = true;
+            Rigidbody2D rb = player.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 1f;
+            rb.freezeRotation = true;
 
-            // GAS 컴포넌트 추가
-            player.AddComponent<AttributeSetComponent>();
-            player.AddComponent<TagComponent>();
-            player.AddComponent<EffectComponent>();
-            player.AddComponent<AbilitySystemComponent>();
-
-            // 플레이어 컨트롤러 추가
+            // 컨트롤러 추가
             player.AddComponent<Platform2DController>();
 
-            // 시각적 구분
+            // Layer 설정
+            player.layer = 8; // Player Layer
+
+            // 색상 설정
             player.GetComponent<Renderer>().material.color = Color.blue;
-            player.layer = 8; // Player layer
-            player.tag = "Player";
 
             return player;
         }
 
-        /// <summary>
-        /// 적 생성
-        /// </summary>
-        private void SpawnEnemies()
+        #endregion
+
+        #region Enemy Spawning
+
+        private async Task SpawnEnemies()
         {
+            ClearEnemies();
+
             for (int i = 0; i < enemyCount; i++)
             {
-                float xPos = Random.Range(-levelWidth / 2, levelWidth / 2);
-                float yPos = enemySpawnHeight;
-                Vector3 spawnPosition = new Vector3(xPos, yPos, 0);
-
-                GameObject enemy;
-                if (enemyPrefab != null)
+                // 플랫폼 위에 랜덤하게 배치
+                if (platforms.Count > 1)
                 {
-                    enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
-                }
-                else
-                {
-                    enemy = CreateDefaultEnemy(spawnPosition);
-                }
+                    GameObject platform = platforms[Random.Range(1, platforms.Count)];
+                    Vector3 spawnPos = platform.transform.position + Vector3.up * enemySpawnHeight;
 
-                enemy.name = $"Enemy_{i}";
-                enemies.Add(enemy);
+                    GameObject enemy = SpawnEnemy(spawnPos);
+                    enemy.name = $"Enemy_{i}";
+                    enemies.Add(enemy);
+
+                    await Task.Delay(100); // 시각적 효과
+                }
             }
 
-            Debug.Log($"[SceneSetupHelper] Spawned {enemyCount} enemies");
+            Debug.Log($"[SceneSetupHelper] Spawned {enemies.Count} enemies");
         }
 
-        /// <summary>
-        /// 기본 적 생성 (프리팹이 없을 때)
-        /// </summary>
-        private GameObject CreateDefaultEnemy(Vector3 position)
+        private GameObject SpawnEnemy(Vector3 position)
         {
-            GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            enemy.transform.position = position;
-            enemy.transform.localScale = new Vector3(1.5f, 1.5f, 1);
+            GameObject enemy;
 
-            // 2D 컴포넌트 설정
-            Destroy(enemy.GetComponent<BoxCollider>());
-            BoxCollider2D collider2D = enemy.AddComponent<BoxCollider2D>();
-
-            Rigidbody2D rb2d = enemy.AddComponent<Rigidbody2D>();
-            rb2d.gravityScale = 2f;
-            rb2d.freezeRotation = true;
-
-            // GAS 컴포넌트 추가
-            AttributeSetComponent attributes = enemy.AddComponent<AttributeSetComponent>();
-            TagComponent tags = enemy.AddComponent<TagComponent>();
-            enemy.AddComponent<EffectComponent>();
-
-            // Enemy2D AI 추가
-            enemy.AddComponent<Enemy2DController>();
-
-            // 시각적 구분
-            enemy.GetComponent<Renderer>().material.color = Color.red;
-            enemy.layer = 9; // Enemy layer
-            enemy.tag = "Enemy";
+            if (enemyPrefab != null)
+            {
+                enemy = Instantiate(enemyPrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                // 프리팹이 없으면 기본 적 생성
+                enemy = CreateDefaultEnemy(position);
+            }
 
             return enemy;
         }
 
-        /// <summary>
-        /// UI 생성
-        /// </summary>
-        private void CreateUI()
+        private GameObject CreateDefaultEnemy(Vector3 position)
         {
-            if (uiCanvasPrefab != null)
-            {
-                uiCanvas = Instantiate(uiCanvasPrefab);
-                uiCanvas.name = "GameplayUI";
-            }
-            else
-            {
-                CreateDefaultUI();
-            }
+            GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            enemy.transform.position = position;
+            enemy.transform.localScale = new Vector3(0.8f, 0.8f, 1);
 
-            Debug.Log("[SceneSetupHelper] UI created");
+            // 2D 컴포넌트 설정
+            Destroy(enemy.GetComponent<BoxCollider>());
+            enemy.AddComponent<BoxCollider2D>();
+
+            Rigidbody2D rb = enemy.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 1f;
+            rb.freezeRotation = true;
+
+            // AI 컨트롤러 추가
+            enemy.AddComponent<Enemy2DController>();
+
+            // Layer 설정
+            enemy.layer = 9; // Enemy Layer
+
+            // 색상 설정
+            enemy.GetComponent<Renderer>().material.color = Color.red;
+
+            return enemy;
         }
 
-        /// <summary>
-        /// 기본 UI 생성
-        /// </summary>
-        private void CreateDefaultUI()
+        private void ClearEnemies()
         {
-            // Canvas 생성
-            uiCanvas = new GameObject("GameplayUI");
-            Canvas canvas = uiCanvas.AddComponent<Canvas>();
+            foreach (var enemy in enemies)
+            {
+                if (enemy != null)
+                {
+                    DestroyImmediate(enemy);
+                }
+            }
+            enemies.Clear();
+        }
+
+        #endregion
+
+        #region Camera Follow
+
+        private void SetupCameraFollow(GameObject target)
+        {
+            if (mainCamera == null || target == null) return;
+
+            Camera2DFollow followScript = mainCamera.GetComponent<Camera2DFollow>();
+            if (followScript == null)
+            {
+                followScript = mainCamera.gameObject.AddComponent<Camera2DFollow>();
+            }
+
+            followScript.SetTarget(target.transform);
+
+            Debug.Log("[SceneSetupHelper] Camera follow setup complete");
+        }
+
+        #endregion
+
+        #region UI Setup
+
+        private void SetupUI()
+        {
+            Canvas canvas = FindObjectOfType<Canvas>();
+
+            if (canvas == null)
+            {
+                if (uiCanvasPrefab != null)
+                {
+                    GameObject canvasObj = Instantiate(uiCanvasPrefab);
+                    canvas = canvasObj.GetComponent<Canvas>();
+                }
+                else
+                {
+                    // 기본 캔버스 생성
+                    canvas = CreateDefaultCanvas();
+                }
+            }
+
+            Debug.Log("[SceneSetupHelper] UI setup complete");
+        }
+
+        private Canvas CreateDefaultCanvas()
+        {
+            GameObject canvasObj = new GameObject("UI Canvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            uiCanvas.AddComponent<CanvasScaler>();
-            uiCanvas.AddComponent<GraphicRaycaster>();
+
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
 
             // EventSystem 생성
-            if (GameObject.Find("EventSystem") == null)
+            if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
             {
                 GameObject eventSystem = new GameObject("EventSystem");
                 eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 eventSystem.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
             }
+
+            return canvas;
         }
 
-        /// <summary>
-        /// 조명 설정
-        /// </summary>
-        private void SetupLighting()
+        #endregion
+
+        #region Utility
+
+#if UNITY_EDITOR
+        private void SetLayerName(int layer, string name)
         {
-            // 2D 게임용 글로벌 조명
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = Color.white;
+            UnityEditor.SerializedObject tagManager =
+                new UnityEditor.SerializedObject(UnityEditor.AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            UnityEditor.SerializedProperty layers = tagManager.FindProperty("layers");
 
-            Debug.Log("[SceneSetupHelper] Lighting configured for 2D");
+            if (layers != null && layer >= 0 && layer < 32)
+            {
+                UnityEditor.SerializedProperty layerSP = layers.GetArrayElementAtIndex(layer);
+                if (layerSP != null)
+                {
+                    layerSP.stringValue = name;
+                    tagManager.ApplyModifiedProperties();
+                }
+            }
         }
+#endif
 
-        /// <summary>
-        /// 씬 초기화
-        /// </summary>
-        public void ClearScene()
+        public void ResetScene()
         {
-            // 플레이어 제거
-            if (player != null)
-                DestroyImmediate(player);
+            ClearPlatforms();
+            ClearEnemies();
 
-            // 적들 제거
-            foreach (var enemy in enemies)
+            if (playerInstance != null)
             {
-                if (enemy != null)
-                    DestroyImmediate(enemy);
+                DestroyImmediate(playerInstance);
             }
-            enemies.Clear();
 
-            // 플랫폼 제거
-            foreach (var platform in platforms)
-            {
-                if (platform != null)
-                    DestroyImmediate(platform);
-            }
-            platforms.Clear();
-
-            // UI 제거
-            if (uiCanvas != null)
-                DestroyImmediate(uiCanvas);
-
-            Debug.Log("[SceneSetupHelper] Scene cleared");
+            Debug.Log("[SceneSetupHelper] Scene reset complete");
         }
+
+        #endregion
     }
 }
