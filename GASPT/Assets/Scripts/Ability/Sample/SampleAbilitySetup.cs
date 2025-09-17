@@ -3,6 +3,7 @@
 // ===================================
 using UnityEngine;
 using System.Collections.Generic;
+using AbilitySystem.Platformer;
 
 namespace AbilitySystem
 {
@@ -13,8 +14,8 @@ namespace AbilitySystem
     {
         [Header("테스트 설정")]
         [SerializeField] private AbilitySystem playerAbilitySystem;
-        [SerializeField] private AbilityController abilityController;
-        [SerializeField] private List<AbilityData> testAbilities;
+        [SerializeField] private PlatformerAbilityController abilityController;
+        [SerializeField] private List<SkulData> testAbilities;
 
         [Header("테스트 컨트롤")]
         [SerializeField] private bool autoSetupOnStart = true;
@@ -39,7 +40,7 @@ namespace AbilitySystem
         /// <summary>
         /// 기본 파이어볼 생성
         /// </summary>
-        private AbilityData CreateFireballAbility()
+        private SkulData CreateFireballAbility()
         {
             // 파이어볼 어빌리티 데이터 생성
             return null;
@@ -48,7 +49,7 @@ namespace AbilitySystem
         /// <summary>
         /// 기본 힐 생성
         /// </summary>
-        private AbilityData CreateHealAbility()
+        private SkulData CreateHealAbility()
         {
             // 힐 어빌리티 데이터 생성
             return null;

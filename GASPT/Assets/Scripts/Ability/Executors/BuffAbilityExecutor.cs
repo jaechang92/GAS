@@ -3,6 +3,7 @@
 // ===================================
 // 파일: Assets/Scripts/Ability/Executors/BuffAbilityExecutor.cs
 // ===================================
+using AbilitySystem.Platformer;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -34,7 +35,7 @@ namespace AbilitySystem
         /// <summary>
         /// 버프 어빌리티 실행
         /// </summary>
-        public override async Awaitable ExecuteAsync(GameObject caster, AbilityData data, List<IAbilityTarget> targets)
+        public override async Awaitable ExecuteAsync(GameObject caster, PlatformerAbilityData data, List<IAbilityTarget> targets)
         {
             // 타겟에게 버프/디버프 적용
             await AwaitableHelper.CompletedTask;

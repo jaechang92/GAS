@@ -1,6 +1,7 @@
 // ===================================
 // 파일: Assets/Scripts/Ability/Executors/AbilityExecutor.cs
 // ===================================
+using AbilitySystem.Platformer;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace AbilitySystem
         /// <summary>
         /// 어빌리티 실행 전 검증
         /// </summary>
-        public virtual bool Validate(GameObject caster, AbilityData data, List<IAbilityTarget> targets)
+        public virtual bool Validate(GameObject caster, PlatformerAbilityData data, List<IAbilityTarget> targets)
         {
             // 실행 가능 여부 검증
             return true;
@@ -36,12 +37,12 @@ namespace AbilitySystem
         /// <summary>
         /// 어빌리티 메인 실행 로직 (비동기)
         /// </summary>
-        public abstract Awaitable ExecuteAsync(GameObject caster, AbilityData data, List<IAbilityTarget> targets);
+        public abstract Awaitable ExecuteAsync(GameObject caster, PlatformerAbilityData data, List<IAbilityTarget> targets);
 
         /// <summary>
         /// 타겟 유효성 검사
         /// </summary>
-        protected virtual bool IsValidTarget(GameObject caster, IAbilityTarget target, AbilityData data)
+        protected virtual bool IsValidTarget(GameObject caster, IAbilityTarget target, PlatformerAbilityData data)
         {
             // 타겟이 유효한지 검사
             return false;
@@ -66,7 +67,7 @@ namespace AbilitySystem
         /// <summary>
         /// 실행 전 처리
         /// </summary>
-        protected virtual Awaitable OnPreExecute(GameObject caster, AbilityData data)
+        protected virtual Awaitable OnPreExecute(GameObject caster, SkulData data)
         {
             // 실행 전 준비 작업
             return AwaitableHelper.CompletedTask;
@@ -75,7 +76,7 @@ namespace AbilitySystem
         /// <summary>
         /// 실행 후 처리
         /// </summary>
-        protected virtual Awaitable OnPostExecute(GameObject caster, AbilityData data)
+        protected virtual Awaitable OnPostExecute(GameObject caster, SkulData data)
         {
             // 실행 후 정리 작업
             return AwaitableHelper.CompletedTask;

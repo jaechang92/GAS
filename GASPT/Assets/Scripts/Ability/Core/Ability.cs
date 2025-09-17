@@ -1,6 +1,7 @@
 // ===================================
 // 파일: Assets/Scripts/Ability/Core/Ability.cs
 // ===================================
+using AbilitySystem.Platformer;
 using System;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -13,12 +14,10 @@ namespace AbilitySystem
     public class Ability
     {
         // 어빌리티 데이터 참조
-        private AbilityData data;
+        private SkulData data;
 
         // 상태 관리
         private AbilityState currentState;
-        private float currentCooldown;
-        private float lastUsedTime;
 
         // 소유자 정보
         private GameObject owner;
@@ -30,18 +29,16 @@ namespace AbilitySystem
         public event Action<Ability> OnCooldownCompleted;
 
         // 프로퍼티
-        public string Id => data?.abilityId;
-        public string Name => data?.abilityName;
-        public AbilityData Data => data;
+        public string Id => data?.skulId;
+        public string Name => data?.skulName;
+        public SkulData Data => data;
         public AbilityState State => currentState;
-        public float CooldownRemaining => Mathf.Max(0, currentCooldown);
-        public float CooldownProgress => data.cooldownTime > 0 ? 1 - (currentCooldown / data.cooldownTime) : 1;
         public bool IsReady => currentState == AbilityState.Ready;
 
         /// <summary>
         /// 어빌리티 초기화
         /// </summary>
-        public void Initialize(AbilityData abilityData, GameObject abilityOwner)
+        public void Initialize(SkulData abilityData, GameObject abilityOwner)
         {
             // 데이터와 소유자 설정
         }

@@ -6,25 +6,52 @@ using System;
 namespace AbilitySystem
 {
     /// <summary>
-    /// 어빌리티 타입 정의
+    /// 플랫포머용 어빌리티 타입
     /// </summary>
-    public enum AbilityType
+    public enum PlatformerAbilityType
     {
-        Instant,    // 즉발형
-        Channeling, // 채널링 (시전 유지)
-        Toggle,     // 토글형
-        Passive     // 패시브
+        BasicAttack,    // 기본 공격
+        Skill,          // 스킬
+        Ultimate,       // 궁극기
+        Movement,       // 이동 스킬 (대시 등)
+        Passive         // 패시브
     }
 
     /// <summary>
-    /// 어빌리티 타겟 타입
+    /// 공격 방향
     /// </summary>
-    public enum TargetType
+    public enum AttackDirection
     {
-        Self,       // 자기 자신
-        Single,     // 단일 대상
-        Area,       // 범위
-        Direction   // 방향
+        Forward,        // 전방
+        Up,            // 위
+        Down,          // 아래
+        Air            // 공중
+    }
+
+    /// <summary>
+    /// 캐릭터 상태
+    /// </summary>
+    public enum CharacterState
+    {
+        Idle,
+        Moving,
+        Jumping,
+        Falling,
+        Attacking,
+        Dashing,
+        Hit,
+        Dead
+    }
+
+    /// <summary>
+    /// 스컬 타입 (캐릭터 클래스)
+    /// </summary>
+    public enum SkulType
+    {
+        Balance,        // 밸런스형
+        Power,          // 파워형
+        Speed,          // 스피드형
+        Range           // 원거리형
     }
 
     /// <summary>

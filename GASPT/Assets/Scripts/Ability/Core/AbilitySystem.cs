@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using AbilitySystem.Platformer;
 
 namespace AbilitySystem
 {
@@ -13,7 +14,7 @@ namespace AbilitySystem
     public class AbilitySystem : MonoBehaviour
     {
         [Header("어빌리티 설정")]
-        [SerializeField] private List<AbilityData> initialAbilities = new List<AbilityData>();
+        [SerializeField] private List<SkulData> initialAbilities = new List<SkulData>();
 
         // 등록된 어빌리티 목록
         private Dictionary<string, Ability> abilities = new Dictionary<string, Ability>();
@@ -49,7 +50,7 @@ namespace AbilitySystem
         /// <summary>
         /// 어빌리티 등록
         /// </summary>
-        public bool RegisterAbility(AbilityData abilityData)
+        public bool RegisterAbility(SkulData abilityData)
         {
             // 새로운 어빌리티를 시스템에 등록
             return false;
@@ -103,7 +104,7 @@ namespace AbilitySystem
         /// <summary>
         /// 코스트 소비 처리
         /// </summary>
-        private bool ConsumeResources(AbilityData abilityData)
+        private bool ConsumeResources(SkulData abilityData)
         {
             // 마나, 스태미나 등 소비
             return false;

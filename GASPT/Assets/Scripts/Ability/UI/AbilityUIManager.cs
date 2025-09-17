@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using AbilitySystem.Platformer;
 
 namespace AbilitySystem
 {
@@ -26,7 +27,7 @@ namespace AbilitySystem
         [SerializeField] private TextMeshProUGUI staminaText;
 
         private AbilitySystem abilitySystem;
-        private AbilityController controller;
+        private PlatformerAbilityController controller;
 
         /// <summary>
         /// UI 매니저 초기화
@@ -71,7 +72,7 @@ namespace AbilitySystem
         /// <summary>
         /// 툴팁 표시
         /// </summary>
-        public void ShowTooltip(AbilityData abilityData, Vector3 position)
+        public void ShowTooltip(PlatformerAbilityData abilityData, Vector3 position)
         {
             // 어빌리티 정보 툴팁 표시
         }

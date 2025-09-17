@@ -1,6 +1,7 @@
 // ===================================
 // ÆÄÀÏ: Assets/Scripts/Ability/Executors/HealAbilityExecutor.cs
 // ===================================
+using AbilitySystem.Platformer;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,7 +26,7 @@ namespace AbilitySystem
         /// <summary>
         /// Èú ¾îºô¸®Æ¼ ½ÇÇà
         /// </summary>
-        public override async Awaitable ExecuteAsync(GameObject caster, AbilityData data, List<IAbilityTarget> targets)
+        public override async Awaitable ExecuteAsync(GameObject caster, PlatformerAbilityData data, List<IAbilityTarget> targets)
         {
             // Å¸°Ù¿¡°Ô Èú Àû¿ë
             await AwaitableHelper.CompletedTask;
@@ -34,7 +35,7 @@ namespace AbilitySystem
         /// <summary>
         /// Èú·® °è»ê
         /// </summary>
-        private float CalculateHealAmount(GameObject caster, AbilityData data, IAbilityTarget target)
+        private float CalculateHealAmount(GameObject caster, PlatformerAbilityData data, IAbilityTarget target)
         {
             // ÃÖÁ¾ Èú·® °è»ê
             return 0f;
