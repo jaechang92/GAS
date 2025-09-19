@@ -49,6 +49,12 @@ namespace AbilitySystem.Platformer
         public bool isMultiHit = false;        // 다단히트 여부
         public int hitCount = 1;               // 히트 횟수
 
+        [Header("Dash 설정")]
+        public float dashDistance = 5f;       // 대쉬 거리
+        public float dashDuration = 0.2f;     // 대쉬 지속 시간
+        public bool invincibleDuringDash = false; // 대쉬 중 무적 여부
+
+
         /// <summary>
         /// 어빌리티 사용 가능 여부 체크 (코스트 기준)
         /// </summary>

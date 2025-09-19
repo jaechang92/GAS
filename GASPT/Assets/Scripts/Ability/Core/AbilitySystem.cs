@@ -186,6 +186,17 @@ namespace AbilitySystem
             {
                 RegisterAbility($"{skulData.skulId}_dash", skulData.dashAbility);
             }
+            else
+            {
+                RegisterAbility($"{currentSkul?.skulId}_basic_dash", new PlatformerAbilityData 
+                {
+                    abilityName = "Basic Dash",
+                    abilityId = $"{currentSkul?.skulId}_basic_dash",
+                    cooldownTime = 1f,
+                    dashDistance = 5f,
+                    dashDuration = 0.2f
+                });
+            }
 
             // ÆÐ½Ãºê
             if (skulData.passives != null)

@@ -183,14 +183,16 @@ namespace AbilitySystem.Platformer
         {
             if (!CanPerformAction()) return;
 
-            if (currentSkul != null && currentSkul.dashAbility != null)
+            // 스컬의 대시 어빌리티가 있으면 사용
+            PlatformerAbilityData dashAbility = currentSkul?.dashAbility;
+
+            if(dashAbility == null)
             {
-                ExecuteAbilityAsync(currentSkul.dashAbility);
+                dashAbility = abilitySystem.Abilities[$"{currentSkul?.skulId}_basic_dash"].Data;
             }
-            else
-            {
-                PerformDefaultDash();
-            }
+
+            // 어빌리티 시스템을 통해 실행 (통합된 로직)
+            ExecuteAbilityAsync(dashAbility);
         }
 
         private void OnSwapSkul(InputAction.CallbackContext context)
@@ -364,39 +366,6 @@ namespace AbilitySystem.Platformer
 
         #endregion
 
-        #region Movement System
-
-        private async void PerformDefaultDash()
-        {
-            if (currentState == CharacterState.Dashing) return;
-
-            ChangeState(CharacterState.Dashing);
-
-
-            float dashSpeed = 15f;
-            float dashDuration = 0.2f;
-            float dashDirection = movement.IsFacingRight ? 1f : -1f;
-
-            // Store original gravity
-            float originalGravity = rb.gravityScale;
-            rb.gravityScale = 0f;
-
-            // Perform dash
-            rb.linearVelocity = new Vector2(dashDirection * dashSpeed, 0);
-
-            await Awaitable.WaitForSecondsAsync(dashDuration, cancellationTokenSource.Token);
-
-            // Restore gravity
-            rb.gravityScale = originalGravity;
-
-            if (currentState == CharacterState.Dashing)
-            {
-                ChangeState(CharacterState.Idle);
-            }
-        }
-
-        #endregion
-
         #region Skul System
 
         private void SwapSkuls()
@@ -469,7 +438,7 @@ namespace AbilitySystem.Platformer
             return CharacterState.Idle;
         }
 
-        private void ChangeState(CharacterState newState)
+        public void ChangeState(CharacterState newState)
         {
             if (currentState == newState) return;
 
