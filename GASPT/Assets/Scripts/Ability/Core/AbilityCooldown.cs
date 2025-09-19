@@ -1,7 +1,6 @@
-// ===================================
-// 파일: Assets/Scripts/Ability/Core/AbilityCooldown.cs
-// ===================================
+// 파일 위치: Assets/Scripts/Ability/Core/AbilityCooldown.cs
 using System;
+using UnityEngine;
 
 namespace AbilitySystem
 {
@@ -32,7 +31,10 @@ namespace AbilitySystem
         /// </summary>
         public void Initialize(float duration)
         {
-            // 쿨다운 시간 설정
+            cooldownDuration = duration;
+            remainingTime = 0f;
+            isOnCooldown = false;
+            lastUsedTime = -duration; // 즉시 사용 가능하도록
         }
 
         /// <summary>
@@ -40,7 +42,14 @@ namespace AbilitySystem
         /// </summary>
         public void StartCooldown()
         {
-            // 쿨다운 타이머 시작
+            if (cooldownDuration <= 0) return;
+
+            remainingTime = cooldownDuration;
+            isOnCooldown = true;
+            lastUsedTime = Time.time;
+
+            OnCooldownStarted?.Invoke();
+            Debug.Log($"Cooldown started: {cooldownDuration}s");
         }
 
         /// <summary>
@@ -48,7 +57,15 @@ namespace AbilitySystem
         /// </summary>
         public void StartCooldown(float customDuration)
         {
-            // 특정 시간으로 쿨다운 시작
+            if (customDuration <= 0) return;
+
+            cooldownDuration = customDuration;
+            remainingTime = customDuration;
+            isOnCooldown = true;
+            lastUsedTime = Time.time;
+
+            OnCooldownStarted?.Invoke();
+            Debug.Log($"Cooldown started with custom duration: {customDuration}s");
         }
 
         /// <summary>
@@ -56,7 +73,15 @@ namespace AbilitySystem
         /// </summary>
         public void Update(float deltaTime)
         {
-            // 남은 시간 감소 및 완료 체크
+            if (!isOnCooldown) return;
+
+            remainingTime -= deltaTime;
+            OnCooldownUpdated?.Invoke(remainingTime);
+
+            if (remainingTime <= 0)
+            {
+                CompleteCooldown();
+            }
         }
 
         /// <summary>
@@ -64,7 +89,13 @@ namespace AbilitySystem
         /// </summary>
         public void CompleteCooldown()
         {
-            // 쿨다운 강제 완료
+            if (!isOnCooldown) return;
+
+            remainingTime = 0f;
+            isOnCooldown = false;
+
+            OnCooldownCompleted?.Invoke();
+            Debug.Log("Cooldown completed");
         }
 
         /// <summary>
@@ -72,7 +103,11 @@ namespace AbilitySystem
         /// </summary>
         public void Reset()
         {
-            // 쿨다운 상태 초기화
+            remainingTime = 0f;
+            isOnCooldown = false;
+            lastUsedTime = -cooldownDuration;
+
+            Debug.Log("Cooldown reset");
         }
 
         /// <summary>
@@ -80,7 +115,20 @@ namespace AbilitySystem
         /// </summary>
         public void ReduceCooldown(float amount)
         {
-            // 남은 쿨다운 시간 감소
+            if (!isOnCooldown || amount <= 0) return;
+
+            remainingTime = Mathf.Max(0, remainingTime - amount);
+
+            if (remainingTime <= 0)
+            {
+                CompleteCooldown();
+            }
+            else
+            {
+                OnCooldownUpdated?.Invoke(remainingTime);
+            }
+
+            Debug.Log($"Cooldown reduced by {amount}s, remaining: {remainingTime}s");
         }
 
         /// <summary>
@@ -88,7 +136,50 @@ namespace AbilitySystem
         /// </summary>
         public void ReduceCooldownByPercent(float percent)
         {
-            // 퍼센트 기반 쿨다운 감소
+            if (!isOnCooldown || percent <= 0) return;
+
+            float reduction = remainingTime * Mathf.Clamp01(percent);
+            ReduceCooldown(reduction);
+        }
+
+        /// <summary>
+        /// 쿨다운 시간 변경 (버프/디버프 효과)
+        /// </summary>
+        public void ModifyCooldownDuration(float newDuration)
+        {
+            cooldownDuration = Mathf.Max(0, newDuration);
+
+            // 현재 쿨다운 중이면 비율 유지
+            if (isOnCooldown && cooldownDuration > 0)
+            {
+                float progressRatio = Progress;
+                remainingTime = cooldownDuration * (1f - progressRatio);
+            }
+        }
+
+        /// <summary>
+        /// 쿨다운 감소율 적용 (0~1, 0.2 = 20% 감소)
+        /// </summary>
+        public void ApplyCooldownReduction(float reductionRate)
+        {
+            float reduction = Mathf.Clamp01(reductionRate);
+            ModifyCooldownDuration(cooldownDuration * (1f - reduction));
+        }
+
+        /// <summary>
+        /// 사용 가능 여부 체크
+        /// </summary>
+        public bool CanUse()
+        {
+            return !isOnCooldown;
+        }
+
+        /// <summary>
+        /// 마지막 사용 후 경과 시간
+        /// </summary>
+        public float GetTimeSinceLastUse()
+        {
+            return Time.time - lastUsedTime;
         }
     }
 }

@@ -1,643 +1,609 @@
-// ===================================
-// 파일: Assets/Scripts/Ability/Integration/PlatformerAbilityController.cs
-// ===================================
-using System;
-using System.Collections.Generic;
-using Unity.VisualScripting;
+// 파일 위치: Assets/Scripts/Ability/Integration/PlatformerAbilityController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using System.Threading;
+using System;
+using AbilitySystem.Core;
+using AbilitySystem.Platformer;
 
 namespace AbilitySystem.Platformer
 {
     /// <summary>
-    /// 2D 플랫포머용 어빌리티 컨트롤러
+    /// 플랫포머 캐릭터의 모든 시스템을 통합 관리하는 메인 컨트롤러
     /// </summary>
+    [RequireComponent(typeof(PlatformerMovement))]
+    [RequireComponent(typeof(GroundChecker))]
+    [RequireComponent(typeof(Rigidbody2D))]
+    [RequireComponent(typeof(BoxCollider2D))]
     public class PlatformerAbilityController : MonoBehaviour
     {
-        [Header("컴포넌트 참조")]
-        [SerializeField] private Rigidbody2D rb;
-        [SerializeField] private Collider2D playerCollider;
+        [Header("Component References")]
+        private PlatformerMovement movement;
+        private GroundChecker groundChecker;
+        private Rigidbody2D rb;
+        private BoxCollider2D playerCollider;
+        private AbilitySystem abilitySystem;
+
+        [Header("Combat Settings")]
         [SerializeField] private Transform attackPoint;
         [SerializeField] private LayerMask enemyLayer;
-        [SerializeField] private LayerMask groundLayer;
 
-        [Header("현재 스컬")]
+        [Header("Skul System")]
         [SerializeField] private SkulData currentSkul;
-        [SerializeField] private SkulData subSkul;  // 교체용 서브 스컬
+        [SerializeField] private SkulData subSkul;
 
-        [Header("상태")]
+        [Header("State")]
         [SerializeField] private CharacterState currentState = CharacterState.Idle;
-        [SerializeField] private bool isGrounded = true;
-        [SerializeField] private bool isFacingRight = true;
-
-        [Header("입력 상태")]
-        [SerializeField] private Vector2 currentMoveInput;
-        [SerializeField] private Vector2 rawInputValue;
-        [SerializeField] private bool isReceivingInput;
-        [SerializeField] private string lastInputTime;
-
-        [Header("콤보 시스템")]
-        [SerializeField] private int currentCombo = 0;
-        [SerializeField] private float lastAttackTime = 0f;
-
-        [Header("쿨다운 관리")]
-        private Dictionary<string, float> cooldowns = new Dictionary<string, float>();
 
         // Input System
-        private AbilityInputActions playerInput;
-        private InputAction moveAction;
-        private InputAction jumpAction;
-        private InputAction attackAction;
-        private InputAction skill1Action;
-        private InputAction skill2Action;
-        private InputAction dashAction;
-        private InputAction swapSkulAction;
+        private AbilityInputActions inputActions;
+        private CancellationTokenSource cancellationTokenSource;
 
-        // 내부 상태
+        // Combat State
+        private int currentCombo = 0;
+        private float lastAttackTime = 0f;
         private bool isAttacking = false;
-        private bool isDashing = false;
-        private float dashCooldown = 0f;
 
-        // 차징 관련
-        private bool isCharging = false;
-        private float chargeTime = 0f;
-        private string chargingAbilityId;
+        // Properties
+        public CharacterState CurrentState => currentState;
+        public bool IsGrounded => groundChecker.IsGrounded;
+        public bool IsFacingRight => movement.IsFacingRight;
+        public SkulData CurrentSkul => currentSkul;
+        public SkulData SubSkul => subSkul;
 
-        /// <summary>
-        /// 초기화
-        /// </summary>
+        // Events
+        public event Action<CharacterState> OnStateChanged;
+        public event Action<SkulData> OnSkulChanged;
+        public event Action<int> OnComboChanged;
+        public event Action<float> OnHealthChanged;
+        public event Action<float> OnManaChanged;
+
+        #region Unity Lifecycle
+
         private void Awake()
         {
+            InitializeComponents();
+            InitializeInputSystem();
+            InitializeAbilitySystem();
+        }
+
+        private void Start()
+        {
+            if (currentSkul != null)
+            {
+                ApplySkulStats();
+
+                // AbilitySystem에 초기 스컬 등록
+                if (abilitySystem != null)
+                {
+                    abilitySystem.RegisterSkul(currentSkul);
+                    if (subSkul != null)
+                    {
+                        abilitySystem.RegisterSkul(subSkul);
+                    }
+                }
+            }
+        }
+
+        private void Update()
+        {
+            UpdateState();
+            UpdateComboTimer();
+        }
+
+        private void OnDestroy()
+        {
+            CleanupInputSystem();
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource?.Dispose();
+        }
+
+        #endregion
+
+        #region Initialization
+
+        private void InitializeComponents()
+        {
+            movement = GetComponent<PlatformerMovement>();
+            groundChecker = GetComponent<GroundChecker>();
             rb = GetComponent<Rigidbody2D>();
+            playerCollider = GetComponent<BoxCollider2D>();
 
-            InitializeInputActions();
-            LoadSkul(currentSkul);
+            cancellationTokenSource = new CancellationTokenSource();
+
+            // Movement 이벤트 구독
+            movement.OnFacingDirectionChanged += HandleFacingDirectionChanged;
+            movement.OnJumpPerformed += HandleJumpPerformed;
+            movement.OnDoubleJumpPerformed += HandleDoubleJumpPerformed;
+            movement.OnWallHit += HandleWallHit;
+
+            // GroundChecker 이벤트 구독
+            groundChecker.OnLanded += HandleLanded;
+            groundChecker.OnLeftGround += HandleLeftGround;
         }
 
-        /// <summary>
-        /// Input Actions 초기화
-        /// </summary>
-        [ContextMenu("Initialize Input Actions")]
-        private void InitializeInputActions()
+        private void InitializeInputSystem()
         {
-            if (playerInput == null)
-            {
-                playerInput = new AbilityInputActions();
-                playerInput.Player.Enable();
-            }
+            inputActions = new AbilityInputActions();
+            inputActions.Enable();
 
-            // 이동
-            moveAction = playerInput.Player.Move;
-            if (moveAction != null)
-            {
-                moveAction.performed += OnMovePerformed;
-                moveAction.canceled += OnMoveCanceled;
-            }
+            // Movement Input (이미 PlatformerMovement에서 처리)
+            inputActions.Player.Move.performed += movement.OnMove;
+            inputActions.Player.Move.canceled += movement.OnMove;
+            inputActions.Player.Jump.performed += movement.OnJump;
+            inputActions.Player.Jump.canceled += movement.OnJump;
 
-            // 기본 공격
-            attackAction = playerInput.Player.Attack;
-            if (attackAction != null)
-            {
-                attackAction.performed += OnAttack;
-            }
+            // Combat Input
+            inputActions.Player.Attack.performed += OnAttack;
+            inputActions.Player.Skill1.performed += OnSkill1;
+            inputActions.Player.Skill2.performed += OnSkill2;
 
-            jumpAction = playerInput.Player.Jump;
-            if(jumpAction != null)
-            {
-                jumpAction.performed += OnJump;
-            }
-
-            skill1Action = playerInput.Player.Skill1;
-            if(skill1Action != null)
-            {
-                skill1Action.performed += ctx => OnSkill(ctx, 1);
-            }
-
-            skill2Action = playerInput.Player.Skill2;
-            if (skill2Action != null)
-            {
-                skill2Action.performed += ctx => OnSkill(ctx, 2);
-            }
-
-            dashAction = playerInput.Player.Dash;
-            if(dashAction != null)
-            {
-                dashAction.performed += OnDash;
-            }
-
-            swapSkulAction = playerInput.Player.SwapSkul;
-            if(swapSkulAction != null)
-            {
-                swapSkulAction.performed += OnSwapSkulHead;
-            }
-
-
+            // System Input
+            inputActions.Player.Dash.performed += OnDash;
+            inputActions.Player.SwapSkul.performed += OnSwapSkul;
+            inputActions.Player.Pause.performed += OnPause;
         }
 
-        /// <summary>
-        /// 물리 업데이트
-        /// </summary>
-        private void FixedUpdate()
+        private void InitializeAbilitySystem()
         {
-            if (!isDashing && currentState != CharacterState.Hit)
+            abilitySystem = GetComponent<AbilitySystem>();
+            if (abilitySystem == null)
             {
-                // 이동 처리
-                float moveSpeed = currentSkul != null ? currentSkul.moveSpeed : 5f;
-                rb.linearVelocity = new Vector2(currentMoveInput.x * moveSpeed, rb.linearVelocityY);
-                // 방향 전환
-                if (currentMoveInput.x > 0 && !isFacingRight)
-                    Flip();
-                else if (currentMoveInput.x < 0 && isFacingRight)
-                    Flip();
+                abilitySystem = gameObject.AddComponent<AbilitySystem>();
+            }
+        }
 
-                // 상태 업데이트
-                UpdateCharacterState();
+        #endregion
+
+        #region Input Handlers
+
+        private void OnAttack(InputAction.CallbackContext context)
+        {
+            if (!CanPerformAction()) return;
+
+            PerformAttack();
+        }
+
+        private void OnSkill1(InputAction.CallbackContext context)
+        {
+            if (!CanPerformAction() || currentSkul == null || currentSkul.skill1 == null) return;
+
+            ExecuteAbilityAsync(currentSkul.skill1);
+        }
+
+        private void OnSkill2(InputAction.CallbackContext context)
+        {
+            if (!CanPerformAction() || currentSkul == null || currentSkul.skill2 == null) return;
+
+            ExecuteAbilityAsync(currentSkul.skill2);
+        }
+
+        private void OnDash(InputAction.CallbackContext context)
+        {
+            if (!CanPerformAction()) return;
+
+            if (currentSkul != null && currentSkul.dashAbility != null)
+            {
+                ExecuteAbilityAsync(currentSkul.dashAbility);
+            }
+            else
+            {
+                PerformDefaultDash();
+            }
+        }
+
+        private void OnSwapSkul(InputAction.CallbackContext context)
+        {
+            if (subSkul != null && !isAttacking)
+            {
+                SwapSkuls();
+            }
+        }
+
+        private void OnPause(InputAction.CallbackContext context)
+        {
+            // TODO: Pause menu implementation
+            Debug.Log("Pause pressed");
+        }
+
+        #endregion
+
+        #region Combat System
+
+        private void PerformAttack()
+        {
+            if (isAttacking) return;
+
+            // Combo check
+            float timeSinceLastAttack = Time.time - lastAttackTime;
+
+            if (timeSinceLastAttack > (currentSkul?.comboResetTime ?? 1f))
+            {
+                currentCombo = 0;
             }
 
-            // 쿨다운 업데이트
-            UpdateCooldowns();
-        }
-
-        /// <summary>
-        /// 스컬 로드
-        /// </summary>
-        private void LoadSkul(SkulData skulData)
-        {
-            if (skulData == null) return;
-
-            currentSkul = skulData;
-            cooldowns.Clear();
-            currentCombo = 0;
-
-            // 스컬별 초기화
-            Debug.Log($"스컬 로드: {skulData.skulName}");
-        }
-
-        /// <summary>
-        /// 스컬 교체
-        /// </summary>
-        private void SwapSkul()
-        {
-            if (subSkul == null || isAttacking || isDashing) return;
-
-            // 스컬 교체
-            var temp = currentSkul;
-            currentSkul = subSkul;
-            subSkul = temp;
-
-            LoadSkul(currentSkul);
-
-            // 교체 이펙트
-            ShowSwapEffect();
-        }
-
-        /// <summary>
-        /// 기본 공격 수행
-        /// </summary>
-        private async Awaitable PerformBasicAttack()
-        {
-            if (isAttacking || currentState == CharacterState.Hit) return;
-            if (currentSkul?.basicAttack == null) return;
-
-            // 콤보 체크
-            if (Time.time - lastAttackTime > currentSkul.comboResetTime)
+            if (currentCombo >= (currentSkul?.maxComboCount ?? 3))
             {
                 currentCombo = 0;
             }
 
             isAttacking = true;
-            currentState = CharacterState.Attacking;
-
-            // 공격 방향 결정
-            AttackDirection attackDir = DetermineAttackDirection();
-
-            // 콤보에 따른 데미지 배율
-            float damageMultiplier = currentSkul.comboDamageMultipliers[Mathf.Min(currentCombo, currentSkul.comboDamageMultipliers.Length - 1)];
-
-            // 히트박스 생성
-            await CreateHitbox(currentSkul.basicAttack, damageMultiplier);
-
-            // 콤보 증가
-            currentCombo = (currentCombo + 1) % currentSkul.maxComboCount;
             lastAttackTime = Time.time;
 
-            // 공격 종료
-            await Awaitable.WaitForSecondsAsync(1f / currentSkul.attackSpeed);
-            isAttacking = false;
+            // Execute attack (비동기로 실행)
+            ExecuteAttack();
+
+            // 콤보는 공격 후 증가
+            currentCombo++;
+            OnComboChanged?.Invoke(currentCombo);
         }
 
-        /// <summary>
-        /// 스킬 사용
-        /// </summary>
-        private async Awaitable UseSkill(int skillNumber)
+        private async void ExecuteAttack()
         {
-            PlatformerAbilityData skillData = skillNumber == 1 ? currentSkul?.skill1 : currentSkul?.skill2;
-            if (skillData == null) return;
+            ChangeState(CharacterState.Attacking);
 
-            // 쿨다운 체크
-            if (IsOnCooldown(skillData.abilityId)) return;
-
-            // 차징 스킬 처리
-            if (skillData.isChargeSkill)
+            // 스컬의 기본 공격 어빌리티 사용
+            if (currentSkul?.basicAttack != null)
             {
-                StartCharging(skillData.abilityId);
+                // 어빌리티 ID 설정
+                if (string.IsNullOrEmpty(currentSkul.basicAttack.abilityId))
+                {
+                    currentSkul.basicAttack.abilityId = $"{currentSkul.skulId}_basic";
+                }
+
+                // AbilitySystem을 통해 실행
+                if (abilitySystem != null && abilitySystem.CanUseAbility(currentSkul.basicAttack.abilityId))
+                {
+                    await abilitySystem.ExecuteAbility(currentSkul.basicAttack, gameObject);
+                }
+                else
+                {
+                    // 폴백: 기본 공격 로직
+                    await ExecuteBasicAttack();
+                }
+            }
+            else
+            {
+                // 어빌리티 데이터가 없으면 기본 공격 실행
+                await ExecuteBasicAttack();
+            }
+
+            isAttacking = false;
+
+            if (currentState == CharacterState.Attacking)
+            {
+                ChangeState(CharacterState.Idle);
+            }
+        }
+
+        private async Awaitable ExecuteBasicAttack()
+        {
+            // 기본 공격 로직 (어빌리티 데이터가 없을 때)
+            float baseDamage = currentSkul?.attackPower ?? 10f;
+
+            // 콤보 인덱스 조정 (콤보는 1부터 시작, 배열 인덱스는 0부터)
+            int comboIndex = Mathf.Clamp(currentCombo - 1, 0, 2); // 최대 3콤보
+            float comboMultiplier = 1f;
+
+            if (currentSkul != null && currentSkul.comboDamageMultipliers != null && currentSkul.comboDamageMultipliers.Length > comboIndex)
+            {
+                comboMultiplier = currentSkul.comboDamageMultipliers[comboIndex];
+            }
+
+            float finalDamage = baseDamage * comboMultiplier;
+
+            Debug.Log($"Basic Attack - Combo: {currentCombo}, Index: {comboIndex}, Multiplier: {comboMultiplier}, Damage: {finalDamage}");
+
+            // Hit detection
+            if (attackPoint != null)
+            {
+                Vector2 attackSize = new Vector2(1f, 1f);
+                Collider2D[] hitEnemies = Physics2D.OverlapBoxAll(
+                    attackPoint.position,
+                    attackSize,
+                    0f,
+                    enemyLayer
+                );
+
+                foreach (Collider2D enemy in hitEnemies)
+                {
+                    IAbilityTarget target = enemy.GetComponent<IAbilityTarget>();
+                    target?.TakeDamage(finalDamage, gameObject);
+                }
+            }
+
+            await Awaitable.WaitForSecondsAsync(0.2f, cancellationTokenSource.Token);
+        }
+
+        private async void ExecuteAbilityAsync(PlatformerAbilityData ability)
+        {
+            if (ability == null || isAttacking) return;
+
+            // Check cooldown (새로운 구조 호환)
+            string abilityId = ability.abilityId;
+
+            // 어빌리티 ID가 없으면 스컬 ID 기반으로 생성
+            if (string.IsNullOrEmpty(abilityId))
+            {
+                if (ability == currentSkul?.skill1)
+                    abilityId = $"{currentSkul.skulId}_skill1";
+                else if (ability == currentSkul?.skill2)
+                    abilityId = $"{currentSkul.skulId}_skill2";
+                else if (ability == currentSkul?.dashAbility)
+                    abilityId = $"{currentSkul.skulId}_dash";
+                else
+                    abilityId = System.Guid.NewGuid().ToString();
+
+                ability.abilityId = abilityId;
+            }
+
+            // Check cooldown
+            if (abilitySystem != null && !abilitySystem.CanUseAbility(abilityId))
+            {
+                Debug.Log($"Ability {ability.abilityName} is on cooldown or cannot be used");
                 return;
             }
 
-            // 스킬 실행
-            await ExecuteSkill(skillData);
-        }
+            isAttacking = true;
+            ChangeState(CharacterState.UsingAbility);
 
-        /// <summary>
-        /// 스킬 실행
-        /// </summary>
-        private async Awaitable ExecuteSkill(PlatformerAbilityData skillData)
-        {
-            // 쿨다운 시작
-            StartCooldown(skillData.abilityId, skillData.cooldownTime);
-
-            // 이동 가능 여부 체크
-            if (!skillData.canMoveWhileUsing)
+            // Start ability
+            if (abilitySystem != null)
             {
-                isAttacking = true;
-                currentState = CharacterState.Attacking;
+                await abilitySystem.ExecuteAbility(ability, gameObject);
             }
 
-            // 다단히트 처리
-            if (skillData.isMultiHit)
+            isAttacking = false;
+
+            if (currentState == CharacterState.UsingAbility)
             {
-                for (int i = 0; i < skillData.hitCount; i++)
-                {
-                    await CreateHitbox(skillData, skillData.damageMultiplier);
-                    await Awaitable.WaitForSecondsAsync(0.1f);
-                }
+                ChangeState(CharacterState.Idle);
             }
-            else
-            {
-                await CreateHitbox(skillData, skillData.damageMultiplier);
-            }
-
-            // 스킬 종료
-            if (!skillData.canMoveWhileUsing)
-            {
-                isAttacking = false;
-            }
-        }
-
-        /// <summary>
-        /// 차징 시작
-        /// </summary>
-        private void StartCharging(string abilityId)
-        {
-            isCharging = true;
-            chargeTime = 0f;
-            chargingAbilityId = abilityId;
-        }
-
-        /// <summary>
-        /// 스킬 버튼 해제 (차징 스킬용)
-        /// </summary>
-        private async void OnSkillReleased(int skillNumber)
-        {
-            if (!isCharging) return;
-
-            PlatformerAbilityData skillData = skillNumber == 1 ? currentSkul?.skill1 : currentSkul?.skill2;
-            if (skillData == null || skillData.abilityId != chargingAbilityId) return;
-
-            // 차징 시간에 따른 데미지 배율
-            float chargeRatio = Mathf.Clamp01(chargeTime / skillData.maxChargeTime);
-            float damageMultiplier = skillData.damageMultiplier * (1f + chargeRatio);
-
-            // 차징 스킬 실행
-            StartCooldown(skillData.abilityId, skillData.cooldownTime);
-            await CreateHitbox(skillData, damageMultiplier);
-
-            isCharging = false;
-            chargeTime = 0f;
-            chargingAbilityId = null;
-        }
-
-        /// <summary>
-        /// 대시 수행
-        /// </summary>
-        private async Awaitable PerformDash()
-        {
-            if (isDashing || dashCooldown > 0) return;
-            if (currentSkul?.dashAbility == null) return;
-
-            isDashing = true;
-            currentState = CharacterState.Dashing;
-            dashCooldown = currentSkul.dashAbility.cooldownTime;
-
-            // 대시 방향
-            float dashDirection = isFacingRight ? 1f : -1f;
-            if (currentMoveInput.x != 0)
-            {
-                dashDirection = Mathf.Sign(currentMoveInput.x);
-            }
-
-            // 대시 실행
-            float dashSpeed = currentSkul.dashAbility.range;
-            rb.linearVelocity = new Vector2(dashDirection * dashSpeed, 0);
-
-            // 무적 시간
-            SetInvulnerable(true);
-
-            await Awaitable.WaitForSecondsAsync(0.3f);
-
-            isDashing = false;
-            SetInvulnerable(false);
-        }
-
-        /// <summary>
-        /// 점프
-        /// </summary>
-        private void Jump()
-        {
-            if (!isGrounded || currentState == CharacterState.Hit) return;
-
-            float jumpPower = currentSkul != null ? currentSkul.jumpPower : 10f;
-            rb.linearVelocity = new Vector2(rb.linearVelocityX, jumpPower);
-            currentState = CharacterState.Jumping;
-            isGrounded = false;
-        }
-
-        /// <summary>
-        /// 히트박스 생성
-        /// </summary>
-        private async Awaitable CreateHitbox(PlatformerAbilityData abilityData, float damageMultiplier)
-        {
-            // 히트박스 위치 계산
-            Vector2 hitboxPosition = (Vector2)attackPoint.position + abilityData.hitboxOffset;
-            if (!isFacingRight)
-            {
-                hitboxPosition.x = attackPoint.position.x - abilityData.hitboxOffset.x;
-            }
-
-            // 적 감지
-            Collider2D[] hits = Physics2D.OverlapBoxAll(
-                hitboxPosition,
-                abilityData.hitboxSize,
-                0f,
-                enemyLayer
-            );
-
-            // 데미지 적용
-            float finalDamage = currentSkul.attackPower * damageMultiplier;
-            foreach (var hit in hits)
-            {
-                var target = hit.GetComponent<IAbilityTarget>();
-                if (target != null && target.IsTargetable)
-                {
-                    target.TakeDamage(finalDamage, gameObject);
-
-                    // 넉백 적용
-                    if (abilityData.knockbackPower > 0)
-                    {
-                        ApplyKnockback(hit.gameObject, abilityData.knockbackPower);
-                    }
-                }
-            }
-
-            // 이펙트 생성
-            if (abilityData.effectPrefab != null)
-            {
-                var effect = Instantiate(abilityData.effectPrefab, hitboxPosition, Quaternion.identity);
-                if (!isFacingRight)
-                {
-                    effect.transform.localScale = new Vector3(-1, 1, 1);
-                }
-                Destroy(effect, 2f);
-            }
-
-            // 사운드 재생
-            if (abilityData.soundEffect != null)
-            {
-                AudioSource.PlayClipAtPoint(abilityData.soundEffect, transform.position);
-            }
-
-            await Awaitable.WaitForSecondsAsync(abilityData.hitboxDuration);
-        }
-
-        /// <summary>
-        /// 공격 방향 결정
-        /// </summary>
-        private AttackDirection DetermineAttackDirection()
-        {
-            if (!isGrounded)
-            {
-                if (currentMoveInput.y < -0.5f)
-                    return AttackDirection.Down;
-                else
-                    return AttackDirection.Air;
-            }
-            else if (currentMoveInput.y > 0.5f)
-            {
-                return AttackDirection.Up;
-            }
-
-            return AttackDirection.Forward;
-        }
-
-        /// <summary>
-        /// 넉백 적용
-        /// </summary>
-        private void ApplyKnockback(GameObject target, float force)
-        {
-            var targetRb = target.GetComponent<Rigidbody2D>();
-            if (targetRb != null)
-            {
-                Vector2 knockbackDir = (target.transform.position - transform.position).normalized;
-                knockbackDir.y = 0.5f; // 약간 위로 띄우기
-                targetRb.AddForce(knockbackDir * force, ForceMode2D.Impulse);
-            }
-        }
-
-        /// <summary>
-        /// 방향 전환
-        /// </summary>
-        private void Flip()
-        {
-            isFacingRight = !isFacingRight;
-            Vector3 scale = transform.localScale;
-            scale.x *= -1;
-            transform.localScale = scale;
-        }
-
-        /// <summary>
-        /// 캐릭터 상태 업데이트
-        /// </summary>
-        private void UpdateCharacterState()
-        {
-            if (isAttacking || isDashing) return;
-
-            if (isGrounded)
-            {
-                if (Mathf.Abs(currentMoveInput.x) > 0.1f)
-                    currentState = CharacterState.Moving;
-                else
-                    currentState = CharacterState.Idle;
-            }
-            else
-            {
-                if (rb.linearVelocityY > 0)
-                    currentState = CharacterState.Jumping;
-                else
-                    currentState = CharacterState.Falling;
-            }
-        }
-
-        /// <summary>
-        /// 쿨다운 업데이트
-        /// </summary>
-        private void UpdateCooldowns()
-        {
-            List<string> keys = new List<string>(cooldowns.Keys);
-            foreach (string key in keys)
-            {
-                cooldowns[key] -= Time.fixedDeltaTime;
-                if (cooldowns[key] <= 0)
-                {
-                    cooldowns.Remove(key);
-                }
-            }
-
-            // 대시 쿨다운
-            if (dashCooldown > 0)
-            {
-                dashCooldown -= Time.fixedDeltaTime;
-            }
-
-            // 차징 시간 업데이트
-            if (isCharging)
-            {
-                chargeTime += Time.fixedDeltaTime;
-            }
-        }
-
-        /// <summary>
-        /// 쿨다운 확인
-        /// </summary>
-        private bool IsOnCooldown(string abilityId)
-        {
-            return cooldowns.ContainsKey(abilityId) && cooldowns[abilityId] > 0;
-        }
-
-        /// <summary>
-        /// 쿨다운 시작
-        /// </summary>
-        private void StartCooldown(string abilityId, float duration)
-        {
-            cooldowns[abilityId] = duration;
-        }
-
-        /// <summary>
-        /// 무적 설정
-        /// </summary>
-        private void SetInvulnerable(bool invulnerable)
-        {
-            // 레이어 변경으로 무적 처리
-            gameObject.layer = invulnerable ? LayerMask.NameToLayer("Invulnerable") : LayerMask.NameToLayer("Player");
-        }
-
-        /// <summary>
-        /// 스컬 교체 이펙트
-        /// </summary>
-        private void ShowSwapEffect()
-        {
-            // 교체 이펙트 표시
-            Debug.Log("스컬 교체!");
-        }
-
-        /// <summary>
-        /// 지면 체크
-        /// </summary>
-        private void OnCollisionEnter2D(Collision2D collision)
-        {
-            if (((1 << collision.gameObject.layer) & groundLayer) != 0)
-            {
-                isGrounded = true;
-            }
-        }
-
-        private void OnCollisionExit2D(Collision2D collision)
-        {
-            if (((1 << collision.gameObject.layer) & groundLayer) != 0)
-            {
-                isGrounded = false;
-            }
-        }
-
-        /// <summary>
-        /// 디버그 기즈모
-        /// </summary>
-        private void OnDrawGizmosSelected()
-        {
-            if (attackPoint == null) return;
-
-            // 기본 공격 히트박스 표시
-            if (currentSkul?.basicAttack != null)
-            {
-                Gizmos.color = Color.red;
-                Vector3 pos = attackPoint.position + (Vector3)currentSkul.basicAttack.hitboxOffset;
-                Gizmos.DrawWireCube(pos, currentSkul.basicAttack.hitboxSize);
-            }
-        }
-
-        #region MoveMentFuntion
-
-        /// <summary>
-        /// 이동 입력 받음
-        /// </summary>
-        private void OnMovePerformed(InputAction.CallbackContext context)
-        {
-            rawInputValue = context.ReadValue<Vector2>();
-            currentMoveInput = rawInputValue;
-            isReceivingInput = true;
-            lastInputTime = Time.time.ToString("F2");
-
-            Debug.Log($" Move Input: {rawInputValue}");
-        }
-
-        /// <summary>
-        /// 이동 입력 해제
-        /// </summary>
-        private void OnMoveCanceled(InputAction.CallbackContext context)
-        {
-            rawInputValue = Vector2.zero;
-            currentMoveInput = Vector2.zero;
-            isReceivingInput = false;
-
-            Debug.Log(" Move Input 해제");
-        }
-
-        private void OnJump(InputAction.CallbackContext context)
-        {
-            Jump();
-        }
-
-        private void OnAttack(InputAction.CallbackContext context)
-        {
-            _ = PerformBasicAttack();
-        }
-
-        private void OnSkill(InputAction.CallbackContext context, int skillIndex)
-        {
-            _ = UseSkill(skillIndex);
-        }
-
-        private void OnDash(InputAction.CallbackContext context)
-        {
-            _ = PerformDash();
-        }
-
-        private void OnSwapSkulHead(InputAction.CallbackContext context)
-        {
-            SwapSkul();
         }
 
         #endregion
 
+        #region Movement System
 
+        private async void PerformDefaultDash()
+        {
+            if (currentState == CharacterState.Dashing) return;
+
+            ChangeState(CharacterState.Dashing);
+
+
+            float dashSpeed = 15f;
+            float dashDuration = 0.2f;
+            float dashDirection = movement.IsFacingRight ? 1f : -1f;
+
+            // Store original gravity
+            float originalGravity = rb.gravityScale;
+            rb.gravityScale = 0f;
+
+            // Perform dash
+            rb.linearVelocity = new Vector2(dashDirection * dashSpeed, 0);
+
+            await Awaitable.WaitForSecondsAsync(dashDuration, cancellationTokenSource.Token);
+
+            // Restore gravity
+            rb.gravityScale = originalGravity;
+
+            if (currentState == CharacterState.Dashing)
+            {
+                ChangeState(CharacterState.Idle);
+            }
+        }
+
+        #endregion
+
+        #region Skul System
+
+        private void SwapSkuls()
+        {
+            if (subSkul == null) return;
+
+            SkulData temp = currentSkul;
+            currentSkul = subSkul;
+            subSkul = temp;
+
+            ApplySkulStats();
+            OnSkulChanged?.Invoke(currentSkul);
+        }
+
+        private void ApplySkulStats()
+        {
+            if (currentSkul == null) return;
+
+            // Apply movement stats
+            if (movement != null)
+            {
+                movement.UpdateMovementStats(currentSkul.moveSpeed, currentSkul.jumpPower);
+            }
+
+            // Register new skul abilities to AbilitySystem
+            if (abilitySystem != null)
+            {
+                abilitySystem.ChangeSkul(currentSkul);
+            }
+
+            // Reset combo
+            currentCombo = 0;
+            OnComboChanged?.Invoke(0);
+
+            Debug.Log($"Applied {currentSkul.skulName} stats - ATK: {currentSkul.attackPower}, SPD: {currentSkul.moveSpeed}");
+        }
+
+        #endregion
+
+        #region State Management
+
+        private void UpdateState()
+        {
+            if (isAttacking) return; // Don't change state while attacking
+
+            CharacterState newState = DetermineState();
+
+            if (newState != currentState)
+            {
+                ChangeState(newState);
+            }
+        }
+
+        private CharacterState DetermineState()
+        {
+            if (currentState == CharacterState.Dashing) return currentState;
+            if (currentState == CharacterState.UsingAbility) return currentState;
+            if (currentState == CharacterState.Attacking) return currentState;
+
+            if (!groundChecker.IsGrounded)
+            {
+                return movement.IsFalling ? CharacterState.Falling : CharacterState.Jumping;
+            }
+
+            if (movement.IsMoving)
+            {
+                return CharacterState.Running;
+            }
+
+            return CharacterState.Idle;
+        }
+
+        private void ChangeState(CharacterState newState)
+        {
+            if (currentState == newState) return;
+
+            CharacterState oldState = currentState;
+            currentState = newState;
+
+            OnStateChanged?.Invoke(newState);
+
+            Debug.Log($"State changed: {oldState} -> {newState}");
+        }
+
+        #endregion
+
+        #region Combat Helpers
+
+        private void UpdateComboTimer()
+        {
+            if (currentCombo > 0 && Time.time - lastAttackTime > (currentSkul?.comboResetTime ?? 1f))
+            {
+                currentCombo = 0;
+                OnComboChanged?.Invoke(0);
+            }
+        }
+
+        private bool CanPerformAction()
+        {
+            // Can't perform actions while in certain states
+            if (currentState == CharacterState.Dashing) return false;
+            if (currentState == CharacterState.Stunned) return false;
+            if (currentState == CharacterState.Dead) return false;
+
+            return true;
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void HandleFacingDirectionChanged(bool isFacingRight)
+        {
+            // Flip attack point
+            if (attackPoint != null)
+            {
+                Vector3 localPos = attackPoint.localPosition;
+                localPos.x = Mathf.Abs(localPos.x) * (isFacingRight ? 1 : -1);
+                attackPoint.localPosition = localPos;
+            }
+        }
+
+        private void HandleJumpPerformed()
+        {
+            // Play jump sound/effect
+            if (currentSkul?.basicAttack?.soundEffect != null)
+            {
+                // AudioSource.PlayClipAtPoint(currentSkul.basicAttack.soundEffect, transform.position);
+            }
+        }
+
+        private void HandleDoubleJumpPerformed()
+        {
+            // Play double jump effect
+        }
+
+        private void HandleWallHit()
+        {
+            // Handle wall collision effects
+        }
+
+        private void HandleLanded()
+        {
+            // Play landing effect
+        }
+
+        private void HandleLeftGround()
+        {
+            // Handle leaving ground
+        }
+
+        #endregion
+
+        #region Cleanup
+
+        private void CleanupInputSystem()
+        {
+            if (inputActions != null)
+            {
+                inputActions.Player.Move.performed -= movement.OnMove;
+                inputActions.Player.Move.canceled -= movement.OnMove;
+                inputActions.Player.Jump.performed -= movement.OnJump;
+                inputActions.Player.Jump.canceled -= movement.OnJump;
+
+                inputActions.Player.Attack.performed -= OnAttack;
+                inputActions.Player.Skill1.performed -= OnSkill1;
+                inputActions.Player.Skill2.performed -= OnSkill2;
+                inputActions.Player.Dash.performed -= OnDash;
+                inputActions.Player.SwapSkul.performed -= OnSwapSkul;
+                inputActions.Player.Pause.performed -= OnPause;
+
+                inputActions.Disable();
+                inputActions.Dispose();
+            }
+
+            if (movement != null)
+            {
+                movement.OnFacingDirectionChanged -= HandleFacingDirectionChanged;
+                movement.OnJumpPerformed -= HandleJumpPerformed;
+                movement.OnDoubleJumpPerformed -= HandleDoubleJumpPerformed;
+                movement.OnWallHit -= HandleWallHit;
+            }
+
+            if (groundChecker != null)
+            {
+                groundChecker.OnLanded -= HandleLanded;
+                groundChecker.OnLeftGround -= HandleLeftGround;
+            }
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// 캐릭터 상태 열거형
+    /// </summary>
+    public enum CharacterState
+    {
+        Idle,
+        Running,
+        Jumping,
+        Falling,
+        Attacking,
+        UsingAbility,
+        Dashing,
+        WallSliding,
+        Stunned,
+        Dead
     }
 }

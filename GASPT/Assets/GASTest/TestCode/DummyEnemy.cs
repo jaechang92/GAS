@@ -1,137 +1,99 @@
-// ===================================
-// 파일: Assets/Scripts/Ability/Test/DummyEnemy.cs
-// ===================================
+// 파일 위치: Assets/GASTest/TestCode/DummyEnemy.cs
+using AbilitySystem;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AbilitySystem.Platformer.Test
 {
-
-    public struct Stretch
-    {
-        public float left;
-        public float right;
-        public float top;
-        public float bottom;
-
-        public Stretch(float left, float right, float top, float bottom)
-        {
-            this.left = left;
-            this.right = right;
-            this.top = top;
-            this.bottom = bottom;
-        }
-    }
-
     /// <summary>
-    /// 테스트용 더미 적
+    /// 테스트용 더미 적 - IAbilityTarget 구현
     /// </summary>
-    public class DummyEnemy : MonoBehaviour, IAbilityTarget
+    public class DummyEnemy : AbilityTargetBase
     {
-        private Stretch stretch = new Stretch(0,0,0,0);
-
-        [Header("스탯")]
-        [SerializeField] private float maxHealth = 100f;
-        [SerializeField] private float currentHealth = 100f;
+        [Header("Enemy Settings")]
         [SerializeField] private bool showDamageNumbers = true;
         [SerializeField] private bool respawnOnDeath = true;
         [SerializeField] private float respawnDelay = 3f;
 
-        // 체력바
-        private GameObject healthBarObj;
-        private Slider healthBar;
+        [Header("UI")]
+        [SerializeField] private Slider healthBar;
+        [SerializeField] private GameObject damageTextPrefab;
+        [SerializeField] private Transform damageTextSpawnPoint;
+
+        [Header("Effects")]
+        [SerializeField] private Color damageColor = Color.red;
+        [SerializeField] private float damageFeedbackDuration = 0.1f;
+
+        // Components
+        private SpriteRenderer spriteRenderer;
+        private Rigidbody2D rb;
+        private Collider2D col;
         private Vector3 initialPosition;
+        private Color originalColor;
 
-        // IAbilityTarget 구현
-        public GameObject GameObject => gameObject;
-        public Transform Transform => transform;
-        public bool IsAlive => currentHealth > 0;
-        public bool IsTargetable => IsAlive;
+        // Buffs and Effects
+        private Dictionary<BuffType, float> activeBuffs = new Dictionary<BuffType, float>();
+        private Dictionary<StatusEffectType, float> activeStatusEffects = new Dictionary<StatusEffectType, float>();
 
-        private void Start()
+        protected override void Start()
         {
+            base.Start();
+            InitializeComponents();
+            UpdateHealthBar();
+        }
+
+        private void InitializeComponents()
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+            rb = GetComponent<Rigidbody2D>();
+            col = GetComponent<Collider2D>();
+
+            if (spriteRenderer != null)
+            {
+                originalColor = spriteRenderer.color;
+            }
+
             initialPosition = transform.position;
-            CreateHealthBar();
-            currentHealth = maxHealth;
+
+            // Find health bar in children
+            if (healthBar == null)
+            {
+                healthBar = GetComponentInChildren<Slider>();
+            }
         }
 
-        /// <summary>
-        /// 체력바 생성
-        /// </summary>
-        private void CreateHealthBar()
+        #region IAbilityTarget Implementation
+
+        public override void TakeDamage(float damage)
         {
-            // World Space Canvas 생성
-            healthBarObj = new GameObject("Health Bar Canvas");
-            healthBarObj.transform.SetParent(transform);
-            healthBarObj.transform.localPosition = new Vector3(0, 1.5f, 0);
-
-            Canvas canvas = healthBarObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
-            healthBarObj.AddComponent<CanvasScaler>();
-
-            RectTransform canvasRect = healthBarObj.GetComponent<RectTransform>();
-            canvasRect.sizeDelta = new Vector2(1, 0.2f);
-
-            // 체력바 배경
-            GameObject bgObj = new GameObject("Background");
-            bgObj.transform.SetParent(healthBarObj.transform);
-            Image bg = bgObj.AddComponent<Image>();
-            bg.color = Color.black;
-            RectTransform bgRect = bgObj.GetComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.offsetMin = Vector2.zero;
-            bgRect.offsetMax = Vector2.zero;
-
-            // 체력바
-            GameObject barObj = new GameObject("Health Bar");
-            barObj.transform.SetParent(healthBarObj.transform);
-            healthBar = barObj.AddComponent<Slider>();
-            healthBar.fillRect = barObj.transform as RectTransform;
-
-            GameObject fill = new GameObject("Fill");
-            fill.transform.SetParent(barObj.transform);
-            Image fillImage = fill.AddComponent<Image>();
-            fillImage.color = Color.red;
-            fillImage.rectTransform.offsetMin = new Vector2(stretch.left, stretch.bottom);
-            fillImage.rectTransform.offsetMax = new Vector2(-stretch.right, -stretch.top);
-            healthBar.fillRect = fill.GetComponent<RectTransform>();
-
-            RectTransform barRect = barObj.GetComponent<RectTransform>();
-            barRect.anchorMin = Vector2.zero;
-            barRect.anchorMax = Vector2.one;
-            barRect.offsetMin = Vector2.zero;
-            barRect.offsetMax = Vector2.zero;
-
-            healthBar.value = 1f;
+            TakeDamage(damage, null, DamageType.Physical);
         }
 
-        /// <summary>
-        /// 데미지 받기
-        /// </summary>
-        public void TakeDamage(float damage, GameObject source)
+        public override void TakeDamage(float damage, GameObject attacker)
+        {
+            TakeDamage(damage, attacker, DamageType.Physical);
+        }
+
+        public override void TakeDamage(float damage, GameObject attacker, DamageType damageType)
         {
             if (!IsAlive) return;
 
-            currentHealth -= damage;
-            currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-
-            // 체력바 업데이트
-            if (healthBar != null)
+            // Apply damage reduction buffs
+            if (activeBuffs.ContainsKey(BuffType.DamageReduction))
             {
-                healthBar.value = currentHealth / maxHealth;
+                damage *= (1f - activeBuffs[BuffType.DamageReduction]);
             }
 
-            // 데미지 표시
-            if (showDamageNumbers)
-            {
-                ShowDamageNumber(damage);
-            }
+            currentHealth = Mathf.Max(0, currentHealth - damage);
 
-            // 피격 이펙트
-            StartCoroutine(HitEffect());
+            // Visual feedback
+            ShowDamageFeedback(damage);
+            UpdateHealthBar();
 
-            Debug.Log($"{name} 받은 데미지: {damage}, 남은 체력: {currentHealth}/{maxHealth}");
+            Debug.Log($"{gameObject.name} took {damage:F1} {damageType} damage from {attacker?.name ?? "unknown"}. Health: {currentHealth}/{maxHealth}");
 
             if (currentHealth <= 0)
             {
@@ -139,162 +101,293 @@ namespace AbilitySystem.Platformer.Test
             }
         }
 
-        /// <summary>
-        /// 힐 받기
-        /// </summary>
-        public void Heal(float amount, GameObject source)
+        public override void Heal(float amount)
+        {
+            Heal(amount, null);
+        }
+
+        public override void Heal(float amount, GameObject healer)
         {
             if (!IsAlive) return;
 
-            currentHealth += amount;
-            currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+            float oldHealth = currentHealth;
+            currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+            float actualHeal = currentHealth - oldHealth;
 
+            if (actualHeal > 0)
+            {
+                ShowHealFeedback(actualHeal);
+                UpdateHealthBar();
+                Debug.Log($"{gameObject.name} healed for {actualHeal:F1} by {healer?.name ?? "unknown"}. Health: {currentHealth}/{maxHealth}");
+            }
+        }
+
+        public override void ApplyBuff(BuffType buffType, float duration, float value)
+        {
+            activeBuffs[buffType] = value;
+
+            // Start coroutine to remove buff after duration
+            StartCoroutine(RemoveBuffAfterDuration(buffType, duration));
+
+            Debug.Log($"{gameObject.name} received {buffType} buff: {value} for {duration}s");
+        }
+
+        public override void RemoveBuff(BuffType buffType)
+        {
+            if (activeBuffs.ContainsKey(buffType))
+            {
+                activeBuffs.Remove(buffType);
+                Debug.Log($"{gameObject.name} removed {buffType} buff");
+            }
+        }
+
+        public override void ApplyStatusEffect(StatusEffectType effectType, float duration)
+        {
+            activeStatusEffects[effectType] = Time.time + duration;
+
+            // Apply effect immediately
+            switch (effectType)
+            {
+                case StatusEffectType.Stun:
+                    // Disable movement
+                    if (rb != null) rb.constraints = RigidbodyConstraints2D.FreezeAll;
+                    break;
+                case StatusEffectType.Slow:
+                    // Reduce speed (would affect movement component)
+                    break;
+                case StatusEffectType.Freeze:
+                    if (rb != null) rb.constraints = RigidbodyConstraints2D.FreezeAll;
+                    if (spriteRenderer != null) spriteRenderer.color = Color.cyan;
+                    break;
+            }
+
+            StartCoroutine(RemoveStatusEffectAfterDuration(effectType, duration));
+            Debug.Log($"{gameObject.name} affected by {effectType} for {duration}s");
+        }
+
+        public override void RemoveStatusEffect(StatusEffectType effectType)
+        {
+            if (!activeStatusEffects.ContainsKey(effectType)) return;
+
+            activeStatusEffects.Remove(effectType);
+
+            // Remove effect
+            switch (effectType)
+            {
+                case StatusEffectType.Stun:
+                case StatusEffectType.Freeze:
+                    if (rb != null) rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+                    if (spriteRenderer != null) spriteRenderer.color = originalColor;
+                    break;
+            }
+
+            Debug.Log($"{gameObject.name} removed {effectType} effect");
+        }
+
+        public override void ApplyKnockback(Vector2 force)
+        {
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.AddForce(force, ForceMode2D.Impulse);
+            }
+        }
+
+        public override void ApplyKnockback(Vector2 direction, float power)
+        {
+            ApplyKnockback(direction.normalized * power);
+        }
+
+        #endregion
+
+        #region Visual Feedback
+
+        private void ShowDamageFeedback(float damage)
+        {
+            // Flash red
+            if (spriteRenderer != null)
+            {
+                StartCoroutine(FlashColor(damageColor, damageFeedbackDuration));
+            }
+
+            // Show damage number
+            if (showDamageNumbers && damageTextPrefab != null)
+            {
+                Vector3 spawnPos = damageTextSpawnPoint != null ? damageTextSpawnPoint.position : transform.position + Vector3.up;
+                GameObject damageText = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
+
+                // Setup damage text (assumes it has a Text or TextMeshPro component)
+                TextMeshPro textComponent = damageText.GetComponentInChildren<TMPro.TextMeshPro>();
+
+                if (textComponent != null)
+                {
+                    textComponent.text = damage.ToString("F0");
+                }
+
+                Destroy(damageText, 1f);
+            }
+        }
+
+        private void ShowHealFeedback(float amount)
+        {
+            // Flash green
+            if (spriteRenderer != null)
+            {
+                StartCoroutine(FlashColor(Color.green, damageFeedbackDuration));
+            }
+
+            // Show heal number
+            if (showDamageNumbers && damageTextPrefab != null)
+            {
+                Vector3 spawnPos = damageTextSpawnPoint != null ? damageTextSpawnPoint.position : transform.position + Vector3.up;
+                GameObject healText = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
+
+                var textComponent = healText.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+                if (textComponent != null)
+                {
+                    textComponent.text = "+" + amount.ToString("F0");
+                    textComponent.color = Color.green;
+                }
+
+                Destroy(healText, 1f);
+            }
+        }
+
+        private IEnumerator FlashColor(Color flashColor, float duration)
+        {
+            if (spriteRenderer == null) yield break;
+
+            spriteRenderer.color = flashColor;
+            yield return new WaitForSeconds(duration);
+            spriteRenderer.color = originalColor;
+        }
+
+        private void UpdateHealthBar()
+        {
             if (healthBar != null)
             {
                 healthBar.value = currentHealth / maxHealth;
             }
-
-            Debug.Log($"{name} 힐: {amount}, 현재 체력: {currentHealth}/{maxHealth}");
         }
 
-        /// <summary>
-        /// 버프/디버프 적용
-        /// </summary>
-        public void ApplyEffect(string effectId, float duration, GameObject source)
+        #endregion
+
+        #region Death and Respawn
+
+        private void Die()
         {
-            Debug.Log($"{name}에 {effectId} 효과 적용 ({duration}초)");
-        }
+            Debug.Log($"{gameObject.name} died!");
 
-        /// <summary>
-        /// 데미지 숫자 표시
-        /// </summary>
-        private void ShowDamageNumber(float damage)
-        {
-            GameObject damageTextObj = new GameObject("Damage Text");
-            damageTextObj.transform.position = transform.position + Vector3.up * 1.5f;
+            // Disable components
+            if (col != null) col.enabled = false;
+            if (rb != null) rb.simulated = false;
 
-            TextMesh textMesh = damageTextObj.AddComponent<TextMesh>();
-            textMesh.text = damage.ToString("0");
-            textMesh.fontSize = 20;
-            textMesh.color = Color.yellow;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-
-            // 위로 올라가며 사라지는 애니메이션
-            StartCoroutine(DamageTextAnimation(damageTextObj));
-        }
-
-        /// <summary>
-        /// 데미지 텍스트 애니메이션
-        /// </summary>
-        private System.Collections.IEnumerator DamageTextAnimation(GameObject textObj)
-        {
-            float timer = 0;
-            float duration = 1f;
-            Vector3 startPos = textObj.transform.position;
-
-            while (timer < duration)
+            // Death animation
+            if (spriteRenderer != null)
             {
-                timer += Time.deltaTime;
-                textObj.transform.position = startPos + Vector3.up * timer;
+                StartCoroutine(DeathAnimation());
+            }
 
-                var textMesh = textObj.GetComponent<TextMesh>();
-                if (textMesh != null)
+            // Respawn if enabled
+            if (respawnOnDeath)
+            {
+                StartCoroutine(RespawnAfterDelay());
+            }
+        }
+
+        private IEnumerator DeathAnimation()
+        {
+            float duration = 0.5f;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+
+                if (spriteRenderer != null)
                 {
-                    Color color = textMesh.color;
-                    color.a = 1f - (timer / duration);
-                    textMesh.color = color;
+                    Color c = spriteRenderer.color;
+                    c.a = alpha;
+                    spriteRenderer.color = c;
                 }
 
                 yield return null;
             }
-
-            Destroy(textObj);
         }
 
-        /// <summary>
-        /// 피격 이펙트
-        /// </summary>
-        private System.Collections.IEnumerator HitEffect()
-        {
-            var renderer = GetComponent<SpriteRenderer>();
-            if (renderer == null)
-            {
-                renderer = GetComponentInChildren<SpriteRenderer>();
-            }
-
-            if (renderer != null)
-            {
-                Color originalColor = renderer.color;
-                renderer.color = Color.white;
-                yield return new WaitForSeconds(0.1f);
-                renderer.color = originalColor;
-            }
-        }
-
-        /// <summary>
-        /// 사망 처리
-        /// </summary>
-        private void Die()
-        {
-            Debug.Log($"{name} 사망!");
-
-            // 사망 이펙트
-            var renderer = GetComponent<SpriteRenderer>();
-            if (renderer != null)
-            {
-                renderer.color = Color.gray;
-            }
-
-            // 충돌 비활성화
-            var collider = GetComponent<Collider2D>();
-            if (collider != null)
-            {
-                collider.enabled = false;
-            }
-
-            if (respawnOnDeath)
-            {
-                StartCoroutine(Respawn());
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
-        }
-
-        /// <summary>
-        /// 리스폰
-        /// </summary>
-        private System.Collections.IEnumerator Respawn()
+        private IEnumerator RespawnAfterDelay()
         {
             yield return new WaitForSeconds(respawnDelay);
 
-            // 초기화
-            currentHealth = maxHealth;
+            Respawn();
+        }
+
+        private void Respawn()
+        {
+            // Reset position
             transform.position = initialPosition;
 
-            // 체력바 업데이트
-            if (healthBar != null)
+            // Reset health
+            currentHealth = maxHealth;
+            UpdateHealthBar();
+
+            // Re-enable components
+            if (col != null) col.enabled = true;
+            if (rb != null) rb.simulated = true;
+
+            // Reset visuals
+            if (spriteRenderer != null)
             {
-                healthBar.value = 1f;
+                Color c = originalColor;
+                c.a = 1f;
+                spriteRenderer.color = c;
             }
 
-            // 시각 효과 복구
-            var renderer = GetComponent<SpriteRenderer>();
-            if (renderer != null)
-            {
-                renderer.color = Color.red;
-            }
+            // Clear effects
+            activeBuffs.Clear();
+            activeStatusEffects.Clear();
 
-            // 충돌 활성화
-            var collider = GetComponent<Collider2D>();
-            if (collider != null)
-            {
-                collider.enabled = true;
-            }
-
-            Debug.Log($"{name} 리스폰!");
+            Debug.Log($"{gameObject.name} respawned!");
         }
+
+        #endregion
+
+        #region Coroutines
+
+        private IEnumerator RemoveBuffAfterDuration(BuffType buffType, float duration)
+        {
+            yield return new WaitForSeconds(duration);
+            RemoveBuff(buffType);
+        }
+
+        private IEnumerator RemoveStatusEffectAfterDuration(StatusEffectType effectType, float duration)
+        {
+            yield return new WaitForSeconds(duration);
+            RemoveStatusEffect(effectType);
+        }
+
+        #endregion
+
+        #region Debug
+
+        [ContextMenu("Take 10 Damage")]
+        private void Debug_Take10Damage()
+        {
+            TakeDamage(10f);
+        }
+
+        [ContextMenu("Heal 20 HP")]
+        private void Debug_Heal20HP()
+        {
+            Heal(20f);
+        }
+
+        [ContextMenu("Apply Stun")]
+        private void Debug_ApplyStun()
+        {
+            ApplyStatusEffect(StatusEffectType.Stun, 2f);
+        }
+
+        #endregion
     }
 }

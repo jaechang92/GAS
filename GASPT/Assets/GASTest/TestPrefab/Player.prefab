@@ -44,6 +44,9 @@ GameObject:
   - component: {fileID: 1056385012005400760}
   - component: {fileID: 5532720357554796491}
   - component: {fileID: 5048046863123606402}
+  - component: {fileID: 9185744872555193173}
+  - component: {fileID: 2745306899509560816}
+  - component: {fileID: 4553243475799655398}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -83,7 +86,7 @@ Rigidbody2D:
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 2
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 6bd9ee9491f6b824895db8e52ef21b93, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -152,22 +155,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60ac76a48cca0fe4580419cbcb273044, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AbilitySystem.Platformer.PlatformerAbilityController
-  rb: {fileID: 3180984164057050258}
-  playerCollider: {fileID: 1056385012005400760}
   attackPoint: {fileID: 0}
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 0
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  currentSkul: {fileID: 0}
+    m_Bits: 128
+  currentSkul: {fileID: 11400000, guid: 4b43b19f6e04df94d882f73ed25b9874, type: 2}
   subSkul: {fileID: 0}
   currentState: 0
-  isGrounded: 1
-  isFacingRight: 1
-  currentCombo: 0
-  lastAttackTime: 0
 --- !u!212 &5048046863123606402
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -226,3 +220,93 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &9185744872555193173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7280709220373063013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4dce0c98212f9a478f980ba3bcd7557, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilitySystem.Core.GroundChecker
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  checkDistance: 0.1
+  boxSize: {x: 0.9, y: 0.05}
+  boxOffset: {x: 0, y: 0}
+  detectSlopes: 1
+  maxSlopeAngle: 45
+  useCoyoteTime: 1
+  coyoteTimeDuration: 0.1
+  useJumpBuffer: 1
+  jumpBufferDuration: 0.15
+  showDebugGizmos: 1
+  gizmoColor: {r: 0, g: 1, b: 0, a: 1}
+--- !u!114 &2745306899509560816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7280709220373063013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 088517742404813469ac88e53159673f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilitySystem.Core.PlatformerMovement
+  moveSpeed: 5
+  airMoveSpeed: 4
+  useAcceleration: 0
+  acceleration: 10
+  deceleration: 10
+  airAcceleration: 8
+  airDeceleration: 6
+  instantStopOnGround: 1
+  instantDirectionChange: 1
+  airControl: 1
+  jumpPower: 6
+  jumpCutMultiplier: 0.5
+  fallMultiplier: 2.5
+  lowJumpMultiplier: 2
+  maxFallSpeed: -20
+  maxJumpCount: 2
+  enableWallCheck: 1
+  wallLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  wallCheckDistance: 0.1
+  wallCheckSize: {x: 0.05, y: 0.8}
+  wallCheckOffset: {x: 0, y: 0}
+  enablePlatformDrop: 1
+  oneWayPlatformLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  platformDropTime: 0.3
+  enableEdgeCorrection: 1
+  edgeCorrectionRange: 0.3
+  showDebugInfo: 1
+--- !u!114 &4553243475799655398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7280709220373063013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aaa381c1ba5657429985bd0d32c80e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Helper.ColliderOptimizer
+  autoOptimize: 1
+  edgeRadius: 0.02
+  usedByComposite: 0
+  isPlatform: 0
+  isOneWayPlatform: 0
+  usePlatformEffector: 0
+  surfaceArc: 180
+  optimizeTilemap: 0
+  useCompositeCollider: 1
