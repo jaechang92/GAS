@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:\\Program Files\\Unity\\Hub\\Editor\\2023.1.20f1\\Editor\\Unity.exe\" -batchmode -projectPath . -executeMethod UnityEngine.Debug.Log -logFile - -quit)",
+      "Read(//c/Program Files/**)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -73,26 +73,26 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // ���� �޴� UI Ȱ��ȭ
+            // 메인 메뉴 UI 활성화
             gameFlowManager?.ShowMainMenu();
             await Awaitable.NextFrameAsync();
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // ���� �޴� UI ��Ȱ��ȭ
+            // 메인 메뉴 UI 비활성화
             gameFlowManager?.HideMainMenu();
             await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
         {
-            // ���� �޴������� ������Ʈ ����
+            // 메인 메뉴에서의 업데이트 로직
         }
     }
 
     /// <summary>
-    /// �ε� ����
+    /// 로딩 상태
     /// </summary>
     public class LoadingState : GameState
     {
@@ -103,25 +103,25 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // �ε� ȭ�� Ȱ��ȭ
+            // 로딩 화면 활성화
             gameFlowManager?.ShowLoadingScreen();
             loadingProgress = 0f;
             isLoadingComplete = false;
 
-            // ���� �ε� ����
+            // 가상 로딩 시작
             await StartLoading(cancellationToken);
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // �ε� ȭ�� ��Ȱ��ȭ
+            // 로딩 화면 비활성화
             gameFlowManager?.HideLoadingScreen();
             await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
         {
-            // �ε� ����� ������Ʈ
+            // 로딩 진행률 업데이트
             if (!isLoadingComplete)
             {
                 gameFlowManager?.UpdateLoadingProgress(loadingProgress);
@@ -130,7 +130,7 @@ namespace GameFlow
 
         private async Awaitable StartLoading(CancellationToken cancellationToken)
         {
-            // ������ �ε� ���μ���
+            // 가상의 로딩 프로세스
             for (int i = 0; i <= 100; i++)
             {
                 if (cancellationToken.IsCancellationRequested) return;
@@ -141,14 +141,14 @@ namespace GameFlow
 
             isLoadingComplete = true;
 
-            // �ε� �Ϸ� �� �ڵ����� �ΰ������� ��ȯ
+            // 로딩 완료 후 자동으로 인게임으로 전환
             await Awaitable.WaitForSecondsAsync(0.5f);
             gameFlowManager?.TriggerEvent(GameEventType.LoadComplete);
         }
     }
 
     /// <summary>
-    /// �ΰ��� ����
+    /// 인게임 상태
     /// </summary>
     public class IngameState : GameState
     {
@@ -156,10 +156,10 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // �ΰ��� UI Ȱ��ȭ
+            // 인게임 UI 활성화
             gameFlowManager?.ShowIngameUI();
 
-            // ���� �ð� �簳
+            // 게임 시간 복구
             Time.timeScale = 1f;
 
             await Awaitable.NextFrameAsync();
@@ -167,14 +167,14 @@ namespace GameFlow
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // �ΰ��� UI �����
+            // 인게임 UI 처리
             await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
         {
-            // �ΰ��� ������Ʈ ����
-            // ESC Ű�� �Ͻ�����
+            // 인게임 업데이트 로직
+            // ESC 키로 일시정지
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 gameFlowManager?.TriggerEvent(GameEventType.PauseGame);
@@ -183,7 +183,7 @@ namespace GameFlow
     }
 
     /// <summary>
-    /// �Ͻ����� ����
+    /// 일시정지 상태
     /// </summary>
     public class PauseState : GameState
     {
@@ -191,10 +191,10 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // ���� �ð� ����
+            // 게임 시간 정지
             Time.timeScale = 0f;
 
-            // �Ͻ����� UI Ȱ��ȭ
+            // 일시정지 UI 활성화
             gameFlowManager?.ShowPauseMenu();
 
             await Awaitable.NextFrameAsync();
@@ -202,10 +202,10 @@ namespace GameFlow
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // �Ͻ����� UI ��Ȱ��ȭ
+            // 일시정지 UI 비활성화
             gameFlowManager?.HidePauseMenu();
 
-            // ���� �ð� �簳
+            // 게임 시간 복구
             Time.timeScale = 1f;
 
             await Awaitable.NextFrameAsync();
@@ -213,7 +213,7 @@ namespace GameFlow
 
         protected override void UpdateState(float deltaTime)
         {
-            // ESC Ű�� ���� �簳
+            // ESC 키로 게임 복구
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 gameFlowManager?.TriggerEvent(GameEventType.ResumeGame);
@@ -222,7 +222,7 @@ namespace GameFlow
     }
 
     /// <summary>
-    /// �޴� ����
+    /// 메뉴 상태
     /// </summary>
     public class MenuState : GameState
     {
@@ -230,26 +230,26 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // �޴� UI Ȱ��ȭ
+            // 메뉴 UI 활성화
             gameFlowManager?.ShowInGameMenu();
             await Awaitable.NextFrameAsync();
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // �޴� UI ��Ȱ��ȭ
+            // 메뉴 UI 비활성화
             gameFlowManager?.HideInGameMenu();
             await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
         {
-            // �޴� ������Ʈ ����
+            // 메뉴 업데이트 로직
         }
     }
 
     /// <summary>
-    /// �κ� ����
+    /// 로비 상태
     /// </summary>
     public class LobbyState : GameState
     {
@@ -257,21 +257,21 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // �κ� UI Ȱ��ȭ
+            // 로비 UI 활성화
             gameFlowManager?.ShowLobby();
             await Awaitable.NextFrameAsync();
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // �κ� UI ��Ȱ��ȭ
+            // 로비 UI 비활성화
             gameFlowManager?.HideLobby();
             await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
         {
-            // �κ� ������Ʈ ����
+            // 로비 업데이트 로직
         }
     }
 }

@@ -1,0 +1,79 @@
+# Unity Git 속성 설정
+# 모든 텍스트 파일을 UTF-8으로 처리하고 CRLF 줄 끝 처리
+
+# C# 소스 파일들
+*.cs text eol=crlf encoding=utf-8
+*.asmdef text eol=crlf encoding=utf-8
+
+# Unity 설정 파일들
+*.unity text eol=crlf encoding=utf-8
+*.prefab text eol=crlf encoding=utf-8
+*.asset text eol=crlf encoding=utf-8
+*.meta text eol=crlf encoding=utf-8
+*.mat text eol=crlf encoding=utf-8
+*.anim text eol=crlf encoding=utf-8
+*.controller text eol=crlf encoding=utf-8
+
+# JSON 파일들
+*.json text eol=crlf encoding=utf-8
+package.json text eol=crlf encoding=utf-8
+
+# 문서 파일들
+*.md text eol=crlf encoding=utf-8
+*.txt text eol=crlf encoding=utf-8
+
+# 프로젝트 파일들
+*.sln text eol=crlf encoding=utf-8
+*.csproj text eol=crlf encoding=utf-8
+
+# 바이너리 파일들 (인코딩 변환하지 않음)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.tga binary
+*.tiff binary
+*.iff binary
+*.pict binary
+*.dds binary
+*.xcf binary
+*.fbx binary
+*.FBX binary
+*.obj binary
+*.OBJ binary
+*.3ds binary
+*.3DS binary
+*.max binary
+*.MAX binary
+*.ma binary
+*.mb binary
+*.mp3 binary
+*.MP3 binary
+*.ogg binary
+*.OGG binary
+*.wav binary
+*.WAV binary
+*.aiff binary
+*.AIFF binary
+*.aif binary
+*.AIF binary
+*.mod binary
+*.MOD binary
+*.it binary
+*.IT binary
+*.s3m binary
+*.S3M binary
+*.xm binary
+*.XM binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.rar binary
+*.tar binary

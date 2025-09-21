@@ -1,0 +1,58 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# files
+[*.cs]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Unity-specific files
+[*.{unity,prefab,asset,meta,mat,anim,controller}]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+
+# JSON files
+[*.json]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 2
+
+# Markdown files
+[*.md]
+charset = utf-8
+end_of_line = crlf
+trim_trailing_whitespace = false
+
+# Assembly definition files
+[*.asmdef]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 2
+
+# Project files
+[*.{csproj,sln}]
+charset = utf-8
+end_of_line = crlf
+
+# 한글 주석에 대한 특별 설정
+# C# 파일에서 한글 주석 처리 규칙
+[*.cs]
+# UTF-8 BOM 없이 저장
+charset = utf-8
+# Windows 스타일 줄 끝
+end_of_line = crlf
