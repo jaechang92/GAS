@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87dd676d87620144684c239b9d48e44e, type: 3}
   m_Name: SkillData1
   m_EditorClassIdentifier: Assembly-CSharp::AbilitySystem.Platformer.PlatformerAbilityData
-  abilityId: 
-  abilityName: 
-  description: 
+  abilityId: 0001_skill1
+  abilityName: Skill1
+  description: Skill1
   icon: {fileID: 0}
-  abilityType: 0
+  abilityType: 1
   attackDirection: 0
   cooldownTime: 1
   manaCost: 0
@@ -36,3 +36,6 @@ MonoBehaviour:
   maxChargeTime: 2
   isMultiHit: 0
   hitCount: 1
+  dashDistance: 5
+  dashDuration: 0.2
+  invincibleDuringDash: 0

@@ -1,0 +1,313 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using FSM.Core;
+
+namespace GameFlow
+{
+    /// <summary>
+    /// 게임 흐름을 관리하는 FSM 컨트롤러
+    /// </summary>
+    public class GameFlowManager : MonoBehaviour
+    {
+        [Header("UI 참조")]
+        [SerializeField] private GameObject mainMenuUI;
+        [SerializeField] private GameObject loadingScreenUI;
+        [SerializeField] private GameObject ingameUI;
+        [SerializeField] private GameObject pauseMenuUI;
+        [SerializeField] private GameObject inGameMenuUI;
+        [SerializeField] private GameObject lobbyUI;
+
+        [Header("로딩 화면")]
+        [SerializeField] private Slider loadingProgressBar;
+        [SerializeField] private Text loadingText;
+
+        [Header("설정")]
+        [SerializeField] private GameStateType initialState = GameStateType.Main;
+
+        // FSM 관련
+        private StateMachine stateMachine;
+        private Dictionary<GameEventType, Action> eventHandlers;
+
+        // 현재 상태 정보
+        public GameStateType CurrentState =>
+            Enum.TryParse<GameStateType>(stateMachine?.CurrentStateId, out var state) ? state : GameStateType.Main;
+
+        // StateMachine 접근용 프로퍼티
+        public StateMachine StateMachine => stateMachine;
+
+        // 이벤트
+        public event Action<GameStateType, GameStateType> OnStateChanged;
+        public event Action<GameEventType> OnEventTriggered;
+
+        private void Awake()
+        {
+            InitializeStateMachine();
+            InitializeEventHandlers();
+            InitializeUI();
+        }
+
+        private void Start()
+        {
+            // 초기 상태로 시작
+            stateMachine.StartStateMachine(initialState.ToString());
+        }
+
+        /// <summary>
+        /// FSM 초기화
+        /// </summary>
+        private void InitializeStateMachine()
+        {
+            stateMachine = gameObject.AddComponent<StateMachine>();
+
+            // 상태들 추가
+            stateMachine.AddState(new MainState());
+            stateMachine.AddState(new LoadingState());
+            stateMachine.AddState(new IngameState());
+            stateMachine.AddState(new PauseState());
+            stateMachine.AddState(new MenuState());
+            stateMachine.AddState(new LobbyState());
+
+            // 기본 전환 설정
+            GameFlowTransitionSetup.SetupDefaultTransitions(stateMachine, this);
+
+            // 상태 변경 이벤트 구독
+            stateMachine.OnStateChanged += OnGameStateChanged;
+        }
+
+        /// <summary>
+        /// 이벤트 핸들러 초기화
+        /// </summary>
+        private void InitializeEventHandlers()
+        {
+            eventHandlers = new Dictionary<GameEventType, Action>
+            {
+                { GameEventType.StartGame, () => TransitionTo(GameStateType.Loading) },
+                { GameEventType.LoadComplete, () => TransitionTo(GameStateType.Ingame) },
+                { GameEventType.PauseGame, () => TransitionTo(GameStateType.Pause) },
+                { GameEventType.ResumeGame, () => TransitionTo(GameStateType.Ingame) },
+                { GameEventType.OpenMenu, () => TransitionTo(GameStateType.Menu) },
+                { GameEventType.CloseMenu, () => TransitionTo(GameStateType.Ingame) },
+                { GameEventType.GoToLobby, () => TransitionTo(GameStateType.Lobby) },
+                { GameEventType.GoToMain, () => TransitionTo(GameStateType.Main) }
+            };
+        }
+
+        /// <summary>
+        /// UI 초기화
+        /// </summary>
+        private void InitializeUI()
+        {
+            // 모든 UI 비활성화
+            HideAllUI();
+        }
+
+        /// <summary>
+        /// 게임 이벤트 트리거
+        /// </summary>
+        public void TriggerEvent(GameEventType eventType)
+        {
+            Debug.Log($"[GameFlow] Event triggered: {eventType}");
+            OnEventTriggered?.Invoke(eventType);
+
+            if (eventHandlers.TryGetValue(eventType, out var handler))
+            {
+                handler?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 특정 상태로 전환
+        /// </summary>
+        public void TransitionTo(GameStateType targetState)
+        {
+            if (stateMachine != null)
+            {
+                stateMachine.ForceTransitionTo(targetState.ToString());
+            }
+        }
+
+        /// <summary>
+        /// 상태 변경 이벤트 핸들러
+        /// </summary>
+        private void OnGameStateChanged(string fromState, string toState)
+        {
+            if (Enum.TryParse<GameStateType>(fromState, out var from) &&
+                Enum.TryParse<GameStateType>(toState, out var to))
+            {
+                OnStateChanged?.Invoke(from, to);
+                Debug.Log($"[GameFlow] State changed: {from} -> {to}");
+            }
+        }
+
+        #region UI 관리 메서드들
+
+        private void HideAllUI()
+        {
+            SetUIActive(mainMenuUI, false);
+            SetUIActive(loadingScreenUI, false);
+            SetUIActive(ingameUI, false);
+            SetUIActive(pauseMenuUI, false);
+            SetUIActive(inGameMenuUI, false);
+            SetUIActive(lobbyUI, false);
+        }
+
+        private void SetUIActive(GameObject ui, bool active)
+        {
+            if (ui != null) ui.SetActive(active);
+        }
+
+        public void ShowMainMenu()
+        {
+            HideAllUI();
+            SetUIActive(mainMenuUI, true);
+        }
+
+        public void HideMainMenu()
+        {
+            SetUIActive(mainMenuUI, false);
+        }
+
+        public void ShowLoadingScreen()
+        {
+            HideAllUI();
+            SetUIActive(loadingScreenUI, true);
+            UpdateLoadingProgress(0f);
+        }
+
+        public void HideLoadingScreen()
+        {
+            SetUIActive(loadingScreenUI, false);
+        }
+
+        public void UpdateLoadingProgress(float progress)
+        {
+            if (loadingProgressBar != null)
+                loadingProgressBar.value = progress;
+
+            if (loadingText != null)
+                loadingText.text = $"Loading... {progress * 100:F0}%";
+        }
+
+        public void ShowIngameUI()
+        {
+            HideAllUI();
+            SetUIActive(ingameUI, true);
+        }
+
+        public void ShowPauseMenu()
+        {
+            SetUIActive(pauseMenuUI, true);
+        }
+
+        public void HidePauseMenu()
+        {
+            SetUIActive(pauseMenuUI, false);
+        }
+
+        public void ShowInGameMenu()
+        {
+            SetUIActive(inGameMenuUI, true);
+        }
+
+        public void HideInGameMenu()
+        {
+            SetUIActive(inGameMenuUI, false);
+        }
+
+        public void ShowLobby()
+        {
+            HideAllUI();
+            SetUIActive(lobbyUI, true);
+        }
+
+        public void HideLobby()
+        {
+            SetUIActive(lobbyUI, false);
+        }
+
+        #endregion
+
+        #region 공개 API 메서드들
+
+        /// <summary>
+        /// 게임 시작
+        /// </summary>
+        public void StartGame()
+        {
+            TriggerEvent(GameEventType.StartGame);
+        }
+
+        /// <summary>
+        /// 게임 일시정지
+        /// </summary>
+        public void PauseGame()
+        {
+            TriggerEvent(GameEventType.PauseGame);
+        }
+
+        /// <summary>
+        /// 게임 재개
+        /// </summary>
+        public void ResumeGame()
+        {
+            TriggerEvent(GameEventType.ResumeGame);
+        }
+
+        /// <summary>
+        /// 메인 메뉴로 이동
+        /// </summary>
+        public void GoToMainMenu()
+        {
+            TriggerEvent(GameEventType.GoToMain);
+        }
+
+        /// <summary>
+        /// 로비로 이동
+        /// </summary>
+        public void GoToLobby()
+        {
+            TriggerEvent(GameEventType.GoToLobby);
+        }
+
+        /// <summary>
+        /// 인게임 메뉴 열기
+        /// </summary>
+        public void OpenInGameMenu()
+        {
+            TriggerEvent(GameEventType.OpenMenu);
+        }
+
+        /// <summary>
+        /// 인게임 메뉴 닫기
+        /// </summary>
+        public void CloseInGameMenu()
+        {
+            TriggerEvent(GameEventType.CloseMenu);
+        }
+
+        #endregion
+
+        private void OnDestroy()
+        {
+            if (stateMachine != null)
+            {
+                stateMachine.OnStateChanged -= OnGameStateChanged;
+            }
+        }
+
+        // 디버그용 메서드들
+        [ContextMenu("Debug - Go to Main")]
+        private void DebugGoToMain() => TransitionTo(GameStateType.Main);
+
+        [ContextMenu("Debug - Start Game")]
+        private void DebugStartGame() => StartGame();
+
+        [ContextMenu("Debug - Pause Game")]
+        private void DebugPauseGame() => PauseGame();
+
+        [ContextMenu("Debug - Resume Game")]
+        private void DebugResumeGame() => ResumeGame();
+    }
+}
