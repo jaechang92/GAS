@@ -51,7 +51,7 @@ namespace GameFlow
             Debug.Log("1. GameFlow 매니저 생성 테스트 시작");
 
             // GameFlow 매니저가 이미 있는지 확인
-            gameFlowManager = FindObjectOfType<GameFlowManager>();
+            gameFlowManager = Object.FindAnyObjectByType<GameFlowManager>();
 
             if (gameFlowManager == null)
             {

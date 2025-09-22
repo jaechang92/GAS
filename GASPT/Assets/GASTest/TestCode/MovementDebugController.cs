@@ -1,41 +1,41 @@
 // ===================================
-// ÆÄÀÏ: Assets/Scripts/Ability/Debug/MovementDebugController.cs
+// íŒŒì¼: Assets/Scripts/Ability/Debug/MovementDebugController.cs
 // ===================================
 using TMPro;
 using UnityEditor.ShaderGraph;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace AbilitySystem.Platformer
+namespace AbilitySystemDebug.Platformer
 {
     /// <summary>
-    /// ÇÃ·¹ÀÌ¾î ÀÌµ¿ ¹®Á¦ Áø´Ü¿ë µğ¹ö±× ÄÁÆ®·Ñ·¯
+    /// í”Œë ˆì´ì–´ ì´ë™ í…ŒìŠ¤íŠ¸ ë””ë²„ê·¸ìš© ì»¨íŠ¸ë¡¤ëŸ¬
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MovementDebugController : MonoBehaviour
     {
-        [Header("===== µğ¹ö±× Á¤º¸ =====")]
+        [Header("===== ë””ë²„ê·¸ ì„¤ì • =====")]
         [SerializeField] private bool showDebugInfo = true;
         [SerializeField] private bool useAlternativeInput = false;
 
-        [Header("ÄÄÆ÷³ÍÆ® Ã¼Å©")]
+        [Header("ì»´í¬ë„ŒíŠ¸ ì²´í¬")]
         [SerializeField] private bool hasPlayerInput;
         [SerializeField] private bool hasRigidbody2D;
         [SerializeField] private bool inputActionsAssigned;
         [SerializeField] private bool moveActionFound;
 
-        [Header("ÀÔ·Â »óÅÂ")]
+        [Header("ì…ë ¥ ìƒíƒœ")]
         [SerializeField] private Vector2 currentMoveInput;
         [SerializeField] private Vector2 rawInputValue;
         [SerializeField] private bool isReceivingInput;
         [SerializeField] private string lastInputTime;
 
-        [Header("ÀÌµ¿ »óÅÂ")]
+        [Header("ì´ë™ ìƒíƒœ")]
         [SerializeField] private Vector2 currentVelocity;
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private bool isMoving;
 
-        [Header("ÄÄÆ÷³ÍÆ® ÂüÁ¶")]
+        [Header("ì»´í¬ë„ŒíŠ¸ ì°¸ì¡°")]
         private AbilityInputActions inputActions;
         private PlayerInput playerInput;
         private InputAction moveAction;
@@ -51,33 +51,33 @@ namespace AbilitySystem.Platformer
 
         private void Awake()
         {
-            Debug.Log("=== MovementDebugController ½ÃÀÛ ===");
+            Debug.Log("=== MovementDebugController ì‹œì‘ ===");
 
             inputActions = new AbilityInputActions();
 
 
 
-            // Rigidbody2D Ã¼Å©
+            // Rigidbody2D ì²´í¬
             rb = GetComponent<Rigidbody2D>();
             hasRigidbody2D = rb != null;
             if (!hasRigidbody2D)
             {
-                Debug.LogError(" Rigidbody2D°¡ ¾ø½À´Ï´Ù!");
+                Debug.LogError(" Rigidbody2Dê°€ ì—†ìŠµë‹ˆë‹¤!");
                 rb = gameObject.AddComponent<Rigidbody2D>();
                 rb.gravityScale = 2f;
                 rb.freezeRotation = true;
-                Debug.Log("V Rigidbody2D ÀÚµ¿ Ãß°¡µÊ");
+                Debug.Log("V Rigidbody2D ìë™ ì¶”ê°€ë¨");
             }
 
-            // PlayerInput Ã¼Å©
+            // PlayerInput ì²´í¬
             playerInput = GetComponent<PlayerInput>();
             hasPlayerInput = playerInput != null;
 
             if (!hasPlayerInput)
             {
-                Debug.LogError("X PlayerInput ÄÄÆ÷³ÍÆ®°¡ ¾ø½À´Ï´Ù!");
+                Debug.LogError("X PlayerInput ì»´í¬ë„ŒíŠ¸ê°€ ì—†ìŠµë‹ˆë‹¤!");
                 playerInput = gameObject.AddComponent<PlayerInput>();
-                Debug.Log("V PlayerInput ÀÚµ¿ Ãß°¡µÊ - Input Actions AssetÀ» ÇÒ´çÇØÁÖ¼¼¿ä!");
+                Debug.Log("V PlayerInput ìë™ ì¶”ê°€ë¨ - Input Actions Assetì„ í• ë‹¹í•´ì£¼ì„¸ìš”!");
             }
 
             SetupDebugUI();
@@ -87,12 +87,12 @@ namespace AbilitySystem.Platformer
         {
             SetupInput();
 
-            // ÄÄÆ÷³ÍÆ® »óÅÂ ·Î±×
+            // ì»´í¬ë„ŒíŠ¸ ìƒíƒœ ë¡œê·¸
             LogComponentStatus();
         }
 
         /// <summary>
-        /// ÀÔ·Â ½Ã½ºÅÛ ¼³Á¤
+        /// ì…ë ¥ ì‹œìŠ¤í…œ ì„¤ì •
         /// </summary>
         private void SetupInput()
         {
@@ -100,7 +100,7 @@ namespace AbilitySystem.Platformer
             {
                 inputActionsAssigned = true;
 
-                // Move ¾×¼Ç Ã£±â (¿©·¯ °æ·Î ½Ãµµ)
+                // Move ì•¡ì…˜ ì°¾ê¸° (ì—¬ëŸ¬ ê²½ë¡œ ì‹œë„)
                 string[] possiblePaths = {
                     "Player/Move",
                     "Gameplay/Move",
@@ -115,13 +115,13 @@ namespace AbilitySystem.Platformer
                     if (moveAction != null)
                     {
                         moveActionFound = true;
-                        Debug.Log($"V Move ¾×¼ÇÀ» Ã£¾Ò½À´Ï´Ù: {path}");
+                        Debug.Log($"V Move ì•¡ì…˜ì„ ì°¾ì•˜ìŠµë‹ˆë‹¤: {path}");
 
-                        // Äİ¹é µî·Ï
+                        // ì½œë°± ì„¤ì •
                         moveAction.performed += OnMovePerformed;
                         moveAction.canceled += OnMoveCanceled;
 
-                        // ¾×¼Ç È°¼ºÈ­
+                        // ì•¡ì…˜ í™œì„±í™”
                         moveAction.Enable();
                         break;
                     }
@@ -129,35 +129,35 @@ namespace AbilitySystem.Platformer
 
                 if (!moveActionFound)
                 {
-                    Debug.LogError("X Move ¾×¼ÇÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù! Action MapÀ» È®ÀÎÇÏ¼¼¿ä.");
-                    Debug.Log("½ÃµµÇÑ °æ·Îµé: " + string.Join(", ", possiblePaths));
+                    Debug.LogError("X Move ï¿½×¼ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½! Action Mapï¿½ï¿½ È®ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½.");
+                    Debug.Log("ï¿½Ãµï¿½ï¿½ï¿½ ï¿½ï¿½Îµï¿½: " + string.Join(", ", possiblePaths));
                 }
 
-                // ÀüÃ¼ ¾×¼Ç ¸Ê È°¼ºÈ­
+                // ï¿½ï¿½Ã¼ ï¿½×¼ï¿½ ï¿½ï¿½ È°ï¿½ï¿½È­
                 playerInput.ActivateInput();
 
-                // ÇöÀç ¾×¼Ç ¸Ê Á¤º¸ Ãâ·Â
-                Debug.Log($"ÇöÀç Action Map: {playerInput.currentActionMap?.name ?? "¾øÀ½"}");
+                // ï¿½ï¿½ï¿½ï¿½ ï¿½×¼ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+                Debug.Log($"ï¿½ï¿½ï¿½ï¿½ Action Map: {playerInput.currentActionMap?.name ?? "ï¿½ï¿½ï¿½ï¿½"}");
 
-                // ¸ğµç ¾×¼Ç Ãâ·Â
+                // ï¿½ï¿½ï¿½ ï¿½×¼ï¿½ ï¿½ï¿½ï¿½
                 if (playerInput.actions != null)
                 {
-                    Debug.Log("=== »ç¿ë °¡´ÉÇÑ ¸ğµç ¾×¼Ç ===");
+                    Debug.Log("=== ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½×¼ï¿½ ===");
                     foreach (var action in playerInput.actions)
                     {
-                        Debug.Log($"- {action.name} (°æ·Î: {action.actionMap?.name}/{action.name})");
+                        Debug.Log($"- {action.name} (ï¿½ï¿½ï¿½: {action.actionMap?.name}/{action.name})");
                     }
                 }
             }
             else
             {
                 inputActionsAssigned = false;
-                Debug.LogError("X Input Actions AssetÀÌ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù!");
+                Debug.LogError("X Input Actions Assetï¿½ï¿½ ï¿½Ò´ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò½ï¿½ï¿½Ï´ï¿½!");
             }
         }
 
         /// <summary>
-        /// ÀÌµ¿ ÀÔ·Â ¹ŞÀ½
+        /// ï¿½Ìµï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         private void OnMovePerformed(InputAction.CallbackContext context)
         {
@@ -170,7 +170,7 @@ namespace AbilitySystem.Platformer
         }
 
         /// <summary>
-        /// ÀÌµ¿ ÀÔ·Â ÇØÁ¦
+        /// ï¿½Ìµï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         private void OnMoveCanceled(InputAction.CallbackContext context)
         {
@@ -178,14 +178,14 @@ namespace AbilitySystem.Platformer
             currentMoveInput = Vector2.zero;
             isReceivingInput = false;
 
-            Debug.Log(" Move Input ÇØÁ¦");
+            Debug.Log(" Move Input ï¿½ï¿½ï¿½ï¿½");
         }
 
         public Vector2 actionValueDebug;
 
         private void Update()
         {
-            //// ´ëÃ¼ ÀÔ·Â ½Ã½ºÅÛ (Å×½ºÆ®¿ë)
+            //// ï¿½ï¿½Ã¼ ï¿½Ô·ï¿½ ï¿½Ã½ï¿½ï¿½ï¿½ (ï¿½×½ï¿½Æ®ï¿½ï¿½)
             //if (useAlternativeInput || !moveActionFound)
             //{
             //    float horizontal = Input.GetAxisRaw("Horizontal");
@@ -199,7 +199,7 @@ namespace AbilitySystem.Platformer
             //    }
             //}
 
-            //// Input SystemÀ¸·Î Á÷Á¢ ÀĞ±â ½Ãµµ
+            //// Input Systemï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ğ±ï¿½ ï¿½Ãµï¿½
             //if (moveAction != null && moveAction.enabled)
             //{
             //    Vector2 actionValue = moveAction.ReadValue<Vector2>();
@@ -222,35 +222,35 @@ namespace AbilitySystem.Platformer
         {
             if (rb != null)
             {
-                // ÀÌµ¿ Ã³¸®
+                // ï¿½Ìµï¿½ Ã³ï¿½ï¿½
                 Vector2 targetVelocity = new Vector2(currentMoveInput.x * moveSpeed, rb.linearVelocityY);
                 rb.linearVelocity = targetVelocity;
 
                 currentVelocity = rb.linearVelocity;
                 isMoving = Mathf.Abs(currentVelocity.x) > 0.1f;
 
-                // ÀÌµ¿ ·Î±× (½ºÆÔ ¹æÁö¸¦ À§ÇØ ½ÇÁ¦ ÀÌµ¿ ½Ã¿¡¸¸)
-                if (isMoving && Time.frameCount % 30 == 0) // 0.5ÃÊ¸¶´Ù
+                // ï¿½Ìµï¿½ ï¿½Î±ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½Ã¿ï¿½ï¿½ï¿½)
+                if (isMoving && Time.frameCount % 30 == 0) // 0.5ï¿½Ê¸ï¿½ï¿½ï¿½
                 {
-                    Debug.Log($" ÀÌµ¿ Áß: ¼Óµµ={currentVelocity}, ÀÔ·Â={currentMoveInput}");
+                    Debug.Log($" ï¿½Ìµï¿½ ï¿½ï¿½: ï¿½Óµï¿½={currentVelocity}, ï¿½Ô·ï¿½={currentMoveInput}");
                 }
             }
         }
 
         /// <summary>
-        /// ÄÄÆ÷³ÍÆ® »óÅÂ ·Î±×
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ ï¿½Î±ï¿½
         /// </summary>
         private void LogComponentStatus()
         {
-            Debug.Log("=== ÄÄÆ÷³ÍÆ® »óÅÂ Ã¼Å© ===");
+            Debug.Log("=== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ Ã¼Å© ===");
             Debug.Log($"PlayerInput: {(hasPlayerInput ? "V" : "X")}");
             Debug.Log($"Rigidbody2D: {(hasRigidbody2D ? "V" : "X")}");
-            Debug.Log($"Input Actions ÇÒ´ç: {(inputActionsAssigned ? "V" : "X")}");
-            Debug.Log($"Move Action Ã£À½: {(moveActionFound ? "V" : "X")}");
+            Debug.Log($"Input Actions ï¿½Ò´ï¿½: {(inputActionsAssigned ? "V" : "X")}");
+            Debug.Log($"Move Action Ã£ï¿½ï¿½: {(moveActionFound ? "V" : "X")}");
 
             if (rb != null)
             {
-                Debug.Log($"Rigidbody2D ¼³Á¤:");
+                Debug.Log($"Rigidbody2D ï¿½ï¿½ï¿½ï¿½:");
                 Debug.Log($"- Gravity Scale: {rb.gravityScale}");
                 Debug.Log($"- Is Kinematic: {rb.bodyType}");
                 Debug.Log($"- Freeze Rotation: {rb.freezeRotation}");
@@ -260,7 +260,7 @@ namespace AbilitySystem.Platformer
         }
 
         /// <summary>
-        /// µğ¹ö±× UI »ı¼º
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         private void SetupDebugUI()
         {
@@ -302,40 +302,40 @@ namespace AbilitySystem.Platformer
         }
 
         /// <summary>
-        /// µğ¹ö±× UI ¾÷µ¥ÀÌÆ®
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
         /// </summary>
         private void UpdateDebugUI()
         {
             if (debugText == null) return;
 
-            string info = "=== ÀÌµ¿ µğ¹ö±× Á¤º¸ ===\n\n";
+            string info = "=== ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ===\n\n";
 
-            info += "[ÄÄÆ÷³ÍÆ® »óÅÂ]\n";
+            info += "[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½]\n";
             info += $"PlayerInput: {(hasPlayerInput ? "V" : "X")}\n";
             info += $"Rigidbody2D: {(hasRigidbody2D ? "V" : "X")}\n";
             info += $"Input Actions: {(inputActionsAssigned ? "V" : "X")}\n";
             info += $"Move Action: {(moveActionFound ? "V" : "X")}\n\n";
 
-            info += "[ÀÔ·Â Á¤º¸]\n";
-            info += $"ÇöÀç ÀÔ·Â: {currentMoveInput}\n";
-            info += $"Raw ÀÔ·Â: {rawInputValue}\n";
-            info += $"ÀÔ·Â ¹Ş´Â Áß: {(isReceivingInput ? "¿¹" : "¾Æ´Ï¿À")}\n";
-            info += $"¸¶Áö¸· ÀÔ·Â: {lastInputTime}\n";
-            info += $"´ëÃ¼ ÀÔ·Â: {(useAlternativeInput ? "»ç¿ë" : "¹Ì»ç¿ë")}\n\n";
+            info += "[ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½]\n";
+            info += $"ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½: {currentMoveInput}\n";
+            info += $"Raw ï¿½Ô·ï¿½: {rawInputValue}\n";
+            info += $"ï¿½Ô·ï¿½ ï¿½Ş´ï¿½ ï¿½ï¿½: {(isReceivingInput ? "ï¿½ï¿½" : "ï¿½Æ´Ï¿ï¿½")}\n";
+            info += $"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½: {lastInputTime}\n";
+            info += $"ï¿½ï¿½Ã¼ ï¿½Ô·ï¿½: {(useAlternativeInput ? "ï¿½ï¿½ï¿½" : "ï¿½Ì»ï¿½ï¿½")}\n\n";
 
-            info += "[ÀÌµ¿ Á¤º¸]\n";
-            info += $"ÇöÀç ¼Óµµ: {currentVelocity}\n";
-            info += $"ÀÌµ¿ ¼Óµµ: {moveSpeed}\n";
-            info += $"ÀÌµ¿ Áß: {(isMoving ? "¿¹" : "¾Æ´Ï¿À")}\n\n";
+            info += "[ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½]\n";
+            info += $"ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½: {currentVelocity}\n";
+            info += $"ï¿½Ìµï¿½ ï¿½Óµï¿½: {moveSpeed}\n";
+            info += $"ï¿½Ìµï¿½ ï¿½ï¿½: {(isMoving ? "ï¿½ï¿½" : "ï¿½Æ´Ï¿ï¿½")}\n\n";
 
-            info += "[Á¶ÀÛ¹ı]\n";
-            info += "ÀÌµ¿: A/D ¶Ç´Â ¡ç/¡æ\n";
-            info += "Á¡ÇÁ: Space (º°µµ ±¸Çö ÇÊ¿ä)\n";
+            info += "[ï¿½ï¿½ï¿½Û¹ï¿½]\n";
+            info += "ï¿½Ìµï¿½: A/D ï¿½Ç´ï¿½ ï¿½ï¿½/ï¿½ï¿½\n";
+            info += "ï¿½ï¿½ï¿½ï¿½: Space (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½)\n";
 
             if (!moveActionFound)
             {
-                info += "\n<color=red>! Move ActionÀ» Ã£À» ¼ö ¾øÀ½!</color>\n";
-                info += "<color=yellow>Legacy Input »ç¿ë Áß...</color>";
+                info += "\n<color=red>! Move Actionï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½!</color>\n";
+                info += "<color=yellow>Legacy Input ï¿½ï¿½ï¿½ ï¿½ï¿½...</color>";
             }
 
             debugText.text = info;
@@ -350,7 +350,7 @@ namespace AbilitySystem.Platformer
                 inputActions.Player.Move.canceled -= OnMoveCanceled;
 
             }
-            // Äİ¹é Á¤¸®
+            // ï¿½İ¹ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (moveAction != null)
             {
                 moveAction.performed -= OnMovePerformed;
@@ -359,27 +359,27 @@ namespace AbilitySystem.Platformer
         }
 
         /// <summary>
-        /// °­Á¦ ÀÌµ¿ Å×½ºÆ®
+        /// ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½×½ï¿½Æ®
         /// </summary>
         [ContextMenu("Force Move Right")]
         public void ForceTestMoveRight()
         {
             currentMoveInput = Vector2.right;
-            Debug.Log("°­Á¦ ÀÌµ¿ Å×½ºÆ®: ¿À¸¥ÂÊ");
+            Debug.Log("ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½×½ï¿½Æ®: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½");
         }
 
         [ContextMenu("Force Move Left")]
         public void ForceTestMoveLeft()
         {
             currentMoveInput = Vector2.left;
-            Debug.Log("°­Á¦ ÀÌµ¿ Å×½ºÆ®: ¿ŞÂÊ");
+            Debug.Log("ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½×½ï¿½Æ®: ï¿½ï¿½ï¿½ï¿½");
         }
 
         [ContextMenu("Stop Movement")]
         public void StopMovement()
         {
             currentMoveInput = Vector2.zero;
-            Debug.Log("ÀÌµ¿ Á¤Áö");
+            Debug.Log("ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½");
         }
     }
 }

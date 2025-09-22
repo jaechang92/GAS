@@ -36,7 +36,7 @@ namespace GameFlow
         private void InitializeTestUI()
         {
             if (gameFlowManager == null)
-                gameFlowManager = FindObjectOfType<GameFlowManager>();
+                gameFlowManager = Object.FindAnyObjectByType<GameFlowManager>();
 
             // 버튼 이벤트 연결
             if (startGameButton != null)
