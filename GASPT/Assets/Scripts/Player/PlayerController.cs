@@ -404,11 +404,7 @@ namespace Player
         /// </summary>
         private void DrawDebugInfo()
         {
-            if (groundCheck != null)
-            {
-                Debug.DrawWireSphere(groundCheck.position, groundCheckRadius, isGrounded ? Color.green : Color.red);
-            }
-
+            // Scene 뷰에서만 보이는 Gizmo는 OnDrawGizmosSelected에서 처리
             if (wallCheck != null)
             {
                 Vector3 wallPos = wallCheck.position + Vector3.right * wallCheckDistance * facingDirection;

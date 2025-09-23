@@ -19,6 +19,7 @@ namespace FSM.Core
 
         private Dictionary<string, IState> states = new Dictionary<string, IState>();
         private List<ITransition> transitions = new List<ITransition>();
+        private Dictionary<string, bool> eventTriggers = new Dictionary<string, bool>();
 
         private IState currentState;
         private CancellationTokenSource cancellationTokenSource;
@@ -149,6 +150,44 @@ namespace FSM.Core
 
             if (enableDebugLog)
                 Debug.Log($"[FSM] Added transition: {transition.FromStateId} -> {transition.ToStateId}");
+        }
+
+        /// <summary>
+        /// 이벤트 기반 전환 추가 (편의 메서드)
+        /// </summary>
+        public void AddTransition(string fromStateId, string toStateId, string eventId, int priority = 0)
+        {
+            var transition = new EventBasedTransition($"{fromStateId}_{toStateId}_{eventId}", fromStateId, toStateId, eventId, this, priority);
+            AddTransition(transition);
+        }
+
+        /// <summary>
+        /// 이벤트 트리거
+        /// </summary>
+        public void TriggerEvent(string eventId)
+        {
+            eventTriggers[eventId] = true;
+        }
+
+        /// <summary>
+        /// 이벤트 상태 확인
+        /// </summary>
+        public bool IsEventTriggered(string eventId)
+        {
+            return eventTriggers.TryGetValue(eventId, out bool triggered) && triggered;
+        }
+
+        /// <summary>
+        /// 이벤트 소비 (한 번 확인 후 리셋)
+        /// </summary>
+        public bool ConsumeEvent(string eventId)
+        {
+            if (eventTriggers.TryGetValue(eventId, out bool triggered) && triggered)
+            {
+                eventTriggers[eventId] = false;
+                return true;
+            }
+            return false;
         }
 
         public void RemoveTransition(ITransition transition)

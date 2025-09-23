@@ -65,4 +65,24 @@ namespace FSM.Core
             return conditionFunc?.Invoke() ?? false;
         }
     }
+
+    public class EventBasedTransition : Transition
+    {
+        private readonly string eventId;
+        private readonly StateMachine stateMachine;
+
+        public EventBasedTransition(string id, string fromStateId, string toStateId,
+            string eventId, StateMachine stateMachine, int priority = 0)
+            : base(id, fromStateId, toStateId, priority)
+        {
+            this.eventId = eventId;
+            this.stateMachine = stateMachine;
+        }
+
+        public override bool CanTransition()
+        {
+            if (!IsEnabled) return false;
+            return stateMachine?.ConsumeEvent(eventId) ?? false;
+        }
+    }
 }
