@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using FSM.Core.Utils;
 
@@ -14,6 +13,11 @@ namespace FSM.Core
         [SerializeField] private bool enableDebugLog = true;
         [SerializeField] private string initialStateId;
 
+        [Header("상태 정보 (읽기 전용)")]
+        [SerializeField] private string currentStateDisplay = "None";
+        [SerializeField] private string previousStateDisplay = "None";
+        [SerializeField] private float stateChangeTime = 0f;
+
         [Header("Inspector 헬퍼 (읽기 전용)")]
         [SerializeField] private StateMachineInspectorHelper inspectorHelper = new StateMachineInspectorHelper();
 
@@ -22,9 +26,11 @@ namespace FSM.Core
         private Dictionary<string, bool> eventTriggers = new Dictionary<string, bool>();
 
         private IState currentState;
+        private string previousStateId = string.Empty;
         private CancellationTokenSource cancellationTokenSource;
 
         public string CurrentStateId => currentState?.Id ?? string.Empty;
+        public string PreviousStateId => previousStateId;
         public IState CurrentState => currentState;
         public bool IsRunning { get; private set; }
 
@@ -58,27 +64,24 @@ namespace FSM.Core
                 CheckTransitions();
             }
 
-            // Inspector 헬퍼 업데이트 (에디터에서만)
-            #if UNITY_EDITOR
-            if (Application.isPlaying)
-            {
-                inspectorHelper.UpdateFromStateMachine(this);
-            }
-            #endif
+#if UNITY_EDITOR
+            // Inspector 헬퍼 업데이트
+            UpdateInspectorDisplay();
+            inspectorHelper.UpdateFromStateMachine(this);
+#endif
         }
 
         private void CheckTransitions()
         {
-            var availableTransitions = transitions
-                .Where(t => t.IsEnabled && t.FromStateId == CurrentStateId)
-                .OrderByDescending(t => t.Priority);
-
-            foreach (var transition in availableTransitions)
+            // 성능 최적화: for 루프 사용 및 어로케이션 최소화
+            var currentStateId = CurrentStateId;
+            for (int i = transitions.Count - 1; i >= 0; i--)
             {
-                if (transition.CanTransition())
+                var transition = transitions[i];
+                if (transition.IsEnabled && transition.FromStateId == currentStateId && transition.CanTransition())
                 {
                     _ = TransitionToAsync(transition);
-                    break;
+                    return;
                 }
             }
         }
@@ -96,20 +99,20 @@ namespace FSM.Core
             states[state.Id] = state;
 
             if (enableDebugLog)
-                Debug.Log($"[FSM] Added state: {state.Id}");
+                Debug.Log($"[FSM] 상태 추가됨: {state.Id}");
         }
 
         public void RemoveState(string stateId)
         {
             if (states.TryGetValue(stateId, out var state))
             {
-                // ���� ���¶�� ���� ó��
+                // 현재 상태라면 정리 처리
                 if (CurrentStateId == stateId && IsRunning)
                 {
                     Stop();
                 }
 
-                // ���� ��ȯ ����
+                // 관련 전환 제거
                 var relatedTransitions = transitions
                     .Where(t => t.FromStateId == stateId || t.ToStateId == stateId)
                     .ToList();
@@ -122,7 +125,7 @@ namespace FSM.Core
                 states.Remove(stateId);
 
                 if (enableDebugLog)
-                    Debug.Log($"[FSM] Removed state: {stateId}");
+                    Debug.Log($"[FSM] 상태 제거됨: {stateId}");
             }
         }
 
@@ -142,14 +145,14 @@ namespace FSM.Core
 
             if (!HasState(transition.FromStateId) || !HasState(transition.ToStateId))
             {
-                Debug.LogWarning($"[FSM] Cannot add transition: States {transition.FromStateId} or {transition.ToStateId} do not exist");
+                Debug.LogWarning($"[FSM] 전환 추가 실패: 상태 {transition.FromStateId} 또는 {transition.ToStateId}가 존재하지 않음");
                 return;
             }
 
             transitions.Add(transition);
 
             if (enableDebugLog)
-                Debug.Log($"[FSM] Added transition: {transition.FromStateId} -> {transition.ToStateId}");
+                Debug.Log($"[FSM] 전환 추가됨: {transition.FromStateId} -> {transition.ToStateId}");
         }
 
         /// <summary>
@@ -167,6 +170,12 @@ namespace FSM.Core
         public void TriggerEvent(string eventId)
         {
             eventTriggers[eventId] = true;
+
+            // TouchGround 이벤트 디버깅
+            if (enableDebugLog && eventId == "TouchGround")
+            {
+                Debug.Log($"[FSM] TouchGround 이벤트 발생! 현재 상태: {CurrentStateId}");
+            }
         }
 
         /// <summary>
@@ -195,7 +204,7 @@ namespace FSM.Core
             if (transitions.Remove(transition))
             {
                 if (enableDebugLog)
-                    Debug.Log($"[FSM] Removed transition: {transition.FromStateId} -> {transition.ToStateId}");
+                    Debug.Log($"[FSM] 전환 제거됨: {transition.FromStateId} -> {transition.ToStateId}");
             }
         }
 
@@ -203,30 +212,40 @@ namespace FSM.Core
         {
             if (!HasState(stateId) || !IsRunning) return false;
 
-            return transitions.Any(t =>
-                t.IsEnabled &&
-                t.FromStateId == CurrentStateId &&
-                t.ToStateId == stateId &&
-                t.CanTransition());
+            var currentStateId = CurrentStateId;
+            for (int i = 0; i < transitions.Count; i++)
+            {
+                var t = transitions[i];
+                if (t.IsEnabled && t.FromStateId == currentStateId && t.ToStateId == stateId && t.CanTransition())
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool TryTransitionTo(string stateId)
         {
-            if (!CanTransitionTo(stateId)) return false;
+            if (!HasState(stateId) || !IsRunning) return false;
 
-            var transition = transitions.First(t =>
-                t.FromStateId == CurrentStateId &&
-                t.ToStateId == stateId);
-
-            _ = TransitionToAsync(transition);
-            return true;
+            var currentStateId = CurrentStateId;
+            for (int i = 0; i < transitions.Count; i++)
+            {
+                var transition = transitions[i];
+                if (transition.IsEnabled && transition.FromStateId == currentStateId && transition.ToStateId == stateId && transition.CanTransition())
+                {
+                    _ = TransitionToAsync(transition);
+                    return true;
+                }
+            }
+            return false;
         }
 
         public void ForceTransitionTo(string stateId)
         {
             if (!HasState(stateId))
             {
-                Debug.LogWarning($"[FSM] Cannot force transition to {stateId}: State does not exist");
+                Debug.LogWarning($"[FSM] {stateId}로 강제 전환 실패: 상태가 존재하지 않음");
                 return;
             }
 
@@ -245,7 +264,7 @@ namespace FSM.Core
 
             if (string.IsNullOrEmpty(targetStateId))
             {
-                Debug.LogWarning("[FSM] Cannot start: No states available");
+                Debug.LogWarning("[FSM] 시작할 수 없음: 사용 가능한 상태가 없음");
                 return;
             }
 
@@ -254,7 +273,7 @@ namespace FSM.Core
             OnStarted?.Invoke();
 
             if (enableDebugLog)
-                Debug.Log($"[FSM] Started with initial state: {targetStateId}");
+                Debug.Log($"[FSM] 초기 상태로 시작됨: {targetStateId}");
         }
 
         public void Stop()
@@ -265,8 +284,11 @@ namespace FSM.Core
             _ = ExitCurrentStateAsync();
             OnStopped?.Invoke();
 
+            // 중지 시 이전 상태도 리셋
+            previousStateId = string.Empty;
+
             if (enableDebugLog)
-                Debug.Log("[FSM] Stopped");
+                Debug.Log("[FSM] 중지됨");
         }
 
         private async Awaitable TransitionToAsync(ITransition transition)
@@ -277,43 +299,48 @@ namespace FSM.Core
             await ChangeStateAsync(transition.ToStateId);
 
             OnTransitionCompleted?.Invoke(transition);
-            //transition.OnTransitionTriggered?.Invoke(transition);
 
             if (enableDebugLog)
-                Debug.Log($"[FSM] Transition completed: {fromStateId} -> {transition.ToStateId}");
+                Debug.Log($"[FSM] 전환 완료: {fromStateId} -> {transition.ToStateId}");
         }
 
-        private async Task ChangeStateAsync(string newStateId)
+        private async Awaitable ChangeStateAsync(string newStateId)
         {
             if (!states.TryGetValue(newStateId, out var newState))
             {
-                Debug.LogWarning($"[FSM] State {newStateId} not found");
+                Debug.LogWarning($"[FSM] 상태 {newStateId}를 찾을 수 없음");
                 return;
             }
 
-            var previousStateId = CurrentStateId;
+            var oldStateId = CurrentStateId;
 
-            // ���� ���� ����
+            // 현재 상태 종료
             await ExitCurrentStateAsync();
 
-            // �� ���� ����
+            // 이전 상태 업데이트
+            previousStateId = oldStateId;
+
+            // 새 상태 진입
             currentState = newState;
             try
             {
                 await currentState.OnEnter(cancellationTokenSource.Token);
-                OnStateChanged?.Invoke(previousStateId, newStateId);
+                OnStateChanged?.Invoke(oldStateId, newStateId);
+
+                // 상태 변경 시간 기록
+                stateChangeTime = Time.time;
 
                 if (enableDebugLog)
-                    Debug.Log($"[FSM] State changed: {previousStateId} -> {newStateId}");
+                    Debug.Log($"[FSM] 상태 변경됨: {oldStateId} -> {newStateId}");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[FSM] Error entering state {newStateId}: {e.Message}");
+                Debug.LogError($"[FSM] 상태 {newStateId} 진입 중 오류: {e.Message}");
                 currentState = null;
             }
         }
 
-        private async Task ExitCurrentStateAsync()
+        private async Awaitable ExitCurrentStateAsync()
         {
             if (currentState != null)
             {
@@ -323,7 +350,7 @@ namespace FSM.Core
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[FSM] Error exiting state {currentState.Id}: {e.Message}");
+                    Debug.LogError($"[FSM] 상태 {currentState.Id} 종료 중 오류: {e.Message}");
                 }
                 finally
                 {
@@ -331,6 +358,14 @@ namespace FSM.Core
                 }
             }
         }
+
+        #if UNITY_EDITOR
+        private void UpdateInspectorDisplay()
+        {
+            currentStateDisplay = string.IsNullOrEmpty(CurrentStateId) ? "None" : CurrentStateId;
+            previousStateDisplay = string.IsNullOrEmpty(previousStateId) ? "None" : previousStateId;
+        }
+        #endif
 
         private void OnDestroy()
         {

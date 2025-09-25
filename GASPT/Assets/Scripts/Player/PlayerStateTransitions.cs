@@ -172,15 +172,8 @@ namespace Player
 
         private static void SetupFallTransitions(StateMachine stateMachine)
         {
-            // Fall → Idle: 착지 + 정지
-            stateMachine.AddTransition(
-                PlayerStateType.Fall.ToString(),
-                PlayerStateType.Idle.ToString(),
-                PlayerEventType.TouchGround.ToString()
-            );
-
-            // Fall → Move: 착지 + 이동
-            // 조건부 전환은 상태 내부에서 처리
+            // Fall → Idle/Move: 착지 시 상태 전환
+            // Fall 상태 내부에서 입력 상태에 따라 직접 전환 처리
 
             // Fall → Jump: 코요테 타임 점프
             // 조건부 전환은 상태 내부에서 처리

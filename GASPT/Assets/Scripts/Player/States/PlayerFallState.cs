@@ -18,6 +18,9 @@ namespace Player
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
             LogStateDebug("낙하 상태 진입");
+            Debug.Log(playerController.PreviousState);
+            //UnityEditor.EditorApplication.isPaused = true;
+
 
             // 코요테 타임 초기화
             coyoteTimeCounter = coyoteTime;
@@ -34,6 +37,8 @@ namespace Player
 
         protected override void UpdateState(float deltaTime)
         {
+            // GroundChecker가 FixedUpdate에서 자동으로 지면 체크 수행
+
             // 코요테 타임 감소
             if (coyoteTimeCounter > 0)
             {
@@ -43,11 +48,13 @@ namespace Player
             // 공중 이동 처리
             HandleAirMovement();
 
-            // 강화된 중력 적용 (더 빠른 낙하)
-            ApplyGravity(2.5f);
+            // Fall 상태에서는 접지 상태와 관계없이 강화된 중력 적용 (강제 적용)
+            //playerController.ForceApplyGravity(2.5f);
 
-            // 최대 낙하 속도 제한
-            LimitFallSpeed();
+            ApplyGravity();
+
+            // 최대 낙하 속도 제한 (ForceApplyGravity에서 이미 처리되므로 제거)
+            // LimitFallSpeed(); // 제거됨
 
             // 상태 전환 체크
             CheckForStateTransitions();
@@ -55,43 +62,44 @@ namespace Player
 
         private void HandleAirMovement()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null) return;
 
-            // 공중에서의 이동 (지상보다 약간 느림)
+            // 공중에서의 이동 (커스텀 물리 사용)
             Vector2 input = playerController.GetInputVector();
-            Vector2 velocity = rb.linearVelocity;
+            float airMoveSpeed = playerController.AirMoveSpeed;
 
-            float airMoveSpeed = 6f; // 공중 이동 속도
-            float airAcceleration = 25f; // 공중 가속도 (Jump보다 약간 느림)
-
-            float targetVelocityX = input.x * airMoveSpeed;
-            velocity.x = Mathf.MoveTowards(velocity.x, targetVelocityX, airAcceleration * Time.fixedDeltaTime);
-
-            rb.linearVelocity = velocity;
+            // 커스텀 물리를 통한 공중 이동
+            playerController.SetHorizontalMovement(input.x, airMoveSpeed);
         }
 
         private void LimitFallSpeed()
         {
-            if (rb == null) return;
-
-            float maxFallSpeed = 20f; // 최대 낙하 속도
-
-            if (rb.linearVelocity.y < -maxFallSpeed)
-            {
-                Vector2 velocity = rb.linearVelocity;
-                velocity.y = -maxFallSpeed;
-                rb.linearVelocity = velocity;
-            }
+            // 최대 낙하 속도 제한은 PlayerController.ApplyGravity()에서 처리됨
+            // 여기서는 추가 제한 없이 기본 중력 시스템 사용
         }
 
         private void CheckForStateTransitions()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null) return;
 
-            // 땅에 착지하면 상태 전환
-            if (playerController.IsGrounded)
+            // 땅에 착지하면 상태 전환 (하강 중일 때만 진짜 착지)
+            if (playerController.IsGrounded && playerController.Velocity.y <= 0.1f)
             {
-                // TouchGround 이벤트에 의해 자동으로 Idle 또는 Move 상태로 전환됨
+                // 입력 상태에 따른 상태 전환 결정
+                Vector2 input = playerController.GetInputVector();
+
+                if (Mathf.Abs(input.x) > 0.1f)
+                {
+                    // 이동 입력이 있으면 Move 상태로
+                    LogStateDebug("착지 - Move 상태로 전환");
+                    StateMachine?.ForceTransitionTo(PlayerStateType.Move.ToString());
+                }
+                else
+                {
+                    // 이동 입력이 없으면 Idle 상태로
+                    LogStateDebug("착지 - Idle 상태로 전환");
+                    StateMachine?.ForceTransitionTo(PlayerStateType.Idle.ToString());
+                }
                 return;
             }
 
@@ -103,7 +111,7 @@ namespace Player
             }
 
             // 벽에 닿으면 Wall Grab 상태로 전환 (조건 확인)
-            if (playerController.IsTouchingWall && rb.linearVelocity.y < 0)
+            if (playerController.IsTouchingWall && playerController.Velocity.y < 0)
             {
                 Vector2 input = playerController.GetInputVector();
                 // 벽 방향으로 입력이 있을 때만 벽 잡기
