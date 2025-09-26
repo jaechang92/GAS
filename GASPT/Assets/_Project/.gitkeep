@@ -1,0 +1,12 @@
+# This file ensures the _Project directory structure is preserved in git
+# 이 파일은 _Project 디렉토리 구조가 git에서 보존되도록 합니다.
+
+# Project Folder Guidelines:
+# - Keep this folder clean and organized
+# - Follow the folder structure defined in FOLDER_STRUCTURE_GUIDE.md
+# - Only commit finalized assets and scripts
+
+# 프로젝트 폴더 가이드라인:
+# - 이 폴더를 깨끗하고 정리된 상태로 유지하세요
+# - FOLDER_STRUCTURE_GUIDE.md에 정의된 폴더 구조를 따르세요
+# - 완성된 에셋과 스크립트만 커밋하세요
