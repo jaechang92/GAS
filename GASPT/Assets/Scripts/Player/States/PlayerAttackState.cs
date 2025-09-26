@@ -31,11 +31,11 @@ namespace Player
             attackDamage = 25;
 
             // 공격 중 이동 제한
-            if (rb != null)
+            if (playerController != null)
             {
-                Vector2 velocity = rb.linearVelocity;
+                Vector2 velocity = playerController.Velocity;
                 velocity.x *= 0.5f; // 공격 중에는 이동 속도 감소
-                rb.linearVelocity = velocity;
+                playerController.SetVelocity(velocity);
             }
 
             // 공격 입력 리셋
@@ -151,17 +151,17 @@ namespace Player
 
         private void HandleLimitedMovement()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null || playerController == null) return;
 
             // 공격 중에도 약간의 이동 허용 (50% 속도)
             Vector2 input = playerController.GetInputVector();
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = playerController.Velocity;
 
             float limitedMoveSpeed = 4f; // 공격 중 이동 속도
             float targetVelocityX = input.x * limitedMoveSpeed;
 
             velocity.x = Mathf.MoveTowards(velocity.x, targetVelocityX, 20f * Time.fixedDeltaTime);
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         private void CompleteAttack()

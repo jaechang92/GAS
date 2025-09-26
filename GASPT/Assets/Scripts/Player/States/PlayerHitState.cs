@@ -66,24 +66,24 @@ namespace Player
 
         private void ApplyKnockback()
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
             // 넉백 방향 결정 (피격 방향의 반대)
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = playerController.Velocity;
             velocity.x = -playerController.FacingDirection * knockbackForce.x;
             velocity.y = knockbackForce.y;
 
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         private void HandleKnockbackDecay()
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
             // 넉백 속도 점진적 감소
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = playerController.Velocity;
             velocity.x = Mathf.MoveTowards(velocity.x, 0, 10f * Time.fixedDeltaTime);
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         private void ShowHitEffect()

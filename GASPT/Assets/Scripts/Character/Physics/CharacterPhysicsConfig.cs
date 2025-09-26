@@ -130,17 +130,12 @@ namespace Character.Physics
             return airControlMultiplier;
         }
 
-        // Skul 스타일에서는 중력 안 씀
+        // TODO: 향후 고급 물리 시스템 구현 시 사용 예정
+        // Skul 스타일에서는 중력을 사용하지 않지만, 향후 다른 물리 스타일 구현 시 활용 가능
         public float GetCurrentGravity(bool isFastFalling)
         {
             return 0f; // No gravity in Skul style
         }
 
-        // Inspector에서 버튼으로 프리셋 적용
-        [ContextMenu("Apply Skul Preset")]
-        private void ApplySkulPresetFromMenu()
-        {
-            ApplySkulPreset();
-        }
     }
 }

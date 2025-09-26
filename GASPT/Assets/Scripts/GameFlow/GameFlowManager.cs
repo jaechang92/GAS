@@ -143,6 +143,7 @@ namespace GameFlow
 
         #region UI 관리 메서드들
 
+        // TODO: 향후 상태 전환 시 UI 정리에 사용 예정
         private void HideAllUI()
         {
             SetUIActive(mainMenuUI, false);
@@ -153,6 +154,7 @@ namespace GameFlow
             SetUIActive(lobbyUI, false);
         }
 
+        // TODO: 향후 동적 UI 관리에 사용 예정
         private void SetUIActive(GameObject ui, bool active)
         {
             if (ui != null) ui.SetActive(active);
@@ -297,17 +299,5 @@ namespace GameFlow
             }
         }
 
-        // 디버그용 메서드들
-        [ContextMenu("Debug - Go to Main")]
-        private void DebugGoToMain() => TransitionTo(GameStateType.Main);
-
-        [ContextMenu("Debug - Start Game")]
-        private void DebugStartGame() => StartGame();
-
-        [ContextMenu("Debug - Pause Game")]
-        private void DebugPauseGame() => PauseGame();
-
-        [ContextMenu("Debug - Resume Game")]
-        private void DebugResumeGame() => ResumeGame();
     }
 }

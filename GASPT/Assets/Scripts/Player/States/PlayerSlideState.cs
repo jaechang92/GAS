@@ -34,11 +34,11 @@ namespace Player
             ModifyColliderForSlide();
 
             // 슬라이딩 시작
-            if (rb != null)
+            if (playerController != null)
             {
-                Vector2 velocity = rb.linearVelocity;
+                Vector2 velocity = playerController.Velocity;
                 velocity.x = slideSpeed * playerController.FacingDirection;
-                rb.linearVelocity = velocity;
+                playerController.SetVelocity(velocity);
             }
 
             // 슬라이딩 입력 리셋
@@ -134,22 +134,22 @@ namespace Player
 
         private void HandleSlideMovement()
         {
-            if (rb == null || playerController == null) return;
+            if (playerController == null || playerController == null) return;
 
             // 슬라이딩 속도 점진적 감소
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = playerController.Velocity;
 
             // 시간에 따른 속도 감소 (처음에는 빠르게, 나중에는 천천히)
             float speedDecay = Mathf.Lerp(1f, 0.3f, slideTime / slideDuration);
             float currentSlideSpeed = slideSpeed * speedDecay;
 
             velocity.x = currentSlideSpeed * playerController.FacingDirection;
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         private void CheckForStateTransitions()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null || playerController == null) return;
 
             // 슬라이딩 지속시간 완료
             if (slideTime >= slideDuration)
@@ -180,7 +180,7 @@ namespace Player
             }
 
             // 슬라이딩 속도가 너무 느려지면 종료
-            if (Mathf.Abs(rb.linearVelocity.x) < 2f)
+            if (Mathf.Abs(playerController.Velocity.x) < 2f)
             {
                 CompleteSlide();
                 return;

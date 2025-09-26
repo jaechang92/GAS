@@ -31,9 +31,9 @@ namespace Player
             wallJumpDuration = 0.3f;
 
             // 벽 점프 실행
-            if (rb != null)
+            if (playerController != null)
             {
-                Vector2 velocity = rb.linearVelocity;
+                Vector2 velocity = playerController.Velocity;
 
                 // 벽의 반대 방향으로 점프
                 int jumpDirection = -playerController.FacingDirection;
@@ -41,7 +41,7 @@ namespace Player
                 velocity.y = wallJumpForce;
                 velocity.x = wallJumpHorizontalForce * jumpDirection;
 
-                rb.linearVelocity = velocity;
+                playerController.SetVelocity(velocity);
             }
 
             // 점프 입력 리셋
@@ -82,11 +82,11 @@ namespace Player
 
         private void HandleAirMovement()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null || playerController == null) return;
 
             // 벽 점프 후 공중 제어 (약간 제한적)
             Vector2 input = playerController.GetInputVector();
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = playerController.Velocity;
 
             float airMoveSpeed = 5f; // 벽 점프 후 공중 이동 속도
             float airAcceleration = 20f; // 공중 가속도
@@ -96,17 +96,17 @@ namespace Player
             // 기존 수평 속도를 완전히 무시하지 않고 부드럽게 변경
             velocity.x = Mathf.MoveTowards(velocity.x, targetVelocityX, airAcceleration * Time.fixedDeltaTime);
 
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         private void CheckForStateTransitions()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null || playerController == null) return;
 
             // 벽 점프 지속시간이 끝나면 Fall 상태로 전환
             if (wallJumpTime > wallJumpDuration)
             {
-                if (rb.linearVelocity.y <= 0)
+                if (playerController.Velocity.y <= 0)
                 {
                     StateMachine?.ForceTransitionTo(PlayerStateType.Fall.ToString());
                     return;
@@ -129,14 +129,14 @@ namespace Player
             }
 
             // 하강 중이면 Fall 상태로 전환
-            if (rb.linearVelocity.y < -0.5f)
+            if (playerController.Velocity.y < -0.5f)
             {
                 StateMachine?.ForceTransitionTo(PlayerStateType.Fall.ToString());
                 return;
             }
 
             // 다른 벽에 닿으면 다시 Wall Grab 상태로 (입력 잠금 해제 후)
-            if (!inputLocked && playerController.IsTouchingWall && rb.linearVelocity.y < 0)
+            if (!inputLocked && playerController.IsTouchingWall && playerController.Velocity.y < 0)
             {
                 Vector2 input = playerController.GetInputVector();
                 // 새로운 벽 방향으로 입력이 있을 때만

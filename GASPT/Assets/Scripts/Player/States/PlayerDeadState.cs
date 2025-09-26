@@ -24,10 +24,10 @@ namespace Player
             respawnTriggered = false;
 
             // 물리 정지
-            if (rb != null)
+            if (playerController != null)
             {
-                rb.linearVelocity = Vector2.zero;
-                rb.gravityScale = 0f;
+                playerController.SetVelocity(Vector2.zero);
+                playerController.ApplyGravity(0f);
             }
 
             // 죽음 이펙트
@@ -44,9 +44,9 @@ namespace Player
             LogStateDebug("죽음 상태 종료");
 
             // 물리 복구
-            if (rb != null)
+            if (playerController != null)
             {
-                rb.gravityScale = 3f;
+                playerController.ApplyGravity(3f);
             }
 
             // 죽음 이펙트 제거

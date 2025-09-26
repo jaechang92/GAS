@@ -51,10 +51,12 @@ namespace Character.Physics
             // 3. Resolve Collisions
             ResolveCollisions();
 
-            if (useGroundCorrection)
-            {
-                ApplyGroundCorrection();
-            }
+            // NOTE: 지면 보정은 RaycastController.ApplyGroundSnap()에서 처리됨
+            // 중복 보정 방지를 위해 비활성화
+            // if (useGroundCorrection)
+            // {
+            //     ApplyGroundCorrection();
+            // }
 
             // 4. Apply Friction/Air Resistance - Skul 스타일 적용 상당히 다른 느낌 있음
             ApplySkulStyleFriction(deltaTime);
@@ -110,70 +112,7 @@ namespace Character.Physics
             }
         }
 
-        private void CorrectGroundPosition()
-        {
-            if (collisionData.groundHit)
-            {
-                BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
-                if (boxCollider != null)
-                {
-                    // Ground 표면 위에 정확한 y 위치 설정
-                    float targetY = collisionData.groundHit.point.y +
-                                   (boxCollider.size.y * 0.5f) +
-                                   raycastController.GetSkinWidth();
-
-                    Vector3 pos = transform.position;
-                    float yDiff = targetY - pos.y;
-
-                    // 너무 극단적인 보정은 방지하고 부드럽게 보정
-                    if (Mathf.Abs(yDiff) < maxGroundCorrectionDistance)
-                    {
-                        pos.y = targetY;
-                        transform.position = pos;
-
-                        if (config.enableDebugLogs)
-                        {
-                            Debug.Log($"[Movement] Ground position corrected by {yDiff:F4}");
-                        }
-                    }
-                }
-            }
-        }
-
-        private void ApplyGroundCorrection()
-        {
-            if (!collisionData.isGrounded) return;
-
-            // Ground에 파묻혔거나 떠있는 것 보정
-            if (collisionData.groundDistance < raycastController.GetSkinWidth() * 0.9f)
-            {
-                // 너무 가까움 - 위로 밀어냄
-                float pushUp = raycastController.GetSkinWidth() - collisionData.groundDistance;
-                transform.position += Vector3.up * pushUp;
-
-                if (config.enableDebugLogs)
-                {
-                    Debug.Log($"[Movement] Pushed up from ground by {pushUp:F4}");
-                }
-            }
-            else if (collisionData.groundDistance > raycastController.GetSkinWidth() * 1.5f &&
-                     collisionData.groundDistance < maxGroundCorrectionDistance)
-            {
-                // 약간 떠있음 - 아래로 당김
-                if (physicsData.velocity.y <= 0)
-                {
-                    float snapDown = collisionData.groundDistance - raycastController.GetSkinWidth();
-                    transform.position += Vector3.down * snapDown;
-                    physicsData.velocity.y = 0;
-
-                    if (config.enableDebugLogs)
-                    {
-                        Debug.Log($"[Movement] Snapped down to ground by {snapDown:F4}");
-                    }
-                }
-            }
-        }
-
+        // TODO: 향후 경사면 물리 시스템에서 사용 예정
         private void AdjustVelocityForSlope()
         {
             float targetVelocityX = physicsData.velocity.x;
@@ -187,6 +126,7 @@ namespace Character.Physics
             physicsData.velocity = slopeDirection * Mathf.Abs(targetVelocityX);
         }
 
+        // TODO: 향후 특수 마찰 시스템에서 사용 예정
         // Skul 스타일 마찰력 (훨씬 반응성 좋음)
         private void ApplySkulStyleFriction(float deltaTime)
         {

@@ -11,7 +11,7 @@ namespace Player
         [Header("Ground Check Settings")]
         [SerializeField] private bool isGroundCheckEnabled = true; // OnOff 스위치
         [SerializeField] private LayerMask groundLayer = -1; // Ground Layer
-        [SerializeField] private float groundCheckDistance = 0.15f; // 지면 검사 거리 (0.2f에서 0.15f로 감소)
+        [SerializeField] private float groundCheckDistance = 0.1f; // 지면 검사 거리 (0.15f에서 0.1f로 감소)
         [SerializeField] private Vector2 groundCheckOffset = Vector2.zero; // 검사 위치 오프셋
         [SerializeField] private float groundCheckWidth = 0.6f; // 검사 폭 (0.8f에서 0.6f로 감소)
         [SerializeField] private int rayCount = 3; // 발사할 Ray 개수
@@ -108,12 +108,13 @@ namespace Player
         }
 
         /// <summary>
-        /// Raycast를 사용한 지면 검사
+        /// Raycast를 사용한 지면 검사 (정밀 검사)
         /// </summary>
         private bool CheckGroundWithRaycast()
         {
             Bounds bounds = playerCollider.bounds;
-            Vector2 centerPoint = new Vector2(bounds.center.x + groundCheckOffset.x, bounds.min.y + groundCheckOffset.y);
+            // 콜라이더 하단에서 약간 위로 올린 지점에서 시작 (묻힘 방지)
+            Vector2 centerPoint = new Vector2(bounds.center.x + groundCheckOffset.x, bounds.min.y + 0.02f + groundCheckOffset.y);
 
             // 단일 Ray인 경우
             if (rayCount <= 1)

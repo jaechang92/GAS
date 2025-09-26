@@ -24,17 +24,17 @@ namespace Player
             dashTime = 0f;
             dashDirection = playerController.FacingDirection;
 
-            // TODO: PlayerStats에서 대시 속도와 지속시간 가져오기
-            dashSpeed = 20f;
-            dashDuration = 0.2f;
+            // PlayerController에서 대시 속도와 지속시간 가져오기
+            dashSpeed = 20f;  // 기본값 사용
+            dashDuration = 0.2f; // 기본값 사용
 
-            // 대시 시작
-            if (rb != null)
-            {
-                // 중력 무시하고 수평으로 빠르게 이동
-                rb.gravityScale = 0f;
-                ApplyDash(dashSpeed, dashDirection);
-            }
+            // 대시 디버그 로그
+            Debug.Log($"[Dash] 방향: {(dashDirection > 0 ? "오른쪽" : "왼쪽")} ({dashDirection}), 속도: {dashSpeed}, 지속시간: {dashDuration}");
+            Debug.Log($"[Dash] 대시 전 속도: {playerController.Velocity}");
+
+            // 대시 시작 (커스텀 물리 사용)
+            ApplyDash(dashSpeed, dashDirection);
+            Debug.Log($"[Dash] 대시 후 속도: {playerController.Velocity}");
 
             // 대시 쿨다운 시작
             playerController.StartDash();
@@ -45,12 +45,6 @@ namespace Player
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
             LogStateDebug("대시 상태 종료");
-
-            // 중력 복구
-            if (rb != null)
-            {
-                rb.gravityScale = 3f; // 기본 중력으로 복구
-            }
 
             // 대시 입력 리셋
             playerController.ResetDash();
@@ -79,13 +73,20 @@ namespace Player
 
         private void MaintainDashMovement()
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            // 대시 속도를 일정하게 유지
-            Vector2 velocity = rb.linearVelocity;
-            velocity.x = dashSpeed * dashDirection;
+            // 대시 속도를 일정하게 유지 (커스텀 물리 사용)
+            Vector3 velocity = playerController.Velocity;
+            float targetVelocityX = dashSpeed * dashDirection;
+            velocity.x = targetVelocityX;
             velocity.y = 0; // 수평 대시이므로 Y축 속도는 0
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
+
+            // 주기적으로 속도 확인 (0.05초마다)
+            if (Time.fixedTime % 0.05f < Time.fixedDeltaTime)
+            {
+                Debug.Log($"[Dash] 유지 중 - 목표속도: {targetVelocityX}, 현재속도: {playerController.Velocity.x}, 시간: {dashTime:F2}/{dashDuration:F2}");
+            }
         }
 
         private void CheckForEarlyExit()

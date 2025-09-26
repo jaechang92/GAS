@@ -27,11 +27,11 @@ namespace Player
             wallGrabDuration = 1f;
 
             // 벽 잡기 시 수평 속도 제거
-            if (rb != null)
+            if (playerController != null)
             {
-                Vector2 velocity = rb.linearVelocity;
+                Vector2 velocity = playerController.Velocity;
                 velocity.x = 0;
-                rb.linearVelocity = velocity;
+                playerController.SetVelocity(velocity);
             }
 
             await Awaitable.NextFrameAsync();
@@ -56,7 +56,7 @@ namespace Player
 
         private void HandleWallSliding()
         {
-            if (rb == null || playerController == null) return;
+            if (playerController == null || playerController == null) return;
 
             Vector2 input = playerController.GetInputVector();
 
@@ -67,7 +67,7 @@ namespace Player
             if (holdingTowardsWall)
             {
                 // 벽에 붙어서 천천히 슬라이딩
-                Vector2 velocity = rb.linearVelocity;
+                Vector2 velocity = playerController.Velocity;
                 velocity.x = 0;
 
                 if (velocity.y < 0)
@@ -75,7 +75,7 @@ namespace Player
                     velocity.y = Mathf.Max(velocity.y, -wallSlideSpeed);
                 }
 
-                rb.linearVelocity = velocity;
+                playerController.SetVelocity(velocity);
             }
             else
             {

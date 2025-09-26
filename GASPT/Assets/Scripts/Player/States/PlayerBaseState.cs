@@ -7,11 +7,11 @@ namespace Player
     /// <summary>
     /// 플레이어 상태의 기본 클래스
     /// 모든 플레이어 상태가 상속받는 베이스 클래스
+    /// 커스텀 물리 시스템 사용
     /// </summary>
     public abstract class PlayerBaseState : IState
     {
         protected PlayerController playerController;
-        protected Rigidbody2D rb;
         protected PlayerStateType stateType;
 
         public string Id { get; private set; }
@@ -38,16 +38,10 @@ namespace Player
             StateMachine = stateMachine;
 
             playerController = owner.GetComponent<PlayerController>();
-            rb = owner.GetComponent<Rigidbody2D>();
 
             if (playerController == null)
             {
                 Debug.LogError($"[{stateType}State] PlayerController를 찾을 수 없습니다!");
-            }
-
-            if (rb == null)
-            {
-                Debug.LogError($"[{stateType}State] Rigidbody2D를 찾을 수 없습니다!");
             }
         }
 
@@ -79,66 +73,79 @@ namespace Player
         protected abstract Awaitable ExitState(CancellationToken cancellationToken);
         protected abstract void UpdateState(float deltaTime);
 
-        // 공통 유틸리티 메서드들
+        // 커스텀 물리 시스템용 공통 유틸리티 메서드들
         protected void ApplyMovement(float speed)
         {
-            if (rb == null || playerController == null) return;
+            if (playerController == null) return;
 
             Vector2 inputVector = playerController.GetInputVector();
-            Vector2 velocity = rb.linearVelocity;
-            velocity.x = inputVector.x * speed;
-            rb.linearVelocity = velocity;
+            playerController.SetHorizontalMovement(inputVector.x, speed);
         }
 
         protected void ApplyJump(float force)
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            Vector2 velocity = rb.linearVelocity;
+            playerController.ApplyJump(force);
+        }
+
+        /// <summary>
+        /// 운동량을 보존하면서 점프 적용
+        /// </summary>
+        protected void ApplyJumpPreservingMomentum(float force)
+        {
+            if (playerController == null) return;
+
+            Vector3 velocity = playerController.Velocity;
             velocity.y = force;
-            rb.linearVelocity = velocity;
+
+            // 수평 속도 유지 - 이전 속도가 더 크면 그대로 유지
+            float currentHorizontalSpeed = Mathf.Abs(velocity.x);
+            float previousSpeed = playerController.PreviousHorizontalSpeed;
+
+            if (previousSpeed > currentHorizontalSpeed && previousSpeed > 0.1f)
+            {
+                // 이전 속도의 방향 유지하면서 크기 보존
+                float direction = velocity.x >= 0 ? 1f : -1f;
+                velocity.x = direction * previousSpeed;
+            }
+
+            playerController.SetVelocity(velocity);
         }
 
         protected void ApplyDash(float speed, int direction)
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            Vector2 velocity = rb.linearVelocity;
+            Vector3 velocity = playerController.Velocity;
             velocity.x = speed * direction;
             velocity.y = 0; // 대시 중에는 중력 무시
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         protected void StopHorizontalMovement()
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            Vector2 velocity = rb.linearVelocity;
+            Vector3 velocity = playerController.Velocity;
             velocity.x = 0;
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         protected void StopVerticalMovement()
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            Vector2 velocity = rb.linearVelocity;
+            Vector3 velocity = playerController.Velocity;
             velocity.y = 0;
-            rb.linearVelocity = velocity;
+            playerController.SetVelocity(velocity);
         }
 
         protected void ApplyGravity(float multiplier = 1f)
         {
-            if (rb == null) return;
+            if (playerController == null) return;
 
-            if (rb.linearVelocity.y < 0)
-            {
-                rb.gravityScale = 3f * multiplier; // 떨어질 때 중력 증가
-            }
-            else
-            {
-                rb.gravityScale = 3f;
-            }
+            playerController.ApplyGravity(multiplier);
         }
 
         protected bool CanTransitionTo(PlayerStateType targetState)
@@ -158,7 +165,7 @@ namespace Player
                     return playerController.IsTouchingWall && !playerController.IsGrounded;
 
                 case PlayerStateType.Fall:
-                    return !playerController.IsGrounded && rb.linearVelocity.y < 0;
+                    return !playerController.IsGrounded && playerController.Velocity.y < 0;
 
                 default:
                     return true;

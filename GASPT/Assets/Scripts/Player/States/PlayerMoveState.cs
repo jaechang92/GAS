@@ -35,11 +35,13 @@ namespace Player
 
         protected override void UpdateState(float deltaTime)
         {
+            // GroundChecker가 FixedUpdate에서 자동으로 지면 체크 수행
+
             // 이동 처리
             HandleMovement();
 
-            // 중력 적용
-            ApplyGravity();
+            // Move 상태에서는 중력 적용하지 않음 (접지 상태이므로)
+            // ApplyGravity(); // 제거됨
 
             // 상태 전환 체크
             CheckForStateTransitions();
@@ -47,19 +49,12 @@ namespace Player
 
         private void HandleMovement()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null) return;
 
             Vector2 input = playerController.GetInputVector();
 
-            // 부드러운 이동 적용
-            Vector2 velocity = rb.linearVelocity;
-            float targetVelocityX = input.x * moveSpeed;
-
-            // 가속/감속 적용
-            float acceleration = 50f;
-            velocity.x = Mathf.MoveTowards(velocity.x, targetVelocityX, acceleration * Time.fixedDeltaTime);
-
-            rb.linearVelocity = velocity;
+            // 커스텀 물리를 사용한 수평 이동 설정
+            playerController.SetHorizontalMovement(input.x, moveSpeed);
         }
 
         private void CheckForStateTransitions()
@@ -82,7 +77,7 @@ namespace Player
             }
 
             // 땅에서 떨어지면 Fall 상태로 전환
-            if (!playerController.IsGrounded && rb.linearVelocity.y < -0.1f)
+            if (!playerController.IsGrounded && playerController.Velocity.y < -0.1f)
             {
                 // Fall 상태로의 전환은 PlayerEventType.LeaveGround 이벤트에 의해 자동 처리됨
                 return;

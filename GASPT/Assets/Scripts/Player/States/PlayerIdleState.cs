@@ -15,12 +15,17 @@ namespace Player
         {
             LogStateDebug("대기 상태 진입");
 
-            // 대기 상태에서는 수평 이동 정지
-            if (rb != null)
+            // 점프에서 착지했을 때만 운동량 보존 체크
+            if (playerController != null)
             {
-                Vector2 velocity = rb.linearVelocity;
-                velocity.x = Mathf.Lerp(velocity.x, 0, Time.fixedDeltaTime * 10f); // 부드럽게 정지
-                rb.linearVelocity = velocity;
+                var prevState = playerController.GetType().GetField("currentState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                // 움직이지 않으면 대기 상태에서는 수평 이동 즉시 정지
+                Vector2 input = playerController.GetInputVector();
+                if (Mathf.Abs(input.x) < 0.1f)
+                {
+                    StopHorizontalMovement();
+                }
             }
 
             await Awaitable.NextFrameAsync();
@@ -34,8 +39,10 @@ namespace Player
 
         protected override void UpdateState(float deltaTime)
         {
-            // 중력 적용
-            ApplyGravity();
+            // GroundChecker가 FixedUpdate에서 자동으로 지면 체크 수행
+
+            // Idle 상태에서는 중력 적용하지 않음 (접지 상태이므로)
+            // ApplyGravity(); // 제거됨
 
             // 입력 체크
             CheckForStateTransitions();
@@ -61,7 +68,7 @@ namespace Player
             }
 
             // 땅에서 떨어지면 Fall 상태로 전환
-            if (!playerController.IsGrounded && rb.linearVelocity.y < -0.1f)
+            if (!playerController.IsGrounded && playerController.Velocity.y < -0.1f)
             {
                 // Fall 상태로의 전환은 PlayerEventType.LeaveGround 이벤트에 의해 자동 처리됨
                 return;

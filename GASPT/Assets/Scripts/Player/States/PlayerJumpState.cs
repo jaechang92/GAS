@@ -11,7 +11,7 @@ namespace Player
     {
         private float jumpForce = 15f;
         private float jumpTime = 0f;
-        private float maxJumpTime = 0.3f;
+        private float maxJumpTime = 0.5f; // 0.3f에서 0.5f로 증가 (더 긴 점프 허용)
         private bool jumpReleased = false;
 
         public PlayerJumpState() : base(PlayerStateType.Jump) { }
@@ -24,33 +24,29 @@ namespace Player
             jumpTime = 0f;
             jumpReleased = false;
 
-            // 점프 실행
-            if (rb != null)
+            // 점프 실행 (커스텀 물리 사용)
+            jumpForce = playerController.JumpForce; // PlayerController에서 점프력 가져오기
+
+            // 벽 점프인지 일반 점프인지 확인
+            if (playerController.IsTouchingWall && !playerController.IsGrounded)
             {
-                // TODO: PlayerStats에서 점프력 가져오기
-                jumpForce = 15f;
-
-                // 벽 점프인지 일반 점프인지 확인
-                if (playerController.IsTouchingWall && !playerController.IsGrounded)
-                {
-                    // 벽 점프
-                    Vector2 velocity = rb.linearVelocity;
-                    velocity.y = jumpForce * 0.8f; // 벽 점프는 좀 더 약하게
-                    velocity.x = -playerController.FacingDirection * 8f; // 벽에서 밀어내기
-                    rb.linearVelocity = velocity;
-                }
-                else
-                {
-                    // 일반 점프
-                    ApplyJump(jumpForce);
-                }
-
-                // 수평 이동 유지
-                ApplyMovement(8f);
+                // 벽 점프
+                Vector3 velocity = playerController.Velocity;
+                velocity.y = jumpForce * 0.8f; // 벽 점프는 좀 더 약하게
+                velocity.x = -playerController.FacingDirection * 8f; // 벽에서 밀어내기
+                playerController.SetVelocity(velocity);
+            }
+            else
+            {
+                // 일반 점프
+                ApplyJump(jumpForce);
             }
 
             // 점프 입력 리셋
             playerController.ResetJump();
+
+            // 점프 시작 시 강제로 접지 상태 해제 (TouchGround 이벤트 발생 보장)
+            playerController.ForceSetGrounded(false);
 
             await Awaitable.NextFrameAsync();
         }
@@ -71,41 +67,39 @@ namespace Player
             // 가변 점프 높이 처리
             HandleVariableJumpHeight();
 
+            // 중력
+            ApplyGravity();
+
             // 상태 전환 체크
             CheckForStateTransitions();
         }
 
         private void HandleAirMovement()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null) return;
 
-            // 공중에서의 이동 (지상보다 약간 느림)
+            // 공중에서의 이동 (커스텀 물리 사용)
             Vector2 input = playerController.GetInputVector();
-            Vector2 velocity = rb.linearVelocity;
+            float airMoveSpeed = playerController.AirMoveSpeed;
 
-            float airMoveSpeed = 6f; // 공중 이동 속도
-            float airAcceleration = 30f; // 공중 가속도
-
-            float targetVelocityX = input.x * airMoveSpeed;
-            velocity.x = Mathf.MoveTowards(velocity.x, targetVelocityX, airAcceleration * Time.fixedDeltaTime);
-
-            rb.linearVelocity = velocity;
+            // 커스텀 물리를 통한 공중 이동
+            playerController.SetHorizontalMovement(input.x, airMoveSpeed);
         }
 
         private void HandleVariableJumpHeight()
         {
-            if (rb == null || playerController == null) return;
+            if (playerController == null) return;
 
             // 점프 버튼을 놓으면 상승 속도 감소
             if (!playerController.IsJumpPressed() && !jumpReleased)
             {
                 jumpReleased = true;
 
-                if (rb.linearVelocity.y > 0)
+                Vector3 velocity = playerController.Velocity;
+                if (velocity.y > 0)
                 {
-                    Vector2 velocity = rb.linearVelocity;
                     velocity.y *= 0.5f; // 점프 높이 감소
-                    rb.linearVelocity = velocity;
+                    playerController.SetVelocity(velocity);
                 }
             }
 
@@ -115,30 +109,35 @@ namespace Player
                 jumpReleased = true;
             }
 
-            // 중력 적용 (상승 중일 때는 약하게, 하강 중일 때는 강하게)
-            if (rb.linearVelocity.y > 0 && !jumpReleased)
+            // Jump 상태에서는 접지 상태와 관계없이 중력 적용 (강제 적용)
+            if (playerController.Velocity.y > 0 && !jumpReleased)
             {
-                ApplyGravity(1f); // 일반 중력
+                // 상승 중일 때는 약하게
+                playerController.ForceApplyGravity(1f);
             }
             else
             {
-                ApplyGravity(2f); // 강화된 중력
+                // 하강 중일 때는 강하게
+                playerController.ForceApplyGravity(2f);
             }
         }
 
         private void CheckForStateTransitions()
         {
-            if (playerController == null || rb == null) return;
+            if (playerController == null || playerController == null) return;
 
-            // 땅에 착지하면 상태 전환
-            if (playerController.IsGrounded)
+            // 점프 최소 시간 보장 (0.15초 이상 경과 후에만 상태 전환 허용)
+            if (jumpTime < 0.15f) return;
+
+            // 땅에 착지하면 상태 전환 (단, 하강 중이고 충분히 떨어진 후에만)
+            if (playerController.IsGrounded && playerController.Velocity.y <= -0.1f && jumpTime > 0.2f)
             {
                 // TouchGround 이벤트에 의해 자동으로 Idle 또는 Move 상태로 전환됨
                 return;
             }
 
-            // 하강 중이면 Fall 상태로 전환
-            if (rb.linearVelocity.y < -0.5f)
+            // 하강 중이면 Fall 상태로 전환 (더 엄격한 조건)
+            if (playerController.Velocity.y < -1.5f && jumpTime > 0.2f)
             {
                 // 자동으로 Fall 상태로 전환
                 StateMachine?.ForceTransitionTo(PlayerStateType.Fall.ToString());
@@ -146,7 +145,7 @@ namespace Player
             }
 
             // 벽에 닿으면 Wall Grab 상태로 전환 (조건 확인)
-            if (playerController.IsTouchingWall && rb.linearVelocity.y < 0)
+            if (playerController.IsTouchingWall && playerController.Velocity.y < 0)
             {
                 Vector2 input = playerController.GetInputVector();
                 // 벽 방향으로 입력이 있을 때만 벽 잡기

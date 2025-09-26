@@ -147,13 +147,13 @@ namespace FSM.Core.Integration
         [SerializeField] private StateMachine stateMachine;
         [SerializeField] private GAS.Core.AbilitySystem abilitySystem;
 
-        [Header("»óÅÂ ±â¹İ ¾îºô¸®Æ¼ Á¦ÇÑ")]
+        [Header("ìƒíƒœ ê¸°ë°˜ ì–´ë¹Œë¦¬í‹° ì œí•œ")]
         [SerializeField] private StateAbilityRestriction[] restrictions;
 
         private void Awake()
         {
             if (stateMachine == null) stateMachine = GetComponent<StateMachine>();
-            if (abilitySystem == null) abilitySystem = GetComponent<GAS.Core.AbilitySystem>();
+            if (abilitySystem == null) abilitySystem = GetComponent<AbilitySystem>();
         }
 
         private void Start()
