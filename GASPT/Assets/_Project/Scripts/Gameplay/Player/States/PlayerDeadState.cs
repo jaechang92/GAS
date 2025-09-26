@@ -106,11 +106,8 @@ namespace Player
         private void NotifyGameManager()
         {
             // GameManager에 플레이어 죽음 알림
-            if (Managers.GameManager.TryGetInstance(out var gameManager))
-            {
-                gameManager.LoseLife();
-                LogStateDebug("GameManager에 생명 감소 알림");
-            }
+            Managers.GameManager.Instance.LoseLife();
+            LogStateDebug("GameManager에 생명 감소 알림");
         }
 
         private void TriggerRespawn()
@@ -120,15 +117,12 @@ namespace Player
             respawnTriggered = true;
 
             // GameManager에서 게임 오버 확인
-            if (Managers.GameManager.TryGetInstance(out var gameManager))
+            if (Managers.GameManager.Instance.IsGameOver)
             {
-                if (gameManager.IsGameOver)
-                {
-                    // 게임 오버 처리
-                    LogStateDebug("게임 오버 - GameOver 씬으로 전환");
-                    // TODO: GameOver 씬으로 전환
-                    return;
-                }
+                // 게임 오버 처리
+                LogStateDebug("게임 오버 - GameOver 씬으로 전환");
+                // TODO: GameOver 씬으로 전환
+                return;
             }
 
             // 리스폰 처리

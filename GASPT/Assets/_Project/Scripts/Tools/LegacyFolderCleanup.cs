@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectTools
 {
@@ -254,7 +255,3 @@ namespace ProjectTools
         }
     }
 }
-
-#if UNITY_EDITOR
-using System.Linq;
-#endif
