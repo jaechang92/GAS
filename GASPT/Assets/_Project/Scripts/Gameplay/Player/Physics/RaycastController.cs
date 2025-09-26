@@ -96,6 +96,12 @@ namespace Character.Physics
                 collisions.faceDir = (int)Mathf.Sign(moveAmount.x);
             }
 
+            // 매우 작은 이동량은 무시 (떨림 방지)
+            if (Mathf.Abs(moveAmount.x) < 0.001f && Mathf.Abs(moveAmount.y) < 0.001f)
+            {
+                return;
+            }
+
             if (moveAmount.y < 0)
             {
                 DescendSlope(ref moveAmount);
@@ -108,6 +114,7 @@ namespace Character.Physics
                 VerticalCollisions(ref moveAmount);
             }
 
+            // 부드러운 이동 적용
             transform.Translate(moveAmount);
 
             if (standingOnPlatform)
@@ -122,12 +129,7 @@ namespace Character.Physics
         void HorizontalCollisions(ref Vector3 moveAmount)
         {
             float directionX = Mathf.Sign(moveAmount.x);
-            float rayLength = Mathf.Abs(moveAmount.x) + skinWidth;
-
-            if (Mathf.Abs(moveAmount.x) < skinWidth)
-            {
-                rayLength = 2 * skinWidth;
-            }
+            float rayLength = skinWidth * 2f; // 고정된 레이 길이
 
             for (int i = 0; i < horizontalRayCount; i++)
             {
@@ -189,7 +191,7 @@ namespace Character.Physics
         void VerticalCollisions(ref Vector3 moveAmount)
         {
             float directionY = Mathf.Sign(moveAmount.y);
-            float rayLength = Mathf.Abs(moveAmount.y) + skinWidth;
+            float rayLength = skinWidth * 2f; // 고정된 레이 길이
 
             for (int i = 0; i < verticalRayCount; i++)
             {

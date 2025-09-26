@@ -6,33 +6,33 @@ using System;
 namespace GAS.Core
 {
     /// <summary>
-    /// ¹ü¿ë ¾îºô¸®Æ¼ ½Ã½ºÅÛ
-    /// ´Ù¾çÇÑ °ÔÀÓ Àå¸£¿¡¼­ »ç¿ëÇÒ ¼ö ÀÖµµ·Ï ¼³°è
+    /// ë²”ìš© ì–´ë¹Œë¦¬í‹° ì‹œìŠ¤í…œ
+    /// ë‹¤ì–‘í•œ ê²Œì„ ì¥ë¥´ì—ì„œ ì‚¬ìš©í•  ìˆ˜ ìˆë„ë¡ ì„¤ê³„
     /// </summary>
     public class AbilitySystem : MonoBehaviour, IAbilitySystem
     {
-        [Header("ÃÊ±â ¾îºô¸®Æ¼")]
+        [Header("ì´ˆê¸° ì–´ë¹Œë¦¬í‹°")]
         [SerializeField] private List<AbilityData> initialAbilities = new List<AbilityData>();
 
-        [Header("¸®¼Ò½º ½Ã½ºÅÛ (¼±ÅÃ»çÇ×)")]
+        [Header("ë¦¬ì†ŒìŠ¤ ì‹œìŠ¤í…œ (ì„ íƒì‚¬í•­)")]
         [SerializeField] private bool useResourceSystem = true;
         [SerializeField] private List<ResourceConfig> resourceConfigs = new List<ResourceConfig>();
 
-        // µî·ÏµÈ ¾îºô¸®Æ¼µé
+        // ë“±ë¡ëœ ì–´ë¹Œë¦¬í‹°ë“¤
         private Dictionary<string, IAbility> abilities = new Dictionary<string, IAbility>();
 
-        // ¸®¼Ò½º ½Ã½ºÅÛ
+        // ë¦¬ì†ŒìŠ¤ ì‹œìŠ¤í…œ
         private Dictionary<string, float> currentResources = new Dictionary<string, float>();
         private Dictionary<string, float> maxResources = new Dictionary<string, float>();
 
-        // °ÔÀÓÇÃ·¹ÀÌ ÄÁÅØ½ºÆ®
+        // ê²Œì„í”Œë ˆì´ ì»¨í…ìŠ¤íŠ¸
         private IGameplayContext gameplayContext;
 
-        // ÇÁ·ÎÆÛÆ¼
+        // í”„ë¡œí¼í‹°
         public IReadOnlyDictionary<string, IAbility> Abilities => abilities;
         public bool UseResourceSystem => useResourceSystem;
 
-        // ÀÌº¥Æ®
+        // ì´ë²¤íŠ¸
         public event Action<string> OnAbilityAdded;
         public event Action<string> OnAbilityRemoved;
         public event Action<string> OnAbilityUsed;
@@ -40,7 +40,7 @@ namespace GAS.Core
         public event Action<string, float> OnResourceChanged;
 
         /// <summary>
-        /// ½Ã½ºÅÛ ÃÊ±âÈ­
+        /// ì‹œìŠ¤í…œ ì´ˆê¸°í™”
         /// </summary>
         private void Awake()
         {
@@ -50,7 +50,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¸®¼Ò½º ½Ã½ºÅÛ ÃÊ±âÈ­
+        /// ë¦¬ì†ŒìŠ¤ ì‹œìŠ¤í…œ ì´ˆê¸°í™”
         /// </summary>
         private void InitializeResourceSystem()
         {
@@ -64,7 +64,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ÃÊ±â ¾îºô¸®Æ¼ ¼³Á¤
+        /// ì´ˆê¸° ì–´ë¹Œë¦¬í‹° ë“±ë¡
         /// </summary>
         private void InitializeAbilities()
         {
@@ -79,25 +79,25 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// °ÔÀÓÇÃ·¹ÀÌ ÄÁÅØ½ºÆ® ÃÊ±âÈ­
+        /// ê²Œì„í”Œë ˆì´ ì»¨í…ìŠ¤íŠ¸ ì´ˆê¸°í™”
         /// </summary>
         private void InitializeGameplayContext()
         {
             gameplayContext = GetComponent<IGameplayContext>();
             if (gameplayContext == null)
             {
-                // ±âº» ÄÁÅØ½ºÆ® »ı¼º
+                // ê¸°ë³¸ ì»¨í…ìŠ¤íŠ¸ ìƒì„±
                 var contextComponent = gameObject.AddComponent<DefaultGameplayContext>();
                 gameplayContext = contextComponent;
             }
         }
 
         /// <summary>
-        /// ¸Å ÇÁ·¹ÀÓ ¾÷µ¥ÀÌÆ®
+        /// ë§¤ í”„ë ˆì„ ì—…ë°ì´íŠ¸
         /// </summary>
         private void Update()
         {
-            // ¸ğµç ¾îºô¸®Æ¼ÀÇ Äğ´Ù¿î ¾÷µ¥ÀÌÆ®
+            // ëª¨ë“  ì–´ë¹Œë¦¬í‹°ì˜ ì¿¨ë‹¤ìš´ ì—…ë°ì´íŠ¸
             foreach (var ability in abilities.Values)
             {
                 if (ability is Ability concreteAbility)
@@ -106,7 +106,7 @@ namespace GAS.Core
                 }
             }
 
-            // ¸®¼Ò½º ÀÚµ¿ È¸º¹
+            // ë¦¬ì†ŒìŠ¤ ìë™ íšŒë³µ
             if (useResourceSystem)
             {
                 UpdateResourceRegeneration();
@@ -114,7 +114,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¸®¼Ò½º ÀÚµ¿ È¸º¹ Ã³¸®
+        /// ë¦¬ì†ŒìŠ¤ ìë™ íšŒë³µ ì²˜ë¦¬
         /// </summary>
         private void UpdateResourceRegeneration()
         {
@@ -138,7 +138,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¾îºô¸®Æ¼ »ı¼º
+        /// ì–´ë¹Œë¦¬í‹° ìƒì„±
         /// </summary>
         private IAbility CreateAbility(IAbilityData data)
         {
@@ -147,7 +147,7 @@ namespace GAS.Core
             return ability;
         }
 
-        #region IAbilitySystem ±¸Çö
+        #region IAbilitySystem êµ¬í˜„
 
         public bool HasAbility(string abilityId)
         {
@@ -163,7 +163,7 @@ namespace GAS.Core
         {
             if (ability == null || string.IsNullOrEmpty(ability.Id)) return;
 
-            // ±âÁ¸ ¾îºô¸®Æ¼°¡ ÀÖÀ¸¸é Á¦°Å
+            // ê¸°ì¡´ ì–´ë¹Œë¦¬í‹°ê°€ ìˆìœ¼ë©´ êµì²´
             if (abilities.ContainsKey(ability.Id))
             {
                 RemoveAbility(ability.Id);
@@ -198,13 +198,13 @@ namespace GAS.Core
                 return false;
             }
 
-            // ¾îºô¸®Æ¼ ÀÚÃ¼ »óÅÂ È®ÀÎ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
             if (!ability.CanExecute())
             {
                 return false;
             }
 
-            // ¸®¼Ò½º È®ÀÎ
+            // ï¿½ï¿½ï¿½Ò½ï¿½ È®ï¿½ï¿½
             if (useResourceSystem && ability.Data != null)
             {
                 foreach (var cost in ability.Data.ResourceCosts)
@@ -228,7 +228,7 @@ namespace GAS.Core
 
             var ability = abilities[abilityId];
 
-            // ¸®¼Ò½º ¼Ò¸ğ
+            // ï¿½ï¿½ï¿½Ò½ï¿½ ï¿½Ò¸ï¿½
             if (useResourceSystem && ability.Data != null)
             {
                 foreach (var cost in ability.Data.ResourceCosts)
@@ -237,7 +237,7 @@ namespace GAS.Core
                 }
             }
 
-            // ¾îºô¸®Æ¼ ½ÇÇà (ºñµ¿±â)
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ (ï¿½ñµ¿±ï¿½)
             _ = ExecuteAbilityAsync(ability);
 
             OnAbilityUsed?.Invoke(abilityId);
@@ -308,7 +308,7 @@ namespace GAS.Core
         #endregion
 
         /// <summary>
-        /// ¾îºô¸®Æ¼ ºñµ¿±â ½ÇÇà
+        /// ì–´ë¹Œë¦¬í‹° ë¹„ë™ê¸° ì‹¤í–‰
         /// </summary>
         private async Awaitable ExecuteAbilityAsync(IAbility ability)
         {
@@ -323,7 +323,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¸®¼Ò½º ÃæºĞ ¿©ºÎ È®ÀÎ
+        /// ë¦¬ì†ŒìŠ¤ ì¶©ë¶„ ì—¬ë¶€ í™•ì¸
         /// </summary>
         private bool HasEnoughResource(string resourceType, float amount)
         {
@@ -331,7 +331,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¾îºô¸®Æ¼ µ¥ÀÌÅÍ·Î ¾îºô¸®Æ¼ Ãß°¡
+        /// ì–´ë¹Œë¦¬í‹° ë°ì´í„°ë¡œ ì–´ë¹Œë¦¬í‹° ì¶”ê°€
         /// </summary>
         public void AddAbility(IAbilityData abilityData)
         {
@@ -342,13 +342,13 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ÃÖ´ë ¸®¼Ò½º °ª ¼³Á¤
+        /// ìµœëŒ€ ë¦¬ì†ŒìŠ¤ ê°’ ì„¤ì •
         /// </summary>
         public void SetMaxResource(string resourceType, float maxValue)
         {
             maxResources[resourceType] = maxValue;
 
-            // ÇöÀç °ªÀÌ ÃÖ´ë°ªÀ» ÃÊ°úÇÏ¸é Á¶Á¤
+            // í˜„ì¬ ê°’ì´ ìµœëŒ€ê°’ì„ ì´ˆê³¼í•˜ë©´ ì¡°ì •
             if (currentResources.TryGetValue(resourceType, out var current) && current > maxValue)
             {
                 SetResource(resourceType, maxValue);
@@ -356,7 +356,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ÃÖ´ë ¸®¼Ò½º °ª °¡Á®¿À±â
+        /// ìµœëŒ€ ë¦¬ì†ŒìŠ¤ ê°’ ê°€ì ¸ì˜¤ê¸°
         /// </summary>
         public float GetMaxResource(string resourceType)
         {
@@ -364,7 +364,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ¸ğµç ¾îºô¸®Æ¼ Äğ´Ù¿î ¸®¼Â
+        /// ëª¨ë“  ì–´ë¹Œë¦¬í‹° ì¿¨ë‹¤ìš´ ë¦¬ì…‹
         /// </summary>
         public void ResetAllCooldowns()
         {
@@ -378,7 +378,25 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// ½Ã½ºÅÛ Á¤¸®
+        /// ì–´ë¹Œë¦¬í‹° í™œì„±í™” (í¸ì˜ ë©”ì„œë“œ)
+        /// TryUseAbilityì˜ ë³„ì¹­
+        /// </summary>
+        public bool ActivateAbility(string abilityId)
+        {
+            return TryUseAbility(abilityId);
+        }
+
+        /// <summary>
+        /// ì–´ë¹Œë¦¬í‹° ë¹„í™œì„±í™” (í¸ì˜ ë©”ì„œë“œ)
+        /// CancelAbilityì˜ ë³„ì¹­
+        /// </summary>
+        public void DeactivateAbility(string abilityId)
+        {
+            CancelAbility(abilityId);
+        }
+
+        /// <summary>
+        /// ì‹œìŠ¤í…œ ì •ë¦¬
         /// </summary>
         private void OnDestroy()
         {
@@ -394,7 +412,7 @@ namespace GAS.Core
     }
 
     /// <summary>
-    /// ¸®¼Ò½º ¼³Á¤
+    /// ë¦¬ì†ŒìŠ¤ ì„¤ì •
     /// </summary>
     [System.Serializable]
     public class ResourceConfig
@@ -402,6 +420,6 @@ namespace GAS.Core
         public string resourceType;
         public float maxValue = 100f;
         public float initialValue = 100f;
-        public float regenerationRate = 0f; // ÃÊ´ç È¸º¹·®
+        public float regenerationRate = 0f; // ì´ˆë‹¹ íšŒë³µëŸ‰
     }
 }

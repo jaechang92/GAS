@@ -20,7 +20,6 @@ namespace Player
 
         [Header("테스트 대상")]
         [SerializeField] private PlayerController playerController;
-        [SerializeField] private PlayerControllerTest playerTest;
 
         [Header("테스트 결과")]
         [SerializeField] private List<string> testResults = new List<string>();
@@ -49,17 +48,6 @@ namespace Player
             {
                 LogTestResult("FAIL: PlayerController를 찾을 수 없습니다", false);
                 return;
-            }
-
-            // PlayerControllerTest 자동 찾기
-            if (playerTest == null)
-            {
-                playerTest = Object.FindAnyObjectByType<PlayerControllerTest>();
-            }
-
-            if (playerTest == null)
-            {
-                LogTestResult("WARN: PlayerControllerTest를 찾을 수 없습니다 - 수동 테스트만 가능", false);
             }
 
             // 컴포넌트 검증 테스트

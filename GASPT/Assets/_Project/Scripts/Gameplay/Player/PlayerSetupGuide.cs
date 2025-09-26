@@ -7,7 +7,7 @@ namespace Player
     /// <summary>
     /// 플레이어 오브젝트 설정 가이드
     /// Skul 스타일 무중력 물리 시스템을 사용하는 플레이어 설정 방법을 제공
-    /// MovementCalculator + RaycastController + CharacterPhysicsConfig 기반 시스템 사용
+    /// PhysicsEngine + CollisionDetector + CharacterPhysicsConfig 기반 시스템 사용
     /// 중력 없는 고정 속도 기반 플랫폼 액션 시스템
     /// </summary>
     public class PlayerSetupGuide : MonoBehaviour
@@ -76,18 +76,11 @@ namespace Player
             boxCollider.size = new Vector2(0.8f, 1.8f);
             boxCollider.isTrigger = false; // Raycast용이므로 트리거 아님
 
-            // 2. RaycastController 추가 (정밀 충돌 검사)
-            if (playerGO.GetComponent<RaycastController>() == null)
+            // 2. PhysicsEngine 추가 (새로운 통합 물리 시스템)
+            if (playerGO.GetComponent<Character.Physics.PhysicsEngine>() == null)
             {
-                playerGO.AddComponent<RaycastController>();
-                Debug.Log("- RaycastController 추가됨 (정밀 충돌 검사 시스템)");
-            }
-
-            // 3. MovementCalculator 추가 (Skul 스타일 물리 엔진)
-            if (playerGO.GetComponent<MovementCalculator>() == null)
-            {
-                playerGO.AddComponent<MovementCalculator>();
-                Debug.Log("- MovementCalculator 추가됨 (Skul 스타일 물리 엔진)");
+                playerGO.AddComponent<Character.Physics.PhysicsEngine>();
+                Debug.Log("- PhysicsEngine 추가됨 (새로운 통합 물리 시스템)");
             }
 
             // 4. SpriteRenderer 추가
@@ -126,7 +119,7 @@ namespace Player
             }
 
             Debug.Log("[PlayerSetup] Skul 스타일 플레이어 컴포넌트 자동 설정 완료!");
-            Debug.Log("⚠️ CharacterPhysicsConfig ScriptableObject 할당이 필요합니다!");
+            Debug.Log("⚠️ CharacterPhysicsConfig ScriptableObject 할당이 필요합니다! (PhysicsEngine에)");
         }
 
         /// <summary>
@@ -144,8 +137,7 @@ namespace Player
             var requiredComponents = new System.Type[]
             {
                 typeof(PlayerController),
-                typeof(MovementCalculator),    // Skul 스타일 물리 엔진
-                typeof(RaycastController),     // 정밀 충돌 검사
+                typeof(Character.Physics.PhysicsEngine),    // 새로운 통합 물리 엔진
                 typeof(BoxCollider2D),         // Skul 스타일은 Box 형태
                 typeof(SpriteRenderer),
                 typeof(AbilitySystem)
@@ -204,19 +196,19 @@ namespace Player
                 }
             }
 
-            // MovementCalculator 설정 확인
-            var movementCalculator = playerGO.GetComponent<MovementCalculator>();
-            if (movementCalculator != null)
+            // PhysicsEngine 설정 확인
+            var physicsEngine = playerGO.GetComponent<Character.Physics.PhysicsEngine>();
+            if (physicsEngine != null)
             {
                 // Reflection을 통해 private config 필드 확인
-                var configField = typeof(MovementCalculator).GetField("config",
+                var configField = typeof(Character.Physics.PhysicsEngine).GetField("config",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (configField != null)
                 {
-                    var config = configField.GetValue(movementCalculator) as CharacterPhysicsConfig;
+                    var config = configField.GetValue(physicsEngine) as CharacterPhysicsConfig;
                     if (config == null)
                     {
-                        Debug.LogError("❌ MovementCalculator에 CharacterPhysicsConfig가 할당되지 않았습니다!");
+                        Debug.LogError("❌ PhysicsEngine에 CharacterPhysicsConfig가 할당되지 않았습니다!");
                         isValid = false;
                     }
                     else
@@ -230,24 +222,15 @@ namespace Player
                 }
             }
 
-            // RaycastController 설정 확인
-            var raycastController = playerGO.GetComponent<RaycastController>();
-            if (raycastController != null)
+            // CollisionDetector 설정 확인 (자동 생성됨)
+            var collisionDetector = playerGO.GetComponent<Character.Physics.CollisionDetector>();
+            if (collisionDetector != null)
             {
-                var maskField = typeof(RaycastController).GetField("collisionMask",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (maskField != null)
-                {
-                    var mask = (LayerMask)maskField.GetValue(raycastController);
-                    if (mask.value == 0 || mask.value == -1)
-                    {
-                        Debug.LogWarning("⚠️ RaycastController의 collisionMask 설정을 확인하세요.");
-                    }
-                    else
-                    {
-                        Debug.Log("✅ RaycastController collisionMask 설정됨");
-                    }
-                }
+                Debug.Log("✅ CollisionDetector 확인됨 (자동 생성)");
+            }
+            else
+            {
+                Debug.Log("ℹ️ CollisionDetector는 PhysicsEngine에 의해 자동 생성됩니다.");
             }
 
             // 태그 확인
@@ -318,7 +301,7 @@ namespace Player
             Debug.Log("2. Create > Character > Physics Config 선택");
             Debug.Log("3. 생성된 CharacterPhysicsConfig 에셋 선택");
             Debug.Log("4. Inspector에서 'Use Skul Preset' 체크 후 'Apply Skul Preset' 버튼 클릭");
-            Debug.Log("5. MovementCalculator의 Config 필드에 할당");
+            Debug.Log("5. PhysicsEngine의 Config 필드에 할당");
             Debug.Log("6. 필요시 값 조정:");
             Debug.Log("   - Jump Velocity: 점프 속도 (기본: 18f)");
             Debug.Log("   - Move Speed: 이동 속도 (기본: 10f)");

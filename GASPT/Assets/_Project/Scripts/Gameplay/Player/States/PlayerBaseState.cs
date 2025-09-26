@@ -73,55 +73,8 @@ namespace Player
         protected abstract Awaitable ExitState(CancellationToken cancellationToken);
         protected abstract void UpdateState(float deltaTime);
 
-        // 커스텀 물리 시스템용 공통 유틸리티 메서드들
-        protected void ApplyMovement(float speed)
-        {
-            if (playerController == null) return;
-
-            Vector2 inputVector = playerController.GetInputVector();
-            playerController.SetHorizontalMovement(inputVector.x, speed);
-        }
-
-        protected void ApplyJump(float force)
-        {
-            if (playerController == null) return;
-
-            playerController.ApplyJump(force);
-        }
-
-        /// <summary>
-        /// 운동량을 보존하면서 점프 적용
-        /// </summary>
-        protected void ApplyJumpPreservingMomentum(float force)
-        {
-            if (playerController == null) return;
-
-            Vector3 velocity = playerController.Velocity;
-            velocity.y = force;
-
-            // 수평 속도 유지 - 이전 속도가 더 크면 그대로 유지
-            float currentHorizontalSpeed = Mathf.Abs(velocity.x);
-            float previousSpeed = playerController.PreviousHorizontalSpeed;
-
-            if (previousSpeed > currentHorizontalSpeed && previousSpeed > 0.1f)
-            {
-                // 이전 속도의 방향 유지하면서 크기 보존
-                float direction = velocity.x >= 0 ? 1f : -1f;
-                velocity.x = direction * previousSpeed;
-            }
-
-            playerController.SetVelocity(velocity);
-        }
-
-        protected void ApplyDash(float speed, int direction)
-        {
-            if (playerController == null) return;
-
-            Vector3 velocity = playerController.Velocity;
-            velocity.x = speed * direction;
-            velocity.y = 0; // 대시 중에는 중력 무시
-            playerController.SetVelocity(velocity);
-        }
+        // 커스텀 물리 시스템용 공통 유틸리티 메서드들 (간소화됨)
+        // 대부분의 물리 연산은 PhysicsEngine에서 자동으로 처리됨
 
         protected void StopHorizontalMovement()
         {
@@ -139,13 +92,6 @@ namespace Player
             Vector3 velocity = playerController.Velocity;
             velocity.y = 0;
             playerController.SetVelocity(velocity);
-        }
-
-        protected void ApplyGravity(float multiplier = 1f)
-        {
-            if (playerController == null) return;
-
-            playerController.ApplyGravity(multiplier);
         }
 
         protected bool CanTransitionTo(PlayerStateType targetState)

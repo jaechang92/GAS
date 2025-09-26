@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Read(//d/JaeChang/UintyDev/**)",
+      "Bash(git commit:*)",
+      "Bash(git mv:*)",
+      "Bash(tree:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
