@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using Character.Physics;
+using Player.Physics;
 using Player;
 using GAS.Core;
 using System.IO;
@@ -15,7 +15,7 @@ namespace ProjectTools
     {
         [Header("기본 설정")]
         private Sprite playerSprite;
-        private CharacterPhysicsConfig physicsConfig;
+        private SkulPhysicsConfig physicsConfig;
 
         [Header("고급 설정")]
         private bool autoCreatePhysicsConfig = true;
@@ -67,13 +67,13 @@ namespace ProjectTools
             EditorGUILayout.Space(5);
 
             EditorGUILayout.HelpBox(
-                "새로운 물리 시스템을 사용하는 플레이어 캐릭터를 자동으로 생성합니다.\n\n" +
+                "Skul 스타일 물리 시스템을 사용하는 플레이어 캐릭터를 자동으로 생성합니다.\n\n" +
                 "포함 컴포넌트:\n" +
                 "• PlayerController (FSM 상태 관리)\n" +
-                "• PhysicsEngine (통합 물리 시스템)\n" +
-                "• CollisionDetector (레이캐스트 충돌 검사)\n" +
-                "• MovementProcessor (이동 계산)\n" +
-                "• PhysicsState (상태 관리)\n" +
+                "• CharacterPhysics (통합 물리 시스템)\n" +
+                "• Rigidbody2D (Unity 물리 엔진)\n" +
+                "• BoxCollider2D (충돌 감지)\n" +
+                "• SkulPhysicsConfig (Skul 스타일 설정)\n" +
                 "• InputHandler (입력 처리)\n" +
                 "• AnimationController (애니메이션)\n" +
                 "• AbilitySystem (GAS 통합)",
@@ -94,23 +94,28 @@ namespace ProjectTools
                 false
             );
 
-            physicsConfig = (CharacterPhysicsConfig)EditorGUILayout.ObjectField(
+            physicsConfig = (SkulPhysicsConfig)EditorGUILayout.ObjectField(
                 "물리 설정",
                 physicsConfig,
-                typeof(CharacterPhysicsConfig),
+                typeof(SkulPhysicsConfig),
                 false
             );
 
             EditorGUILayout.Space(5);
 
-            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("🔍 자동으로 스프라이트 찾기", GUILayout.Height(25)))
             {
                 FindPlayerSprite();
             }
-            if (GUILayout.Button("⚙️ 자동으로 Physics Config 찾기", GUILayout.Height(25)))
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("⚙️ Skul Physics Config 찾기", GUILayout.Height(25)))
             {
                 FindPhysicsConfig();
+            }
+            if (GUILayout.Button("🔄 새로고침", GUILayout.Height(25), GUILayout.Width(80)))
+            {
+                RefreshAndFindPhysicsConfig();
             }
             EditorGUILayout.EndHorizontal();
 
@@ -121,7 +126,7 @@ namespace ProjectTools
         {
             EditorGUILayout.LabelField("고급 설정", EditorStyles.boldLabel);
 
-            autoCreatePhysicsConfig = EditorGUILayout.Toggle("Physics Config 자동 생성", autoCreatePhysicsConfig);
+            autoCreatePhysicsConfig = EditorGUILayout.Toggle("Skul Physics Config 자동 생성", autoCreatePhysicsConfig);
             createPrefab = EditorGUILayout.Toggle("프리팹으로 저장", createPrefab);
             placeInScene = EditorGUILayout.Toggle("씬에 배치", placeInScene);
 
@@ -180,10 +185,16 @@ namespace ProjectTools
 
             EditorGUILayout.Space(5);
 
-            if (GUILayout.Button("📋 CharacterPhysicsConfig 생성", GUILayout.Height(30)))
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("📋 SkulPhysicsConfig 생성", GUILayout.Height(30)))
             {
-                CreateCharacterPhysicsConfig();
+                CreateSkulPhysicsConfig();
             }
+            if (GUILayout.Button("🔧 안전 재생성", GUILayout.Height(30), GUILayout.Width(100)))
+            {
+                SafeRecreatePhysicsConfig();
+            }
+            EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button("🔧 기존 캐릭터 업그레이드", GUILayout.Height(30)))
             {
@@ -217,21 +228,159 @@ namespace ProjectTools
         }
 
         /// <summary>
-        /// Physics Config 자동 찾기
+        /// Physics Config 자동 찾기 (다중 검색 방식)
         /// </summary>
         private void FindPhysicsConfig()
         {
-            string[] guids = AssetDatabase.FindAssets("t:CharacterPhysicsConfig");
+            // 방법 1: 타입 기반 검색
+            string[] guids = AssetDatabase.FindAssets("t:SkulPhysicsConfig");
             if (guids.Length > 0)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                physicsConfig = AssetDatabase.LoadAssetAtPath<CharacterPhysicsConfig>(path);
-                Debug.Log($"✅ Physics Config를 찾았습니다: {path}");
+                physicsConfig = AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(path);
+                Debug.Log($"✅ Skul Physics Config를 찾았습니다 (타입 검색): {path}");
+                return;
+            }
+
+            // 방법 2: 파일명 기반 검색
+            guids = AssetDatabase.FindAssets("SkulPhysicsConfig");
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.EndsWith(".asset"))
+                {
+                    var config = AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(path);
+                    if (config != null)
+                    {
+                        physicsConfig = config;
+                        Debug.Log($"✅ Skul Physics Config를 찾았습니다 (파일명 검색): {path}");
+                        return;
+                    }
+                }
+            }
+
+            // 방법 3: 특정 경로에서 직접 검색
+            string[] searchPaths = {
+                "Assets/_Project/Data/SkulPhysicsConfig.asset",
+                "Assets/Data/SkulPhysicsConfig.asset",
+                "Assets/SkulPhysicsConfig.asset"
+            };
+
+            foreach (string searchPath in searchPaths)
+            {
+                if (AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(searchPath) != null)
+                {
+                    physicsConfig = AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(searchPath);
+                    Debug.Log($"✅ Skul Physics Config를 찾았습니다 (경로 검색): {searchPath}");
+                    return;
+                }
+            }
+
+            // 방법 4: 모든 에셋 폴더 검색
+            string[] allAssetPaths = AssetDatabase.GetAllAssetPaths();
+            foreach (string assetPath in allAssetPaths)
+            {
+                if (assetPath.Contains("SkulPhysicsConfig") && assetPath.EndsWith(".asset"))
+                {
+                    var config = AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(assetPath);
+                    if (config != null)
+                    {
+                        physicsConfig = config;
+                        Debug.Log($"✅ Skul Physics Config를 찾았습니다 (전체 검색): {assetPath}");
+                        return;
+                    }
+                }
+            }
+
+            Debug.LogWarning("❌ SkulPhysicsConfig를 찾을 수 없습니다.");
+            Debug.LogWarning("해결 방법:");
+            Debug.LogWarning("1. Unity 에디터에서 Assets → Refresh 실행");
+            Debug.LogWarning("2. SkulPhysicsConfig.asset 파일의 스크립트 연결 확인");
+            Debug.LogWarning("3. 자동 생성 옵션 활성화");
+            Debug.LogWarning("4. Project 창에서 우클릭 → Create → Skul → Physics Config로 수동 생성");
+        }
+
+        /// <summary>
+        /// AssetDatabase 새로고침 후 Physics Config 찾기
+        /// </summary>
+        private void RefreshAndFindPhysicsConfig()
+        {
+            Debug.Log("🔄 AssetDatabase 새로고침 중...");
+            AssetDatabase.Refresh();
+
+            // 잠시 대기 후 검색
+            System.Threading.Thread.Sleep(100);
+
+            FindPhysicsConfig();
+
+            if (physicsConfig == null)
+            {
+                Debug.LogWarning("새로고침 후에도 SkulPhysicsConfig를 찾을 수 없습니다.");
+                Debug.LogWarning("스크립트 참조가 끊어진 것 같습니다. 안전한 해결 방법:");
+                Debug.LogWarning("1. Project창에서 SkulPhysicsConfig.asset 선택");
+                Debug.LogWarning("2. Inspector에서 Script 필드의 오른쪽 동그라미 클릭");
+                Debug.LogWarning("3. SkulPhysicsConfig 스크립트 다시 선택");
+                Debug.LogWarning("4. 또는 '에셋 안전 재생성' 버튼 클릭");
+            }
+        }
+
+        /// <summary>
+        /// 에셋 안전 재생성 (기존 설정 보존)
+        /// </summary>
+        [ContextMenu("SkulPhysicsConfig 안전 재생성")]
+        public void SafeRecreatePhysicsConfig()
+        {
+            string assetPath = "Assets/_Project/Data/SkulPhysicsConfig.asset";
+
+            // 기존 에셋 로드 시도 (설정 백업용)
+            var existingConfig = AssetDatabase.LoadAssetAtPath<SkulPhysicsConfig>(assetPath);
+
+            // 디렉토리 확인
+            string directory = System.IO.Path.GetDirectoryName(assetPath);
+            if (!AssetDatabase.IsValidFolder(directory))
+            {
+                AssetDatabase.CreateFolder("Assets/_Project", "Data");
+            }
+
+            // 새 인스턴스 생성
+            var newConfig = ScriptableObject.CreateInstance<SkulPhysicsConfig>();
+
+            // 기존 설정이 있다면 복사, 없다면 기본값 적용
+            if (existingConfig != null)
+            {
+                Debug.Log("기존 설정을 새 에셋으로 복사 중...");
+                // 기존 설정값들 복사 (리플렉션 사용)
+                var fields = typeof(SkulPhysicsConfig).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                foreach (var field in fields)
+                {
+                    if (field.IsPublic || field.GetCustomAttributes(typeof(SerializeField), false).Length > 0)
+                    {
+                        field.SetValue(newConfig, field.GetValue(existingConfig));
+                    }
+                }
             }
             else
             {
-                Debug.LogWarning("❌ CharacterPhysicsConfig를 찾을 수 없습니다. 자동 생성을 활성화하거나 수동으로 생성해주세요.");
+                Debug.Log("기존 설정이 없어 Skul 기본 프리셋을 적용합니다...");
+                newConfig.ApplyPerfectSkulPreset();
             }
+
+            // 기존 에셋 삭제
+            if (AssetDatabase.LoadAssetAtPath(assetPath, typeof(UnityEngine.Object)) != null)
+            {
+                AssetDatabase.DeleteAsset(assetPath);
+            }
+
+            // 새 에셋 생성
+            AssetDatabase.CreateAsset(newConfig, assetPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            // 생성된 에셋 할당
+            physicsConfig = newConfig;
+
+            Debug.Log($"✅ SkulPhysicsConfig가 안전하게 재생성되었습니다: {assetPath}");
+            Debug.Log("GUID가 새로 생성되어 스크립트 참조 문제가 해결되었습니다.");
         }
 
         /// <summary>
@@ -239,12 +388,12 @@ namespace ProjectTools
         /// </summary>
         private void CreatePlayerCharacter()
         {
-            Debug.Log("🎮 새로운 물리 시스템 기반 플레이어 캐릭터 생성 시작...");
+            Debug.Log("🎮 Skul 스타일 물리 시스템 기반 플레이어 캐릭터 생성 시작...");
 
-            // Physics Config 자동 생성
+            // Skul Physics Config 자동 생성
             if (physicsConfig == null && autoCreatePhysicsConfig)
             {
-                physicsConfig = CreateCharacterPhysicsConfig();
+                physicsConfig = CreateSkulPhysicsConfig();
             }
 
             // 게임오브젝트 생성
@@ -270,7 +419,7 @@ namespace ProjectTools
                 Debug.Log("✅ 플레이어 캐릭터 생성 완료 (임시 오브젝트)");
             }
 
-            Debug.Log("🎯 새로운 물리 시스템 기반 플레이어 캐릭터 생성 완료!");
+            Debug.Log("🎯 Skul 스타일 물리 시스템 기반 플레이어 캐릭터 생성 완료!");
         }
 
         /// <summary>
@@ -286,43 +435,54 @@ namespace ProjectTools
             // 1. SpriteRenderer 추가
             SetupSpriteRenderer(playerCharacter);
 
-            // 2. BoxCollider2D 추가
+            // 2. Rigidbody2D 추가 (CharacterPhysics 의존성)
+            var rigidbody = playerCharacter.AddComponent<Rigidbody2D>();
+            rigidbody.gravityScale = 0f; // CharacterPhysics가 중력 제어
+            rigidbody.freezeRotation = true;
+            rigidbody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Debug.Log("- Rigidbody2D 추가됨");
+
+            // 3. BoxCollider2D 추가
             if (setupCollider)
             {
                 SetupCollider(playerCharacter);
             }
 
-            // 3. AbilitySystem 추가 (PlayerController의 의존성)
+            // 4. AbilitySystem 추가 (PlayerController의 의존성)
             if (addAbilitySystem)
             {
                 playerCharacter.AddComponent<AbilitySystem>();
                 Debug.Log("- AbilitySystem 추가됨");
             }
 
-            // 4. PhysicsEngine 추가 (새로운 통합 물리 시스템)
-            var physicsEngine = playerCharacter.AddComponent<Character.Physics.PhysicsEngine>();
-            Debug.Log("- PhysicsEngine 추가됨 (통합 물리 시스템)");
+            // 5. CharacterPhysics 추가 (새로운 Skul 스타일 물리 시스템)
+            var characterPhysics = playerCharacter.AddComponent<CharacterPhysics>();
+            Debug.Log("- CharacterPhysics 추가됨 (Skul 스타일 물리 시스템)");
 
-            // 5. InputHandler 추가
+            // 6. InputHandler 추가
             if (addInputHandler)
             {
                 playerCharacter.AddComponent<InputHandler>();
                 Debug.Log("- InputHandler 추가됨");
             }
 
-            // 6. AnimationController 추가
+            // 7. AnimationController 추가
             if (addAnimationController)
             {
                 playerCharacter.AddComponent<AnimationController>();
                 Debug.Log("- AnimationController 추가됨");
             }
 
-            // 7. PlayerController 추가 (마지막에 추가)
+            // 8. PlayerController 추가 (마지막에 추가)
             playerCharacter.AddComponent<PlayerController>();
             Debug.Log("- PlayerController 추가됨");
 
-            // 8. Physics Config 설정
-            SetupPhysicsConfig(physicsEngine);
+            // 9. SkulPhysicsTestRunner 추가 (테스트용)
+            playerCharacter.AddComponent<SkulPhysicsTestRunner>();
+            Debug.Log("- SkulPhysicsTestRunner 추가됨 (테스트용)");
+
+            // 10. Skul Physics Config 설정
+            SetupPhysicsConfig(characterPhysics);
 
             return playerCharacter;
         }
@@ -362,24 +522,24 @@ namespace ProjectTools
         }
 
         /// <summary>
-        /// Physics Config 설정
+        /// Skul Physics Config 설정
         /// </summary>
-        private void SetupPhysicsConfig(Character.Physics.PhysicsEngine physicsEngine)
+        private void SetupPhysicsConfig(CharacterPhysics characterPhysics)
         {
             if (physicsConfig != null)
             {
-                var configField = typeof(Character.Physics.PhysicsEngine).GetField("config",
+                var configField = typeof(CharacterPhysics).GetField("config",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
                 if (configField != null)
                 {
-                    configField.SetValue(physicsEngine, physicsConfig);
-                    Debug.Log($"- CharacterPhysicsConfig 할당됨 (Skul Preset: {physicsConfig.useSkulPreset})");
+                    configField.SetValue(characterPhysics, physicsConfig);
+                    Debug.Log($"- SkulPhysicsConfig 할당됨");
                 }
             }
             else
             {
-                Debug.LogWarning("⚠️ CharacterPhysicsConfig가 없습니다. 런타임에 오류가 발생할 수 있습니다.");
+                Debug.LogWarning("⚠️ SkulPhysicsConfig가 없습니다. 런타임에 오류가 발생할 수 있습니다.");
             }
         }
 
@@ -408,11 +568,11 @@ namespace ProjectTools
         }
 
         /// <summary>
-        /// CharacterPhysicsConfig 생성
+        /// SkulPhysicsConfig 생성
         /// </summary>
-        private CharacterPhysicsConfig CreateCharacterPhysicsConfig()
+        private SkulPhysicsConfig CreateSkulPhysicsConfig()
         {
-            string configPath = "Assets/_Project/Data/CharacterPhysicsConfig.asset";
+            string configPath = "Assets/_Project/Data/SkulPhysicsConfig.asset";
 
             // 디렉토리 생성
             string directory = Path.GetDirectoryName(configPath);
@@ -422,18 +582,18 @@ namespace ProjectTools
                 AssetDatabase.CreateFolder("Assets/_Project", "Data");
             }
 
-            // CharacterPhysicsConfig 생성
-            var config = ScriptableObject.CreateInstance<CharacterPhysicsConfig>();
+            // SkulPhysicsConfig 생성
+            var config = ScriptableObject.CreateInstance<SkulPhysicsConfig>();
 
             // 설정 적용
             if (useSkullPreset)
             {
-                config.ApplySkulPreset();
+                config.ApplyPerfectSkulPreset();
             }
             else
             {
                 config.moveSpeed = moveSpeed;
-                config.jumpForce = jumpForce;
+                config.jumpVelocity = jumpForce;
                 config.dashSpeed = dashSpeed;
             }
 
@@ -442,7 +602,7 @@ namespace ProjectTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"✅ CharacterPhysicsConfig 생성됨: {configPath}");
+            Debug.Log($"✅ SkulPhysicsConfig 생성됨: {configPath}");
             return config;
         }
 
@@ -488,41 +648,51 @@ namespace ProjectTools
 
             Debug.Log($"🔧 {selectedObject.name} 업그레이드 시작...");
 
-            // 기존 구 시스템 컴포넌트 제거
-            RemoveOldComponents(selectedObject);
-
-            // 새로운 시스템 컴포넌트 추가
+            // 새로운 Skul 스타일 시스템 컴포넌트 추가
             AddNewComponents(selectedObject);
 
             Debug.Log("✅ 캐릭터 업그레이드 완료!");
         }
 
         /// <summary>
-        /// 구 시스템 컴포넌트 제거
-        /// </summary>
-        private void RemoveOldComponents(GameObject target)
-        {
-            // RaycastController 제거
-            var oldRaycast = target.GetComponent<RaycastController>();
-            if (oldRaycast != null)
-            {
-                DestroyImmediate(oldRaycast);
-                Debug.Log("- RaycastController 제거됨");
-            }
-
-        }
-
-        /// <summary>
-        /// 새로운 시스템 컴포넌트 추가
+        /// 새로운 Skul 스타일 시스템 컴포넌트 추가
         /// </summary>
         private void AddNewComponents(GameObject target)
         {
-            // PhysicsEngine 추가
-            if (target.GetComponent<Character.Physics.PhysicsEngine>() == null)
+            // Rigidbody2D 확인 및 설정
+            var rigidbody = target.GetComponent<Rigidbody2D>();
+            if (rigidbody == null)
             {
-                var physicsEngine = target.AddComponent<Character.Physics.PhysicsEngine>();
-                SetupPhysicsConfig(physicsEngine);
-                Debug.Log("- PhysicsEngine 추가됨");
+                rigidbody = target.AddComponent<Rigidbody2D>();
+                Debug.Log("- Rigidbody2D 추가됨");
+            }
+            rigidbody.gravityScale = 0f;
+            rigidbody.freezeRotation = true;
+            rigidbody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Debug.Log("- Rigidbody2D 설정 업데이트됨");
+
+            // BoxCollider2D 확인
+            if (target.GetComponent<BoxCollider2D>() == null)
+            {
+                var collider = target.AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(0.8f, 0.9f);
+                collider.offset = new Vector2(0, -0.05f);
+                Debug.Log("- BoxCollider2D 추가됨");
+            }
+
+            // CharacterPhysics 추가
+            if (target.GetComponent<CharacterPhysics>() == null)
+            {
+                var characterPhysics = target.AddComponent<CharacterPhysics>();
+                SetupPhysicsConfig(characterPhysics);
+                Debug.Log("- CharacterPhysics 추가됨 (Skul 스타일)");
+            }
+
+            // SkulPhysicsTestRunner 추가
+            if (target.GetComponent<SkulPhysicsTestRunner>() == null)
+            {
+                target.AddComponent<SkulPhysicsTestRunner>();
+                Debug.Log("- SkulPhysicsTestRunner 추가됨");
             }
 
             // 필수 컴포넌트들 확인 및 추가

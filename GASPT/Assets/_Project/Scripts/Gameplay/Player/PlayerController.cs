@@ -19,7 +19,7 @@ namespace Player
         // === 핵심 컴포넌트 참조 ===
         private AbilitySystem abilitySystem;
         private InputHandler inputHandler;
-        private Character.Physics.PhysicsEngine physicsEngine;
+        private Player.Physics.CharacterPhysics characterPhysics;
         private AnimationController animationController;
 
         // === FSM 관련 ===
@@ -32,12 +32,12 @@ namespace Player
         // === 프로퍼티 (PhysicsEngine 위임) ===
         public PlayerStateType CurrentState => GetCurrentState();
         public PlayerStateType PreviousState => previousState;
-        public bool IsGrounded => physicsEngine?.IsGrounded ?? false;
-        public bool IsTouchingWall => physicsEngine?.IsTouchingWall ?? false;
-        public bool CanDash => physicsEngine?.CanDash ?? false;
-        public Vector3 Velocity => physicsEngine?.Velocity ?? Vector3.zero;
+        public bool IsGrounded => characterPhysics?.IsGrounded ?? false;
+        public bool IsTouchingWall => characterPhysics?.IsTouchingWall ?? false;
+        public bool CanDash => characterPhysics?.CanDash ?? false;
+        public Vector3 Velocity => characterPhysics?.Velocity ?? Vector3.zero;
         public int FacingDirection => facingDirection;
-        public bool IsDashing => physicsEngine?.IsDashing ?? false;
+        public bool IsDashing => characterPhysics?.IsDashing ?? false;
 
         // === 이벤트 ===
         public event System.Action<PlayerStateType, PlayerStateType> OnStateChanged;
@@ -76,12 +76,12 @@ namespace Player
                 LogDebug("InputHandler 컴포넌트가 자동으로 추가되었습니다.");
             }
 
-            // PhysicsEngine 초기화
-            physicsEngine = GetComponent<Character.Physics.PhysicsEngine>();
-            if (physicsEngine == null)
+            // CharacterPhysics 초기화
+            characterPhysics = GetComponent<Player.Physics.CharacterPhysics>();
+            if (characterPhysics == null)
             {
-                physicsEngine = gameObject.AddComponent<Character.Physics.PhysicsEngine>();
-                LogDebug("PhysicsEngine 컴포넌트가 자동으로 추가되었습니다.");
+                characterPhysics = gameObject.AddComponent<Player.Physics.CharacterPhysics>();
+                LogDebug("CharacterPhysics 컴포넌트가 자동으로 추가되었습니다.");
             }
 
             // AnimationController 초기화
@@ -199,11 +199,12 @@ namespace Player
             inputHandler.OnAttackPressed += () => TriggerEvent(PlayerEventType.AttackPressed);
             inputHandler.OnSlidePressed += () => { if (IsGrounded) TriggerEvent(PlayerEventType.SlidePressed); };
 
-            // PhysicsEngine 이벤트 구독
-            if (physicsEngine != null)
+            // CharacterPhysics 이벤트 구독
+            if (characterPhysics != null)
             {
-                physicsEngine.OnGroundedChanged += OnGroundedChanged;
-                physicsEngine.OnJump += () => TriggerEvent(PlayerEventType.JumpPressed);
+                characterPhysics.OnGroundedChanged += OnGroundedChanged;
+                characterPhysics.OnJump += () => TriggerEvent(PlayerEventType.JumpPressed);
+                characterPhysics.OnDash += () => TriggerEvent(PlayerEventType.DashPressed);
             }
         }
 
@@ -223,11 +224,12 @@ namespace Player
                 inputHandler.OnSlidePressed -= () => { if (IsGrounded) TriggerEvent(PlayerEventType.SlidePressed); };
             }
 
-            // PhysicsEngine 이벤트 구독 해제
-            if (physicsEngine != null)
+            // CharacterPhysics 이벤트 구독 해제
+            if (characterPhysics != null)
             {
-                physicsEngine.OnGroundedChanged -= OnGroundedChanged;
-                physicsEngine.OnJump -= () => TriggerEvent(PlayerEventType.JumpPressed);
+                characterPhysics.OnGroundedChanged -= OnGroundedChanged;
+                characterPhysics.OnJump -= () => TriggerEvent(PlayerEventType.JumpPressed);
+                characterPhysics.OnDash -= () => TriggerEvent(PlayerEventType.DashPressed);
             }
 
             // FSM 이벤트 구독 해제
@@ -254,8 +256,8 @@ namespace Player
             if (input.x > 0) facingDirection = 1;
             else if (input.x < 0) facingDirection = -1;
 
-            // PhysicsEngine에 입력 전달
-            physicsEngine?.SetHorizontalMovement(input.x);
+            // CharacterPhysics에 입력 전달
+            characterPhysics?.SetHorizontalInput(input.x);
 
             // AnimationController에 방향 전달
             animationController?.UpdateFacingDirection(facingDirection);
@@ -272,8 +274,8 @@ namespace Player
         /// </summary>
         private void OnJumpPressed()
         {
-            // PhysicsEngine에 점프 입력 전달
-            physicsEngine?.SetJumpInput(true, true);
+            // CharacterPhysics에 점프 입력 전달
+            characterPhysics?.SetJumpInput(true, true);
 
             // StateMachine에 이벤트 발생
             TriggerEvent(PlayerEventType.JumpPressed);
@@ -284,8 +286,8 @@ namespace Player
         /// </summary>
         private void OnJumpReleased()
         {
-            // PhysicsEngine에 점프 해제 전달
-            physicsEngine?.SetJumpInput(false, false);
+            // CharacterPhysics에 점프 해제 전달
+            characterPhysics?.SetJumpInput(false, false);
 
             // StateMachine에 이벤트 발생
             TriggerEvent(PlayerEventType.JumpReleased);
@@ -299,8 +301,8 @@ namespace Player
             // 대시 방향 계산 (현재 향하고 있는 방향)
             Vector2 dashDirection = new Vector2(facingDirection, 0);
 
-            // PhysicsEngine에 대시 실행 요청
-            physicsEngine?.PerformDash(dashDirection);
+            // CharacterPhysics에 대시 실행 요청
+            characterPhysics?.PerformDash(dashDirection);
 
             // StateMachine에 이벤트 발생
             TriggerEvent(PlayerEventType.DashPressed);
@@ -371,11 +373,11 @@ namespace Player
         }
 
         /// <summary>
-        /// 속도 직접 설정 (PhysicsEngine으로 위임)
+        /// 속도 직접 설정 (CharacterPhysics로 위임)
         /// </summary>
         public void SetVelocity(Vector3 newVelocity)
         {
-            physicsEngine?.SetVelocity(newVelocity);
+            characterPhysics?.SetVelocity(newVelocity);
         }
 
         /// <summary>

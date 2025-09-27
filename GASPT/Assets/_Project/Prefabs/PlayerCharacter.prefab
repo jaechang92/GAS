@@ -10,12 +10,14 @@ GameObject:
   m_Component:
   - component: {fileID: 273710762444641652}
   - component: {fileID: 7931904744301537999}
+  - component: {fileID: 928000404134794839}
   - component: {fileID: 7253961663596878631}
   - component: {fileID: 6653917397485895049}
-  - component: {fileID: 4943760123406487412}
+  - component: {fileID: 3419197753955028484}
   - component: {fileID: 9072212415302766432}
   - component: {fileID: 2242461352487155456}
   - component: {fileID: 6587679837664890474}
+  - component: {fileID: 6808700113067381787}
   m_Layer: 0
   m_Name: PlayerCharacter
   m_TagString: Player
@@ -96,6 +98,33 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!50 &928000404134794839
+Rigidbody2D:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 667428588633525145}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 1
+  m_Constraints: 4
 --- !u!61 &7253961663596878631
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -157,7 +186,7 @@ MonoBehaviour:
   initialAbilities: []
   useResourceSystem: 1
   resourceConfigs: []
---- !u!114 &4943760123406487412
+--- !u!114 &3419197753955028484
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -166,12 +195,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 667428588633525145}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 691e99529162f7b459e52f4d0ea74b53, type: 3}
+  m_Script: {fileID: 11500000, guid: 7b2666afe4ce84341b669a3ef308b99a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Character.Physics.PhysicsEngine
-  config: {fileID: 11400000, guid: f5356ef0b7396f14185de633d8722af8, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::Player.Physics.CharacterPhysics
+  config: {fileID: 11400000, guid: 4cab190ea6aefb14f9292f63c5f4d442, type: 2}
   enableDebugLogs: 0
-  showPhysicsGizmos: 0
 --- !u!114 &9072212415302766432
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -212,3 +240,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Player.PlayerController
   showDebugInfo: 0
+--- !u!114 &6808700113067381787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 667428588633525145}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 523988ae6b889014a91e25a38b790d5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Player.SkulPhysicsTestRunner
+  runTestsOnStart: 0
+  enableDebugLogs: 1
+  testInterval: 2
+  characterPhysics: {fileID: 0}
+  playerController: {fileID: 0}

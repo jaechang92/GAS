@@ -1,0 +1,24 @@
+{
+  "name": "com.jaechang.guidvalidator",
+  "version": "1.0.0",
+  "displayName": "GUID Validator",
+  "description": "Unity GUID 검증 도구 - Git 작업 중 발생하는 GUID 문제들을 탐지하고 수정하는 독립적인 패키지",
+  "unity": "2022.3",
+  "unityRelease": "0f1",
+  "keywords": [
+    "unity",
+    "guid",
+    "validation",
+    "git",
+    "asset management",
+    "editor tool"
+  ],
+  "author": {
+    "name": "JaeChang",
+    "email": ""
+  },
+  "type": "tool",
+  "hideInEditor": false,
+  "dependencies": {},
+  "samples": []
+}
