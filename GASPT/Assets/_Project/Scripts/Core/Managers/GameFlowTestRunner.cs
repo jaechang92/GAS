@@ -1,5 +1,6 @@
 using UnityEngine;
-using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace GameFlow
 {
@@ -24,29 +25,29 @@ namespace GameFlow
 
         public void InitializeAndTest()
         {
-            StartCoroutine(RunFullTest());
+            _ = RunFullTest();
         }
 
-        private IEnumerator RunFullTest()
+        private async Awaitable RunFullTest()
         {
             Debug.Log("=== GameFlow 시스템 테스트 시작 ===");
 
             // 1. GameFlow 매니저 생성 및 초기화 테스트
-            yield return StartCoroutine(TestGameFlowManagerCreation());
+            await TestGameFlowManagerCreation();
 
             // 2. 상태 전환 테스트
-            yield return StartCoroutine(TestStateTransitions());
+            await TestStateTransitions();
 
             // 3. 이벤트 시스템 테스트
-            yield return StartCoroutine(TestEventSystem());
+            await TestEventSystem();
 
             // 4. FSM 통합 테스트
-            yield return StartCoroutine(TestFSMIntegration());
+            await TestFSMIntegration();
 
             Debug.Log("=== GameFlow 시스템 테스트 완료 ===");
         }
 
-        private IEnumerator TestGameFlowManagerCreation()
+        private async Awaitable TestGameFlowManagerCreation()
         {
             Debug.Log("1. GameFlow 매니저 생성 테스트 시작");
 
@@ -69,7 +70,7 @@ namespace GameFlow
                 Debug.Log("기존 GameFlowManager를 찾았습니다.");
             }
 
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
 
             // 초기 상태 확인
             Debug.Log($"초기 상태: {gameFlowManager.CurrentState}");
@@ -131,39 +132,39 @@ namespace GameFlow
             return panel;
         }
 
-        private IEnumerator TestStateTransitions()
+        private async Awaitable TestStateTransitions()
         {
             Debug.Log("2. 상태 전환 테스트 시작");
 
             if (gameFlowManager == null)
             {
                 Debug.LogError("GameFlowManager가 없습니다!");
-                yield break;
+                return;
             }
 
             // Main -> Loading
             Debug.Log("Main → Loading 테스트");
             gameFlowManager.StartGame();
-            yield return new WaitForSeconds(testInterval);
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
             // Loading은 자동으로 Ingame으로 전환됨 (약 5초 후)
             Debug.Log("Loading → Ingame 자동 전환 대기");
-            yield return new WaitForSeconds(6f);
+            await Awaitable.WaitForSecondsAsync(6f);
 
             // Ingame -> Pause
             Debug.Log("Ingame → Pause 테스트");
             gameFlowManager.PauseGame();
-            yield return new WaitForSeconds(testInterval);
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
             // Pause -> Ingame
             Debug.Log("Pause → Ingame 테스트");
             gameFlowManager.ResumeGame();
-            yield return new WaitForSeconds(testInterval);
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
             Debug.Log("상태 전환 테스트 완료");
         }
 
-        private IEnumerator TestEventSystem()
+        private async Awaitable TestEventSystem()
         {
             Debug.Log("3. 이벤트 시스템 테스트 시작");
 
@@ -191,7 +192,7 @@ namespace GameFlow
                 eventReceived = false;
                 gameFlowManager.TriggerEvent(eventType);
 
-                yield return new WaitForSeconds(0.5f);
+                await Awaitable.WaitForSecondsAsync(0.5f);
 
                 if (eventReceived && receivedEventType == eventType)
                 {
@@ -202,20 +203,20 @@ namespace GameFlow
                     Debug.LogError($"✗ {eventType} 이벤트 실패");
                 }
 
-                yield return new WaitForSeconds(testInterval);
+                await Awaitable.WaitForSecondsAsync(testInterval);
             }
 
             Debug.Log("이벤트 시스템 테스트 완료");
         }
 
-        private IEnumerator TestFSMIntegration()
+        private async Awaitable TestFSMIntegration()
         {
             Debug.Log("4. FSM 통합 테스트 시작");
 
             if (gameFlowManager.StateMachine == null)
             {
                 Debug.LogError("StateMachine이 초기화되지 않았습니다!");
-                yield break;
+                return;
             }
 
             // FSM 상태 정보 확인
@@ -238,7 +239,7 @@ namespace GameFlow
             // 강제 전환 테스트
             Debug.Log("강제 전환 테스트: Lobby로 이동");
             gameFlowManager.TransitionTo(GameStateType.Lobby);
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
 
             Debug.Log($"전환 후 상태: {gameFlowManager.CurrentState}");
 
@@ -249,19 +250,19 @@ namespace GameFlow
         [ContextMenu("GameFlow 매니저 생성 테스트")]
         public void TestManagerCreation()
         {
-            StartCoroutine(TestGameFlowManagerCreation());
+            _ = TestGameFlowManagerCreation();
         }
 
         [ContextMenu("상태 전환 테스트")]
         public void TestTransitions()
         {
-            StartCoroutine(TestStateTransitions());
+            _ = TestStateTransitions();
         }
 
         [ContextMenu("이벤트 시스템 테스트")]
         public void TestEvents()
         {
-            StartCoroutine(TestEventSystem());
+            _ = TestEventSystem();
         }
 
         [ContextMenu("현재 상태 정보 출력")]

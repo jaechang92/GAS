@@ -147,32 +147,32 @@ namespace GameFlow
         [ContextMenu("자동 테스트 실행")]
         public void RunAutomatedTest()
         {
-            StartCoroutine(AutomatedTestSequence());
+            _ = AutomatedTestSequence();
         }
 
-        private System.Collections.IEnumerator AutomatedTestSequence()
+        private async Awaitable AutomatedTestSequence()
         {
             LogEvent("=== 자동 테스트 시작 ===");
 
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
             TestEvent("Auto - StartGame", () => gameFlowManager.StartGame());
 
-            yield return new WaitForSeconds(3f); // 로딩 대기
+            await Awaitable.WaitForSecondsAsync(3f); // 로딩 대기
             TestEvent("Auto - PauseGame", () => gameFlowManager.PauseGame());
 
-            yield return new WaitForSeconds(2f);
+            await Awaitable.WaitForSecondsAsync(2f);
             TestEvent("Auto - ResumeGame", () => gameFlowManager.ResumeGame());
 
-            yield return new WaitForSeconds(2f);
+            await Awaitable.WaitForSecondsAsync(2f);
             TestEvent("Auto - OpenMenu", () => gameFlowManager.OpenInGameMenu());
 
-            yield return new WaitForSeconds(2f);
+            await Awaitable.WaitForSecondsAsync(2f);
             TestEvent("Auto - CloseMenu", () => gameFlowManager.CloseInGameMenu());
 
-            yield return new WaitForSeconds(2f);
+            await Awaitable.WaitForSecondsAsync(2f);
             TestEvent("Auto - GoToLobby", () => gameFlowManager.GoToLobby());
 
-            yield return new WaitForSeconds(2f);
+            await Awaitable.WaitForSecondsAsync(2f);
             TestEvent("Auto - GoToMain", () => gameFlowManager.GoToMainMenu());
 
             LogEvent("=== 자동 테스트 완료 ===");

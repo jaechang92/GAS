@@ -7,13 +7,13 @@ namespace FSM.Examples
 {
     public class CharacterFSMExample : MonoBehaviour
     {
-        [Header("ƒƒ∆˜≥Õ∆Æ ¬¸¡∂")]
+        [Header("Ïª¥Ìè¨ÎÑåÌä∏ Ï∞∏Ï°∞")]
         [SerializeField] private StateMachine stateMachine;
         [SerializeField] private GAS.Core.AbilitySystem abilitySystem;
         [SerializeField] private Rigidbody2D rb;
         [SerializeField] private Animator animator;
 
-        [Header("ƒ≥∏Ø≈Õ º≥¡§")]
+        [Header("Ï∫êÎ¶≠ÌÑ∞ ÏÑ§Ï†ï")]
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float jumpForce = 10f;
 
@@ -50,29 +50,29 @@ namespace FSM.Examples
             AttackState attackState = new AttackState();
             attackState.Initialize("attack", gameObject, stateMachine);
 
-            // ªÛ≈¬ √ﬂ∞°
+            // ÏÉÅÌÉú Ï∂îÍ∞Ä
             stateMachine.AddState(idleState);
             stateMachine.AddState(moveState);
             stateMachine.AddState(jumpState);
             stateMachine.AddState(attackState);
 
-            // ¿¸»Ø √ﬂ∞°
+            // Ï†ÑÌôò Ï∂îÍ∞Ä
             AddTransitions();
         }
 
         private void AddTransitions()
         {
-            // Idle -> Move (øÚ¡˜¿” ¿‘∑¬ Ω√)
+            // Idle -> Move (ÏõÄÏßÅÏûÑ ÏûÖÎ†• Ïãú)
             var idleToMove = new ConditionalTransition("idle_to_move", "idle", "move",
                 () => Mathf.Abs(horizontalInput) > 0.1f);
             stateMachine.AddTransition(idleToMove);
 
-            // Move -> Idle (øÚ¡˜¿” ¿‘∑¬ æ¯¿ª Ω√)
+            // Move -> Idle (ÏõÄÏßÅÏûÑ ÏûÖÎ†• ÏóÜÏùÑ Ïãú)
             var moveToIdle = new ConditionalTransition("move_to_idle", "move", "idle",
                 () => Mathf.Abs(horizontalInput) <= 0.1f);
             stateMachine.AddTransition(moveToIdle);
 
-            // Any -> Jump (¡°«¡ ¿‘∑¬ & ∂•ø° ¿÷¿ª ∂ß)
+            // Any -> Jump (Ï†êÌîÑ ÏûÖÎ†• & ÎïÖÏóê ÏûàÏùÑ Îïå)
             foreach (string fromState in new[] { "idle", "move" })
             {
                 var toJump = new ConditionalTransition($"{fromState}_to_jump", fromState, "jump",
@@ -80,12 +80,12 @@ namespace FSM.Examples
                 stateMachine.AddTransition(toJump);
             }
 
-            // Jump -> Idle (¬¯¡ˆ Ω√)
+            // Jump -> Idle (Ï∞©ÏßÄ Ïãú)
             var jumpToIdle = new ConditionalTransition("jump_to_idle", "jump", "idle",
                 () => isGrounded && rb.linearVelocity.y <= 0.1f);
             stateMachine.AddTransition(jumpToIdle);
 
-            // Any -> Attack (∞¯∞› ¿‘∑¬ Ω√)
+            // Any -> Attack (Í≥µÍ≤© ÏûÖÎ†• Ïãú)
             foreach (string fromState in new[] { "idle", "move" })
             {
                 var toAttack = new ConditionalTransition($"{fromState}_to_attack", fromState, "attack",
@@ -93,7 +93,7 @@ namespace FSM.Examples
                 stateMachine.AddTransition(toAttack);
             }
 
-            // Attack -> Idle (∞¯∞› ¡æ∑· Ω√)
+            // Attack -> Idle (Í≥µÍ≤© Ï¢ÖÎ£å Ïãú)
             var attackToIdle = new Transition("attack_to_idle", "attack", "idle");
             attackToIdle.AddCondition(new TimeCondition("attack_duration", 0.5f));
             stateMachine.AddTransition(attackToIdle);
@@ -104,12 +104,12 @@ namespace FSM.Examples
             isGrounded = Physics2D.Raycast(transform.position, Vector2.down, 1.1f);
         }
 
-        // ªÛ≈¬ ≈¨∑°Ω∫µÈ
+        // ÏÉÅÌÉú ÌÅ¥ÎûòÏä§Îì§
         public class IdleState : State
         {
             protected override void OnUpdateState(float deltaTime)
             {
-                var example = owner.GetComponent<CharacterFSMExample>();
+                var example = Owner.GetComponent<CharacterFSMExample>();
                 if (example.animator != null)
                 {
                     //example.animator.SetBool("IsMoving", false);
@@ -121,7 +121,7 @@ namespace FSM.Examples
         {
             protected override void OnUpdateState(float deltaTime)
             {
-                var example = owner.GetComponent<CharacterFSMExample>();
+                var example = Owner.GetComponent<CharacterFSMExample>();
                 if (example.rb != null)
                 {
                     var moveVector = new Vector2(example.horizontalInput * example.moveSpeed, example.rb.linearVelocity.y);
@@ -139,7 +139,7 @@ namespace FSM.Examples
         {
             protected override async Awaitable OnEnterState(System.Threading.CancellationToken cancellationToken)
             {
-                var example = owner.GetComponent<CharacterFSMExample>();
+                var example = Owner.GetComponent<CharacterFSMExample>();
                 if (example.rb != null)
                 {
                     example.rb.linearVelocity = new Vector2(example.rb.linearVelocity.x, example.jumpForce);
@@ -157,10 +157,10 @@ namespace FSM.Examples
         {
             protected override async Awaitable OnEnterState(System.Threading.CancellationToken cancellationToken)
             {
-                var example = owner.GetComponent<CharacterFSMExample>();
+                var example = Owner.GetComponent<CharacterFSMExample>();
 
-                // æÓ∫Ù∏Æ∆º Ω√Ω∫≈€¿Ã ¿÷¥Ÿ∏È ∞¯∞› æÓ∫Ù∏Æ∆º Ω««‡
-                var abilitySystem = owner.GetComponent<IAbilitySystem>();
+                // Ïñ¥ÎπåÎ¶¨Ìã∞ ÏãúÏä§ÌÖúÏù¥ ÏûàÎã§Î©¥ Í≥µÍ≤© Ïñ¥ÎπåÎ¶¨Ìã∞ Ïã§Ìñâ
+                var abilitySystem = Owner.GetComponent<IAbilitySystem>();
                 if (abilitySystem != null)
                 {
                     abilitySystem.TryUseAbility("basic_attack");

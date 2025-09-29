@@ -1,0 +1,22 @@
+#!/bin/sh
+# Git pre-commit hook - IEnumerator 사용 검사
+
+echo "Checking for forbidden IEnumerator usage..."
+
+# IEnumerator 패턴 검사
+if git diff --cached --name-only | grep '\.cs$' | xargs grep -l "IEnumerator\|yield return" 2>/dev/null; then
+    echo "❌ ERROR: IEnumerator or 'yield return' detected!"
+    echo "Please use async/await with Awaitable instead."
+    echo "See CODING_GUIDELINES.md for proper patterns."
+    exit 1
+fi
+
+# UnityTest 어트리뷰트 검사
+if git diff --cached --name-only | grep '\.cs$' | xargs grep -l "\[UnityTest\]" 2>/dev/null; then
+    echo "❌ ERROR: [UnityTest] attribute detected!"
+    echo "Please use [Test] with async void instead."
+    exit 1
+fi
+
+echo "✅ Code style check passed!"
+exit 0

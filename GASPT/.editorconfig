@@ -1,0 +1,27 @@
+root = true
+
+[*.cs]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+
+# IEnumerator 사용 금지 규칙
+dotnet_diagnostic.IDE0007.severity = error  # var 사용 강제
+dotnet_diagnostic.CS0108.severity = error   # 은닉 경고를 오류로
+
+# IEnumerator 패턴 금지
+dotnet_code_quality.CA1010.api_surface = private, internal, public
+dotnet_code_quality.CA1710.api_surface = public
+
+# Unity 특화 설정
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# 코딩 스타일 강제
+csharp_prefer_braces = true:suggestion
+csharp_using_directive_placement = outside_namespace:error
+
+# 비동기 패턴 강제 (IEnumerator 대신 async/await)
+dotnet_diagnostic.CS1998.severity = none  # async 메서드에서 await 없어도 경고 안함

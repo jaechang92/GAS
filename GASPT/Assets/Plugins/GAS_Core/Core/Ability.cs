@@ -20,7 +20,7 @@ namespace GAS.Core
         private AbilityState currentState;
 
         // 시스템 참조
-        private GameObject owner;
+        protected GameObject owner;
         private IAbilitySystem abilitySystem;
         private IGameplayContext gameplayContext;
 
@@ -76,7 +76,7 @@ namespace GAS.Core
         /// <summary>
         /// 어빌리티 사용 가능 여부 확인
         /// </summary>
-        public bool CanExecute()
+        public virtual bool CanExecute()
         {
             // 상태 확인
             if (currentState != AbilityState.Ready) return false;
@@ -462,7 +462,7 @@ namespace GAS.Core
         /// <summary>
         /// 어빌리티 취소
         /// </summary>
-        public void Cancel()
+        public virtual void Cancel()
         {
             if (currentState == AbilityState.Casting || currentState == AbilityState.Active)
             {

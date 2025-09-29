@@ -198,13 +198,13 @@ namespace GAS.Core
                 return false;
             }
 
-            // �����Ƽ ��ü ���� Ȯ��
+            // 어빌리티 실행 가능 확인
             if (!ability.CanExecute())
             {
                 return false;
             }
 
-            // ���ҽ� Ȯ��
+            // 리소스 확인
             if (useResourceSystem && ability.Data != null)
             {
                 foreach (var cost in ability.Data.ResourceCosts)
@@ -228,7 +228,7 @@ namespace GAS.Core
 
             var ability = abilities[abilityId];
 
-            // ���ҽ� �Ҹ�
+            // 리소스 소모
             if (useResourceSystem && ability.Data != null)
             {
                 foreach (var cost in ability.Data.ResourceCosts)
@@ -237,7 +237,7 @@ namespace GAS.Core
                 }
             }
 
-            // �����Ƽ ���� (�񵿱�)
+            // 어빌리티 실행 (비동기)
             _ = ExecuteAbilityAsync(ability);
 
             OnAbilityUsed?.Invoke(abilityId);

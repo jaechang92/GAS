@@ -7,7 +7,7 @@ namespace FSM.Core
 {
     public abstract class State : IState
     {
-        protected GameObject owner;
+        private GameObject owner;
         protected IStateMachine stateMachine;
 
         public string Id { get; private set; }

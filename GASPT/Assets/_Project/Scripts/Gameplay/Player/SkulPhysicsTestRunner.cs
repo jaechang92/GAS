@@ -1,6 +1,5 @@
 using UnityEngine;
 using Player.Physics;
-using System.Collections;
 
 namespace Player
 {
@@ -25,7 +24,7 @@ namespace Player
         {
             if (runTestsOnStart)
             {
-                StartCoroutine(RunAllTests());
+                _ = RunAllTests();
             }
         }
 
@@ -37,37 +36,37 @@ namespace Player
             if (Input.GetKeyDown(KeyCode.Alpha3)) TestDashSystem();
             if (Input.GetKeyDown(KeyCode.Alpha4)) TestWallInteraction();
             if (Input.GetKeyDown(KeyCode.Alpha5)) TestGravityAndFalling();
-            if (Input.GetKeyDown(KeyCode.Alpha6)) StartCoroutine(TestCoyoteTimeAndJumpBuffer());
-            if (Input.GetKeyDown(KeyCode.Alpha0)) StartCoroutine(RunAllTests());
+            if (Input.GetKeyDown(KeyCode.Alpha6)) _ = TestCoyoteTimeAndJumpBuffer();
+            if (Input.GetKeyDown(KeyCode.Alpha0)) _ = RunAllTests();
         }
 
         /// <summary>
         /// 모든 테스트 실행
         /// </summary>
-        public IEnumerator RunAllTests()
+        public async Awaitable RunAllTests()
         {
-            if (isTestingRunning) yield break;
+            if (isTestingRunning) return;
             isTestingRunning = true;
 
             LogTest("=== Skul 물리 시스템 전체 테스트 시작 ===");
 
-            yield return StartCoroutine(TestBasicMovementCoroutine());
-            yield return new WaitForSeconds(testInterval);
+            await TestBasicMovementCoroutine();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
-            yield return StartCoroutine(TestJumpMechanicsCoroutine());
-            yield return new WaitForSeconds(testInterval);
+            await TestJumpMechanicsCoroutine();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
-            yield return StartCoroutine(TestDashSystemCoroutine());
-            yield return new WaitForSeconds(testInterval);
+            await TestDashSystemCoroutine();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
-            yield return StartCoroutine(TestWallInteractionCoroutine());
-            yield return new WaitForSeconds(testInterval);
+            await TestWallInteractionCoroutine();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
-            yield return StartCoroutine(TestGravityAndFallingCoroutine());
-            yield return new WaitForSeconds(testInterval);
+            await TestGravityAndFallingCoroutine();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
-            yield return StartCoroutine(TestCoyoteTimeAndJumpBuffer());
-            yield return new WaitForSeconds(testInterval);
+            await TestCoyoteTimeAndJumpBuffer();
+            await Awaitable.WaitForSecondsAsync(testInterval);
 
             LogTest("=== 모든 테스트 완료 ===");
             isTestingRunning = false;
@@ -80,17 +79,17 @@ namespace Player
         /// </summary>
         public void TestBasicMovement()
         {
-            StartCoroutine(TestBasicMovementCoroutine());
+            _ = TestBasicMovementCoroutine();
         }
 
-        private IEnumerator TestBasicMovementCoroutine()
+        private async Awaitable TestBasicMovementCoroutine()
         {
             LogTest("--- 기본 이동 테스트 시작 ---");
 
             // 오른쪽 이동 테스트
             LogTest("오른쪽 이동 테스트");
             characterPhysics.SetHorizontalInput(1f);
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
 
             float rightSpeed = characterPhysics.Velocity.x;
             LogTest($"오른쪽 이동 속도: {rightSpeed:F2} (목표: {GetConfig()?.moveSpeed ?? 12f})");
@@ -98,7 +97,7 @@ namespace Player
             // 정지 테스트
             LogTest("정지 테스트");
             characterPhysics.SetHorizontalInput(0f);
-            yield return new WaitForSeconds(0.5f);
+            await Awaitable.WaitForSecondsAsync(0.5f);
 
             float stopSpeed = Mathf.Abs(characterPhysics.Velocity.x);
             LogTest($"정지 후 속도: {stopSpeed:F2} (목표: 거의 0)");
@@ -106,7 +105,7 @@ namespace Player
             // 왼쪽 이동 테스트
             LogTest("왼쪽 이동 테스트");
             characterPhysics.SetHorizontalInput(-1f);
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
 
             float leftSpeed = characterPhysics.Velocity.x;
             LogTest($"왼쪽 이동 속도: {leftSpeed:F2} (목표: -{GetConfig()?.moveSpeed ?? 12f})");
@@ -121,10 +120,10 @@ namespace Player
         /// </summary>
         public void TestJumpMechanics()
         {
-            StartCoroutine(TestJumpMechanicsCoroutine());
+            _ = TestJumpMechanicsCoroutine();
         }
 
-        private IEnumerator TestJumpMechanicsCoroutine()
+        private async Awaitable TestJumpMechanicsCoroutine()
         {
             LogTest("--- 점프 메커니즘 테스트 시작 ---");
 
@@ -133,7 +132,7 @@ namespace Player
             if (characterPhysics.IsGrounded)
             {
                 characterPhysics.SetJumpInput(true, true);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
 
                 float jumpVelocity = characterPhysics.Velocity.y;
                 LogTest($"점프 속도: {jumpVelocity:F2} (목표: {GetConfig()?.jumpVelocity ?? 16f})");
@@ -145,22 +144,25 @@ namespace Player
                 LogTest("캐릭터가 접지 상태가 아닙니다.");
             }
 
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
 
             // 짧은 점프 테스트 (착지 후)
-            yield return new WaitUntil(() => characterPhysics.IsGrounded);
+            while (!characterPhysics.IsGrounded)
+            {
+                await Awaitable.NextFrameAsync();
+            }
             LogTest("짧은 점프 테스트");
 
             characterPhysics.SetJumpInput(true, true);
-            yield return new WaitForFixedUpdate();
-            yield return new WaitForSeconds(0.1f); // 짧게 누르기
+            await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
+            await Awaitable.WaitForSecondsAsync(0.1f); // 짧게 누르기
             characterPhysics.SetJumpInput(false, false);
 
             float shortJumpPeak = 0f;
             while (characterPhysics.Velocity.y > 0)
             {
                 shortJumpPeak = Mathf.Max(shortJumpPeak, characterPhysics.Velocity.y);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
             }
             LogTest($"짧은 점프 최대 속도: {shortJumpPeak:F2}");
 
@@ -172,10 +174,10 @@ namespace Player
         /// </summary>
         public void TestDashSystem()
         {
-            StartCoroutine(TestDashSystemCoroutine());
+            _ = TestDashSystemCoroutine();
         }
 
-        private IEnumerator TestDashSystemCoroutine()
+        private async Awaitable TestDashSystemCoroutine()
         {
             LogTest("--- 대시 시스템 테스트 시작 ---");
 
@@ -184,7 +186,7 @@ namespace Player
             if (characterPhysics.CanDash)
             {
                 characterPhysics.PerformDash(Vector2.right);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
 
                 float dashSpeed = characterPhysics.Velocity.x;
                 LogTest($"대시 속도: {dashSpeed:F2} (목표: {GetConfig()?.dashSpeed ?? 28f})");
@@ -195,7 +197,7 @@ namespace Player
                 while (characterPhysics.IsDashing)
                 {
                     dashDuration += Time.fixedDeltaTime;
-                    yield return new WaitForFixedUpdate();
+                    await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
                 }
                 LogTest($"대시 지속 시간: {dashDuration:F2}초 (목표: {GetConfig()?.dashDuration ?? 0.15f}초)");
             }
@@ -204,7 +206,7 @@ namespace Player
                 LogTest("대시를 사용할 수 없습니다 (쿨다운 중)");
             }
 
-            yield return new WaitForSeconds(1f);
+            await Awaitable.WaitForSecondsAsync(1f);
             LogTest("--- 대시 시스템 테스트 완료 ---");
         }
 
@@ -213,10 +215,10 @@ namespace Player
         /// </summary>
         public void TestWallInteraction()
         {
-            StartCoroutine(TestWallInteractionCoroutine());
+            _ = TestWallInteractionCoroutine();
         }
 
-        private IEnumerator TestWallInteractionCoroutine()
+        private async Awaitable TestWallInteractionCoroutine()
         {
             LogTest("--- 벽 상호작용 테스트 시작 ---");
 
@@ -228,7 +230,7 @@ namespace Player
                 LogTest("벽 슬라이딩 테스트");
                 // 벽 방향으로 이동 시도
                 characterPhysics.SetHorizontalInput(characterPhysics.WallDirection);
-                yield return new WaitForSeconds(0.5f);
+                await Awaitable.WaitForSecondsAsync(0.5f);
 
                 float slideSpeed = characterPhysics.Velocity.y;
                 LogTest($"벽 슬라이딩 속도: {slideSpeed:F2} (목표: {GetConfig()?.wallSlideSpeed ?? -3f})");
@@ -236,7 +238,7 @@ namespace Player
                 // 벽점프 테스트
                 LogTest("벽점프 테스트");
                 characterPhysics.SetJumpInput(true, true);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
                 characterPhysics.SetJumpInput(false, false);
 
                 Vector2 wallJumpVel = characterPhysics.Velocity;
@@ -256,10 +258,10 @@ namespace Player
         /// </summary>
         public void TestGravityAndFalling()
         {
-            StartCoroutine(TestGravityAndFallingCoroutine());
+            _ = TestGravityAndFallingCoroutine();
         }
 
-        private IEnumerator TestGravityAndFallingCoroutine()
+        private async Awaitable TestGravityAndFallingCoroutine()
         {
             LogTest("--- 중력과 낙하 테스트 시작 ---");
 
@@ -267,7 +269,7 @@ namespace Player
             if (characterPhysics.IsGrounded)
             {
                 characterPhysics.SetVelocity(new Vector2(0, 5f)); // 공중으로 띄우기
-                yield return new WaitForSeconds(0.2f);
+                await Awaitable.WaitForSecondsAsync(0.2f);
             }
 
             LogTest("낙하 중력 테스트");
@@ -278,7 +280,7 @@ namespace Player
             {
                 float currentFallSpeed = Mathf.Abs(characterPhysics.Velocity.y);
                 maxFallSpeed = Mathf.Max(maxFallSpeed, currentFallSpeed);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
             }
 
             LogTest($"최대 낙하 속도: {maxFallSpeed:F2} (목표 제한: {GetConfig()?.maxFallSpeed ?? 22f})");
@@ -288,7 +290,7 @@ namespace Player
         /// <summary>
         /// 코요테 타임과 점프 버퍼 테스트
         /// </summary>
-        public IEnumerator TestCoyoteTimeAndJumpBuffer()
+        public async Awaitable TestCoyoteTimeAndJumpBuffer()
         {
             LogTest("--- 코요테 타임과 점프 버퍼 테스트 시작 ---");
 
@@ -299,11 +301,11 @@ namespace Player
 
                 // 바닥에서 살짝 떨어뜨리기
                 characterPhysics.SetVelocity(new Vector2(1f, 1f));
-                yield return new WaitForSeconds(0.05f); // 코요테 타임 내에서
+                await Awaitable.WaitForSecondsAsync(0.05f); // 코요테 타임 내에서
 
                 // 점프 시도
                 characterPhysics.SetJumpInput(true, true);
-                yield return new WaitForFixedUpdate();
+                await Awaitable.WaitForSecondsAsync(Time.fixedDeltaTime);
 
                 bool coyoteJumpSuccess = characterPhysics.Velocity.y > 0;
                 LogTest($"코요테 타임 점프 성공: {coyoteJumpSuccess}");
@@ -311,22 +313,28 @@ namespace Player
                 characterPhysics.SetJumpInput(false, false);
             }
 
-            yield return new WaitUntil(() => characterPhysics.IsGrounded);
+            while (!characterPhysics.IsGrounded)
+            {
+                await Awaitable.NextFrameAsync();
+            }
 
             // 점프 버퍼 테스트
             LogTest("점프 버퍼 테스트");
 
             // 공중에서 점프 입력
             characterPhysics.SetVelocity(new Vector2(0, 2f)); // 공중으로
-            yield return new WaitForSeconds(0.1f);
+            await Awaitable.WaitForSecondsAsync(0.1f);
 
             characterPhysics.SetJumpInput(true, true); // 공중에서 점프 입력
-            yield return new WaitForSeconds(0.05f);
+            await Awaitable.WaitForSecondsAsync(0.05f);
             characterPhysics.SetJumpInput(false, false);
 
             // 착지 후 자동 점프 확인
-            yield return new WaitUntil(() => characterPhysics.IsGrounded);
-            yield return new WaitForSeconds(0.1f);
+            while (!characterPhysics.IsGrounded)
+            {
+                await Awaitable.NextFrameAsync();
+            }
+            await Awaitable.WaitForSecondsAsync(0.1f);
 
             bool bufferJumpSuccess = characterPhysics.Velocity.y > 0;
             LogTest($"점프 버퍼 자동 실행: {bufferJumpSuccess}");
@@ -373,7 +381,7 @@ namespace Player
         private void EditorTestGravity() => TestGravityAndFalling();
 
         [ContextMenu("모든 테스트 실행")]
-        private void EditorRunAllTests() => StartCoroutine(RunAllTests());
+        private void EditorRunAllTests() => _ = RunAllTests();
 
         #endregion
 
