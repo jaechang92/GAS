@@ -1,0 +1,54 @@
+# Unity 프로젝트 Git 속성 설정
+# CRLF 줄바꿈 강제 설정
+
+# C# 스크립트 파일들
+*.cs text eol=crlf
+*.shader text eol=crlf
+*.compute text eol=crlf
+*.cginc text eol=crlf
+*.hlsl text eol=crlf
+
+# Unity 특수 파일들
+*.meta text eol=crlf
+*.prefab text eol=crlf
+*.unity text eol=crlf
+*.asset text eol=crlf
+*.mat text eol=crlf
+*.anim text eol=crlf
+*.controller text eol=crlf
+
+# 설정 파일들
+*.json text eol=crlf
+*.xml text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf
+*.txt text eol=crlf
+*.md text eol=crlf
+
+# 바이너리 파일들 (변환 안함)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.tga binary
+*.psd binary
+*.ai binary
+*.fbx binary
+*.obj binary
+*.mb binary
+*.ma binary
+*.max binary
+*.blend binary
+*.dae binary
+*.3ds binary
+*.dll binary
+*.exe binary
+*.so binary
+*.unitypackage binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aif binary
+*.ttf binary
+*.otf binary
