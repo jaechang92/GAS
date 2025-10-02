@@ -4,6 +4,7 @@ using Player;
 using Combat.Attack;
 using Core.Enums;
 using System.Collections.Generic;
+using GAS.Core;
 
 namespace Combat.Demo
 {
@@ -123,7 +124,7 @@ namespace Combat.Demo
                 // 기본 컴포넌트 추가
                 player.AddComponent<Rigidbody2D>().gravityScale = 3f;
                 player.AddComponent<CapsuleCollider2D>();
-                player.AddComponent<GAS.Core.AbilitySystem>();
+                player.AddComponent<AbilitySystem>();
             }
 
             player.name = "Player";

@@ -6,7 +6,8 @@
         "Combat.Hitbox",
         "Combat.Attack",
         "Core.Enums",
-        "Player"
+        "Player",
+        "GAS.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
