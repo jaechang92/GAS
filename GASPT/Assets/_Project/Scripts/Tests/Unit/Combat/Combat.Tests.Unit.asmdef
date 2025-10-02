@@ -6,6 +6,7 @@
         "Combat.Hitbox",
         "Combat.Attack",
         "GAS.Core",
+        "Core.Enums",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

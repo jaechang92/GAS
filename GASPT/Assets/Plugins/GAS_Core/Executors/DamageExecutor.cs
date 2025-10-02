@@ -1,21 +1,22 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Core.Enums;
 using UnityEngine;
 
 namespace GAS.Core
 {
     /// <summary>
-    /// µ¥¹ÌÁö ¾îºô¸®Æ¼ ½ÇÇà±â
+    /// ë°ë¯¸ì§€ ì–´ë¹Œë¦¬í‹° ì‹¤í–‰ê¸°
     /// </summary>
     [CreateAssetMenu(fileName = "NewDamageExecutor", menuName = "GAS/Executors/DamageExecutor")]
     public class DamageExecutor : AbilityExecutor
     {
-        [Header("µ¥¹ÌÁö ¼³Á¤")]
+        [Header("ë°ë¯¸ì§€ ì„¤ì •")]
         [SerializeField] private float baseDamage = 10f;
         [SerializeField] private DamageType damageType = DamageType.Physical;
         [SerializeField] private bool scalingWithCaster = true;
 
-        [Header("Å¸°ÙÆÃ")]
+        [Header("íƒ€ê²ŸíŒ…")]
         [SerializeField] private TargetType targetType = TargetType.SingleTarget;
         [SerializeField] private LayerMask targetLayer = -1;
 
@@ -23,16 +24,16 @@ namespace GAS.Core
         {
             try
             {
-                // ½ÇÇà Àü Ã³¸®
+                // ì‹¤í–‰ ì „ ì²˜ë¦¬
                 await OnPreExecute(caster, data);
 
-                // Å¸°ÙÀÌ ¾øÀ¸¸é ÀÚµ¿À¸·Î Ã£±â
+                // íƒ€ê²Ÿì´ ì—†ìœ¼ë©´ ìë™ìœ¼ë¡œ ì°¾ê¸°
                 if (targets == null || targets.Count == 0)
                 {
                     targets = FindTargets(caster, data);
                 }
 
-                // °¢ Å¸°Ù¿¡°Ô µ¥¹ÌÁö Àû¿ë
+                // ê° íƒ€ê²Ÿì—ê²Œ ë°ë¯¸ì§€ ì ìš©
                 foreach (var target in targets)
                 {
                     if (IsValidTarget(caster, target, data))
@@ -41,7 +42,7 @@ namespace GAS.Core
                     }
                 }
 
-                // ½ÇÇà ÈÄ Ã³¸®
+                // ì‹¤í–‰ í›„ ì²˜ë¦¬
                 await OnPostExecute(caster, data);
 
                 return true;
@@ -54,7 +55,7 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// Å¸°Ù Ã£±â
+        /// íƒ€ê²Ÿ ì°¾ê¸°
         /// </summary>
         private List<IAbilityTarget> FindTargets(GameObject caster, IAbilityData data)
         {
@@ -72,7 +73,7 @@ namespace GAS.Core
                         caster.transform.position,
                         caster.transform.forward,
                         data.Range,
-                        90f, // ±âº» °¢µµ
+                        90f, // ê¸°ë³¸ ê°ë„
                         targetLayer);
 
                 case TargetType.Line:
@@ -85,36 +86,36 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// µ¥¹ÌÁö Àû¿ë
+        /// ë°ë¯¸ì§€ ì ìš©
         /// </summary>
         private void ApplyDamage(GameObject caster, IAbilityTarget target, IAbilityData data)
         {
             float finalDamage = CalculateDamage(caster, target, data);
 
-            // µ¥¹ÌÁö Àû¿ë
+            // ë°ë¯¸ì§€ ì ìš©
             target.TakeDamage(finalDamage, caster.GetComponent<IAbilityTarget>());
 
             Debug.Log($"Applied {finalDamage:F1} {damageType} damage to {target.GameObject.name}");
         }
 
         /// <summary>
-        /// ÃÖÁ¾ µ¥¹ÌÁö °è»ê
+        /// ìµœì¢… ë°ë¯¸ì§€ ê³„ì‚°
         /// </summary>
         private float CalculateDamage(GameObject caster, IAbilityTarget target, IAbilityData data)
         {
             float damage = baseDamage;
 
-            // AbilityData¿¡¼­ Ãß°¡ µ¥¹ÌÁö Á¤º¸ °¡Á®¿À±â
+            // AbilityDataì—ì„œ ì¶”ê°€ ë°ë¯¸ì§€ ì •ë³´ ê°€ì ¸ì˜¤ê¸°
             if (data is AbilityData concreteData && concreteData.DamageValue > 0)
             {
                 damage = concreteData.DamageValue;
             }
 
-            // Ä³½ºÅÍ ½ºÄÉÀÏ¸µ (¿¹: ·¹º§, ½ºÅÈ µî)
+            // ìºìŠ¤í„° ìŠ¤ì¼€ì¼ë§ (ì˜ˆ: ë ˆë²¨, ìŠ¤íƒ¯ ë“±)
             if (scalingWithCaster)
             {
-                // ¿©±â¼­ Ä³½ºÅÍÀÇ ½ºÅÈÀ» ±â¹İÀ¸·Î µ¥¹ÌÁö ½ºÄÉÀÏ¸µ °¡´É
-                // ¿¹½Ã: ·¹º§ ½Ã½ºÅÛÀÌ ÀÖ´Ù¸é
+                // ì—¬ê¸°ì„œ ìºìŠ¤í„°ì˜ ìŠ¤íƒ¯ì„ ê¸°ë°˜ìœ¼ë¡œ ë°ë¯¸ì§€ ìŠ¤ì¼€ì¼ë§ ê°€ëŠ¥
+                // ì˜ˆì‹œ: ë ˆë²¨ ì‹œìŠ¤í…œì´ ìˆë‹¤ë©´
                 // var level = caster.GetComponent<LevelComponent>()?.Level ?? 1;
                 // damage *= (1f + level * 0.1f);
             }
@@ -127,11 +128,11 @@ namespace GAS.Core
             if (!base.IsValidTarget(caster, target, data))
                 return false;
 
-            // ÀÚ±â ÀÚ½Å Á¦¿Ü (Self Å¸ÀÔÀÌ ¾Æ´Ñ °æ¿ì)
+            // ìê¸° ìì‹  ì œì™¸ (Self íƒ€ì…ì´ ì•„ë‹Œ ê²½ìš°)
             if (targetType != TargetType.Self && target.GameObject == caster)
                 return false;
 
-            // ÆÀ Ã¼Å© (Àû´ëÀûÀÎ ´ë»ó¸¸)
+            // íŒ€ ì²´í¬ (ì ëŒ€ì ì¸ ëŒ€ìƒë§Œ)
             var casterTarget = caster.GetComponent<IAbilityTarget>();
             if (casterTarget != null && target.IsFriendlyTo(casterTarget))
                 return false;

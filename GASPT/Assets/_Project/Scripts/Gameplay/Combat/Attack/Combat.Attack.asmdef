@@ -4,7 +4,8 @@
     "references": [
         "Combat.Core",
         "Combat.Hitbox",
-        "GAS.Core"
+        "GAS.Core",
+        "Core.Enums"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
