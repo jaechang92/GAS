@@ -116,15 +116,17 @@ namespace Combat.Attack
                 return false;
             }
 
+            // 현재 콤보 인덱스 저장 (이벤트용)
+            int executedComboIndex = currentComboIndex;
+
             // 콤보 시작 또는 진행
             if (!isComboActive)
             {
-                StartCombo();
+                StartCombo(executedComboIndex);
             }
-            else
-            {
-                AdvanceCombo();
-            }
+
+            // 다음 콤보로 진행 (StartCombo 이후에도 실행)
+            AdvanceCombo();
 
             lastHitTime = Time.time;
             return true;
@@ -133,14 +135,13 @@ namespace Combat.Attack
         /// <summary>
         /// 콤보 시작
         /// </summary>
-        private void StartCombo()
+        private void StartCombo(int startIndex)
         {
-            currentComboIndex = 0;
             isComboActive = true;
             comboTimer = comboResetTime;
 
-            OnComboStarted?.Invoke(currentComboIndex);
-            LogDebug($"Combo started: index {currentComboIndex}");
+            OnComboStarted?.Invoke(startIndex);
+            LogDebug($"Combo started: index {startIndex}");
         }
 
         /// <summary>
@@ -159,7 +160,7 @@ namespace Combat.Attack
 
             comboTimer = comboResetTime;
             OnComboAdvanced?.Invoke(currentComboIndex);
-            LogDebug($"Combo advanced: index {currentComboIndex}");
+            LogDebug($"Combo advanced to: index {currentComboIndex}");
         }
 
         /// <summary>
