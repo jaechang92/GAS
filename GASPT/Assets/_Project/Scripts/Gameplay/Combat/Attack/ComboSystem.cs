@@ -125,8 +125,11 @@ namespace Combat.Attack
                 StartCombo(executedComboIndex);
             }
 
-            // 다음 콤보로 진행 (StartCombo 이후에도 실행)
-            AdvanceCombo();
+            // 다음 콤보로 진행 (콤보 데이터가 있을 때만)
+            if (combos.Count > 0)
+            {
+                AdvanceCombo();
+            }
 
             lastHitTime = Time.time;
             return true;

@@ -29,6 +29,10 @@ namespace Combat.Tests.Unit
             animator = attackerObject.AddComponent<Animator>();
             animationHandler = attackerObject.AddComponent<AttackAnimationHandler>();
 
+            // AttackAnimationHandler 설정 (EditMode 테스트용)
+            animationHandler.SetAnimator(animator);
+            animationHandler.SetComboSystem(comboSystem);
+
             // 타겟 생성
             targetObject = new GameObject("Target");
             targetHealth = targetObject.AddComponent<HealthSystem>();
@@ -80,17 +84,17 @@ namespace Combat.Tests.Unit
         {
             // Arrange
             AddTestCombos(3);
-            comboSystem.RegisterHit(0);
+            comboSystem.RegisterHit(0); // 0번 실행 → index 1로 진행
 
             bool comboAdvanced = false;
             comboSystem.OnComboAdvanced += (index) => comboAdvanced = true;
 
             // Act
-            bool result = comboSystem.RegisterHit(1);
+            bool result = comboSystem.RegisterHit(1); // 1번 실행 → index 2로 진행
 
             // Assert
             Assert.IsTrue(result, "두 번째 타격 등록 성공해야 함");
-            Assert.AreEqual(1, comboSystem.CurrentComboIndex, "콤보 인덱스가 1이어야 함");
+            Assert.AreEqual(2, comboSystem.CurrentComboIndex, "콤보 인덱스가 2로 진행되어야 함");
             Assert.IsTrue(comboAdvanced, "콤보 진행 이벤트가 발생해야 함");
         }
 
