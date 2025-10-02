@@ -1,6 +1,8 @@
 using UnityEngine;
 using FSM.Core;
 using GAS.Core;
+using Combat.Core;
+using Combat.Attack;
 using System.Collections.Generic;
 
 namespace Player
@@ -22,6 +24,11 @@ namespace Player
         private Player.Physics.CharacterPhysics characterPhysics;
         private AnimationController animationController;
 
+        // === Combat 시스템 ===
+        private HealthSystem healthSystem;
+        private ComboSystem comboSystem;
+        private AttackAnimationHandler attackAnimationHandler;
+
         // === FSM 관련 ===
         private StateMachine stateMachine;
         private PlayerStateType previousState = PlayerStateType.Idle;
@@ -38,6 +45,13 @@ namespace Player
         public Vector3 Velocity => characterPhysics?.Velocity ?? Vector3.zero;
         public int FacingDirection => facingDirection;
         public bool IsDashing => characterPhysics?.IsDashing ?? false;
+
+        // === Combat 프로퍼티 ===
+        public HealthSystem HealthSystem => healthSystem;
+        public ComboSystem ComboSystem => comboSystem;
+        public AttackAnimationHandler AttackAnimationHandler => attackAnimationHandler;
+        public bool IsAlive => healthSystem?.IsAlive ?? true;
+        public bool IsAttacking => attackAnimationHandler?.IsAttacking ?? false;
 
         // === 이벤트 ===
         public event System.Action<PlayerStateType, PlayerStateType> OnStateChanged;
@@ -90,6 +104,39 @@ namespace Player
             {
                 animationController = gameObject.AddComponent<AnimationController>();
                 LogDebug("AnimationController 컴포넌트가 자동으로 추가되었습니다.");
+            }
+
+            // === Combat 시스템 초기화 ===
+            // HealthSystem 초기화
+            healthSystem = GetComponent<HealthSystem>();
+            if (healthSystem == null)
+            {
+                healthSystem = gameObject.AddComponent<HealthSystem>();
+                LogDebug("HealthSystem 컴포넌트가 자동으로 추가되었습니다.");
+            }
+
+            // ComboSystem 초기화
+            comboSystem = GetComponent<ComboSystem>();
+            if (comboSystem == null)
+            {
+                comboSystem = gameObject.AddComponent<ComboSystem>();
+                LogDebug("ComboSystem 컴포넌트가 자동으로 추가되었습니다.");
+            }
+
+            // AttackAnimationHandler 초기화
+            attackAnimationHandler = GetComponent<AttackAnimationHandler>();
+            if (attackAnimationHandler == null)
+            {
+                attackAnimationHandler = gameObject.AddComponent<AttackAnimationHandler>();
+                LogDebug("AttackAnimationHandler 컴포넌트가 자동으로 추가되었습니다.");
+            }
+
+            // Animator 설정 (AttackAnimationHandler용)
+            var animator = GetComponent<Animator>();
+            if (animator != null && attackAnimationHandler != null)
+            {
+                attackAnimationHandler.SetAnimator(animator);
+                attackAnimationHandler.SetComboSystem(comboSystem);
             }
         }
 
