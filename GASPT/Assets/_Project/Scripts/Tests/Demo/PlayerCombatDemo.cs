@@ -1,6 +1,6 @@
 using UnityEngine;
-using Player;
 using Combat.Core;
+using Player;
 using Combat.Attack;
 using Core.Enums;
 using System.Collections.Generic;
