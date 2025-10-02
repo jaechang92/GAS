@@ -2,7 +2,6 @@
     "name": "Player",
     "rootNamespace": "Player",
     "references": [
-        "GUID:75469ad4d38634e559750d17036d5f7c",
         "Unity.InputSystem",
         "FSM.Core",
         "GAS.Core",
