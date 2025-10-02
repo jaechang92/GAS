@@ -1,4 +1,5 @@
 using System;
+using Core.Enums;
 
 namespace GAS.Core
 {
@@ -45,19 +46,6 @@ namespace GAS.Core
         AllAllies,      // 모든 아군
         Cone,           // 원뿔 범위
         Line            // 직선 범위
-    }
-
-    /// <summary>
-    /// 데미지 타입
-    /// </summary>
-    public enum DamageType
-    {
-        Physical,       // 물리 데미지
-        Magical,        // 마법 데미지
-        True,           // 고정 데미지
-        Healing,        // 힐링
-        Shield,         // 실드
-        Custom          // 커스텀
     }
 
     /// <summary>

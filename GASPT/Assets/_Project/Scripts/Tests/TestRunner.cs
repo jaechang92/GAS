@@ -207,100 +207,96 @@ namespace Skull.Tests
         {
             LogTest("단위 테스트 실행 중...");
 
-            // 실제 단위 테스트는 Unity Test Runner를 통해 실행
-            // 여기서는 결과를 시뮬레이션
-            await SimulateTestExecution("SkullManager_초기화_테스트", "Unit", results);
-            await SimulateTestExecution("SkullManager_스컬추가_테스트", "Unit", results);
-            await SimulateTestExecution("SkullManager_스컬교체_테스트", "Unit", results);
-            await SimulateTestExecution("SkullManager_스컬제거_테스트", "Unit", results);
+            // 실제 단위 테스트 실행
+            await RunRealTest("SkullManager_초기화_테스트", "Unit", results, Test_SkullManager_초기화);
+            await RunRealTest("SkullManager_스컬추가_테스트", "Unit", results, Test_SkullManager_스컬추가);
+            await RunRealTest("SkullManager_스컬교체_테스트", "Unit", results, Test_SkullManager_스컬교체);
+            await RunRealTest("SkullManager_스컬제거_테스트", "Unit", results, Test_SkullManager_스컬제거);
         }
 
         private async Awaitable RunIntegrationTests(List<TestResult> results)
         {
             LogTest("통합 테스트 실행 중...");
+            LogTest("통합 테스트는 아직 구현되지 않았습니다.");
 
-            await SimulateTestExecution("스컬시스템_GAS_연동_테스트", "Integration", results);
-            await SimulateTestExecution("스컬교체_이벤트_순서_테스트", "Integration", results);
-            await SimulateTestExecution("어빌리티_실행_통합_테스트", "Integration", results);
-            await SimulateTestExecution("동시성_안정성_테스트", "Integration", results);
+            // TODO: 실제 통합 테스트 구현 필요
+            // await RunRealTest("스컬시스템_GAS_연동_테스트", "Integration", results, Test_GAS_연동);
+            // await RunRealTest("스컬교체_이벤트_순서_테스트", "Integration", results, Test_스컬교체_이벤트);
+            // await RunRealTest("어빌리티_실행_통합_테스트", "Integration", results, Test_어빌리티_통합);
+            // await RunRealTest("동시성_안정성_테스트", "Integration", results, Test_동시성);
+
+            await Awaitable.NextFrameAsync();
         }
 
         private async Awaitable RunPerformanceTests(List<TestResult> results)
         {
             LogTest("성능 테스트 실행 중...");
+            LogTest("성능 테스트는 아직 구현되지 않았습니다.");
 
-            await SimulatePerformanceTest("스컬교체_성능_테스트", results);
-            await SimulatePerformanceTest("어빌리티_성능_테스트", results);
-            await SimulatePerformanceTest("메모리_누수_테스트", results);
+            // TODO: 실제 성능 테스트 구현 필요
+            // await RunRealTest("스컬교체_성능_테스트", "Performance", results, Test_스컬교체_성능);
+            // await RunRealTest("어빌리티_성능_테스트", "Performance", results, Test_어빌리티_성능);
+            // await RunRealTest("메모리_누수_테스트", "Performance", results, Test_메모리_누수);
 
-            if (runStressTests)
-            {
-                await SimulatePerformanceTest("스트레스_테스트", results);
-            }
+            await Awaitable.NextFrameAsync();
         }
 
         #endregion
 
-        #region 테스트 시뮬레이션
+        #region 실제 테스트 실행
 
-        private async Awaitable SimulateTestExecution(string testName, string category, List<TestResult> results)
+        /// <summary>
+        /// 실제 테스트 실행
+        /// </summary>
+        private async Awaitable RunRealTest(string testName, string category, List<TestResult> results, Func<Awaitable<(bool, string)>> testFunc)
         {
             var startTime = Time.time;
 
-            // 테스트 실행 시뮬레이션
-            await Awaitable.WaitForSecondsAsync(UnityEngine.Random.Range(0.1f, 0.5f));
-
-            // 결과 생성 (90% 성공률)
-            bool passed = UnityEngine.Random.Range(0f, 1f) > 0.1f;
-            string errorMessage = passed ? "" : $"시뮬레이션된 테스트 실패: {testName}";
-
-            var result = new TestResult
+            try
             {
-                testName = testName,
-                category = category,
-                passed = passed,
-                executionTime = Time.time - startTime,
-                errorMessage = errorMessage,
-                timestamp = DateTime.Now,
-                metrics = new Dictionary<string, object>()
-            };
+                // 실제 테스트 함수 실행
+                var (passed, errorMessage) = await testFunc();
 
-            results.Add(result);
-            LogTest($"{(passed ? "✓" : "✗")} {testName}: {(passed ? "성공" : "실패")} ({result.executionTime:F3}초)");
+                var result = new TestResult
+                {
+                    testName = testName,
+                    category = category,
+                    passed = passed,
+                    executionTime = Time.time - startTime,
+                    errorMessage = errorMessage,
+                    timestamp = DateTime.Now,
+                    metrics = new Dictionary<string, object>()
+                };
+
+                results.Add(result);
+                LogTest($"{(passed ? "✓" : "✗")} {testName}: {(passed ? "성공" : "실패")} ({result.executionTime:F3}초)");
+
+                if (!passed && !string.IsNullOrEmpty(errorMessage))
+                {
+                    LogError($"  실패 원인: {errorMessage}");
+                }
+            }
+            catch (Exception e)
+            {
+                var result = new TestResult
+                {
+                    testName = testName,
+                    category = category,
+                    passed = false,
+                    executionTime = Time.time - startTime,
+                    errorMessage = $"예외 발생: {e.Message}\n{e.StackTrace}",
+                    timestamp = DateTime.Now,
+                    metrics = new Dictionary<string, object>()
+                };
+
+                results.Add(result);
+                LogTest($"✗ {testName}: 실패 ({result.executionTime:F3}초)");
+                LogError($"  예외: {e.Message}");
+            }
         }
 
-        private async Awaitable SimulatePerformanceTest(string testName, List<TestResult> results)
-        {
-            var startTime = Time.time;
-            var metrics = new Dictionary<string, object>();
-
-            // 성능 테스트 시뮬레이션
-            await Awaitable.WaitForSecondsAsync(UnityEngine.Random.Range(0.5f, 2.0f));
-
-            // 성능 메트릭 생성
-            metrics["평균_실행시간_ms"] = UnityEngine.Random.Range(1f, 16f);
-            metrics["최대_실행시간_ms"] = UnityEngine.Random.Range(5f, 25f);
-            metrics["메모리_사용량_KB"] = UnityEngine.Random.Range(100f, 1000f);
-            metrics["FPS_영향도_%"] = UnityEngine.Random.Range(0f, 15f);
-
-            // 성능 기준 검증
-            bool passed = (float)metrics["평균_실행시간_ms"] < 16f &&
-                         (float)metrics["FPS_영향도_%"] < 20f;
-
-            var result = new TestResult
-            {
-                testName = testName,
-                category = "Performance",
-                passed = passed,
-                executionTime = Time.time - startTime,
-                errorMessage = passed ? "" : "성능 기준 미달",
-                timestamp = DateTime.Now,
-                metrics = metrics
-            };
-
-            results.Add(result);
-            LogTest($"{(passed ? "✓" : "✗")} {testName}: {(passed ? "성공" : "실패")} ({result.executionTime:F3}초)");
-        }
+        // 시뮬레이션 테스트 메서드는 더 이상 사용하지 않음
+        // 실제 테스트 구현 시 삭제 예정
 
         #endregion
 
@@ -609,6 +605,226 @@ namespace Skull.Tests
         private void LogError(string message)
         {
             Debug.LogError($"[TestRunner] {message}");
+        }
+
+        #endregion
+
+        #region 실제 SkullManager 테스트 메서드들
+
+        /// <summary>
+        /// SkullManager 초기화 테스트
+        /// </summary>
+        private async Awaitable<(bool, string)> Test_SkullManager_초기화()
+        {
+            GameObject testObj = null;
+            try
+            {
+                testObj = new GameObject("TestSkullManager");
+                var skullManager = testObj.AddComponent<Skull.Core.SkullManager>();
+
+                await Awaitable.NextFrameAsync();
+
+                // 검증
+                if (skullManager == null)
+                    return (false, "SkullManager 생성 실패");
+
+                if (skullManager.MaxSlots != 2)
+                    return (false, $"MaxSlots 기본값 오류: 예상=2, 실제={skullManager.MaxSlots}");
+
+                if (skullManager.CurrentSkull != null)
+                    return (false, "초기 CurrentSkull이 null이어야 함");
+
+                if (skullManager.IsSwitching)
+                    return (false, "초기 IsSwitching이 false여야 함");
+
+                return (true, "");
+            }
+            catch (Exception e)
+            {
+                return (false, $"예외 발생: {e.Message}");
+            }
+            finally
+            {
+                if (testObj != null)
+                    Destroy(testObj);
+            }
+        }
+
+        /// <summary>
+        /// SkullManager 스컬 추가 테스트
+        /// </summary>
+        private async Awaitable<(bool, string)> Test_SkullManager_스컬추가()
+        {
+            GameObject testObj = null;
+            try
+            {
+                testObj = new GameObject("TestSkullManager");
+                var skullManager = testObj.AddComponent<Skull.Core.SkullManager>();
+
+                await Awaitable.NextFrameAsync();
+
+                // Mock 스컬 생성
+                var mockSkull = new Unit.MockSkullController(Skull.Data.SkullType.Default);
+
+                // 스컬 추가
+                bool addResult = skullManager.AddSkullToSlot(0, mockSkull);
+
+                // 검증
+                if (!addResult)
+                    return (false, "AddSkullToSlot 실패");
+
+                var retrievedSkull = skullManager.GetSkullInSlot(0);
+                if (retrievedSkull != mockSkull)
+                    return (false, "추가된 스컬을 찾을 수 없음");
+
+                if (skullManager.SkullCount != 1)
+                    return (false, $"SkullCount 오류: 예상=1, 실제={skullManager.SkullCount}");
+
+                // 잘못된 슬롯 인덱스 테스트
+                if (skullManager.AddSkullToSlot(-1, mockSkull))
+                    return (false, "잘못된 슬롯 인덱스(-1)에 추가 성공해서는 안됨");
+
+                if (skullManager.AddSkullToSlot(10, mockSkull))
+                    return (false, "잘못된 슬롯 인덱스(10)에 추가 성공해서는 안됨");
+
+                // null 스컬 추가 테스트
+                if (skullManager.AddSkullToSlot(1, null))
+                    return (false, "null 스컬 추가가 성공해서는 안됨");
+
+                return (true, "");
+            }
+            catch (Exception e)
+            {
+                return (false, $"예외 발생: {e.Message}");
+            }
+            finally
+            {
+                if (testObj != null)
+                    Destroy(testObj);
+            }
+        }
+
+        /// <summary>
+        /// SkullManager 스컬 교체 테스트
+        /// </summary>
+        private async Awaitable<(bool, string)> Test_SkullManager_스컬교체()
+        {
+            GameObject testObj = null;
+            try
+            {
+                testObj = new GameObject("TestSkullManager");
+                var skullManager = testObj.AddComponent<Skull.Core.SkullManager>();
+
+                await Awaitable.NextFrameAsync();
+
+                // 두 개의 Mock 스컬 생성
+                var mockSkull1 = new Unit.MockSkullController(Skull.Data.SkullType.Default);
+                var mockSkull2 = new Unit.MockSkullController(Skull.Data.SkullType.Mage);
+
+                // 스컬들을 슬롯에 추가
+                skullManager.AddSkullToSlot(0, mockSkull1);
+                skullManager.AddSkullToSlot(1, mockSkull2);
+
+                // 첫 번째 스컬로 설정
+                skullManager.SetCurrentSlot(0);
+                await Awaitable.NextFrameAsync();
+
+                // 검증 1: 첫 번째 스컬이 현재 스컬인지
+                if (skullManager.CurrentSkull != mockSkull1)
+                    return (false, "첫 번째 스컬 설정 실패");
+
+                if (skullManager.CurrentSlotIndex != 0)
+                    return (false, $"CurrentSlotIndex 오류: 예상=0, 실제={skullManager.CurrentSlotIndex}");
+
+                // 두 번째 스컬로 교체
+                skullManager.SetCurrentSlot(1);
+                await Awaitable.NextFrameAsync();
+
+                // 검증 2: 두 번째 스컬로 교체되었는지
+                if (skullManager.CurrentSkull != mockSkull2)
+                    return (false, "두 번째 스컬로 교체 실패");
+
+                if (skullManager.CurrentSlotIndex != 1)
+                    return (false, $"교체 후 CurrentSlotIndex 오류: 예상=1, 실제={skullManager.CurrentSlotIndex}");
+
+                // 다음 슬롯으로 교체 (순환 테스트)
+                skullManager.SwitchToNextSlotSync();
+                await Awaitable.NextFrameAsync();
+
+                if (skullManager.CurrentSkull != mockSkull1)
+                    return (false, "순환 교체 실패 (다음 슬롯)");
+
+                if (skullManager.CurrentSlotIndex != 0)
+                    return (false, $"순환 교체 후 인덱스 오류: 예상=0, 실제={skullManager.CurrentSlotIndex}");
+
+                // 이전 슬롯으로 교체
+                skullManager.SwitchToPreviousSlotSync();
+                await Awaitable.NextFrameAsync();
+
+                if (skullManager.CurrentSkull != mockSkull2)
+                    return (false, "순환 교체 실패 (이전 슬롯)");
+
+                return (true, "");
+            }
+            catch (Exception e)
+            {
+                return (false, $"예외 발생: {e.Message}");
+            }
+            finally
+            {
+                if (testObj != null)
+                    Destroy(testObj);
+            }
+        }
+
+        /// <summary>
+        /// SkullManager 스컬 제거 테스트
+        /// </summary>
+        private async Awaitable<(bool, string)> Test_SkullManager_스컬제거()
+        {
+            GameObject testObj = null;
+            try
+            {
+                testObj = new GameObject("TestSkullManager");
+                var skullManager = testObj.AddComponent<Skull.Core.SkullManager>();
+
+                await Awaitable.NextFrameAsync();
+
+                // Mock 스컬 생성 및 추가
+                var mockSkull = new Unit.MockSkullController(Skull.Data.SkullType.Default);
+                skullManager.AddSkullToSlot(0, mockSkull);
+
+                // 검증 1: 스컬이 추가되었는지
+                if (skullManager.SkullCount != 1)
+                    return (false, "스컬 추가 실패");
+
+                // 스컬 제거
+                bool removeResult = skullManager.RemoveSkullFromSlot(0);
+
+                // 검증 2: 스컬이 제거되었는지
+                if (!removeResult)
+                    return (false, "RemoveSkullFromSlot 실패");
+
+                var retrievedSkull = skullManager.GetSkullInSlot(0);
+                if (retrievedSkull != null)
+                    return (false, "스컬이 제거되지 않음");
+
+                // 빈 슬롯 제거 시도
+                bool removeEmptyResult = skullManager.RemoveSkullFromSlot(0);
+                if (removeEmptyResult)
+                    return (false, "빈 슬롯 제거가 성공해서는 안됨");
+
+                return (true, "");
+            }
+            catch (Exception e)
+            {
+                return (false, $"예외 발생: {e.Message}");
+            }
+            finally
+            {
+                if (testObj != null)
+                    Destroy(testObj);
+            }
         }
 
         #endregion

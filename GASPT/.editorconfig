@@ -1,11 +1,16 @@
 root = true
 
-[*.cs]
+# 모든 파일에 대한 기본 설정
+[*]
 charset = utf-8
 end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# 파일
+[*.cs]
 indent_style = space
 indent_size = 4
-insert_final_newline = true
 
 # IEnumerator 사용 금지 규칙
 dotnet_diagnostic.IDE0007.severity = error  # var 사용 강제

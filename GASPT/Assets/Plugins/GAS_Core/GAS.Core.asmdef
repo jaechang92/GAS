@@ -1,0 +1,16 @@
+{
+    "name": "GAS.Core",
+    "rootNamespace": "GAS.Core",
+    "references": [
+        "Core.Enums"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

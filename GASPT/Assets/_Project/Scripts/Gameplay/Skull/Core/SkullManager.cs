@@ -68,7 +68,7 @@ namespace Skull.Core
         /// <summary>
         /// 보유 중인 스컬 개수
         /// </summary>
-        public int SkullCount => skullSlots.Count;
+        public int SkullCount => skullSlots.Values.Count(skull => skull != null);
 
         /// <summary>
         /// 최대 스컬 슬롯 수
@@ -237,6 +237,11 @@ namespace Skull.Core
         public bool RemoveSkullFromSlot(int slotIndex)
         {
             if (!skullSlots.ContainsKey(slotIndex))
+            {
+                return false;
+            }
+
+            if (skullSlots[slotIndex] == null)
             {
                 return false;
             }
