@@ -71,11 +71,8 @@ namespace Combat.Attack
             // 히트박스 생성 및 활성화
             await CreateAndActivateHitbox(cancellationToken);
 
-            // 콤보 시스템 업데이트
-            if (comboSystem != null)
-            {
-                comboSystem.RegisterHit(comboIndex);
-            }
+            // NOTE: ComboSystem.RegisterHit()는 PlayerAttackState에서 이미 호출됨
+            // 여기서 다시 호출하면 중복 진행되므로 제거함
         }
 
         /// <summary>

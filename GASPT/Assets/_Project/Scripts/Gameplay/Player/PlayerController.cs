@@ -199,6 +199,7 @@ namespace Player
             stateMachine.AddTransition("Fall", "WallGrab", "TouchWall");
 
             // Attack 상태에서의 전환
+            stateMachine.AddTransition("Attack", "Attack", "AttackPressed"); // 콤보 공격을 위한 자기 자신으로의 전환
             stateMachine.AddTransition("Attack", "Idle", "AttackFinished");
             stateMachine.AddTransition("Attack", "Move", "StartMove");
 
