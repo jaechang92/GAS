@@ -12,13 +12,13 @@ namespace Combat.Demo
     /// <summary>
     /// 플레이어 전투 시스템 데모
     /// Player + Combat 시스템 통합 테스트
-    /// TestBootstrap을 사용하여 필요한 것만 초기화
+    /// SceneBootstrap을 사용하여 필요한 것만 초기화
     /// </summary>
     public class PlayerCombatDemo : MonoBehaviour
     {
         [Header("초기화")]
-        [Tooltip("TestBootstrap이 있으면 자동으로 찾아서 초기화를 기다림")]
-        [SerializeField] private bool waitForTestBootstrap = true;
+        [Tooltip("SceneBootstrap이 있으면 자동으로 찾아서 초기화를 기다림")]
+        [SerializeField] private bool waitForSceneBootstrap = true;
 
         [Header("플레이어 설정")]
         [SerializeField] private GameObject playerPrefab;
@@ -61,13 +61,13 @@ namespace Combat.Demo
 
         private async void Start()
         {
-            // TestBootstrap이 있으면 초기화를 기다림
-            if (waitForTestBootstrap)
+            // SceneBootstrap이 있으면 초기화를 기다림
+            if (waitForSceneBootstrap)
             {
-                var bootstrap = FindFirstObjectByType<TestBootstrap>();
+                var bootstrap = FindFirstObjectByType<SceneBootstrap>();
                 if (bootstrap != null)
                 {
-                    LogEvent("[Demo] TestBootstrap 초기화 대기 중...");
+                    LogEvent("[Demo] SceneBootstrap 초기화 대기 중...");
 
                     // 초기화가 완료될 때까지 대기
                     while (!bootstrap.IsInitialized)
@@ -75,11 +75,11 @@ namespace Combat.Demo
                         await Awaitable.NextFrameAsync(destroyCancellationToken);
                     }
 
-                    LogEvent("[Demo] TestBootstrap 초기화 완료!");
+                    LogEvent("[Demo] SceneBootstrap 초기화 완료!");
                 }
                 else
                 {
-                    LogEvent("[Demo] TestBootstrap을 찾을 수 없습니다. 바로 시작합니다.");
+                    LogEvent("[Demo] SceneBootstrap을 찾을 수 없습니다. 바로 시작합니다.");
                 }
             }
 

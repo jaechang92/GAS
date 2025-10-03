@@ -6,11 +6,15 @@ using Core.Enums;
 namespace Tests
 {
     /// <summary>
-    /// 테스트 씬용 경량 초기화 시스템
-    /// 전체 게임 흐름(GameFlow) 없이 필요한 것들만 초기화
+    /// 씬 독립 실행용 초기화 시스템
+    /// 전체 게임 흐름(GameFlow) 없이 필요한 것들만 초기화하여 씬을 독립적으로 테스트
     /// </summary>
-    public class TestBootstrap : MonoBehaviour
+    public class SceneBootstrap : MonoBehaviour
     {
+        [Header("테스트 모드")]
+        [Tooltip("이 씬을 독립적으로 실행할지 여부. false인 경우 경고만 표시하고 초기화하지 않음")]
+        [SerializeField] private bool isTestMode = false;
+
         [Header("초기화 옵션")]
         [Tooltip("ResourceManager 초기화 여부")]
         [SerializeField] private bool initializeResourceManager = true;
@@ -42,6 +46,15 @@ namespace Tests
 
         private async void Start()
         {
+            // 테스트 모드가 아니면 경고만 표시하고 초기화하지 않음
+            if (!isTestMode)
+            {
+                Debug.LogWarning("[SceneBootstrap] 테스트 모드가 비활성화되어 있습니다. " +
+                    "씬을 독립적으로 실행하려면 isTestMode를 true로 설정하거나, " +
+                    "Build Settings의 첫 번째 씬부터 시작하세요.");
+                return;
+            }
+
             await InitializeAsync(destroyCancellationToken);
         }
 
@@ -52,11 +65,11 @@ namespace Tests
         {
             if (IsInitialized)
             {
-                LogDebug("[TestBootstrap] 이미 초기화되었습니다.");
+                LogDebug("[SceneBootstrap] 이미 초기화되었습니다.");
                 return;
             }
 
-            LogDebug("[TestBootstrap] 테스트 환경 초기화 시작...");
+            LogDebug("[SceneBootstrap] 테스트 환경 초기화 시작...");
 
             // 1. 매니저 초기화
             await InitializeManagers(cancellationToken);
@@ -65,7 +78,7 @@ namespace Tests
             await LoadResources(cancellationToken);
 
             IsInitialized = true;
-            LogDebug("[TestBootstrap] 테스트 환경 초기화 완료!");
+            LogDebug("[SceneBootstrap] 테스트 환경 초기화 완료!");
 
             OnInitializationComplete?.Invoke();
         }
@@ -75,30 +88,30 @@ namespace Tests
         /// </summary>
         private async Awaitable InitializeManagers(CancellationToken cancellationToken)
         {
-            LogDebug("[TestBootstrap] 매니저 초기화 중...");
+            LogDebug("[SceneBootstrap] 매니저 초기화 중...");
 
             if (initializeResourceManager)
             {
-                var resourceManager = ResourceManager.Instance;
-                LogDebug("[TestBootstrap] ResourceManager 초기화 완료");
+                var resourceManager = ResourceManager.GetInstanceSafe();
+                LogDebug("[SceneBootstrap] ResourceManager 초기화 완료");
             }
 
             if (initializeAudioManager)
             {
-                var audioManager = AudioManager.Instance;
-                LogDebug("[TestBootstrap] AudioManager 초기화 완료");
+                var audioManager = AudioManager.GetInstanceSafe();
+                LogDebug("[SceneBootstrap] AudioManager 초기화 완료");
             }
 
             if (initializeUIManager)
             {
-                var uiManager = UIManager.Instance;
-                LogDebug("[TestBootstrap] UIManager 초기화 완료");
+                var uiManager = UIManager.GetInstanceSafe();
+                LogDebug("[SceneBootstrap] UIManager 초기화 완료");
             }
 
             if (initializeGameManager)
             {
-                var gameManager = GameManager.Instance;
-                LogDebug("[TestBootstrap] GameManager 초기화 완료");
+                var gameManager = GameManager.GetInstanceSafe();
+                LogDebug("[SceneBootstrap] GameManager 초기화 완료");
             }
 
             await Awaitable.NextFrameAsync(cancellationToken);
@@ -111,7 +124,7 @@ namespace Tests
         {
             if (!initializeResourceManager)
             {
-                LogDebug("[TestBootstrap] ResourceManager가 비활성화되어 리소스 로딩을 건너뜁니다.");
+                LogDebug("[SceneBootstrap] ResourceManager가 비활성화되어 리소스 로딩을 건너뜁니다.");
                 return;
             }
 
@@ -120,18 +133,18 @@ namespace Tests
             // 카테고리별 로딩
             if (categoriesToLoad != null && categoriesToLoad.Length > 0)
             {
-                LogDebug($"[TestBootstrap] {categoriesToLoad.Length}개 카테고리 로딩 중...");
+                LogDebug($"[SceneBootstrap] {categoriesToLoad.Length}개 카테고리 로딩 중...");
 
                 foreach (var category in categoriesToLoad)
                 {
                     bool success = await resourceManager.LoadCategoryAsync(category, cancellationToken);
                     if (success)
                     {
-                        LogDebug($"[TestBootstrap] {category} 카테고리 로딩 완료");
+                        LogDebug($"[SceneBootstrap] {category} 카테고리 로딩 완료");
                     }
                     else
                     {
-                        Debug.LogWarning($"[TestBootstrap] {category} 카테고리 로딩 실패");
+                        Debug.LogWarning($"[SceneBootstrap] {category} 카테고리 로딩 실패");
                     }
                 }
             }
@@ -139,7 +152,7 @@ namespace Tests
             // 개별 리소스 로딩
             if (individualResources != null && individualResources.Length > 0)
             {
-                LogDebug($"[TestBootstrap] {individualResources.Length}개 개별 리소스 로딩 중...");
+                LogDebug($"[SceneBootstrap] {individualResources.Length}개 개별 리소스 로딩 중...");
 
                 foreach (var resourcePath in individualResources)
                 {
@@ -149,11 +162,11 @@ namespace Tests
                     var resource = resourceManager.Load<ScriptableObject>(resourcePath);
                     if (resource != null)
                     {
-                        LogDebug($"[TestBootstrap] 리소스 로딩 완료: {resourcePath}");
+                        LogDebug($"[SceneBootstrap] 리소스 로딩 완료: {resourcePath}");
                     }
                     else
                     {
-                        Debug.LogWarning($"[TestBootstrap] 리소스 로딩 실패: {resourcePath}");
+                        Debug.LogWarning($"[SceneBootstrap] 리소스 로딩 실패: {resourcePath}");
                     }
                 }
             }
@@ -168,7 +181,7 @@ namespace Tests
         {
             if (!initializeResourceManager)
             {
-                Debug.LogError("[TestBootstrap] ResourceManager가 초기화되지 않았습니다.");
+                Debug.LogError("[SceneBootstrap] ResourceManager가 초기화되지 않았습니다.");
                 return null;
             }
 
@@ -182,7 +195,7 @@ namespace Tests
         {
             if (!initializeResourceManager)
             {
-                Debug.LogError("[TestBootstrap] ResourceManager가 초기화되지 않았습니다.");
+                Debug.LogError("[SceneBootstrap] ResourceManager가 초기화되지 않았습니다.");
                 return false;
             }
 
@@ -208,14 +221,14 @@ namespace Tests
             }
             else
             {
-                Debug.LogWarning("[TestBootstrap] Play 모드에서만 실행 가능합니다.");
+                Debug.LogWarning("[SceneBootstrap] Play 모드에서만 실행 가능합니다.");
             }
         }
 
         [ContextMenu("Print Status")]
         private void PrintStatus()
         {
-            Debug.Log("=== TestBootstrap 상태 ===");
+            Debug.Log("=== SceneBootstrap 상태 ===");
             Debug.Log($"초기화 완료: {IsInitialized}");
             Debug.Log($"ResourceManager: {initializeResourceManager}");
             Debug.Log($"AudioManager: {initializeAudioManager}");
