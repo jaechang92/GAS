@@ -3,7 +3,8 @@
 > **프로젝트명**: GASPT (Generic Ability System + FSM)
 > **목표**: Skul: The Hero Slayer 스타일 2D 플랫포머 액션 게임
 > **작성일**: 2025-09-27
-> **현재 완성도**: 80% (기반 시스템 완료)
+> **최종 업데이트**: 2025-10-03
+> **현재 완성도**: 82% (기반 시스템 + UI 기반 완료)
 
 ---
 
@@ -48,13 +49,15 @@
   - `GroundChecker.cs`: 정밀한 착지 감지
 - **상태 시스템**: Idle, Move, Jump, Fall, Dash, Attack, Hit, Dead, WallGrab, WallJump, Slide
 
-### 1.2 부분 구현된 시스템 (완성도 70%)
+### 1.2 부분 구현된 시스템 (완성도 85%)
 
-#### 🔄 매니저 시스템
-- **GameManager**: 기본 게임 상태 관리 (점수, 생명, 게임오버)
+#### ✅ 매니저 시스템 (업데이트: 2025-10-03)
+- **GameManager**: 기본 게임 상태 관리 + 골드/다이아 리소스 시스템 ✅
 - **UIManager**: UI 패널 관리 및 로딩 오버레이
+- **HUDManager**: 인게임 HUD 전체 관리 (신규 추가) ✅
 - **GameFlowManager**: 게임 흐름 FSM 제어
 - **AudioManager**: 기본 오디오 시스템
+- **SceneBootstrap**: 씬 독립 테스트 환경 시스템 ✅
 
 #### 🔄 씬 구조
 - **Bootstrap**: `00_Bootstrap.unity` (초기화 씬)
@@ -251,21 +254,37 @@ Assets/_Project/Scripts/Effects/
 ```
 
 #### 4.2 UI/UX 완성 (1-2주)
-**우선순위**: 🟢 LOW
+**우선순위**: 🔥 HIGH → 🟡 MEDIUM (부분 완료)
+**완성도**: 40% (2025-10-03 업데이트)
 
-**구현 파일**:
+**구현 완료된 파일** ✅:
+```
+Assets/_Project/Scripts/UI/HUD/
+├── HUDManager.cs                # HUD 전체 관리
+├── HealthBarUI.cs               # 체력바 게이지 UI
+├── ItemSlotUI.cs                # 아이템/스킬 슬롯 UI
+├── PlayerInfoPanel.cs           # 플레이어 정보 패널
+├── ResourcePanel.cs             # 골드/다이아 표시
+└── UI.HUD.asmdef                # 어셈블리 정의
+
+Assets/_Project/Scripts/Editor/UI/
+└── HUDPrefabCreator.cs          # HUD 프리팹 자동 생성 도구
+
+Assets/_Project/Prefabs/UI/
+└── GameHUD.prefab               # 완성된 HUD 프리팹
+```
+
+**구현 예정 파일**:
 ```
 Assets/_Project/Scripts/UI/
 ├── Game/
-│   ├── GameHUD.cs               # 게임 중 UI
 │   ├── SkullSelectionUI.cs      # 스컬 선택 인터페이스
-│   └── HealthBarUI.cs           # 체력바 UI
+│   └── MiniMapUI.cs             # 미니맵 UI
 ├── Menu/
 │   ├── MainMenuUI.cs            # 메인 메뉴
 │   ├── SettingsUI.cs            # 설정 메뉴
 │   └── ProgressUI.cs            # 진행도 표시
 └── Core/
-    ├── UIManager.cs             # UI 매니저 (확장)
     └── UITransition.cs          # UI 전환 효과
 ```
 
@@ -451,6 +470,24 @@ public class SkullPhysics : PhysicsController
 
 ---
 
-**문서 버전**: v1.0
-**마지막 업데이트**: 2025-09-27
+## 📅 업데이트 이력
+
+### v1.1 - 2025-10-03
+- **HUD 시스템 완성**
+  - 5개 핵심 UI 컴포넌트 구현
+  - GameManager 리소스 시스템 확장
+  - HUD 프리팹 자동 생성 도구 추가
+  - SceneBootstrap 테스트 환경 개선
+- **현재 완성도**: 80% → 82%
+- **Phase 4.2 UI/UX**: 0% → 40% 진행
+
+### v1.0 - 2025-09-27
+- 초기 문서 작성
+- 전체 개발 로드맵 수립
+- 기반 시스템 분석 완료
+
+---
+
+**문서 버전**: v1.1
+**마지막 업데이트**: 2025-10-03
 **작성자**: Claude Code Assistant

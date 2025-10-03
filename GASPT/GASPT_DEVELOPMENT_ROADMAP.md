@@ -212,11 +212,15 @@ Skull/Types/Advanced/
 ### 목표
 완성된 게임 경험을 위한 인터페이스 및 사용자 편의성 구축
 
-### 4.1 게임 UI 시스템
+### 4.1 게임 UI 시스템 (진행 중)
 
 #### 작업 항목
-- [ ] **인게임 UI 완성**
-  - [ ] HUD (체력, 마나, 스컬 정보)
+- [x] **인게임 UI 기반 구축** ✅ (2025-10-03 완료)
+  - [x] HUD 시스템 구현 (HealthBarUI, ItemSlotUI, PlayerInfoPanel, ResourcePanel, HUDManager)
+  - [x] 체력바 UI (보라색 게이지, 부드러운 애니메이션)
+  - [x] 아이템/스킬 슬롯 UI (쿨다운, 개수 표시)
+  - [x] 골드/다이아 리소스 표시
+  - [x] HUD 프리팹 자동 생성 도구
   - [ ] 미니맵 시스템
   - [ ] 인벤토리/장비 UI
   - [ ] 스킬 트리 UI
@@ -227,13 +231,27 @@ Skull/Types/Advanced/
   - [ ] 게임 내 일시정지 메뉴
   - [ ] 로드/세이브 시스템
 
-#### 예상 구조
+#### 구현 완료된 구조 ✅
+```
+Assets/_Project/Scripts/UI/
+└── HUD/                               # 완료 (2025-10-03)
+    ├── HUDManager.cs                  # HUD 전체 관리
+    ├── HealthBarUI.cs                 # 체력바 게이지
+    ├── ItemSlotUI.cs                  # 아이템/스킬 슬롯
+    ├── PlayerInfoPanel.cs             # 플레이어 정보 패널
+    ├── ResourcePanel.cs               # 골드/다이아 패널
+    └── UI.HUD.asmdef                  # 어셈블리 정의
+
+Assets/_Project/Scripts/Editor/UI/
+└── HUDPrefabCreator.cs               # HUD 프리팹 자동 생성 도구
+
+Assets/_Project/Prefabs/UI/
+└── GameHUD.prefab                    # 완성된 HUD 프리팹
+```
+
+#### 예정된 구조
 ```
 UI/
-├── InGame/
-│   ├── HUD.cs
-│   ├── SkullSwitchUI.cs
-│   └── HealthBarUI.cs
 ├── Menus/
 │   ├── MainMenu.cs
 │   ├── SettingsMenu.cs
@@ -436,5 +454,16 @@ Phase 1 완료 후, **Phase 2.1 캐릭터 이동 및 물리 시스템**부터 �
 
 ---
 
-*최종 업데이트: 2025-09-29*
+## 📅 최근 업데이트 이력
+
+### 2025-10-03
+- **Phase 4.1 게임 UI 시스템 착수**
+  - HUD 시스템 완전 구현 (5개 핵심 컴포넌트)
+  - GameManager 리소스 시스템 추가 (골드/다이아)
+  - HUD 프리팹 자동 생성 Editor 도구
+  - SceneBootstrap 테스트 환경 개선
+
+---
+
+*최종 업데이트: 2025-10-03*
 *GASPT 프로젝트 개발팀*
