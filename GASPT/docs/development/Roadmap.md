@@ -54,18 +54,21 @@ GASPT 프로젝트의 완전한 개발 계획 및 단계별 로드맵입니다.
 
 ---
 
-## 🎮 Phase 2: 게임플레이 메커니즘 구현
+## 🎮 Phase 2: 게임플레이 메커니즘 구현 (진행 중 - 65%)
 
 ### 목표
 실제 플레이 가능한 게임 구현 및 핵심 메커니즘 완성
 
-### 2.1 캐릭터 이동 및 물리 시스템
+### 2.1 캐릭터 이동 및 물리 시스템 (진행 중 - 85%)
 
 #### 작업 항목
-- [ ] **향상된 플랫포머 물리 시스템**
-  - [ ] 정밀한 점프 메커니즘 (가변 점프, 코요테 타임)
+- [x] **향상된 플랫포머 물리 시스템** ✅ (2025-10-04 개선)
+  - [x] 정밀한 점프 메커니즘 (가변 점프, 코요테 타임)
+  - [x] 좁은 공간 점프 안정성 (3가지 안전장치)
+  - [x] 자기 자신 충돌 제외 (OverlapBoxAll 필터링)
+  - [x] 지면 감지 시스템 (Layer 기반)
   - [ ] 벽 점프 및 슬라이딩 시스템
-  - [ ] 대시/닷지 메커니즘
+  - [x] 대시/닷지 메커니즘
   - [ ] 낙하 플랫폼 상호작용
 
 - [ ] **스컬별 이동 특성**
@@ -75,50 +78,97 @@ GASPT 프로젝트의 완전한 개발 계획 및 단계별 로드맵입니다.
 
 #### 기술 요구사항
 ```csharp
-// 예상 인터페이스
-public interface IMovementController
+// 구현 완료된 CharacterPhysics
+public class CharacterPhysics : MonoBehaviour
 {
-    float MoveSpeed { get; set; }
-    float JumpForce { get; set; }
-    bool CanWallJump { get; set; }
-    bool CanDoubleJump { get; set; }
+    // 점프 시스템 - 3가지 안전장치
+    // 1. 접지 상태 강제 리셋
+    // 2. 하강 감지 리셋
+    // 3. 키 릴리즈 리셋
+
+    // 충돌 감지 - 자기 자신 제외
+    private void CheckGroundCollision()
+    {
+        Collider2D[] colliders = Physics2D.OverlapBoxAll(...);
+        foreach (var hitCollider in colliders)
+        {
+            if (hitCollider != col && hitCollider.gameObject != gameObject)
+            {
+                isGrounded = true;
+                break;
+            }
+        }
+    }
 }
 ```
 
-### 2.2 전투 시스템 구현
+#### 완료된 개선사항 (2025-10-04)
+- **CharacterPhysics.cs 점프 안정성 강화**
+  - 좁은 공간에서 점프 상태 리셋 안되는 버그 수정
+  - 천장 충돌 시 즉시 하강 전환
+  - 접지 상태에서 강제 리셋 로직 추가
+
+- **충돌 감지 정확성 향상**
+  - Player 자신의 Collider를 Ground로 감지하는 버그 수정
+  - OverlapBoxAll + 자기 자신 필터링 적용
+
+- **Layer 시스템 자동화**
+  - Ground Layer 자동 설정 + 경고 시스템
+  - Player Layer 자동 설정 + 충돌 감지
+
+### 2.2 전투 시스템 구현 (진행 중 - 70%)
 
 #### 작업 항목
-- [ ] **기본 공격 시스템**
-  - [ ] 콤보 시스템 구현
-  - [ ] 히트박스/허트박스 관리
-  - [ ] 대미지 계산 및 적용
+- [x] **기본 공격 시스템** ✅ (2025-10-04 완성)
+  - [x] 콤보 시스템 구현
+  - [x] 콤보 체인 시스템 (1→2→3 연계)
+  - [x] 히트박스/허트박스 관리
+  - [x] 대미지 계산 및 적용
   - [ ] 넉백/스턴 효과
 
 - [ ] **스컬별 고유 어빌리티**
-  - [ ] DefaultSkull: 기본 검격 + 스컬 던지기
+  - [x] DefaultSkull: 기본 검격 (완료)
+  - [ ] DefaultSkull: 스컬 던지기
   - [ ] MageSkull: 마법 미사일 + 순간이동
   - [ ] WarriorSkull: 강타 + 방어 자세
 
 - [ ] **스킬 쿨다운 및 리소스 관리**
   - [ ] 마나/스태미나 시스템
-  - [ ] 쿨다운 UI 연동
+  - [x] 쿨다운 UI 연동 (HUD 슬롯 완료)
   - [ ] 리소스 회복 메커니즘
 
-#### 예상 구조
+#### 구현 완료된 구조 ✅
 ```
 Combat/
-├── Systems/
-│   ├── DamageSystem.cs
-│   ├── ComboSystem.cs
-│   └── HitboxManager.cs
-├── Abilities/
-│   ├── BasicAttack.cs
-│   ├── SpecialAbility.cs
-│   └── UltimateAbility.cs
+├── Core/
+│   ├── ComboSystem.cs              # 콤보 시스템 (완료)
+│   ├── HealthSystem.cs             # 체력 관리 (완료)
+│   └── DamageSystem.cs             # 데미지 처리 (완료)
+├── Attack/
+│   ├── AttackAnimationHandler.cs  # 공격 애니메이션 (완료)
+│   └── AttackData.cs               # 공격 데이터 (완료)
+├── Hitbox/
+│   ├── HitboxController.cs        # 히트박스 관리 (완료)
+│   └── HurtboxController.cs       # 허트박스 관리 (완료)
 └── Effects/
-    ├── DamageEffect.cs
-    └── StatusEffect.cs
+    └── DamageEffect.cs             # 데미지 이펙트 (진행 중)
 ```
+
+#### 완료된 구현사항 (2025-10-04)
+- **PlayerAttackState 콤보 체인 시스템**
+  - CheckComboInput() 메서드로 콤보 윈도우 내 입력 감지
+  - 연속 공격 입력 시 1→2→3 콤보 자동 체인
+  - ComboSystem과 완전 통합
+
+- **입력 시스템 개선**
+  - State 기반 입력 리셋 (Attack/Jump/Dash)
+  - 명명 충돌 해결 (InputHandler → PlayerInput)
+  - 반복 실행 가능한 입력 처리
+
+- **PlayerCombatDemo 테스트 시스템**
+  - 14단계 체크리스트 기반 검증
+  - Layer/Config 자동 설정
+  - Pass/Fail 기준 명시
 
 ### 2.3 적 AI 시스템
 
@@ -456,6 +506,20 @@ Phase 1 완료 후, **Phase 2.1 캐릭터 이동 및 물리 시스템**부터 �
 
 ## 📅 최근 업데이트 이력
 
+### 2025-10-04
+- **Phase 2.1 캐릭터 물리 시스템 개선**
+  - CharacterPhysics 점프 안정성 강화 (3가지 안전장치)
+  - 자기 자신 충돌 제외 로직 추가
+  - Layer 자동 설정 시스템 구축
+- **Phase 2.2 전투 시스템 완성**
+  - PlayerAttackState 콤보 체인 시스템 구현
+  - 입력 시스템 개선 (State 기반 리셋)
+  - PlayerCombatDemo 테스트 체크리스트 작성
+- **기술 인프라 개선**
+  - ResourceManager → GameResourceManager 리팩토링
+  - DictionaryInspectorHelper 확장 (Dictionary 래퍼 메서드)
+  - 어셈블리 참조 최적화
+
 ### 2025-10-03
 - **Phase 4.1 게임 UI 시스템 착수**
   - HUD 시스템 완전 구현 (5개 핵심 컴포넌트)
@@ -465,5 +529,5 @@ Phase 1 완료 후, **Phase 2.1 캐릭터 이동 및 물리 시스템**부터 �
 
 ---
 
-*최종 업데이트: 2025-10-03*
+*최종 업데이트: 2025-10-04*
 *GASPT 프로젝트 개발팀*

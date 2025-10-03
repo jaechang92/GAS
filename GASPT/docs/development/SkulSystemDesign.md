@@ -3,8 +3,8 @@
 > **프로젝트명**: GASPT (Generic Ability System + FSM)
 > **목표**: Skul: The Hero Slayer 스타일 2D 플랫포머 액션 게임
 > **작성일**: 2025-09-27
-> **최종 업데이트**: 2025-10-03
-> **현재 완성도**: 82% (기반 시스템 + UI 기반 완료)
+> **최종 업데이트**: 2025-10-04
+> **현재 완성도**: 84% (기반 시스템 + Combat 시스템 + UI 기반 완료)
 
 ---
 
@@ -94,12 +94,13 @@
 
 ## 🗺️ 3. 구현 로드맵 (단계별 개발 계획)
 
-### 🎯 Phase 1: 기본 플레이어블 프로토타입 (2-3주)
+### 🎯 Phase 1: 기본 플레이어블 프로토타입 (진행 중 - 70%)
 
-#### 1.1 기본 스컬 시스템 구축 (1주)
+#### 1.1 기본 스컬 시스템 구축 (준비 중)
 **우선순위**: 🔥 HIGH
+**상태**: ⏳ 준비 중 (Combat 시스템 먼저 완성)
 
-**구현 파일**:
+**구현 파일** (계획):
 ```
 Assets/_Project/Scripts/Gameplay/Skull/
 ├── Core/
@@ -141,19 +142,37 @@ public class SkullChangeState : PlayerBaseState
 }
 ```
 
-#### 1.2 기본 전투 시스템 (1주)
+#### 1.2 기본 전투 시스템 (진행 중 - 70%)
 **우선순위**: 🔥 HIGH
+**상태**: ✅ 주요 기능 완료 (2025-10-04)
 
-**구현 파일**:
+**구현 완료된 파일** ✅:
 ```
 Assets/_Project/Scripts/Gameplay/Combat/
-├── CombatController.cs          # 기본 공격 처리
-├── SkullThrowAbility.cs         # 스컬 던지기 + 텔레포트
-├── HitboxSystem.cs              # 데미지 판정 시스템
-├── HealthSystem.cs              # 체력 관리
-├── DamageSystem.cs              # 데미지 계산
-└── CombatPhysics.cs             # 전투 관련 물리 처리
+├── Core/
+│   ├── ComboSystem.cs              # 콤보 시스템 (완료)
+│   ├── HealthSystem.cs             # 체력 관리 (완료)
+│   └── DamageSystem.cs             # 데미지 계산 (완료)
+├── Attack/
+│   ├── AttackAnimationHandler.cs  # 공격 애니메이션 (완료)
+│   └── AttackData.cs               # 공격 데이터 (완료)
+└── Hitbox/
+    ├── HitboxController.cs        # 히트박스 관리 (완료)
+    └── HurtboxController.cs       # 허트박스 관리 (완료)
 ```
+
+**구현 예정**:
+```
+Assets/_Project/Scripts/Gameplay/Combat/
+├── SkullThrowAbility.cs         # 스컬 던지기 + 텔레포트
+└── CombatPhysics.cs             # 전투 관련 물리 처리 (넉백, 스턴)
+```
+
+**완료된 주요 기능** (2025-10-04):
+- ✅ **콤보 체인 시스템**: 1→2→3 연속 공격 체인
+- ✅ **PlayerAttackState**: ComboSystem 완전 통합
+- ✅ **입력 시스템**: State 기반 리셋 (Attack/Jump/Dash)
+- ✅ **테스트 환경**: PlayerCombatDemo 14단계 체크리스트
 
 #### 1.3 기본 적 AI (1주)
 **우선순위**: 🔥 HIGH
@@ -472,6 +491,22 @@ public class SkullPhysics : PhysicsController
 
 ## 📅 업데이트 이력
 
+### v1.2 - 2025-10-04
+- **Combat 시스템 완성**
+  - PlayerAttackState 콤보 체인 시스템 구현
+  - 입력 시스템 개선 (State 기반 리셋)
+  - PlayerCombatDemo 테스트 체크리스트 작성
+- **CharacterPhysics 개선**
+  - 점프 안정성 강화 (3가지 안전장치)
+  - 자기 자신 충돌 제외 로직
+  - Layer 자동 설정 시스템
+- **기술 인프라 개선**
+  - ResourceManager → GameResourceManager 리팩토링
+  - DictionaryInspectorHelper 확장
+  - 어셈블리 참조 최적화
+- **현재 완성도**: 82% → 84%
+- **Phase 1.2 기본 전투 시스템**: 50% → 70% 완료
+
 ### v1.1 - 2025-10-03
 - **HUD 시스템 완성**
   - 5개 핵심 UI 컴포넌트 구현
@@ -488,6 +523,6 @@ public class SkullPhysics : PhysicsController
 
 ---
 
-**문서 버전**: v1.1
-**마지막 업데이트**: 2025-10-03
+**문서 버전**: v1.2
+**마지막 업데이트**: 2025-10-04
 **작성자**: Claude Code Assistant
