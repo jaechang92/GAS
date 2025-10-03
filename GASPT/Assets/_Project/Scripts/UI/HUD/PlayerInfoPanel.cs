@@ -73,7 +73,6 @@ namespace UI.HUD
 
             // 이벤트 구독
             connectedHealthSystem.OnHealthChanged += OnHealthChanged;
-            connectedHealthSystem.OnMaxHealthChanged += OnMaxHealthChanged;
 
             // 현재 체력으로 초기화
             if (healthBar != null)
@@ -92,7 +91,6 @@ namespace UI.HUD
             if (connectedHealthSystem != null)
             {
                 connectedHealthSystem.OnHealthChanged -= OnHealthChanged;
-                connectedHealthSystem.OnMaxHealthChanged -= OnMaxHealthChanged;
                 connectedHealthSystem = null;
             }
         }
@@ -100,22 +98,11 @@ namespace UI.HUD
         /// <summary>
         /// 체력 변경 이벤트 핸들러
         /// </summary>
-        private void OnHealthChanged(float newHealth)
+        private void OnHealthChanged(float currentHealth, float maxHealth)
         {
-            if (healthBar != null && connectedHealthSystem != null)
+            if (healthBar != null)
             {
-                healthBar.UpdateHealth(newHealth, connectedHealthSystem.MaxHealth);
-            }
-        }
-
-        /// <summary>
-        /// 최대 체력 변경 이벤트 핸들러
-        /// </summary>
-        private void OnMaxHealthChanged(float newMaxHealth)
-        {
-            if (healthBar != null && connectedHealthSystem != null)
-            {
-                healthBar.UpdateHealth(connectedHealthSystem.CurrentHealth, newMaxHealth);
+                healthBar.UpdateHealth(currentHealth, maxHealth);
             }
         }
 

@@ -2,6 +2,7 @@
     "name": "UI.HUD",
     "rootNamespace": "UI.HUD",
     "references": [
+        "Unity.ugui",
         "Core.Managers",
         "Core.Utilities",
         "Combat.Core"
