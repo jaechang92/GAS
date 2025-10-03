@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using Core.Managers;
 
 namespace Player.Physics
 {
@@ -12,10 +13,26 @@ namespace Player.Physics
     public class CharacterPhysics : MonoBehaviour
     {
         [Header("설정")]
-        [SerializeField] private SkulPhysicsConfig config;
+        [SerializeField] private SkulPhysicsConfig configOverride;
 
         [Header("디버그")]
         [SerializeField] private bool enableDebugLogs = false;
+
+        // 실제 사용할 config (프로퍼티로 자동 로드)
+        private SkulPhysicsConfig config
+        {
+            get
+            {
+                // Inspector에서 설정된 override가 있으면 사용
+                if (configOverride != null)
+                {
+                    return configOverride;
+                }
+
+                // 없으면 ResourceManager에서 로드
+                return ResourceManager.GetSkulPhysicsConfig();
+            }
+        }
 
         // === 컴포넌트 참조 ===
         private Rigidbody2D rb;
@@ -109,8 +126,19 @@ namespace Player.Physics
         {
             if (config == null)
             {
-                Debug.LogError($"[CharacterPhysics] SkulPhysicsConfig가 설정되지 않았습니다! {gameObject.name}");
+                Debug.LogError($"[CharacterPhysics] SkulPhysicsConfig를 로드할 수 없습니다! {gameObject.name}");
+                Debug.LogError($"[CharacterPhysics] ResourceManager가 초기화되었는지 확인하세요!");
                 return;
+            }
+
+            // Inspector override 사용 여부 로그
+            if (configOverride != null)
+            {
+                LogDebug("Inspector에서 설정된 SkulPhysicsConfig 사용");
+            }
+            else
+            {
+                LogDebug("ResourceManager에서 SkulPhysicsConfig 로드");
             }
 
             config.ValidateSettings();
