@@ -8,7 +8,9 @@
         "Core.Enums",
         "Player",
         "GAS.Core",
-        "Tests"
+        "Tests",
+        "Core.Managers",
+        "Core.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
