@@ -83,6 +83,9 @@ namespace Player
             attackTriggered = false;
             comboWindowActive = false;
 
+            // 공격 입력 상태 리셋 (다음 공격 입력을 위해)
+            playerController.PlayerInput?.ResetAttack();
+
             await Awaitable.NextFrameAsync();
         }
 
@@ -91,7 +94,41 @@ namespace Player
             if (!attackTriggered) return;
 
             attackAnimationTime += deltaTime;
+
+            // 콤보 윈도우 체크 및 다음 공격 입력 감지
+            CheckComboInput();
+
             CheckForStateTransitions();
+        }
+
+        /// <summary>
+        /// 콤보 입력 체크 (콤보 체인을 위해)
+        /// </summary>
+        private void CheckComboInput()
+        {
+            if (playerController == null || playerController.ComboSystem == null) return;
+
+            var comboSystem = playerController.ComboSystem;
+
+            // 콤보가 진행 중이고, 다음 공격 입력이 가능한 시간인지 확인
+            if (comboSystem.IsComboActive && comboSystem.CanInputNextCombo)
+            {
+                // 공격 입력이 있는지 확인
+                if (playerController.PlayerInput != null && playerController.PlayerInput.IsAttackPressed)
+                {
+                    // 콤보가 아직 남아있는지 확인
+                    if (comboSystem.CurrentComboIndex < comboSystem.GetComboCount())
+                    {
+                        LogStateDebug($"콤보 연계 입력 감지! 다음 콤보: {comboSystem.CurrentComboIndex}");
+
+                        // 공격 입력 리셋 (중복 입력 방지)
+                        playerController.PlayerInput.ResetAttack();
+
+                        // Attack State로 재진입 (다음 콤보 실행)
+                        playerController.ChangeState(PlayerStateType.Attack);
+                    }
+                }
+            }
         }
 
         /// <summary>
