@@ -59,7 +59,7 @@ Show Debug Logs: ✓
 ```
 
 이 설정은:
-- ResourceManager만 초기화
+- GameResourceManager만 초기화
 - Essential 카테고리 리소스만 로드 (SkulPhysicsConfig 포함)
 - 다른 매니저는 초기화하지 않음
 
@@ -158,10 +158,10 @@ bootstrap.OnInitializationComplete += () =>
 ```
 [TestBootstrap] 테스트 환경 초기화 시작...
 [TestBootstrap] 매니저 초기화 중...
-[TestBootstrap] ResourceManager 초기화 완료
+[TestBootstrap] GameResourceManager 초기화 완료
 [TestBootstrap] Essential 카테고리 로딩 중...
-[ResourceManager] Essential 카테고리 로딩 시작... (1개 리소스)
-[ResourceManager] 로드 성공: Data/SkulPhysicsConfig
+[GameResourceManager] Essential 카테고리 로딩 시작... (1개 리소스)
+[GameResourceManager] 로드 성공: Data/SkulPhysicsConfig
 [TestBootstrap] Essential 카테고리 로딩 완료
 [TestBootstrap] 테스트 환경 초기화 완료!
 ```
@@ -213,7 +213,7 @@ private async void Start()
 
 ## 📚 관련 문서
 
-- ResourceManager 가이드
+- GameResourceManager 가이드
 - ResourceManifest 설정 가이드
 - GameFlow 시스템 가이드
 

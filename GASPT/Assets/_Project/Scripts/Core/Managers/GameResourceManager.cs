@@ -4,14 +4,16 @@ using System.Collections.Generic;
 using System.Threading;
 using Core.Enums;
 using Core.Data;
+using FSM.Core.Utils;
 
 namespace Core.Managers
 {
     /// <summary>
-    /// 리소스 관리 매니저
+    /// 게임 리소스 관리 매니저
     /// 게임에 필요한 모든 리소스를 카테고리별로 중앙에서 로드하고 관리
+    /// (System.Resources.ResourceManager와 구분하기 위해 GameResourceManager로 명명)
     /// </summary>
-    public class ResourceManager : SingletonManager<ResourceManager>
+    public class GameResourceManager : SingletonManager<GameResourceManager>
     {
         [Header("리소스 매니페스트")]
         [Tooltip("Resources/Manifests/ 폴더에서 자동으로 모든 매니페스트를 로드합니다")]
@@ -21,7 +23,7 @@ namespace Core.Managers
         [SerializeField] private bool isInitialized = false;
 
         // 리소스 캐시
-        private Dictionary<string, UnityEngine.Object> resourceCache = new Dictionary<string, UnityEngine.Object>();
+        private DictionaryInspectorHelper<string, UnityEngine.Object> resourceCache = new DictionaryInspectorHelper<string, UnityEngine.Object>();
 
         // 카테고리별 로드 상태
         private HashSet<ResourceCategory> loadedCategories = new HashSet<ResourceCategory>();
@@ -76,11 +78,11 @@ namespace Core.Managers
             if (loadedManifests != null && loadedManifests.Length > 0)
             {
                 manifests.AddRange(loadedManifests);
-                Debug.Log($"[ResourceManager] {loadedManifests.Length}개의 매니페스트 로드 완료");
+                Debug.Log($"[GameResourceManager] {loadedManifests.Length}개의 매니페스트 로드 완료");
             }
             else
             {
-                Debug.LogWarning("[ResourceManager] Resources/Manifests 폴더에 매니페스트가 없습니다.");
+                Debug.LogWarning("[GameResourceManager] Resources/Manifests 폴더에 매니페스트가 없습니다.");
             }
         }
 
@@ -96,7 +98,7 @@ namespace Core.Managers
             // 이미 로드된 카테고리는 스킵
             if (loadedCategories.Contains(category))
             {
-                Debug.Log($"[ResourceManager] {category} 카테고리는 이미 로드되었습니다.");
+                Debug.Log($"[GameResourceManager] {category} 카테고리는 이미 로드되었습니다.");
                 return true;
             }
 
@@ -105,11 +107,11 @@ namespace Core.Managers
 
             if (manifest == null)
             {
-                Debug.LogWarning($"[ResourceManager] {category} 카테고리의 매니페스트를 찾을 수 없습니다.");
+                Debug.LogWarning($"[GameResourceManager] {category} 카테고리의 매니페스트를 찾을 수 없습니다.");
                 return false;
             }
 
-            Debug.Log($"[ResourceManager] {category} 카테고리 로딩 시작... ({manifest.ResourceCount}개 리소스)");
+            Debug.Log($"[GameResourceManager] {category} 카테고리 로딩 시작... ({manifest.ResourceCount}개 리소스)");
 
             int totalResources = manifest.ResourceCount;
             int loadedCount = 0;
@@ -119,7 +121,7 @@ namespace Core.Managers
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Debug.LogWarning($"[ResourceManager] {category} 로딩이 취소되었습니다.");
+                    Debug.LogWarning($"[GameResourceManager] {category} 로딩이 취소되었습니다.");
                     return false;
                 }
 
@@ -147,7 +149,7 @@ namespace Core.Managers
             loadedCategories.Add(category);
             OnCategoryLoaded?.Invoke(category);
 
-            Debug.Log($"[ResourceManager] {category} 카테고리 로딩 완료!");
+            Debug.Log($"[GameResourceManager] {category} 카테고리 로딩 완료!");
             return true;
         }
 
@@ -187,7 +189,7 @@ namespace Core.Managers
 
                 if (resourceType == null)
                 {
-                    Debug.LogError($"[ResourceManager] 타입을 찾을 수 없습니다: {entry.typeName}");
+                    Debug.LogError($"[GameResourceManager] 타입을 찾을 수 없습니다: {entry.typeName}");
                     return false;
                 }
 
@@ -197,18 +199,18 @@ namespace Core.Managers
                 if (resource != null)
                 {
                     resourceCache[entry.path] = resource;
-                    Debug.Log($"[ResourceManager] 로드 성공: {entry.path} ({entry.typeName})");
+                    Debug.Log($"[GameResourceManager] 로드 성공: {entry.path} ({entry.typeName})");
                     return true;
                 }
                 else
                 {
-                    Debug.LogError($"[ResourceManager] 로드 실패: {entry.path}");
+                    Debug.LogError($"[GameResourceManager] 로드 실패: {entry.path}");
                     return false;
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ResourceManager] 로드 중 오류: {entry.path}\n{e.Message}");
+                Debug.LogError($"[GameResourceManager] 로드 중 오류: {entry.path}\n{e.Message}");
                 return false;
             }
         }
@@ -257,7 +259,7 @@ namespace Core.Managers
             }
 
             loadedCategories.Remove(category);
-            Debug.Log($"[ResourceManager] {category} 카테고리 언로드 완료");
+            Debug.Log($"[GameResourceManager] {category} 카테고리 언로드 완료");
         }
 
         /// <summary>
@@ -268,7 +270,7 @@ namespace Core.Managers
             resourceCache.Clear();
             loadedCategories.Clear();
             Resources.UnloadUnusedAssets();
-            Debug.Log("[ResourceManager] 모든 리소스 언로드 완료");
+            Debug.Log("[GameResourceManager] 모든 리소스 언로드 완료");
         }
 
         #endregion
@@ -290,12 +292,12 @@ namespace Core.Managers
             if (resource != null)
             {
                 resourceCache[path] = resource;
-                Debug.Log($"[ResourceManager] {typeof(T).Name} 로드 성공: {path}");
+                Debug.Log($"[GameResourceManager] {typeof(T).Name} 로드 성공: {path}");
                 return resource;
             }
             else
             {
-                Debug.LogError($"[ResourceManager] {typeof(T).Name} 로드 실패: {path}");
+                Debug.LogError($"[GameResourceManager] {typeof(T).Name} 로드 실패: {path}");
                 return null;
             }
         }
@@ -309,7 +311,7 @@ namespace Core.Managers
 
             if (resource == null)
             {
-                Debug.LogWarning($"[ResourceManager] {typeof(T).Name} 로드 실패. 기본 인스턴스 생성.");
+                Debug.LogWarning($"[GameResourceManager] {typeof(T).Name} 로드 실패. 기본 인스턴스 생성.");
                 resource = ScriptableObject.CreateInstance<T>();
                 resourceCache[path] = resource;
             }
@@ -356,7 +358,7 @@ namespace Core.Managers
         [ContextMenu("Print Resource Status")]
         public void PrintResourceStatus()
         {
-            Debug.Log("=== ResourceManager 상태 ===");
+            Debug.Log("=== GameResourceManager 상태 ===");
             Debug.Log($"초기화 완료: {isInitialized}");
             Debug.Log($"매니페스트 수: {manifests.Count}");
             Debug.Log($"로드된 카테고리: {string.Join(", ", loadedCategories)}");
@@ -368,7 +370,7 @@ namespace Core.Managers
         {
             resourceCache.Clear();
             loadedCategories.Clear();
-            Debug.Log("[ResourceManager] 캐시 클리어 완료");
+            Debug.Log("[GameResourceManager] 캐시 클리어 완료");
         }
 
         #endregion

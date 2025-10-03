@@ -106,8 +106,8 @@ namespace GameFlow
             // 로딩 화면 활성화
             gameFlowManager?.ShowLoadingScreen();
 
-            // ResourceManager 가져오기
-            var resourceManager = Core.Managers.ResourceManager.Instance;
+            // GameResourceManager 가져오기
+            var resourceManager = Core.Managers.GameResourceManager.Instance;
 
             // 로드 진행률 이벤트 구독
             resourceManager.OnLoadProgress += OnResourceLoadProgress;
@@ -301,8 +301,8 @@ namespace GameFlow
             // 로딩 화면 활성화
             gameFlowManager?.ShowLoadingScreen();
 
-            // ResourceManager 인스턴스 강제 생성
-            var resourceManager = Core.Managers.ResourceManager.Instance;
+            // GameResourceManager 인스턴스 강제 생성
+            var resourceManager = Core.Managers.GameResourceManager.Instance;
 
             // 로드 진행률 이벤트 구독
             resourceManager.OnLoadProgress += OnResourceLoadProgress;

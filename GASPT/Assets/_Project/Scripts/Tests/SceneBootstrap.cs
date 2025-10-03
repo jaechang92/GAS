@@ -16,8 +16,8 @@ namespace Tests
         [SerializeField] private bool isTestMode = false;
 
         [Header("초기화 옵션")]
-        [Tooltip("ResourceManager 초기화 여부")]
-        [SerializeField] private bool initializeResourceManager = true;
+        [Tooltip("GameResourceManager 초기화 여부")]
+        [SerializeField] private bool initializeGameResourceManager = true;
 
         [Tooltip("AudioManager 초기화 여부")]
         [SerializeField] private bool initializeAudioManager = false;
@@ -90,10 +90,10 @@ namespace Tests
         {
             LogDebug("[SceneBootstrap] 매니저 초기화 중...");
 
-            if (initializeResourceManager)
+            if (initializeGameResourceManager)
             {
-                var resourceManager = ResourceManager.GetInstanceSafe();
-                LogDebug("[SceneBootstrap] ResourceManager 초기화 완료");
+                var resourceManager = GameResourceManager.GetInstanceSafe();
+                LogDebug("[SceneBootstrap] GameResourceManager 초기화 완료");
             }
 
             if (initializeAudioManager)
@@ -122,13 +122,13 @@ namespace Tests
         /// </summary>
         private async Awaitable LoadResources(CancellationToken cancellationToken)
         {
-            if (!initializeResourceManager)
+            if (!initializeGameResourceManager)
             {
-                LogDebug("[SceneBootstrap] ResourceManager가 비활성화되어 리소스 로딩을 건너뜁니다.");
+                LogDebug("[SceneBootstrap] GameResourceManager가 비활성화되어 리소스 로딩을 건너뜁니다.");
                 return;
             }
 
-            var resourceManager = ResourceManager.Instance;
+            var resourceManager = GameResourceManager.Instance;
 
             // 카테고리별 로딩
             if (categoriesToLoad != null && categoriesToLoad.Length > 0)
@@ -179,13 +179,13 @@ namespace Tests
         /// </summary>
         public T LoadResource<T>(string path) where T : UnityEngine.Object
         {
-            if (!initializeResourceManager)
+            if (!initializeGameResourceManager)
             {
-                Debug.LogError("[SceneBootstrap] ResourceManager가 초기화되지 않았습니다.");
+                Debug.LogError("[SceneBootstrap] GameResourceManager가 초기화되지 않았습니다.");
                 return null;
             }
 
-            return ResourceManager.Instance.Load<T>(path);
+            return GameResourceManager.Instance.Load<T>(path);
         }
 
         /// <summary>
@@ -193,13 +193,13 @@ namespace Tests
         /// </summary>
         public async Awaitable<bool> LoadCategory(ResourceCategory category, CancellationToken cancellationToken = default)
         {
-            if (!initializeResourceManager)
+            if (!initializeGameResourceManager)
             {
-                Debug.LogError("[SceneBootstrap] ResourceManager가 초기화되지 않았습니다.");
+                Debug.LogError("[SceneBootstrap] GameResourceManager가 초기화되지 않았습니다.");
                 return false;
             }
 
-            return await ResourceManager.Instance.LoadCategoryAsync(category, cancellationToken);
+            return await GameResourceManager.Instance.LoadCategoryAsync(category, cancellationToken);
         }
 
         private void LogDebug(string message)
@@ -230,7 +230,7 @@ namespace Tests
         {
             Debug.Log("=== SceneBootstrap 상태 ===");
             Debug.Log($"초기화 완료: {IsInitialized}");
-            Debug.Log($"ResourceManager: {initializeResourceManager}");
+            Debug.Log($"GameResourceManager: {initializeGameResourceManager}");
             Debug.Log($"AudioManager: {initializeAudioManager}");
             Debug.Log($"UIManager: {initializeUIManager}");
             Debug.Log($"GameManager: {initializeGameManager}");
