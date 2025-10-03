@@ -1,11 +1,12 @@
 using UnityEngine;
-using Player.Physics;
+using System.Collections.Generic;
 
 namespace Core.Managers
 {
     /// <summary>
     /// 리소스 관리 매니저
     /// 게임에 필요한 모든 리소스를 중앙에서 로드하고 관리
+    /// 제네릭 방식으로 순환 참조 방지
     /// </summary>
     public class ResourceManager : MonoBehaviour
     {
@@ -34,28 +35,10 @@ namespace Core.Managers
         [Header("로드 상태")]
         [SerializeField] private bool isInitialized = false;
 
-        [Header("Physics Config")]
-        [SerializeField] private SkulPhysicsConfig skulPhysicsConfig;
-
-        // 리소스 경로 상수
-        private const string SKUL_PHYSICS_CONFIG_PATH = "Data/SkulPhysicsConfig";
+        // 리소스 캐시 (경로별로 저장)
+        private Dictionary<string, ScriptableObject> resourceCache = new Dictionary<string, ScriptableObject>();
 
         #region 프로퍼티
-
-        /// <summary>
-        /// Skul 물리 설정
-        /// </summary>
-        public SkulPhysicsConfig SkulPhysicsConfig
-        {
-            get
-            {
-                if (skulPhysicsConfig == null)
-                {
-                    LoadSkulPhysicsConfig();
-                }
-                return skulPhysicsConfig;
-            }
-        }
 
         /// <summary>
         /// 초기화 완료 여부
@@ -99,76 +82,73 @@ namespace Core.Managers
 
             Debug.Log("[ResourceManager] 리소스 로드 시작...");
 
-            // 모든 리소스 로드
-            LoadAllResources();
-
             isInitialized = true;
             Debug.Log("[ResourceManager] 리소스 로드 완료!");
         }
 
-        /// <summary>
-        /// 모든 리소스 로드
-        /// </summary>
-        private void LoadAllResources()
-        {
-            LoadSkulPhysicsConfig();
-            // 여기에 다른 리소스 로드 추가
-        }
-
         #endregion
 
-        #region 리소스 로드
+        #region 제네릭 리소스 로드
 
         /// <summary>
-        /// SkulPhysicsConfig 로드
+        /// 제네릭 리소스 로드 (캐시 사용)
         /// </summary>
-        private void LoadSkulPhysicsConfig()
+        public T Load<T>(string path) where T : ScriptableObject
         {
-            if (skulPhysicsConfig != null)
+            // 캐시 확인
+            if (resourceCache.ContainsKey(path))
             {
-                Debug.Log("[ResourceManager] SkulPhysicsConfig 이미 로드됨");
-                return;
+                return resourceCache[path] as T;
             }
 
-            // Resources 폴더에서 로드 시도
-            skulPhysicsConfig = Resources.Load<SkulPhysicsConfig>(SKUL_PHYSICS_CONFIG_PATH);
+            // Resources 폴더에서 로드
+            T resource = Resources.Load<T>(path);
 
-            if (skulPhysicsConfig != null)
+            if (resource != null)
             {
-                Debug.Log($"[ResourceManager] SkulPhysicsConfig 로드 성공: {SKUL_PHYSICS_CONFIG_PATH}");
+                resourceCache[path] = resource;
+                Debug.Log($"[ResourceManager] {typeof(T).Name} 로드 성공: {path}");
+                return resource;
             }
             else
             {
-                Debug.LogError($"[ResourceManager] SkulPhysicsConfig 로드 실패: {SKUL_PHYSICS_CONFIG_PATH}");
-                Debug.LogError("[ResourceManager] 파일이 Assets/_Project/Resources/Data/SkulPhysicsConfig.asset 경로에 있는지 확인하세요!");
-
-                // 폴백: 런타임에 기본 Config 생성
-                CreateDefaultSkulPhysicsConfig();
+                Debug.LogError($"[ResourceManager] {typeof(T).Name} 로드 실패: {path}");
+                Debug.LogError($"[ResourceManager] 파일이 Assets/_Project/Resources/{path}.asset 경로에 있는지 확인하세요!");
+                return null;
             }
         }
 
         /// <summary>
-        /// 기본 SkulPhysicsConfig 생성 (폴백)
+        /// 제네릭 리소스 로드 with 폴백
         /// </summary>
-        private void CreateDefaultSkulPhysicsConfig()
+        public T LoadWithFallback<T>(string path) where T : ScriptableObject
         {
-            Debug.LogWarning("[ResourceManager] 기본 SkulPhysicsConfig를 런타임에 생성합니다.");
-            skulPhysicsConfig = ScriptableObject.CreateInstance<SkulPhysicsConfig>();
+            T resource = Load<T>(path);
 
-            // 기본값은 ScriptableObject에 이미 정의되어 있음
-            Debug.Log("[ResourceManager] 기본 SkulPhysicsConfig 생성 완료");
+            if (resource == null)
+            {
+                Debug.LogWarning($"[ResourceManager] {typeof(T).Name} 로드 실패. 기본 인스턴스 생성.");
+                resource = ScriptableObject.CreateInstance<T>();
+                resourceCache[path] = resource;
+            }
+
+            return resource;
         }
 
-        #endregion
-
-        #region 리소스 접근
+        /// <summary>
+        /// 정적 메서드: 제네릭 리소스 로드
+        /// </summary>
+        public static T GetResource<T>(string path) where T : ScriptableObject
+        {
+            return Instance.Load<T>(path);
+        }
 
         /// <summary>
-        /// SkulPhysicsConfig 가져오기 (정적 메서드)
+        /// 정적 메서드: 제네릭 리소스 로드 with 폴백
         /// </summary>
-        public static SkulPhysicsConfig GetSkulPhysicsConfig()
+        public static T GetResourceWithFallback<T>(string path) where T : ScriptableObject
         {
-            return Instance.SkulPhysicsConfig;
+            return Instance.LoadWithFallback<T>(path);
         }
 
         #endregion
@@ -183,13 +163,11 @@ namespace Core.Managers
         {
             Debug.Log("=== ResourceManager 상태 ===");
             Debug.Log($"초기화 완료: {isInitialized}");
-            Debug.Log($"SkulPhysicsConfig: {(skulPhysicsConfig != null ? "로드됨" : "없음")}");
+            Debug.Log($"캐시된 리소스 수: {resourceCache.Count}");
 
-            if (skulPhysicsConfig != null)
+            foreach (var kvp in resourceCache)
             {
-                Debug.Log($"  - Move Speed: {skulPhysicsConfig.moveSpeed}");
-                Debug.Log($"  - Jump Velocity: {skulPhysicsConfig.jumpVelocity}");
-                Debug.Log($"  - Dash Speed: {skulPhysicsConfig.dashSpeed}");
+                Debug.Log($"  - {kvp.Key}: {kvp.Value?.GetType().Name ?? "null"}");
             }
         }
 
@@ -201,10 +179,20 @@ namespace Core.Managers
         {
             Debug.Log("[ResourceManager] 리소스 재로드 시작...");
 
-            skulPhysicsConfig = null;
+            resourceCache.Clear();
             isInitialized = false;
 
             Initialize();
+        }
+
+        /// <summary>
+        /// 캐시 클리어
+        /// </summary>
+        [ContextMenu("Clear Cache")]
+        public void ClearCache()
+        {
+            resourceCache.Clear();
+            Debug.Log("[ResourceManager] 캐시 클리어 완료");
         }
 
         #endregion

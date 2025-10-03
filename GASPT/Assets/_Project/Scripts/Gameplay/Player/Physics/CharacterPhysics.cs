@@ -29,8 +29,8 @@ namespace Player.Physics
                     return configOverride;
                 }
 
-                // 없으면 ResourceManager에서 로드
-                return ResourceManager.GetSkulPhysicsConfig();
+                // 없으면 ResourceManager에서 로드 (제네릭 메서드 사용)
+                return ResourceManager.GetResourceWithFallback<SkulPhysicsConfig>("Data/SkulPhysicsConfig");
             }
         }
 
