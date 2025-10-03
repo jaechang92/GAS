@@ -6,11 +6,15 @@ namespace FSM.Core.Utils
 {
     /// <summary>
     /// Dictionary를 Unity Inspector에서 확인할 수 있게 해주는 헬퍼 클래스
+    /// 실제 Dictionary 기능 제공
     /// </summary>
     [Serializable]
     public class DictionaryInspectorHelper<TKey, TValue>
     {
         [SerializeField] private List<KeyValuePair<TKey, TValue>> items = new List<KeyValuePair<TKey, TValue>>();
+
+        // 실제 Dictionary (non-serialized)
+        private Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
 
         [Serializable]
         public struct KeyValuePair<K, V>
@@ -38,6 +42,18 @@ namespace FSM.Core.Utils
         }
 
         /// <summary>
+        /// Inspector 리스트를 내부 Dictionary로 동기화
+        /// </summary>
+        private void SyncToDictionary()
+        {
+            items.Clear();
+            foreach (var kvp in dictionary)
+            {
+                items.Add(new KeyValuePair<TKey, TValue>(kvp.Key, kvp.Value));
+            }
+        }
+
+        /// <summary>
         /// Inspector에서 보여줄 아이템 리스트
         /// </summary>
         public List<KeyValuePair<TKey, TValue>> Items => items;
@@ -45,7 +61,68 @@ namespace FSM.Core.Utils
         /// <summary>
         /// 딕셔너리 크기
         /// </summary>
-        public int Count => items.Count;
+        public int Count => dictionary.Count;
+
+        /// <summary>
+        /// 모든 항목 제거
+        /// </summary>
+        public void Clear()
+        {
+            dictionary.Clear();
+            items.Clear();
+        }
+
+        /// <summary>
+        /// 키가 존재하는지 확인
+        /// </summary>
+        public bool ContainsKey(TKey key)
+        {
+            return dictionary.ContainsKey(key);
+        }
+
+        /// <summary>
+        /// 키-값 추가
+        /// </summary>
+        public void Add(TKey key, TValue value)
+        {
+            dictionary.Add(key, value);
+            SyncToDictionary();
+        }
+
+        /// <summary>
+        /// 키로 항목 제거
+        /// </summary>
+        public bool Remove(TKey key)
+        {
+            bool removed = dictionary.Remove(key);
+            if (removed)
+            {
+                SyncToDictionary();
+            }
+            return removed;
+        }
+
+        /// <summary>
+        /// 값 가져오기 시도
+        /// </summary>
+        public bool TryGetValue(TKey key, out TValue value)
+        {
+            return dictionary.TryGetValue(key, out value);
+        }
+
+        /// <summary>
+        /// 인덱서 - 키로 값 접근
+        /// </summary>
+        public TValue this[TKey key]
+        {
+            get => dictionary[key];
+            set
+            {
+                dictionary[key] = value;
+                SyncToDictionary();
+            }
+        }
+
     }
 
     /// <summary>
