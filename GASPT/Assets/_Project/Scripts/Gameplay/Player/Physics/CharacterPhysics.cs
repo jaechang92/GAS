@@ -29,8 +29,8 @@ namespace Player.Physics
                     return configOverride;
                 }
 
-                // 없으면 ResourceManager에서 로드 (제네릭 메서드 사용)
-                return ResourceManager.GetResourceWithFallback<SkulPhysicsConfig>("Data/SkulPhysicsConfig");
+                // 없으면 GameResourceManager에서 로드 (제네릭 메서드 사용)
+                return GameResourceManager.GetResourceWithFallback<SkulPhysicsConfig>("Data/SkulPhysicsConfig");
             }
         }
 
@@ -126,8 +126,12 @@ namespace Player.Physics
         {
             if (config == null)
             {
-                Debug.LogError($"[CharacterPhysics] SkulPhysicsConfig를 로드할 수 없습니다! {gameObject.name}");
-                Debug.LogError($"[CharacterPhysics] ResourceManager가 초기화되었는지 확인하세요!");
+                Debug.LogError($"[CharacterPhysics] SkulPhysicsConfig를 로드할 수 없습니다! GameObject: {gameObject.name}");
+                Debug.LogError($"[CharacterPhysics] 해결 방법:");
+                Debug.LogError($"  1. GameResourceManager가 초기화되었는지 확인 (Bootstrap 씬 로드 필요)");
+                Debug.LogError($"  2. Resources/Data/SkulPhysicsConfig.asset 파일이 존재하는지 확인");
+                Debug.LogError($"  3. 또는 Inspector에서 Config Override를 직접 설정");
+                Debug.LogError($"[CharacterPhysics] ⚠️ 물리 시스템이 작동하지 않습니다! (점프, 이동, 중력 모두 비활성화)");
                 return;
             }
 
@@ -138,7 +142,7 @@ namespace Player.Physics
             }
             else
             {
-                LogDebug("ResourceManager에서 SkulPhysicsConfig 로드");
+                LogDebug("ResourceManager에서 SkulPhysicsConfig 로드 성공");
             }
 
             config.ValidateSettings();
@@ -242,6 +246,14 @@ namespace Player.Physics
 
         private void HandleJump(float deltaTime)
         {
+            // 접지 상태에서 hasJumped 리셋 (안전장치 - 좁은 공간 점프 문제 해결)
+            if (isGrounded && hasJumped && rb.linearVelocity.y <= 0.1f)
+            {
+                hasJumped = false;
+                isJumping = false;
+                LogDebug("점프 상태 강제 리셋 (접지됨)");
+            }
+
             // 점프 실행 조건 체크
             if (jumpBufferCounter > 0 && CanJump)
             {
@@ -253,6 +265,13 @@ namespace Player.Physics
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * config.jumpCutMultiplier);
                 isJumping = false;
+            }
+
+            // 하강 시작하면 isJumping 종료 (천장 충돌 대응)
+            if (isJumping && rb.linearVelocity.y <= 0)
+            {
+                isJumping = false;
+                LogDebug("점프 상승 종료 (하강 시작)");
             }
 
             // 점프 홀드 시간에 따른 점프 높이 조절
@@ -404,7 +423,44 @@ namespace Player.Physics
             Vector2 boxSize = new Vector2(config.groundCheckWidth, config.groundCheckDistance);
             Vector2 boxPosition = boxCenter + Vector2.down * (col.size.y * 0.5f + config.groundCheckDistance * 0.5f);
 
-            isGrounded = Physics2D.OverlapBox(boxPosition, boxSize, 0f, config.groundLayerMask);
+            // 모든 충돌체 감지 후 자기 자신 제외
+            Collider2D[] colliders = Physics2D.OverlapBoxAll(boxPosition, boxSize, 0f, config.groundLayerMask);
+            isGrounded = false;
+
+            foreach (var hitCollider in colliders)
+            {
+                // 자기 자신의 Collider는 제외
+                if (hitCollider != col && hitCollider.gameObject != gameObject)
+                {
+                    isGrounded = true;
+                    break;
+                }
+            }
+
+            // 바닥 감지 실패 경고 (5초마다 출력)
+            if (!isGrounded && !wasGrounded && Time.frameCount % 300 == 0)
+            {
+                Collider2D[] allColliders = Physics2D.OverlapBoxAll(boxPosition, boxSize, 0f);
+                if (allColliders.Length > 0)
+                {
+                    // 자기 자신을 제외한 충돌체만 필터링
+                    var otherColliders = System.Array.FindAll(allColliders, c => c != col && c.gameObject != gameObject);
+
+                    if (otherColliders.Length > 0)
+                    {
+                        Debug.LogWarning($"[CharacterPhysics] 바닥 감지 실패! GameObject: {gameObject.name}");
+                        Debug.LogWarning($"  충돌체는 감지되었으나 Ground Layer가 아닙니다.");
+                        Debug.LogWarning($"  감지된 GameObject: {string.Join(", ", System.Array.ConvertAll(otherColliders, c => $"{c.gameObject.name} (Layer: {LayerMask.LayerToName(c.gameObject.layer)})"))}");
+                        Debug.LogWarning($"  설정된 Ground LayerMask: {config.groundLayerMask.value}");
+                        Debug.LogWarning($"  해결 방법: Ground GameObject의 Layer를 'Ground'로 설정하거나, SkulPhysicsConfig의 groundLayerMask를 수정하세요.");
+                    }
+                    else if (allColliders.Length > 0 && allColliders[0] == col)
+                    {
+                        Debug.LogWarning($"[CharacterPhysics] 자기 자신의 Collider만 감지됨! GameObject: {gameObject.name}");
+                        Debug.LogWarning($"  Ground 체크 영역에 다른 Collider가 없습니다. 바닥이 없거나 너무 멀리 떨어져 있을 수 있습니다.");
+                    }
+                }
+            }
 
             // 접지 상태 변경 처리
             if (wasGrounded != isGrounded)
@@ -420,15 +476,33 @@ namespace Player.Physics
             Vector2 boxCenter = (Vector2)transform.position + col.offset;
             float checkDistance = config.wallCheckDistance;
 
-            // 왼쪽 벽 체크
+            // 왼쪽 벽 체크 (자기 자신 제외)
             Vector2 leftBoxPosition = boxCenter + Vector2.left * (col.size.x * 0.5f + checkDistance * 0.5f);
-            isTouchingLeftWall = Physics2D.OverlapBox(leftBoxPosition,
+            Collider2D[] leftColliders = Physics2D.OverlapBoxAll(leftBoxPosition,
                 new Vector2(checkDistance, col.size.y * 0.8f), 0f, config.wallLayerMask);
+            isTouchingLeftWall = false;
+            foreach (var hitCollider in leftColliders)
+            {
+                if (hitCollider != col && hitCollider.gameObject != gameObject)
+                {
+                    isTouchingLeftWall = true;
+                    break;
+                }
+            }
 
-            // 오른쪽 벽 체크
+            // 오른쪽 벽 체크 (자기 자신 제외)
             Vector2 rightBoxPosition = boxCenter + Vector2.right * (col.size.x * 0.5f + checkDistance * 0.5f);
-            isTouchingRightWall = Physics2D.OverlapBox(rightBoxPosition,
+            Collider2D[] rightColliders = Physics2D.OverlapBoxAll(rightBoxPosition,
                 new Vector2(checkDistance, col.size.y * 0.8f), 0f, config.wallLayerMask);
+            isTouchingRightWall = false;
+            foreach (var hitCollider in rightColliders)
+            {
+                if (hitCollider != col && hitCollider.gameObject != gameObject)
+                {
+                    isTouchingRightWall = true;
+                    break;
+                }
+            }
 
             // 벽 상태 업데이트
             isTouchingWall = isTouchingLeftWall || isTouchingRightWall;
