@@ -1,15 +1,10 @@
 {
-    "name": "Tests",
-    "rootNamespace": "Tests",
+    "name": "Skull",
+    "rootNamespace": "Skull",
     "references": [
-        "Player",
-        "Combat.Core",
-        "Combat.Attack",
         "GAS.Core",
-        "Core.Managers",
-        "Core.Enums",
-        "Core.Data",
-        "Skull"
+        "FSM.Core",
+        "Player"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
