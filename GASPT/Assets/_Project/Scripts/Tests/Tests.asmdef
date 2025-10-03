@@ -1,0 +1,22 @@
+{
+    "name": "Tests",
+    "rootNamespace": "Tests",
+    "references": [
+        "Player",
+        "Combat.Core",
+        "Combat.Attack",
+        "GAS.Core",
+        "Core.Managers",
+        "Core.Enums",
+        "Core.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

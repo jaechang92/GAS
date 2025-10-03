@@ -5,15 +5,21 @@ using Combat.Attack;
 using Core.Enums;
 using System.Collections.Generic;
 using GAS.Core;
+using Tests;
 
 namespace Combat.Demo
 {
     /// <summary>
     /// 플레이어 전투 시스템 데모
     /// Player + Combat 시스템 통합 테스트
+    /// TestBootstrap을 사용하여 필요한 것만 초기화
     /// </summary>
     public class PlayerCombatDemo : MonoBehaviour
     {
+        [Header("초기화")]
+        [Tooltip("TestBootstrap이 있으면 자동으로 찾아서 초기화를 기다림")]
+        [SerializeField] private bool waitForTestBootstrap = true;
+
         [Header("플레이어 설정")]
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private Vector3 playerSpawnPosition = Vector3.zero;
@@ -53,8 +59,30 @@ namespace Combat.Demo
 
         #region Unity 생명주기
 
-        private void Start()
+        private async void Start()
         {
+            // TestBootstrap이 있으면 초기화를 기다림
+            if (waitForTestBootstrap)
+            {
+                var bootstrap = FindFirstObjectByType<TestBootstrap>();
+                if (bootstrap != null)
+                {
+                    LogEvent("[Demo] TestBootstrap 초기화 대기 중...");
+
+                    // 초기화가 완료될 때까지 대기
+                    while (!bootstrap.IsInitialized)
+                    {
+                        await Awaitable.NextFrameAsync(destroyCancellationToken);
+                    }
+
+                    LogEvent("[Demo] TestBootstrap 초기화 완료!");
+                }
+                else
+                {
+                    LogEvent("[Demo] TestBootstrap을 찾을 수 없습니다. 바로 시작합니다.");
+                }
+            }
+
             SetupDemoScene();
         }
 
