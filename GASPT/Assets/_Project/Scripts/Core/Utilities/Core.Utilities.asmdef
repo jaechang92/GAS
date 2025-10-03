@@ -1,10 +1,7 @@
 {
-    "name": "Core.Managers",
-    "rootNamespace": "Core.Managers",
-    "references": [
-        "FSM.Core",
-        "Core.Utilities"
-    ],
+    "name": "Core.Utilities",
+    "rootNamespace": "Core",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
