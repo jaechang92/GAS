@@ -169,7 +169,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f016d948fff5eb949847c739f332eb7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Combat.Demo.CombatDemoScene
-  autoSetupOnStart: 0
+  autoSetupOnStart: 1
   playerSpawnPosition: {x: 0, y: 0, z: 0}
   enemySpawnPosition: {x: 5, y: 0, z: 0}
   playerPrefab: {fileID: 0}
@@ -274,6 +274,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 29ccea41d2c07f74cb1bfcafcccf1ddd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Combat.Demo::Combat.Demo.PlayerCombatDemo
+  waitForSceneBootstrap: 1
   playerPrefab: {fileID: 0}
   playerSpawnPosition: {x: 0, y: 0, z: 0}
   enemyPrefab: {fileID: 0}
@@ -523,6 +524,58 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &647490084
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 647490086}
+  - component: {fileID: 647490085}
+  m_Layer: 0
+  m_Name: SceneBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &647490085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 647490084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b44e720a8ee3a724cbc23b0ab496d8e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Tests::Tests.SceneBootstrap
+  isTestMode: 1
+  initializeResourceManager: 1
+  initializeAudioManager: 0
+  initializeUIManager: 0
+  initializeGameManager: 0
+  categoriesToLoad: 00000000
+  individualResources: []
+  showDebugLogs: 1
+--- !u!4 &647490086
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 647490084}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -532,3 +585,4 @@ SceneRoots:
   - {fileID: 310569780}
   - {fileID: 77886894}
   - {fileID: 434286946}
+  - {fileID: 647490086}
