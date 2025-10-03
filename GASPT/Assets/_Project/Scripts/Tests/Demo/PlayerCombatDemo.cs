@@ -22,9 +22,9 @@ namespace Combat.Demo
         [SerializeField] private GameObject enemyPrefab;
         [SerializeField] private Vector3[] enemySpawnPositions = new Vector3[]
         {
-            new Vector3(5f, 0f, 0f),
-            new Vector3(-5f, 0f, 0f),
-            new Vector3(0f, 0f, 5f)
+            new Vector3(5f, 0f, 0f),   // 오른쪽
+            new Vector3(-5f, 0f, 0f),  // 왼쪽
+            new Vector3(8f, 0f, 0f)    // 오른쪽 멀리 (2D이므로 Z=0)
         };
 
         [Header("콤보 설정")]
@@ -34,10 +34,16 @@ namespace Combat.Demo
         [Header("UI 설정")]
         [SerializeField] private bool showUI = true;
 
+        [Header("환경 설정")]
+        [SerializeField] private bool createGround = true;
+        [SerializeField] private Vector3 groundPosition = new Vector3(0f, -3f, 0f);
+        [SerializeField] private Vector2 groundSize = new Vector2(30f, 2f);
+
         // 생성된 오브젝트
         private GameObject player;
         private PlayerController playerController;
         private List<GameObject> enemies = new List<GameObject>();
+        private GameObject ground;
 
         // 통계
         private int totalHits = 0;
@@ -72,6 +78,12 @@ namespace Combat.Demo
             // DamageSystem 확인
             SetupDamageSystem();
 
+            // 바닥 생성 (2D)
+            if (createGround)
+            {
+                CreateGround();
+            }
+
             // 플레이어 생성
             CreatePlayer();
 
@@ -83,6 +95,9 @@ namespace Combat.Demo
             {
                 SetupPlayerCombo();
             }
+
+            // 카메라 설정 (2D)
+            SetupCamera();
 
             LogEvent("=== Player Combat Demo 설정 완료 ===");
             PrintInstructions();
@@ -121,9 +136,22 @@ namespace Combat.Demo
                 player = new GameObject("Player");
                 player.transform.position = playerSpawnPosition;
 
-                // 기본 컴포넌트 추가
-                player.AddComponent<Rigidbody2D>().gravityScale = 3f;
-                player.AddComponent<CapsuleCollider2D>();
+                // SpriteRenderer 추가 (2D 비주얼)
+                var spriteRenderer = player.AddComponent<SpriteRenderer>();
+                spriteRenderer.sprite = CreateSimpleSprite(Color.cyan);
+                spriteRenderer.sortingOrder = 1; // 적보다 앞에 표시
+
+                // Rigidbody2D 추가 (2D 물리)
+                var rb = player.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 3f;
+                rb.constraints = RigidbodyConstraints2D.FreezeRotation; // 회전 방지
+
+                // CapsuleCollider2D 추가 (2D 충돌)
+                var col = player.AddComponent<CapsuleCollider2D>();
+                col.size = new Vector2(1f, 2f);
+                col.direction = CapsuleDirection2D.Vertical;
+
+                // AbilitySystem 추가
                 player.AddComponent<AbilitySystem>();
             }
 
@@ -222,25 +250,118 @@ namespace Combat.Demo
         }
 
         /// <summary>
-        /// 기본 적 생성
+        /// 기본 적 생성 (2D 방식)
         /// </summary>
         private GameObject CreateBasicEnemy(Vector3 position)
         {
-            var enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            // 빈 GameObject 생성
+            var enemy = new GameObject("Enemy");
             enemy.transform.position = position;
-            enemy.GetComponent<Renderer>().material.color = Color.red;
+
+            // SpriteRenderer 추가 (2D 비주얼)
+            var spriteRenderer = enemy.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = CreateSimpleSprite(Color.red);
+            spriteRenderer.sortingOrder = 0;
+
+            // Rigidbody2D 추가 (2D 물리)
+            var rb = enemy.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            rb.gravityScale = 0f; // 적은 중력 영향 안 받음
+
+            // CapsuleCollider2D 추가 (2D 충돌)
+            var col = enemy.AddComponent<CapsuleCollider2D>();
+            col.size = new Vector2(1f, 2f); // 캡슐 크기
+            col.direction = CapsuleDirection2D.Vertical;
 
             // HealthSystem 추가
             var health = enemy.AddComponent<HealthSystem>();
 
-            // Rigidbody2D 추가 (범위 공격 감지용)
-            var rb = enemy.AddComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Kinematic;
-
-            // Collider 추가
-            var col = enemy.AddComponent<CapsuleCollider2D>();
-
             return enemy;
+        }
+
+        /// <summary>
+        /// 간단한 사각형 스프라이트 생성
+        /// </summary>
+        private Sprite CreateSimpleSprite(Color color)
+        {
+            // 64x64 텍스처 생성
+            int size = 64;
+            Texture2D texture = new Texture2D(size, size);
+
+            // 모든 픽셀을 지정된 색상으로 채움
+            Color[] pixels = new Color[size * size];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            // 텍스처를 Sprite로 변환
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(0, 0, size, size),
+                new Vector2(0.5f, 0.5f), // pivot (중심점)
+                100f // pixels per unit
+            );
+
+            return sprite;
+        }
+
+        /// <summary>
+        /// 바닥 생성 (2D)
+        /// </summary>
+        private void CreateGround()
+        {
+            if (ground != null)
+            {
+                Destroy(ground);
+            }
+
+            ground = new GameObject("Ground");
+            ground.transform.position = groundPosition;
+
+            // SpriteRenderer 추가
+            var spriteRenderer = ground.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = CreateSimpleSprite(new Color(0.3f, 0.3f, 0.3f)); // 회색
+            spriteRenderer.sortingOrder = -1; // 배경
+
+            // 스프라이트 크기 조정
+            ground.transform.localScale = new Vector3(groundSize.x, groundSize.y, 1f);
+
+            // BoxCollider2D 추가 (정적 충돌체)
+            var col = ground.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(1f, 1f); // localScale로 크기 조정되므로 1로 설정
+
+            LogEvent($"[Ground] 생성 완료 - 위치: {groundPosition}, 크기: {groundSize}");
+        }
+
+        /// <summary>
+        /// 카메라 설정 (2D Orthographic)
+        /// </summary>
+        private void SetupCamera()
+        {
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                // 메인 카메라가 없으면 생성
+                var cameraObj = new GameObject("Main Camera");
+                mainCamera = cameraObj.AddComponent<Camera>();
+                cameraObj.tag = "MainCamera";
+                LogEvent("[Camera] Main Camera 생성");
+            }
+
+            // Orthographic 모드로 설정 (2D)
+            mainCamera.orthographic = true;
+            mainCamera.orthographicSize = 5f; // 화면에 보이는 세로 범위
+
+            // 카메라 위치 설정 (플레이어를 중심으로)
+            mainCamera.transform.position = new Vector3(0f, 0f, -10f);
+
+            // 배경 색상
+            mainCamera.backgroundColor = new Color(0.1f, 0.1f, 0.15f); // 어두운 파란색
+
+            LogEvent("[Camera] Orthographic 설정 완료");
         }
 
         /// <summary>
@@ -373,6 +494,7 @@ namespace Combat.Demo
             ResetStatistics();
 
             if (player != null) Destroy(player);
+            if (ground != null) Destroy(ground);
             foreach (var enemy in enemies)
             {
                 if (enemy != null) Destroy(enemy);
