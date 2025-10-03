@@ -8,7 +8,8 @@
         "Combat.Core",
         "Combat.Attack",
         "Core.Enums",
-        "Core.Managers"
+        "Core.Managers",
+        "Core.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

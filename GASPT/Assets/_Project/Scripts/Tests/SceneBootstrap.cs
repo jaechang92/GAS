@@ -29,8 +29,8 @@ namespace Tests
         [SerializeField] private bool initializeGameManager = false;
 
         [Header("리소스 로딩 옵션")]
-        [Tooltip("자동으로 로드할 카테고리들")]
-        [SerializeField] private ResourceCategory[] categoriesToLoad = new ResourceCategory[0];
+        [Tooltip("자동으로 로드할 카테고리들 (기본값: Essential - SkulPhysicsConfig 등 포함)")]
+        [SerializeField] private ResourceCategory[] categoriesToLoad = new ResourceCategory[] { ResourceCategory.Essential };
 
         [Tooltip("개별적으로 로드할 리소스 경로들")]
         [SerializeField] private string[] individualResources = new string[0];
