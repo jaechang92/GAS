@@ -1,7 +1,7 @@
 using UnityEngine;
 using Core;
 
-namespace Managers
+namespace Core.Managers
 {
     /// <summary>
     /// 게임 전체 상태를 관리하는 매니저

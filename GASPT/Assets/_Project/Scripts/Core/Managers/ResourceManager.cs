@@ -11,27 +11,8 @@ namespace Core.Managers
     /// 리소스 관리 매니저
     /// 게임에 필요한 모든 리소스를 카테고리별로 중앙에서 로드하고 관리
     /// </summary>
-    public class ResourceManager : MonoBehaviour
+    public class ResourceManager : SingletonManager<ResourceManager>
     {
-        private static ResourceManager instance;
-        public static ResourceManager Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = FindFirstObjectByType<ResourceManager>();
-                    if (instance == null)
-                    {
-                        GameObject go = new GameObject("ResourceManager");
-                        instance = go.AddComponent<ResourceManager>();
-                        DontDestroyOnLoad(go);
-                    }
-                }
-                return instance;
-            }
-        }
-
         [Header("리소스 매니페스트")]
         [Tooltip("Resources/Manifests/ 폴더에서 자동으로 모든 매니페스트를 로드합니다")]
         [SerializeField] private List<ResourceManifest> manifests = new List<ResourceManifest>();
@@ -76,18 +57,9 @@ namespace Core.Managers
 
         #region Unity 생명주기
 
-        private void Awake()
+        protected override void Awake()
         {
-            if (instance == null)
-            {
-                instance = this;
-                DontDestroyOnLoad(gameObject);
-                InitializeManifests();
-            }
-            else if (instance != this)
-            {
-                Destroy(gameObject);
-            }
+            base.Awake();
         }
 
         #endregion

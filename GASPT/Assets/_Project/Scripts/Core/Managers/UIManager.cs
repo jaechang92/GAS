@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Core;
 using System.Linq;
 
-namespace Managers
+namespace Core.Managers
 {
     /// <summary>
     /// UI 관리 매니저

@@ -1,7 +1,7 @@
 using UnityEngine;
 using Core;
 
-namespace Managers
+namespace Core.Managers
 {
     /// <summary>
     /// 오디오 관리 매니저

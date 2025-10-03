@@ -7,7 +7,8 @@
         "Combat.Attack",
         "Core.Enums",
         "Player",
-        "GAS.Core"
+        "GAS.Core",
+        "Tests"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
