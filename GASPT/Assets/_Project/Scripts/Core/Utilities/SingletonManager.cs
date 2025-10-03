@@ -7,7 +7,7 @@ namespace Core
     /// MonoBehaviour를 상속받는 Unity 컴포넌트용 싱글톤
     /// </summary>
     /// <typeparam name="T">싱글톤으로 구현할 클래스 타입</typeparam>
-    public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+    public abstract class SingletonManager<T> : MonoBehaviour where T : MonoBehaviour
     {
         private static T instance;
         private static readonly object lockObject = new object();
@@ -22,7 +22,7 @@ namespace Core
             {
                 if (applicationIsQuitting)
                 {
-                    Debug.LogWarning($"[Singleton] Instance '{typeof(T)}' already destroyed on application quit. Won't create again - returning null.");
+                    Debug.LogWarning($"[SingletonManager] Instance '{typeof(T)}' already destroyed on application quit. Won't create again - returning null.");
                     return null;
                 }
 
@@ -36,15 +36,15 @@ namespace Core
                         {
                             GameObject singleton = new GameObject();
                             instance = singleton.AddComponent<T>();
-                            singleton.name = $"[Singleton] {typeof(T).Name}";
+                            singleton.name = $"[SingletonManager] {typeof(T).Name}";
 
                             DontDestroyOnLoad(singleton);
 
-                            Debug.Log($"[Singleton] Created new instance: {typeof(T).Name}");
+                            Debug.Log($"[SingletonManager] Created new instance: {typeof(T).Name}");
                         }
                         else
                         {
-                            Debug.Log($"[Singleton] Using existing instance: {typeof(T).Name}");
+                            Debug.Log($"[SingletonManager] Using existing instance: {typeof(T).Name}");
                         }
                     }
 
@@ -77,7 +77,7 @@ namespace Core
             }
             else if (instance != this)
             {
-                Debug.LogWarning($"[Singleton] Duplicate instance detected for {typeof(T).Name}. Destroying duplicate.");
+                Debug.LogWarning($"[SingletonManager] Duplicate instance detected for {typeof(T).Name}. Destroying duplicate.");
                 Destroy(gameObject);
             }
         }
@@ -123,7 +123,7 @@ namespace Core
     /// 씬 전환 시 파괴되는 싱글톤 (DontDestroyOnLoad 없음)
     /// </summary>
     /// <typeparam name="T">싱글톤으로 구현할 클래스 타입</typeparam>
-    public abstract class SceneSingleton<T> : MonoBehaviour where T : MonoBehaviour
+    public abstract class SceneSingletonManager<T> : MonoBehaviour where T : MonoBehaviour
     {
         private static T instance;
 
@@ -139,9 +139,9 @@ namespace Core
                     {
                         GameObject singleton = new GameObject();
                         instance = singleton.AddComponent<T>();
-                        singleton.name = $"[SceneSingleton] {typeof(T).Name}";
+                        singleton.name = $"[SceneSingletonManager] {typeof(T).Name}";
 
-                        Debug.Log($"[SceneSingleton] Created new instance: {typeof(T).Name}");
+                        Debug.Log($"[SceneSingletonManager] Created new instance: {typeof(T).Name}");
                     }
                 }
 
@@ -161,7 +161,7 @@ namespace Core
             }
             else if (instance != this)
             {
-                Debug.LogWarning($"[SceneSingleton] Duplicate instance detected for {typeof(T).Name}. Destroying duplicate.");
+                Debug.LogWarning($"[SceneSingletonManager] Duplicate instance detected for {typeof(T).Name}. Destroying duplicate.");
                 Destroy(gameObject);
             }
         }

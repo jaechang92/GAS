@@ -7,7 +7,7 @@ namespace Managers
     /// 오디오 관리 매니저
     /// 최소 기능: 음악, 효과음 재생 및 볼륨 조절
     /// </summary>
-    public class AudioManager : Singleton<AudioManager>
+    public class AudioManager : SingletonManager<AudioManager>
     {
         [Header("오디오 소스")]
         [SerializeField] private AudioSource musicSource;

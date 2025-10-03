@@ -7,7 +7,7 @@ namespace Managers
     /// 게임 전체 상태를 관리하는 매니저
     /// 최소 기능: 점수, 생명, 게임오버 상태 관리
     /// </summary>
-    public class GameManager : Singleton<GameManager>
+    public class GameManager : SingletonManager<GameManager>
     {
         [Header("게임 설정")]
         [SerializeField] private int initialLives = 3;

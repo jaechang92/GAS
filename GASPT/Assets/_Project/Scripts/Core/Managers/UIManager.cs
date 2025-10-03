@@ -9,7 +9,7 @@ namespace Managers
     /// UI 관리 매니저
     /// 최소 기능: UI 패널 표시/숨김, 로딩 오버레이
     /// </summary>
-    public class UIManager : Singleton<UIManager>
+    public class UIManager : SingletonManager<UIManager>
     {
         [Header("메인 캔버스")]
         [SerializeField] private Canvas mainCanvas;
