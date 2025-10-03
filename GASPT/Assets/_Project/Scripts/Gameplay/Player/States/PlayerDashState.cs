@@ -27,6 +27,10 @@ namespace Player
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
             LogStateDebug("대시 상태 종료");
+
+            // 대시 입력 상태 리셋 (다음 대시 입력을 위해)
+            playerController.PlayerInput?.ResetDash();
+
             await Awaitable.NextFrameAsync();
         }
 

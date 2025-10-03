@@ -53,6 +53,9 @@ namespace Player
         public bool IsAlive => healthSystem?.IsAlive ?? true;
         public bool IsAttacking => attackAnimationHandler?.IsAttacking ?? false;
 
+        // === InputHandler 프로퍼티 ===
+        public InputHandler PlayerInput => inputHandler;
+
         // === 이벤트 ===
         public event System.Action<PlayerStateType, PlayerStateType> OnStateChanged;
         public event System.Action<PlayerEventType> OnPlayerEvent;

@@ -32,6 +32,10 @@ namespace Player
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
             LogStateDebug("점프 상태 종료");
+
+            // 점프 입력 상태 리셋 (다음 점프 입력을 위해)
+            playerController.PlayerInput?.ResetJump();
+
             await Awaitable.NextFrameAsync();
         }
 
