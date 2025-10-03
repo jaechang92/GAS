@@ -3,7 +3,8 @@
     "rootNamespace": "Editor",
     "references": [
         "Core.Data",
-        "Core.Enums"
+        "Core.Enums",
+        "UI.HUD"
     ],
     "includePlatforms": [
         "Editor"
