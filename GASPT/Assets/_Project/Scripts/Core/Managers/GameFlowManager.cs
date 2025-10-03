@@ -24,7 +24,7 @@ namespace GameFlow
         [SerializeField] private Text loadingText;
 
         [Header("설정")]
-        [SerializeField] private GameStateType initialState = GameStateType.Main;
+        [SerializeField] private GameStateType initialState = GameStateType.Preload;
 
         // FSM 관련
         private StateMachine stateMachine;
@@ -62,6 +62,7 @@ namespace GameFlow
             stateMachine = gameObject.AddComponent<StateMachine>();
 
             // 상태들 추가
+            stateMachine.AddState(new PreloadState());  // 초기 리소스 로딩 상태
             stateMachine.AddState(new MainState());
             stateMachine.AddState(new LoadingState());
             stateMachine.AddState(new IngameState());

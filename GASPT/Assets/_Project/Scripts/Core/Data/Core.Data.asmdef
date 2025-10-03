@@ -1,11 +1,8 @@
 {
-    "name": "Core.Managers",
-    "rootNamespace": "Core.Managers",
+    "name": "Core.Data",
+    "rootNamespace": "Core.Data",
     "references": [
-        "FSM.Core",
-        "Core.Utilities",
-        "Core.Enums",
-        "Core.Data"
+        "Core.Enums"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

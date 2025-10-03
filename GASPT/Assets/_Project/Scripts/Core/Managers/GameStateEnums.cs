@@ -5,8 +5,9 @@ namespace GameFlow
     /// </summary>
     public enum GameStateType
     {
+        Preload,    // 초기 리소스 로딩 (Essential + MainMenu)
         Main,       // 메인 메뉴
-        Loading,    // 로딩 화면
+        Loading,    // 게임플레이 리소스 로딩 (Gameplay)
         Ingame,     // 인게임
         Pause,      // 일시정지
         Menu,       // 인게임 메뉴

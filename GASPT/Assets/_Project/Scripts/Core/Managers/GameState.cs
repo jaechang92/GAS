@@ -92,24 +92,50 @@ namespace GameFlow
     }
 
     /// <summary>
-    /// 로딩 상태
+    /// 게임플레이 리소스 로딩 상태
+    /// Gameplay 카테고리 리소스를 로드
     /// </summary>
     public class LoadingState : GameState
     {
-        private float loadingProgress = 0f;
-        private bool isLoadingComplete = false;
-
         public LoadingState() : base(GameStateType.Loading) { }
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
+            Debug.Log("[LoadingState] 게임플레이 리소스 로딩 시작...");
+
             // 로딩 화면 활성화
             gameFlowManager?.ShowLoadingScreen();
-            loadingProgress = 0f;
-            isLoadingComplete = false;
 
-            // 가상 로딩 시작
-            await StartLoading(cancellationToken);
+            // ResourceManager 가져오기
+            var resourceManager = Core.Managers.ResourceManager.Instance;
+
+            // 로드 진행률 이벤트 구독
+            resourceManager.OnLoadProgress += OnResourceLoadProgress;
+
+            // Gameplay 카테고리 로드
+            bool success = await resourceManager.LoadCategoryAsync(
+                Core.Enums.ResourceCategory.Gameplay,
+                cancellationToken
+            );
+
+            // 이벤트 구독 해제
+            resourceManager.OnLoadProgress -= OnResourceLoadProgress;
+
+            if (success)
+            {
+                Debug.Log("[LoadingState] 게임플레이 리소스 로딩 완료!");
+
+                // 잠시 대기 후 인게임으로 전환
+                await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
+                gameFlowManager?.TriggerEvent(GameEventType.LoadComplete);
+            }
+            else
+            {
+                Debug.LogError("[LoadingState] 게임플레이 리소스 로딩 실패!");
+                // 실패 시 메인 메뉴로 돌아가기
+                await Awaitable.WaitForSecondsAsync(1f, cancellationToken);
+                gameFlowManager?.TransitionTo(GameStateType.Main);
+            }
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
@@ -121,29 +147,14 @@ namespace GameFlow
 
         protected override void UpdateState(float deltaTime)
         {
-            // 로딩 진행률 업데이트
-            if (!isLoadingComplete)
-            {
-                gameFlowManager?.UpdateLoadingProgress(loadingProgress);
-            }
+            // 로딩 중에는 특별한 업데이트 로직 없음
         }
 
-        private async Awaitable StartLoading(CancellationToken cancellationToken)
+        private void OnResourceLoadProgress(Core.Enums.ResourceCategory category, float progress, string resourceName)
         {
-            // 가상의 로딩 프로세스
-            for (int i = 0; i <= 100; i++)
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-
-                loadingProgress = i / 100f;
-                await Awaitable.WaitForSecondsAsync(0.05f);
-            }
-
-            isLoadingComplete = true;
-
-            // 로딩 완료 후 자동으로 인게임으로 전환
-            await Awaitable.WaitForSecondsAsync(0.5f);
-            gameFlowManager?.TriggerEvent(GameEventType.LoadComplete);
+            // UI 업데이트
+            gameFlowManager?.UpdateLoadingProgress(progress);
+            Debug.Log($"[LoadingState] {category} 로딩 중... {progress * 100:F0}% - {resourceName}");
         }
     }
 
@@ -272,6 +283,74 @@ namespace GameFlow
         protected override void UpdateState(float deltaTime)
         {
             // 로비 업데이트 로직
+        }
+    }
+
+    /// <summary>
+    /// 초기 리소스 로딩 상태 (Preload)
+    /// Essential + MainMenu 카테고리 리소스를 로드
+    /// </summary>
+    public class PreloadState : GameState
+    {
+        public PreloadState() : base(GameStateType.Preload) { }
+
+        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        {
+            Debug.Log("[PreloadState] 초기 리소스 로딩 시작...");
+
+            // 로딩 화면 활성화
+            gameFlowManager?.ShowLoadingScreen();
+
+            // ResourceManager 인스턴스 강제 생성
+            var resourceManager = Core.Managers.ResourceManager.Instance;
+
+            // 로드 진행률 이벤트 구독
+            resourceManager.OnLoadProgress += OnResourceLoadProgress;
+
+            // Essential + MainMenu 카테고리 로드
+            bool success = await resourceManager.LoadCategoriesAsync(
+                new Core.Enums.ResourceCategory[]
+                {
+                    Core.Enums.ResourceCategory.Essential,
+                    Core.Enums.ResourceCategory.MainMenu
+                },
+                cancellationToken
+            );
+
+            // 이벤트 구독 해제
+            resourceManager.OnLoadProgress -= OnResourceLoadProgress;
+
+            if (success)
+            {
+                Debug.Log("[PreloadState] 초기 리소스 로딩 완료!");
+
+                // 잠시 대기 후 메인 메뉴로 전환
+                await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
+                gameFlowManager?.TransitionTo(GameStateType.Main);
+            }
+            else
+            {
+                Debug.LogError("[PreloadState] 초기 리소스 로딩 실패!");
+            }
+        }
+
+        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        {
+            // 로딩 화면 비활성화
+            gameFlowManager?.HideLoadingScreen();
+            await Awaitable.NextFrameAsync();
+        }
+
+        protected override void UpdateState(float deltaTime)
+        {
+            // 로딩 중에는 특별한 업데이트 로직 없음
+        }
+
+        private void OnResourceLoadProgress(Core.Enums.ResourceCategory category, float progress, string resourceName)
+        {
+            // UI 업데이트
+            gameFlowManager?.UpdateLoadingProgress(progress);
+            Debug.Log($"[PreloadState] {category} 로딩 중... {progress * 100:F0}% - {resourceName}");
         }
     }
 }
