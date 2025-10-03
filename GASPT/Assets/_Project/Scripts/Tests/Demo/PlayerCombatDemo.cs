@@ -1,10 +1,13 @@
 using UnityEngine;
 using Combat.Core;
 using Player;
+using Player.Physics;
 using Combat.Attack;
 using Core.Enums;
 using System.Collections.Generic;
+using System.Reflection;
 using GAS.Core;
+using Core.Managers;
 using Tests;
 
 namespace Combat.Demo
@@ -174,10 +177,9 @@ namespace Combat.Demo
                 rb.gravityScale = 3f;
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation; // 회전 방지
 
-                // CapsuleCollider2D 추가 (2D 충돌)
-                var col = player.AddComponent<CapsuleCollider2D>();
+                // BoxCollider2D 추가 (CharacterPhysics 요구사항)
+                var col = player.AddComponent<BoxCollider2D>();
                 col.size = new Vector2(1f, 2f);
-                col.direction = CapsuleDirection2D.Vertical;
 
                 // AbilitySystem 추가
                 player.AddComponent<AbilitySystem>();
@@ -185,12 +187,35 @@ namespace Combat.Demo
 
             player.name = "Player";
 
+            // Player Layer 설정 (Ground와 구분하기 위해 필수)
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (playerLayer == -1)
+            {
+                Debug.LogWarning("[PlayerCombatDemo] 'Player' Layer가 프로젝트에 존재하지 않습니다! " +
+                    "Edit > Project Settings > Tags and Layers에서 'Player' Layer를 추가하세요. " +
+                    "현재는 Default Layer를 사용합니다.");
+                playerLayer = 0; // Default Layer
+            }
+            else
+            {
+                int groundLayer = LayerMask.NameToLayer("Ground");
+                if (groundLayer != -1 && playerLayer == groundLayer)
+                {
+                    Debug.LogError("[PlayerCombatDemo] Player Layer가 Ground Layer와 동일하게 설정되어 있습니다! " +
+                        "이는 바닥 감지 오류를 유발합니다. Player와 Ground는 별도의 Layer를 사용해야 합니다.");
+                }
+            }
+            player.layer = playerLayer;
+
             // PlayerController 확인/추가
             playerController = player.GetComponent<PlayerController>();
             if (playerController == null)
             {
                 playerController = player.AddComponent<PlayerController>();
             }
+
+            // CharacterPhysics Config 설정 (PlayerController가 추가한 CharacterPhysics에 config 할당)
+            SetupCharacterPhysicsConfig(player);
 
             // 이벤트 연결
             if (playerController.HealthSystem != null)
@@ -224,7 +249,7 @@ namespace Combat.Demo
                 };
             }
 
-            LogEvent($"[Player] 생성 완료 - 위치: {playerSpawnPosition}");
+            LogEvent($"[Player] 생성 완료 - 위치: {playerSpawnPosition}, Layer: {LayerMask.LayerToName(player.layer)}");
         }
 
         /// <summary>
@@ -349,6 +374,17 @@ namespace Combat.Demo
             ground = new GameObject("Ground");
             ground.transform.position = groundPosition;
 
+            // Ground Layer 설정 (CharacterPhysics의 바닥 감지를 위해 필수)
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer == -1)
+            {
+                Debug.LogWarning("[PlayerCombatDemo] 'Ground' Layer가 프로젝트에 존재하지 않습니다! " +
+                    "Edit > Project Settings > Tags and Layers에서 'Ground' Layer를 추가하세요. " +
+                    "현재는 Default Layer를 사용합니다.");
+                groundLayer = 0; // Default Layer
+            }
+            ground.layer = groundLayer;
+
             // SpriteRenderer 추가
             var spriteRenderer = ground.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = CreateSimpleSprite(new Color(0.3f, 0.3f, 0.3f)); // 회색
@@ -361,7 +397,7 @@ namespace Combat.Demo
             var col = ground.AddComponent<BoxCollider2D>();
             col.size = new Vector2(1f, 1f); // localScale로 크기 조정되므로 1로 설정
 
-            LogEvent($"[Ground] 생성 완료 - 위치: {groundPosition}, 크기: {groundSize}");
+            LogEvent($"[Ground] 생성 완료 - 위치: {groundPosition}, 크기: {groundSize}, Layer: {LayerMask.LayerToName(groundLayer)}");
         }
 
         /// <summary>
@@ -387,9 +423,45 @@ namespace Combat.Demo
             mainCamera.transform.position = new Vector3(0f, 0f, -10f);
 
             // 배경 색상
-            mainCamera.backgroundColor = new Color(0.1f, 0.1f, 0.15f); // 어두운 파란색
+            //mainCamera.backgroundColor = new Color(0.1f, 0.1f, 0.15f); // 어두운 파란색
 
             LogEvent("[Camera] Orthographic 설정 완료");
+        }
+
+        /// <summary>
+        /// CharacterPhysics Config 설정
+        /// </summary>
+        private void SetupCharacterPhysicsConfig(GameObject playerObject)
+        {
+            var characterPhysics = playerObject.GetComponent<CharacterPhysics>();
+            if (characterPhysics == null)
+            {
+                LogEvent("[CharacterPhysics] 컴포넌트를 찾을 수 없습니다");
+                return;
+            }
+
+            // GameResourceManager에서 SkulPhysicsConfig 로드
+            var config = GameResourceManager.GetResource<SkulPhysicsConfig>("Data/SkulPhysicsConfig");
+
+            if (config == null)
+            {
+                Debug.LogWarning("[PlayerCombatDemo] SkulPhysicsConfig 로드 실패. Resources/Data/SkulPhysicsConfig.asset이 존재하는지 확인하세요.");
+                return;
+            }
+
+            // Reflection을 사용하여 private configOverride 필드에 할당
+            var field = typeof(CharacterPhysics).GetField("configOverride",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (field != null)
+            {
+                field.SetValue(characterPhysics, config);
+                LogEvent($"[CharacterPhysics] Config Override 설정 완료: {config.name}");
+            }
+            else
+            {
+                Debug.LogError("[PlayerCombatDemo] CharacterPhysics.configOverride 필드를 찾을 수 없습니다 (Reflection 실패)");
+            }
         }
 
         /// <summary>
@@ -584,7 +656,7 @@ H : 도움말
             if (!showUI) return;
 
             // 플레이어 정보
-            GUILayout.BeginArea(new Rect(10, 10, 400, 300));
+            GUILayout.BeginArea(new Rect(10, 10, 400, 800));
             GUILayout.Box("=== Player Combat Demo ===");
 
             if (playerController != null)
@@ -641,12 +713,17 @@ H : 도움말
         private void DrawHealthBar(float percentage, Color barColor)
         {
             Rect barRect = GUILayoutUtility.GetRect(380, 20);
-            GUI.Box(barRect, "");
 
-            Rect fillRect = new Rect(barRect.x + 2, barRect.y + 2, (barRect.width - 4) * percentage, barRect.height - 4);
+            // 배경 (어두운 회색)
             Color oldColor = GUI.color;
+            GUI.color = new Color(0.2f, 0.2f, 0.2f);
+            GUI.DrawTexture(barRect, Texture2D.whiteTexture);
+
+            // 체력바 (지정된 색상)
+            Rect fillRect = new Rect(barRect.x + 2, barRect.y + 2, (barRect.width - 4) * percentage, barRect.height - 4);
             GUI.color = barColor;
-            GUI.Box(fillRect, "");
+            GUI.DrawTexture(fillRect, Texture2D.whiteTexture);
+
             GUI.color = oldColor;
         }
 
