@@ -1,15 +1,7 @@
 {
-    "name": "Player",
-    "rootNamespace": "Player",
-    "references": [
-        "Unity.InputSystem",
-        "FSM.Core",
-        "GAS.Core",
-        "Combat.Core",
-        "Combat.Attack",
-        "Core.Enums",
-        "Core.Managers"
-    ],
+    "name": "Core.Managers",
+    "rootNamespace": "Core.Managers",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
