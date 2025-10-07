@@ -492,14 +492,14 @@ namespace Combat.Demo
                     hitboxDuration = 0.2f,
                     knockbackForce = new Vector2(5f + i * 2f, 2f),
                     inputWindowStart = 0f,
-                    inputWindowEnd = 0.5f
+                    inputWindowEnd = 1.0f // 입력 윈도우 1초로 증가
                 };
 
                 comboSystem.AddCombo(comboData);
             }
 
-            comboSystem.SetComboWindowTime(0.5f);
-            comboSystem.SetComboResetTime(1f);
+            comboSystem.SetComboWindowTime(1.0f); // 콤보 윈도우 1초로 증가 (입력 여유 시간)
+            comboSystem.SetComboResetTime(1.5f); // 콤보 리셋 1.5초로 증가
 
             LogEvent($"[Combo] {comboCount}단 콤보 설정 완료");
         }
@@ -655,59 +655,96 @@ H : 도움말
         {
             if (!showUI) return;
 
+            // GUI 스타일 설정
+            GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
+            labelStyle.fontSize = 14;
+            labelStyle.normal.textColor = Color.white;
+
+            GUIStyle headerStyle = new GUIStyle(GUI.skin.box);
+            headerStyle.fontSize = 16;
+            headerStyle.fontStyle = FontStyle.Bold;
+            headerStyle.normal.textColor = Color.yellow;
+
+            GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
+            boxStyle.normal.background = MakeTex(2, 2, new Color(0f, 0f, 0f, 0.7f));
+
             // 플레이어 정보
-            GUILayout.BeginArea(new Rect(10, 10, 400, 800));
-            GUILayout.Box("=== Player Combat Demo ===");
+            GUILayout.BeginArea(new Rect(10, 10, 450, 900));
+            GUILayout.Box("=== Player Combat Demo ===", headerStyle, GUILayout.Height(30));
+
+            GUILayout.BeginVertical(boxStyle);
 
             if (playerController != null)
             {
                 var health = playerController.HealthSystem;
                 if (health != null)
                 {
-                    GUILayout.Label($"Player HP: {health.CurrentHealth:F0}/{health.MaxHealth:F0}");
+                    GUILayout.Label($"Player HP: {health.CurrentHealth:F0}/{health.MaxHealth:F0}", labelStyle);
                     DrawHealthBar(health.HealthPercentage, Color.green);
                 }
 
                 var combo = playerController.ComboSystem;
                 if (combo != null)
                 {
-                    GUILayout.Label($"Combo: {combo.CurrentComboIndex} / {combo.GetComboCount()}");
-                    GUILayout.Label($"Combo Active: {combo.IsComboActive}");
+                    GUILayout.Label($"Combo: {combo.CurrentComboIndex} / {combo.GetComboCount()}", labelStyle);
+                    GUILayout.Label($"Combo Active: {combo.IsComboActive}", labelStyle);
                 }
             }
 
-            GUILayout.Space(10);
+            GUILayout.Space(15);
 
-            // 통계
-            GUILayout.Label("=== 통계 ===");
-            GUILayout.Label($"총 타격: {totalHits}");
-            GUILayout.Label($"총 처치: {totalKills}");
-            GUILayout.Label($"총 피해: {totalDamageDealt:F1}");
+            // 통계 (Box로 강조)
+            GUILayout.Box("=== 통계 ===", headerStyle, GUILayout.Height(30));
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.Label($"총 타격: {totalHits}", labelStyle);
+            GUILayout.Label($"총 처치: {totalKills}", labelStyle);
+            GUILayout.Label($"총 피해: {totalDamageDealt:F1}", labelStyle);
+            GUILayout.EndVertical();
 
-            GUILayout.Space(10);
+            GUILayout.Space(15);
 
             // 버튼
-            if (GUILayout.Button("체력 회복 (T)"))
+            if (GUILayout.Button("체력 회복 (T)", GUILayout.Height(30)))
                 HealPlayer();
-            if (GUILayout.Button("적 재생성 (Y)"))
+            if (GUILayout.Button("적 재생성 (Y)", GUILayout.Height(30)))
                 CreateEnemies();
-            if (GUILayout.Button("씬 리셋 (R)"))
+            if (GUILayout.Button("씬 리셋 (R)", GUILayout.Height(30)))
                 ResetScene();
 
+            GUILayout.EndVertical();
             GUILayout.EndArea();
 
             // 이벤트 로그
-            GUILayout.BeginArea(new Rect(Screen.width - 510, 10, 500, 400));
-            GUILayout.Box("=== Event Log ===");
+            GUILayout.BeginArea(new Rect(Screen.width - 510, 10, 500, 450));
+            GUILayout.Box("=== Event Log ===", headerStyle, GUILayout.Height(30));
 
-            GUILayout.BeginScrollView(Vector2.zero, GUILayout.Height(350));
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.BeginScrollView(Vector2.zero, GUILayout.Height(380));
             for (int i = eventLog.Count - 1; i >= Mathf.Max(0, eventLog.Count - 15); i--)
             {
-                GUILayout.Label(eventLog[i]);
+                GUILayout.Label(eventLog[i], labelStyle);
             }
             GUILayout.EndScrollView();
+            GUILayout.EndVertical();
 
             GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// 단색 텍스처 생성 (GUI 배경용)
+        /// </summary>
+        private Texture2D MakeTex(int width, int height, Color color)
+        {
+            Color[] pixels = new Color[width * height];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+
+            Texture2D texture = new Texture2D(width, height);
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return texture;
         }
 
         private void DrawHealthBar(float percentage, Color barColor)

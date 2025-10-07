@@ -88,10 +88,15 @@ namespace Player
         /// </summary>
         private void HandleDashInput()
         {
-            bool dashInput = Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift);
-            if (dashInput && !dashPressed)
+            // 이전 프레임 상태 저장
+            bool previousDashPressed = dashPressed;
+
+            // 현재 프레임 입력 상태 업데이트
+            dashPressed = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
+            // 버튼이 눌러진 순간 (이전: false, 현재: true)
+            if (dashPressed && !previousDashPressed)
             {
-                dashPressed = true;
                 OnDashPressed?.Invoke();
             }
         }
@@ -101,10 +106,15 @@ namespace Player
         /// </summary>
         private void HandleAttackInput()
         {
-            bool attackInput = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X);
-            if (attackInput && !attackPressed)
+            // 이전 프레임 상태 저장
+            bool previousAttackPressed = attackPressed;
+
+            // 현재 프레임 입력 상태 업데이트
+            attackPressed = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X);
+
+            // 버튼이 눌러진 순간 (이전: false, 현재: true)
+            if (attackPressed && !previousAttackPressed)
             {
-                attackPressed = true;
                 OnAttackPressed?.Invoke();
             }
         }

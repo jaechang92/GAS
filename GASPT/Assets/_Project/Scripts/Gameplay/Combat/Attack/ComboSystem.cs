@@ -122,13 +122,16 @@ namespace Combat.Attack
             // 콤보 시작 또는 진행
             if (!isComboActive)
             {
+                // 첫 공격: 콤보 시작만 하고 인덱스는 증가시키지 않음
                 StartCombo(executedComboIndex);
             }
-
-            // 다음 콤보로 진행 (콤보 데이터가 있을 때만)
-            if (combos.Count > 0)
+            else
             {
-                AdvanceCombo();
+                // 이미 활성화된 콤보: 다음 콤보로 진행
+                if (combos.Count > 0)
+                {
+                    AdvanceCombo();
+                }
             }
 
             lastHitTime = Time.time;

@@ -16,7 +16,7 @@
 1. Unity Hub 열기
 2. **Add** → **Add project from disk**
 3. `D:\JaeChang\UintyDev\GASPT\GASPT` 폴더 선택
-4. Unity 2023.3+ 버전으로 프로젝트 열기
+4. Unity 6000.2.6f2 버전으로 프로젝트 열기
 
 ### 초기 컴파일 대기
 - 첫 실행 시 스크립트 자동 컴파일 (약 30초)
