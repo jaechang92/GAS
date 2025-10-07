@@ -10,7 +10,13 @@
       "Bash(tree:*)",
       "WebSearch",
       "Bash(mkdir:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(if [ -f ResourceManager.cs.meta ])",
+      "Bash(then mv ResourceManager.cs.meta GameResourceManager.cs.meta)",
+      "Bash(fi)",
+      "Bash(git rm:*)",
+      "Bash(git restore:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
