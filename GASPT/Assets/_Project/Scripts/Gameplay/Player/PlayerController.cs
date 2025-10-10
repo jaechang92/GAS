@@ -36,6 +36,9 @@ namespace Player
         // === 방향 관리 ===
         private int facingDirection = 1; // 1: 오른쪽, -1: 왼쪽
 
+        // === Combat 데이터 임시 저장 ===
+        private DamageData pendingDamageData;
+
         // === 프로퍼티 (PhysicsEngine 위임) ===
         public PlayerStateType CurrentState => GetCurrentState();
         public PlayerStateType PreviousState => previousState;
@@ -257,6 +260,13 @@ namespace Player
                 characterPhysics.OnJump += () => TriggerEvent(PlayerEventType.JumpPressed);
                 characterPhysics.OnDash += () => TriggerEvent(PlayerEventType.DashPressed);
             }
+
+            // HealthSystem 이벤트 구독
+            if (healthSystem != null)
+            {
+                healthSystem.OnDamaged += OnDamaged;
+                healthSystem.OnDeath += OnDeath;
+            }
         }
 
         /// <summary>
@@ -283,6 +293,13 @@ namespace Player
                 characterPhysics.OnDash -= () => TriggerEvent(PlayerEventType.DashPressed);
             }
 
+            // HealthSystem 이벤트 구독 해제
+            if (healthSystem != null)
+            {
+                healthSystem.OnDamaged -= OnDamaged;
+                healthSystem.OnDeath -= OnDeath;
+            }
+
             // FSM 이벤트 구독 해제
             if (stateMachine != null)
             {
@@ -303,6 +320,13 @@ namespace Player
         /// </summary>
         private void OnMovementInput(Vector2 input)
         {
+            // Hit 상태일 때는 입력 무시 (스턴)
+            if (CurrentState == PlayerStateType.Hit)
+            {
+                characterPhysics?.SetHorizontalInput(0f);
+                return;
+            }
+
             // 방향 업데이트
             if (input.x > 0) facingDirection = 1;
             else if (input.x < 0) facingDirection = -1;
@@ -325,6 +349,10 @@ namespace Player
         /// </summary>
         private void OnJumpPressed()
         {
+            // Hit 상태일 때는 입력 무시
+            if (CurrentState == PlayerStateType.Hit)
+                return;
+
             // CharacterPhysics에 점프 입력 전달
             characterPhysics?.SetJumpInput(true, true);
 
@@ -349,6 +377,10 @@ namespace Player
         /// </summary>
         private void OnDashPressed()
         {
+            // Hit 상태일 때는 입력 무시
+            if (CurrentState == PlayerStateType.Hit)
+                return;
+
             // 대시 방향 계산 (현재 향하고 있는 방향)
             Vector2 dashDirection = new Vector2(facingDirection, 0);
 
@@ -391,6 +423,37 @@ namespace Player
                 LogDebug($"상태 변경: {oldState} → {newState}");
                 OnStateChanged?.Invoke(oldState, newState);
             }
+        }
+
+        /// <summary>
+        /// 데미지 받았을 때 처리
+        /// </summary>
+        private void OnDamaged(DamageData damageData)
+        {
+            LogDebug($"피격! 데미지: {damageData.amount}");
+
+            // DamageData 임시 저장 (PlayerHitState가 EnterState에서 가져감)
+            pendingDamageData = damageData;
+
+            // Hit 상태로 전환
+            ChangeState(PlayerStateType.Hit);
+        }
+
+        /// <summary>
+        /// 대기 중인 DamageData 가져오기 (PlayerHitState용)
+        /// </summary>
+        public DamageData GetPendingDamageData()
+        {
+            return pendingDamageData;
+        }
+
+        /// <summary>
+        /// 사망 처리
+        /// </summary>
+        private void OnDeath()
+        {
+            LogDebug("플레이어 사망!");
+            ChangeState(PlayerStateType.Dead);
         }
 
         /// <summary>
