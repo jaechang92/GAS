@@ -3,6 +3,7 @@ using Combat.Core;
 using Player;
 using Enemy;
 using Enemy.Data;
+using Core.Managers;
 
 namespace Tests.Demo
 {
@@ -177,18 +178,11 @@ namespace Tests.Demo
         {
             playerObject = new GameObject("Player");
             playerObject.transform.position = playerSpawnPosition;
-            playerObject.layer = LayerMask.NameToLayer("Default");
+            playerObject.layer = LayerMask.NameToLayer("Player");
 
             // SpriteRenderer
             var sr = playerObject.AddComponent<SpriteRenderer>();
-            sr.color = new Color(0f, 1f, 1f); // 청록색
-
-            // 간단한 사각형 스프라이트
-            Texture2D texture = new Texture2D(1, 1);
-            texture.SetPixel(0, 0, Color.white);
-            texture.Apply();
-            sr.sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
-            playerObject.transform.localScale = new Vector3(0.8f, 1.5f, 1f);
+            sr.sprite = CreateSimpleSprite(Color.cyan);
 
             // Rigidbody2D
             var rb = playerObject.AddComponent<Rigidbody2D>();
@@ -220,6 +214,32 @@ namespace Tests.Demo
             AddEventLog("[Player] 생성 완료");
         }
 
+        private Sprite CreateSimpleSprite(Color color)
+        {
+            // 64x64 텍스처 생성
+            int size = 64;
+            Texture2D texture = new Texture2D(size, size);
+
+            // 모든 픽셀을 지정된 색상으로 채움
+            Color[] pixels = new Color[size * size];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            // 텍스처를 Sprite로 변환
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(0, 0, size, size),
+                new Vector2(0.5f, 0.5f), // pivot (중심점)
+                100f // pixels per unit
+            );
+
+            return sprite;
+        }
+
         /// <summary>
         /// Enemy 생성
         /// </summary>
@@ -246,18 +266,12 @@ namespace Tests.Demo
         {
             var enemy = new GameObject(name);
             enemy.transform.position = position;
-            enemy.layer = LayerMask.NameToLayer("Default");
+            enemy.layer = LayerMask.NameToLayer("Enemy");
 
             // SpriteRenderer
             var sr = enemy.AddComponent<SpriteRenderer>();
             sr.color = Color.red;
-
-            // 간단한 사각형 스프라이트
-            Texture2D texture = new Texture2D(1, 1);
-            texture.SetPixel(0, 0, Color.white);
-            texture.Apply();
-            sr.sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
-            enemy.transform.localScale = new Vector3(0.8f, 1.2f, 1f);
+            sr.sprite = CreateSimpleSprite(Color.red);
 
             // Rigidbody2D
             var rb = enemy.AddComponent<Rigidbody2D>();
@@ -272,25 +286,30 @@ namespace Tests.Demo
             var controller = enemy.AddComponent<EnemyController>();
 
             // EnemyData 생성 및 설정
-            var data = ScriptableObject.CreateInstance<EnemyData>();
-            data.enemyName = name;
-            data.enemyType = EnemyType.Melee;
-            data.maxHealth = 30f;
-            data.moveSpeed = 2.5f;
-            data.attackDamage = 10f;
-            data.attackCooldown = 1.5f;
-            data.detectionRange = 8f;
-            data.chaseRange = 10f;
-            data.attackRange = 1.5f;
-            data.enablePatrol = true;
-            data.patrolDistance = 3f;
-            data.patrolWaitTime = 1.5f;
-            data.hitboxSize = new Vector2(1.5f, 1.0f);
-            data.hitboxOffset = new Vector2(0.8f, 0f);
-            data.hitboxDuration = 0.2f;
-            data.knockbackForce = 5f;
-            data.hitStunDuration = 0.3f;
-            data.enemyColor = Color.red;
+            var data = GameResourceManager.GetResource<EnemyData>("Data/DefualtEnemyData");
+            if (data == null)
+            {
+                ScriptableObject.CreateInstance<EnemyData>();
+
+                data.enemyName = name;
+                data.enemyType = EnemyType.Melee;
+                data.maxHealth = 30f;
+                data.moveSpeed = 2.5f;
+                data.attackDamage = 10f;
+                data.attackCooldown = 1.5f;
+                data.detectionRange = 8f;
+                data.chaseRange = 10f;
+                data.attackRange = 1.5f;
+                data.enablePatrol = true;
+                data.patrolDistance = 3f;
+                data.patrolWaitTime = 1.5f;
+                data.hitboxSize = new Vector2(1.5f, 1.0f);
+                data.hitboxOffset = new Vector2(0.8f, 0f);
+                data.hitboxDuration = 0.2f;
+                data.knockbackForce = 5f;
+                data.hitStunDuration = 0.3f;
+                data.enemyColor = Color.red;
+            }
 
             // Reflection으로 Data 설정
             var dataField = typeof(EnemyController).GetField("enemyData",
@@ -338,11 +357,8 @@ namespace Tests.Demo
             // SpriteRenderer
             var sr = groundObject.AddComponent<SpriteRenderer>();
             sr.color = Color.gray;
+            sr.sprite = CreateSimpleSprite(Color.gray);
 
-            Texture2D texture = new Texture2D(1, 1);
-            texture.SetPixel(0, 0, Color.white);
-            texture.Apply();
-            sr.sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
             groundObject.transform.localScale = new Vector3(30f, 1f, 1f);
 
             // BoxCollider2D
