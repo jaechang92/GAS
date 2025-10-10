@@ -5,9 +5,8 @@ using System.Threading;
 namespace Player
 {
     /// <summary>
-    /// 플레이어 상태의 기본 클래스
-    /// 모든 플레이어 상태가 상속받는 베이스 클래스
-    /// 커스텀 물리 시스템 사용
+    /// 플레이어 상태의 기본 클래스 (하이브리드 FSM)
+    /// 동기 메서드만 구현하면 비동기도 자동 지원
     /// </summary>
     public abstract class PlayerBaseState : IState
     {
@@ -45,22 +44,38 @@ namespace Player
             }
         }
 
-        public virtual async Awaitable OnEnter(CancellationToken cancellationToken = default)
+        // === 동기 메서드 (Combat용 - 기본 구현) ===
+        public virtual void OnEnterSync()
         {
-            Debug.Log($"[PlayerState] {stateType} 상태 진입");
+            Debug.Log($"[PlayerState] {stateType} 상태 진입(동기)");
             IsActive = true;
 
-            await EnterState(cancellationToken);
+            EnterStateSync();
             OnEntered?.Invoke(this);
+        }
+
+        public virtual void OnExitSync()
+        {
+            Debug.Log($"[PlayerState] {stateType} 상태 종료(동기)");
+            IsActive = false;
+
+            ExitStateSync();
+            OnExited?.Invoke(this);
+        }
+
+        // === 비동기 메서드 (GameFlow용 - 동기 호출) ===
+        public virtual async Awaitable OnEnter(CancellationToken cancellationToken = default)
+        {
+            // 동기 메서드 호출
+            OnEnterSync();
+            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         public virtual async Awaitable OnExit(CancellationToken cancellationToken = default)
         {
-            Debug.Log($"[PlayerState] {stateType} 상태 종료");
-            IsActive = false;
-
-            await ExitState(cancellationToken);
-            OnExited?.Invoke(this);
+            // 동기 메서드 호출
+            OnExitSync();
+            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         public virtual void OnUpdate(float deltaTime)
@@ -68,14 +83,12 @@ namespace Player
             UpdateState(deltaTime);
         }
 
-        // 하위 클래스에서 구현할 추상 메서드들
-        protected abstract Awaitable EnterState(CancellationToken cancellationToken);
-        protected abstract Awaitable ExitState(CancellationToken cancellationToken);
+        // === 하위 클래스에서 구현할 동기 메서드들 ===
+        protected abstract void EnterStateSync();
+        protected abstract void ExitStateSync();
         protected abstract void UpdateState(float deltaTime);
 
-        // 커스텀 물리 시스템용 공통 유틸리티 메서드들 (간소화됨)
-        // 대부분의 물리 연산은 PhysicsEngine에서 자동으로 처리됨
-
+        // 커스텀 물리 시스템용 공통 유틸리티 메서드들
         protected void StopHorizontalMovement()
         {
             if (playerController == null) return;

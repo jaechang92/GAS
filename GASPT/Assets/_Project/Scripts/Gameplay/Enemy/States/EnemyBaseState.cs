@@ -44,20 +44,38 @@ namespace Enemy
             }
         }
 
-        public virtual async Awaitable OnEnter(CancellationToken cancellationToken = default)
+        // === 동기 메서드 (Combat용 - 기본 구현) ===
+        public virtual void OnEnterSync()
         {
+            Debug.Log($"[EnemyState] {stateType} 상태 진입(동기)");
             IsActive = true;
 
-            await EnterState(cancellationToken);
+            EnterStateSync();
             OnEntered?.Invoke(this);
+        }
+
+        public virtual void OnExitSync()
+        {
+            Debug.Log($"[EnemyState] {stateType} 상태 종료(동기)");
+            IsActive = false;
+
+            ExitStateSync();
+            OnExited?.Invoke(this);
+        }
+
+        // === 비동기 메서드 (GameFlow용 - 동기 호출) ===
+        public virtual async Awaitable OnEnter(CancellationToken cancellationToken = default)
+        {
+            // 동기 메서드 호출
+            OnEnterSync();
+            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         public virtual async Awaitable OnExit(CancellationToken cancellationToken = default)
         {
-            IsActive = false;
-
-            await ExitState(cancellationToken);
-            OnExited?.Invoke(this);
+            // 동기 메서드 호출
+            OnExitSync();
+            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         public virtual void OnUpdate(float deltaTime)
@@ -65,9 +83,9 @@ namespace Enemy
             UpdateState(deltaTime);
         }
 
-        // 하위 클래스에서 구현할 추상 메서드들
-        protected abstract Awaitable EnterState(CancellationToken cancellationToken);
-        protected abstract Awaitable ExitState(CancellationToken cancellationToken);
+        // === 하위 클래스에서 구현할 동기 메서드들 ===
+        protected abstract void EnterStateSync();
+        protected abstract void ExitStateSync();
         protected abstract void UpdateState(float deltaTime);
 
         // Enemy용 유틸리티 메서드들
@@ -80,8 +98,19 @@ namespace Enemy
 
         protected void MoveToTarget(float speed)
         {
-            if (enemy == null || enemy.Target == null) return;
+            if (enemy == null || enemy.Target == null || enemy.Data == null) return;
 
+            float distanceToTarget = enemy.DistanceToTarget;
+
+            // 공격 범위 내에 있으면 정지
+            if (distanceToTarget <= enemy.Data.attackRange)
+            {
+                StopMovement();
+                FaceTarget();
+                return;
+            }
+
+            // 공격 범위 밖이면 이동
             Vector2 direction = (enemy.Target.position - enemy.transform.position).normalized;
             enemy.Rigidbody.linearVelocity = new Vector2(direction.x * speed, enemy.Rigidbody.linearVelocity.y);
 
