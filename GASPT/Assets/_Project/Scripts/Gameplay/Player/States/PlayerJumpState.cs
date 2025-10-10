@@ -1,4 +1,3 @@
-using System.Threading;
 using UnityEngine;
 
 namespace Player
@@ -17,26 +16,21 @@ namespace Player
             playerController = controller;
         }
 
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        protected override void EnterStateSync()
         {
-            LogStateDebug("점프 상태 진입");
-
+            LogStateDebug("점프 상태 진입(동기)");
             jumpTime = 0f;
 
             // PhysicsEngine이 점프를 자동으로 처리함
             // State에서는 진입 시 특별한 로직만 수행
-
-            await Awaitable.NextFrameAsync();
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("점프 상태 종료");
+            LogStateDebug("점프 상태 종료(동기)");
 
             // 점프 입력 상태 리셋 (다음 점프 입력을 위해)
             playerController.PlayerInput?.ResetJump();
-
-            await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)

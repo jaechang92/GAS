@@ -1,9 +1,7 @@
-using System.Threading;
 using UnityEngine;
 using Combat.Attack;
 using Combat.Core;
 using Core.Enums;
-using System.Collections;
 
 namespace Player
 {
@@ -19,6 +17,8 @@ namespace Player
 
         // 히트박스 설정
         private const float HitboxSpawnDelay = 0.1f; // 공격 시작 후 히트박스 생성 딜레이
+        private bool hasSpawnedHitbox = false; // 히트박스 생성 여부
+        private ComboData currentComboData; // 현재 콤보 데이터 저장
         private LayerMask enemyLayer = 1 << LayerMask.NameToLayer("Enemy"); // Enemy 레이어
 
         // 히트박스 디버그용 Static 리소스 (메모리 누수 방지)
@@ -29,12 +29,14 @@ namespace Player
         {
             playerController = controller;
         }
-        
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+
+        protected override void EnterStateSync()
         {
-            LogStateDebug("공격 상태 진입");
+            LogStateDebug("공격 상태 진입(동기)");
             attackTriggered = false;
             attackAnimationTime = 0f;
+            hasSpawnedHitbox = false;
+            currentComboData = null;
 
             // 공격 입력 즉시 리셋 (중복 전환 방지)
             playerController.PlayerInput?.ResetAttack();
@@ -66,9 +68,8 @@ namespace Player
                             );
                         }
 
-                        // 히트박스 생성 (비동기)
-                        SpawnHitbox(comboData, cancellationToken);
-
+                        // 히트박스 생성을 위해 콤보 데이터 저장
+                        currentComboData = comboData;
                         attackTriggered = true;
                     }
                     else
@@ -89,17 +90,14 @@ namespace Player
                 LogStateDebug("ComboSystem 없음 - 기본 공격 실행");
                 ExecuteBasicAttack();
             }
-
-            await Awaitable.NextFrameAsync();
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("공격 상태 종료");
+            LogStateDebug("공격 상태 종료(동기)");
             attackTriggered = false;
             comboWindowActive = false;
-
-            await Awaitable.NextFrameAsync();
+            currentComboData = null;
         }
 
         protected override void UpdateState(float deltaTime)
@@ -107,6 +105,16 @@ namespace Player
             if (!attackTriggered) return;
 
             attackAnimationTime += deltaTime;
+
+            // 히트박스 생성 (딜레이 후 1회만)
+            if (!hasSpawnedHitbox && attackAnimationTime >= HitboxSpawnDelay)
+            {
+                if (currentComboData != null)
+                {
+                    SpawnHitboxSync(currentComboData);
+                }
+                hasSpawnedHitbox = true;
+            }
 
             // FSM의 Attack→Attack 자동 전환에 의존하여 콤보 처리
             // CheckComboInput() 제거 (중복 전환 방지)
@@ -170,61 +178,53 @@ namespace Player
         }
 
         /// <summary>
-        /// 히트박스 생성 및 데미지 적용
+        /// 히트박스 생성 및 데미지 적용 (동기)
         /// </summary>
-        private async void SpawnHitbox(ComboData comboData, CancellationToken cancellationToken)
+        private void SpawnHitboxSync(ComboData comboData)
         {
-            try
-            {
-                // 히트박스 생성 딜레이
-                await Awaitable.WaitForSecondsAsync(HitboxSpawnDelay, cancellationToken);
+            if (comboData == null || playerController == null) return;
 
-                if (cancellationToken.IsCancellationRequested) return;
+            // 플레이어 위치 및 방향
+            Vector3 playerPosition = playerController.transform.position;
+            int facingDirection = playerController.FacingDirection;
 
-                // 플레이어 위치 및 방향
-                Vector3 playerPosition = playerController.transform.position;
-                int facingDirection = playerController.FacingDirection;
+            // 히트박스 중심 위치 계산 (플레이어 앞쪽)
+            Vector2 hitboxOffset = new Vector2(
+                comboData.hitboxOffset.x * facingDirection,
+                comboData.hitboxOffset.y
+            );
+            Vector3 hitboxCenter = playerPosition + (Vector3)hitboxOffset;
 
-                // 히트박스 중심 위치 계산 (플레이어 앞쪽)
-                Vector2 hitboxOffset = new Vector2(
-                    comboData.hitboxOffset.x * facingDirection,
-                    comboData.hitboxOffset.y
-                );
-                Vector3 hitboxCenter = playerPosition + (Vector3)hitboxOffset;
+            // 히트박스 크기
+            Vector2 hitboxSize = comboData.hitboxSize;
 
-                // 히트박스 크기
-                Vector2 hitboxSize = comboData.hitboxSize;
+            // 데미지 데이터 생성
+            float baseDamage = 10f; // 기본 데미지
+            float totalDamage = baseDamage * comboData.damageMultiplier;
 
-                // 데미지 데이터 생성
-                float baseDamage = 10f; // 기본 데미지
-                float totalDamage = baseDamage * comboData.damageMultiplier;
+            var damageData = DamageData.CreateWithKnockback(
+                totalDamage,
+                DamageType.Physical,
+                playerController.gameObject,
+                comboData.knockbackForce * facingDirection
+            );
 
-                var damageData = DamageData.CreateWithKnockback(
-                    totalDamage,
-                    DamageType.Physical,
-                    playerController.gameObject,
-                    comboData.knockbackForce * facingDirection
-                );
+            // 스턴 시간 설정 (콤보 단계별로 다르게 설정 가능)
+            damageData.stunDuration = 0.3f + (comboData.comboIndex * 0.1f); // 1단: 0.3초, 2단: 0.4초, 3단: 0.5초
 
-                // 박스 범위 데미지 적용
-                var hitTargets = DamageSystem.ApplyBoxDamage(
-                    hitboxCenter,
-                    hitboxSize,
-                    0f, // 회전 없음
-                    damageData,
-                    LayerMask.GetMask("Default") // Enemy 레이어 또는 Default 레이어 타겟
-                );
+            // 박스 범위 데미지 적용
+            var hitTargets = DamageSystem.ApplyBoxDamage(
+                hitboxCenter,
+                hitboxSize,
+                0f, // 회전 없음
+                damageData,
+                LayerMask.GetMask("Default") // Enemy 레이어 또는 Default 레이어 타겟
+            );
 
-                LogStateDebug($"히트박스 생성: {hitTargets.Count}개 타격, 데미지: {totalDamage}");
+            LogStateDebug($"히트박스 생성: {hitTargets.Count}개 타격, 데미지: {totalDamage}");
 
-                // 히트박스 시각화 (디버그용)
-                DrawHitboxDebug(hitboxCenter, hitboxSize, comboData.hitboxDuration);
-            }
-            catch (System.OperationCanceledException)
-            {
-                // 상태 전환으로 인한 취소는 정상
-                LogStateDebug("히트박스 생성 취소됨");
-            }
+            // 히트박스 시각화 (디버그용)
+            DrawHitboxDebug(hitboxCenter, hitboxSize, comboData.hitboxDuration);
         }
 
         /// <summary>

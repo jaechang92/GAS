@@ -1,4 +1,3 @@
-using System.Threading;
 using UnityEngine;
 
 namespace Player
@@ -14,24 +13,20 @@ namespace Player
             playerController = controller;
         }
 
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        protected override void EnterStateSync()
         {
-            LogStateDebug("대시 상태 진입");
+            LogStateDebug("대시 상태 진입(동기)");
 
             // PhysicsEngine이 대시를 자동으로 처리
             // 대시 방향은 InputHandler에서 자동으로 결정됨
-
-            await Awaitable.NextFrameAsync();
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("대시 상태 종료");
+            LogStateDebug("대시 상태 종료(동기)");
 
             // 대시 입력 상태 리셋 (다음 대시 입력을 위해)
             playerController.PlayerInput?.ResetDash();
-
-            await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)

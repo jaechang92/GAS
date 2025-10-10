@@ -1,4 +1,3 @@
-using System.Threading;
 using UnityEngine;
 
 namespace Player
@@ -14,16 +13,14 @@ namespace Player
             playerController = controller;
         }
 
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        protected override void EnterStateSync()
         {
-            LogStateDebug("이동 상태 진입");
-            await Awaitable.NextFrameAsync();
+            LogStateDebug("이동 상태 진입(동기)");
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("이동 상태 종료");
-            await Awaitable.NextFrameAsync();
+            LogStateDebug("이동 상태 종료(동기)");
         }
 
         protected override void UpdateState(float deltaTime)
