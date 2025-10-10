@@ -37,9 +37,27 @@ namespace GameFlow
             gameFlowManager = owner.GetComponent<GameFlowManager>();
         }
 
+        // === 동기 메서드 (기본 구현) ===
+        public virtual void OnEnterSync()
+        {
+            Debug.Log($"[GameFlow] Entering {stateType} state (sync)");
+            IsActive = true;
+            EnterStateSync();
+            OnEntered?.Invoke(this);
+        }
+
+        public virtual void OnExitSync()
+        {
+            Debug.Log($"[GameFlow] Exiting {stateType} state (sync)");
+            IsActive = false;
+            ExitStateSync();
+            OnExited?.Invoke(this);
+        }
+
+        // === 비동기 메서드 (GameFlow 주 사용) ===
         public virtual async Awaitable OnEnter(CancellationToken cancellationToken = default)
         {
-            Debug.Log($"[GameFlow] Entering {stateType} state");
+            Debug.Log($"[GameFlow] Entering {stateType} state (async)");
             IsActive = true;
             await EnterState(cancellationToken);
             OnEntered?.Invoke(this);
@@ -47,7 +65,7 @@ namespace GameFlow
 
         public virtual async Awaitable OnExit(CancellationToken cancellationToken = default)
         {
-            Debug.Log($"[GameFlow] Exiting {stateType} state");
+            Debug.Log($"[GameFlow] Exiting {stateType} state (async)");
             IsActive = false;
             await ExitState(cancellationToken);
             OnExited?.Invoke(this);
@@ -58,7 +76,12 @@ namespace GameFlow
             UpdateState(deltaTime);
         }
 
-        // 하위 클래스에서 구현할 추상 메서드들
+        // === 하위 클래스에서 구현할 메서드들 ===
+        // 동기 메서드 (기본 구현 제공)
+        protected virtual void EnterStateSync() { }
+        protected virtual void ExitStateSync() { }
+
+        // 비동기 메서드 (추상 - 하위 클래스에서 필수 구현)
         protected abstract Awaitable EnterState(CancellationToken cancellationToken);
         protected abstract Awaitable ExitState(CancellationToken cancellationToken);
         protected abstract void UpdateState(float deltaTime);
