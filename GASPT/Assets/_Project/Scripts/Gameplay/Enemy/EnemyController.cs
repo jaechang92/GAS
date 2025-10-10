@@ -39,9 +39,15 @@ namespace Enemy
         private bool isAttacking = false;
         private float lastAttackTime = 0f;
 
+        // === 감지 변수 ===
+        private float detectionTimer = 0f;
+
         // === 정찰 변수 ===
         private Vector3 patrolStartPosition;
         private bool patrolMovingRight = true;
+
+        // === Combat 데이터 임시 저장 ===
+        private DamageData pendingDamageData;
 
         // === 프로퍼티 ===
         public EnemyData Data => enemyData;
@@ -77,13 +83,34 @@ namespace Enemy
             // 초기 상태로 전환
             if (stateMachine != null)
             {
-                stateMachine.ForceTransitionTo(EnemyStateType.Idle.ToString());
+                stateMachine.StartStateMachine(EnemyStateType.Idle.ToString());
                 LogDebug($"Enemy FSM 시작 - 초기 상태: {currentState}");
+            }
+        }
+
+        private void Update()
+        {
+            if (!IsAlive || enemyData == null) return;
+
+            // 주기적 플레이어 감지
+            detectionTimer += Time.deltaTime;
+
+            if (detectionTimer >= enemyData.detectionInterval)
+            {
+                detectionTimer = 0f;
+                CheckPlayerDetection();
             }
         }
 
         private void OnDestroy()
         {
+            // HealthSystem 이벤트 구독 해제
+            if (healthSystem != null)
+            {
+                healthSystem.OnDamaged -= HandleDamaged;
+                healthSystem.OnDeath -= HandleDeath;
+            }
+
             stateMachine?.Stop();
         }
 
@@ -133,6 +160,7 @@ namespace Enemy
             // HealthSystem 이벤트 구독
             if (healthSystem != null)
             {
+                healthSystem.OnDamaged += HandleDamaged;
                 healthSystem.OnDeath += HandleDeath;
             }
 
@@ -150,14 +178,14 @@ namespace Enemy
             // 상태 생성 및 등록
             var idleState = new EnemyIdleState();
             var patrolState = new EnemyPatrolState();
-            var chaseState = new EnemyChaseState();
+            var traceState = new EnemyTraceState(); // Chase -> Trace로 변경
             var attackState = new EnemyAttackState();
             var hitState = new EnemyHitState();
             var deathState = new EnemyDeathState();
 
             stateMachine.AddState(idleState);
             stateMachine.AddState(patrolState);
-            stateMachine.AddState(chaseState);
+            stateMachine.AddState(traceState);
             stateMachine.AddState(attackState);
             stateMachine.AddState(hitState);
             stateMachine.AddState(deathState);
@@ -199,6 +227,96 @@ namespace Enemy
 
             // FacingDirection에 따라 스프라이트 Flip
             spriteRenderer.flipX = facingDirection < 0;
+        }
+
+        /// <summary>
+        /// 주기적 플레이어 감지 및 상태 전환
+        /// </summary>
+        private void CheckPlayerDetection()
+        {
+            if (target == null) return;
+
+            float distance = DistanceToTarget;
+
+            // 현재 상태에 따른 전환 로직
+            switch (currentState)
+            {
+                case EnemyStateType.Idle:
+                    // Idle → Trace or Patrol
+                    if (distance <= enemyData.detectionRange)
+                    {
+                        LogDebug($"플레이어 감지! Trace로 전환 (거리: {distance:F2})");
+                        ChangeState(EnemyStateType.Trace);
+                    }
+                    else if (enemyData.enablePatrol)
+                    {
+                        LogDebug("Patrol로 전환");
+                        ChangeState(EnemyStateType.Patrol);
+                    }
+                    break;
+
+                case EnemyStateType.Patrol:
+                    // Patrol → Trace
+                    if (distance <= enemyData.detectionRange)
+                    {
+                        LogDebug($"정찰 중 플레이어 감지! Trace로 전환 (거리: {distance:F2})");
+                        ChangeState(EnemyStateType.Trace);
+                    }
+                    break;
+
+                case EnemyStateType.Trace:
+                    // Trace → Attack or Patrol/Idle
+                    if (distance <= enemyData.attackRange && CanAttack())
+                    {
+                        LogDebug($"공격 범위 진입! Attack으로 전환 (거리: {distance:F2})");
+                        ChangeState(EnemyStateType.Attack);
+                    }
+                    else if (distance > enemyData.chaseRange)
+                    {
+                        LogDebug($"추적 범위 이탈 (거리: {distance:F2})");
+                        ChangeState(enemyData.enablePatrol ? EnemyStateType.Patrol : EnemyStateType.Idle);
+                    }
+                    break;
+
+                case EnemyStateType.Attack:
+                    // Attack → Trace (거리 이탈 시 즉시 취소)
+                    if (distance > enemyData.attackRange + 1f) // 여유 거리 1m
+                    {
+                        LogDebug($"공격 중 타겟 이탈! Trace로 전환 (거리: {distance:F2})");
+                        ChangeState(EnemyStateType.Trace);
+                    }
+                    break;
+
+                case EnemyStateType.Hit:
+                    // Hit 상태에서는 감지하지 않음 (HitState에서 처리)
+                    break;
+
+                case EnemyStateType.Death:
+                    // Death 상태에서는 아무것도 하지 않음
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 데미지 받았을 때 처리
+        /// </summary>
+        private void HandleDamaged(DamageData damageData)
+        {
+            LogDebug($"피격! 데미지: {damageData.amount}");
+
+            // DamageData 임시 저장 (EnemyHitState가 EnterState에서 가져감)
+            pendingDamageData = damageData;
+
+            // Hit 상태로 전환
+            ChangeState(EnemyStateType.Hit);
+        }
+
+        /// <summary>
+        /// 대기 중인 DamageData 가져오기 (EnemyHitState용)
+        /// </summary>
+        public DamageData GetPendingDamageData()
+        {
+            return pendingDamageData;
         }
 
         /// <summary>

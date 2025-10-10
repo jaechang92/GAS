@@ -10,18 +10,18 @@ namespace Enemy
     /// </summary>
     public class EnemyAttackState : EnemyBaseState
     {
-        private bool attackExecuted = false;
         private float attackTime = 0f;
         private const float AttackDuration = 0.5f; // 공격 애니메이션 시간
         private const float HitboxSpawnDelay = 0.15f; // 공격 시작 후 히트박스 생성 딜레이
+        private bool hasSpawnedHitbox = false; // 히트박스 생성 여부
 
         public EnemyAttackState() : base(EnemyStateType.Attack) { }
 
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        protected override void EnterStateSync()
         {
-            LogStateDebug("Attack 상태 진입");
-            attackExecuted = false;
+            LogStateDebug("Attack 상태 진입(동기)");
             attackTime = 0f;
+            hasSpawnedHitbox = false;
 
             // 이동 정지
             StopMovement();
@@ -33,18 +33,12 @@ namespace Enemy
             // 공격 쿨다운 갱신
             enemy.LastAttackTime = Time.time;
             enemy.IsAttacking = true;
-
-            // 히트박스 생성 (딜레이 후)
-            SpawnHitbox(cancellationToken);
-
-            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("Attack 상태 종료");
+            LogStateDebug("Attack 상태 종료(동기)");
             enemy.IsAttacking = false;
-            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         protected override void UpdateState(float deltaTime)
@@ -52,6 +46,13 @@ namespace Enemy
             if (enemy == null) return;
 
             attackTime += deltaTime;
+
+            // 히트박스 생성 (딜레이 후 1회만)
+            if (!hasSpawnedHitbox && attackTime >= HitboxSpawnDelay)
+            {
+                SpawnHitboxSync();
+                hasSpawnedHitbox = true;
+            }
 
             // 공격 애니메이션 종료 후 다음 상태로 전환
             if (attackTime >= AttackDuration)
@@ -61,59 +62,50 @@ namespace Enemy
         }
 
         /// <summary>
-        /// 히트박스 생성 및 데미지 적용
+        /// 히트박스 생성 및 데미지 적용 (동기)
         /// </summary>
-        private async void SpawnHitbox(CancellationToken cancellationToken)
+        private void SpawnHitboxSync()
         {
-            try
-            {
-                // 히트박스 생성 딜레이
-                await Awaitable.WaitForSecondsAsync(HitboxSpawnDelay, cancellationToken);
+            if (enemy == null || enemy.Data == null) return;
 
-                if (cancellationToken.IsCancellationRequested || enemy == null || enemy.Data == null) return;
+            // 적 위치 및 방향
+            Vector3 enemyPosition = enemy.transform.position;
+            int facingDirection = enemy.FacingDirection;
 
-                // 적 위치 및 방향
-                Vector3 enemyPosition = enemy.transform.position;
-                int facingDirection = enemy.FacingDirection;
+            // 히트박스 중심 위치 계산
+            Vector2 hitboxOffset = new Vector2(
+                enemy.Data.hitboxOffset.x * facingDirection,
+                enemy.Data.hitboxOffset.y
+            );
+            Vector3 hitboxCenter = enemyPosition + (Vector3)hitboxOffset;
 
-                // 히트박스 중심 위치 계산
-                Vector2 hitboxOffset = new Vector2(
-                    enemy.Data.hitboxOffset.x * facingDirection,
-                    enemy.Data.hitboxOffset.y
-                );
-                Vector3 hitboxCenter = enemyPosition + (Vector3)hitboxOffset;
+            // 히트박스 크기
+            Vector2 hitboxSize = enemy.Data.hitboxSize;
 
-                // 히트박스 크기
-                Vector2 hitboxSize = enemy.Data.hitboxSize;
+            // 데미지 데이터 생성
+            var damageData = DamageData.CreateWithKnockback(
+                enemy.Data.attackDamage,
+                Core.Enums.DamageType.Physical,
+                enemy.gameObject,
+                enemy.Data.knockbackForce * facingDirection * Vector2.right
+            );
 
-                // 데미지 데이터 생성
-                var damageData = DamageData.CreateWithKnockback(
-                    enemy.Data.attackDamage,
-                    Core.Enums.DamageType.Physical,
-                    enemy.gameObject,
-                    enemy.Data.knockbackForce * facingDirection * Vector2.right
-                );
+            // 스턴 시간 설정
+            damageData.stunDuration = enemy.Data.hitStunDuration;
 
-                // 박스 범위 데미지 적용
-                var hitTargets = DamageSystem.ApplyBoxDamage(
-                    hitboxCenter,
-                    hitboxSize,
-                    0f, // 회전 없음
-                    damageData,
-                    LayerMask.GetMask("Default", "Player") // Player 레이어 타겟
-                );
+            // 박스 범위 데미지 적용
+            var hitTargets = DamageSystem.ApplyBoxDamage(
+                hitboxCenter,
+                hitboxSize,
+                0f, // 회전 없음
+                damageData,
+                LayerMask.GetMask("Player") // Player 레이어 타겟
+            );
 
-                LogStateDebug($"히트박스 생성: {hitTargets.Count}개 타격, 데미지: {enemy.Data.attackDamage}");
+            LogStateDebug($"히트박스 생성: {hitTargets.Count}개 타격, 데미지: {enemy.Data.attackDamage}");
 
-                // 히트박스 시각화 (디버그용)
-                DrawHitboxDebug(hitboxCenter, hitboxSize, enemy.Data.hitboxDuration);
-
-                attackExecuted = true;
-            }
-            catch (System.OperationCanceledException)
-            {
-                LogStateDebug("히트박스 생성 취소됨");
-            }
+            // 히트박스 시각화 (디버그용)
+            DrawHitboxDebug(hitboxCenter, hitboxSize, enemy.Data.hitboxDuration);
         }
 
         /// <summary>
@@ -133,10 +125,10 @@ namespace Enemy
                 return;
             }
 
-            // 추적 범위 내에 있으면 Chase
+            // 추적 범위 내에 있으면 Trace
             if (distanceToTarget <= enemy.Data.chaseRange)
             {
-                enemy.ChangeState(EnemyStateType.Chase);
+                enemy.ChangeState(EnemyStateType.Trace);
             }
             else
             {

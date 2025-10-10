@@ -30,6 +30,9 @@ namespace Enemy.Data
         public float attackCooldown = 1.5f;
 
         [Header("감지 설정")]
+        [Tooltip("플레이어 감지 주기 (초) - 성능 최적화")]
+        public float detectionInterval = 0.2f;
+
         [Tooltip("플레이어 감지 범위 (감지 시작)")]
         public float detectionRange = 10f;
 

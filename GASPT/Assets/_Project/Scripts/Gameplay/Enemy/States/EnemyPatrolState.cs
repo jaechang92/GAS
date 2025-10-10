@@ -5,7 +5,7 @@ namespace Enemy
 {
     /// <summary>
     /// Enemy Patrol 상태
-    /// 좌우로 정찰하며 플레이어 감지
+    /// 좌우로 정찰 전용 - 감지는 EnemyController가 처리
     /// </summary>
     public class EnemyPatrolState : EnemyBaseState
     {
@@ -14,33 +14,22 @@ namespace Enemy
 
         public EnemyPatrolState() : base(EnemyStateType.Patrol) { }
 
-        protected override async Awaitable EnterState(CancellationToken cancellationToken)
+        protected override void EnterStateSync()
         {
-            LogStateDebug("Patrol 상태 진입");
+            LogStateDebug("Patrol 상태 진입(동기) - 정찰 시작");
             patrolWaitTime = 0f;
             isWaiting = false;
-
-            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
-        protected override async Awaitable ExitState(CancellationToken cancellationToken)
+        protected override void ExitStateSync()
         {
-            LogStateDebug("Patrol 상태 종료");
+            LogStateDebug("Patrol 상태 종료(동기)");
             StopMovement();
-            await Awaitable.NextFrameAsync(cancellationToken);
         }
 
         protected override void UpdateState(float deltaTime)
         {
             if (enemy == null || enemy.Data == null) return;
-
-            // 플레이어 감지 확인
-            if (enemy.Target != null && enemy.DistanceToTarget <= enemy.Data.detectionRange)
-            {
-                LogStateDebug($"플레이어 감지! Chase로 전환");
-                enemy.ChangeState(EnemyStateType.Chase);
-                return;
-            }
 
             // 대기 중인 경우
             if (isWaiting)
