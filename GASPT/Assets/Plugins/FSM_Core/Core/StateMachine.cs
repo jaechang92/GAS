@@ -241,6 +241,9 @@ namespace FSM.Core
             return false;
         }
 
+        /// <summary>
+        /// 동기 상태 전환 (Combat용 - 즉시 전환)
+        /// </summary>
         public void ForceTransitionTo(string stateId)
         {
             if (!HasState(stateId))
@@ -249,7 +252,21 @@ namespace FSM.Core
                 return;
             }
 
-            _ = ChangeStateAsync(stateId);
+            ChangeStateSync(stateId);
+        }
+
+        /// <summary>
+        /// 비동기 상태 전환 (GameFlow용 - 대기 가능)
+        /// </summary>
+        public async Awaitable ForceTransitionToAsync(string stateId)
+        {
+            if (!HasState(stateId))
+            {
+                Debug.LogWarning($"[FSM] {stateId}로 강제 전환 실패: 상태가 존재하지 않음");
+                return;
+            }
+
+            await ChangeStateAsync(stateId);
         }
 
         public void StartStateMachine(string initialStateId = null)
@@ -304,6 +321,48 @@ namespace FSM.Core
                 Debug.Log($"[FSM] 전환 완료: {fromStateId} -> {transition.ToStateId}");
         }
 
+        /// <summary>
+        /// 동기 상태 전환 (Combat용)
+        /// </summary>
+        private void ChangeStateSync(string newStateId)
+        {
+            if (!states.TryGetValue(newStateId, out var newState))
+            {
+                Debug.LogWarning($"[FSM] 상태 {newStateId}를 찾을 수 없음");
+                return;
+            }
+
+            var oldStateId = CurrentStateId;
+
+            // 현재 상태 동기 종료
+            ExitCurrentStateSync();
+
+            // 이전 상태 업데이트
+            previousStateId = oldStateId;
+
+            // 새 상태 진입
+            currentState = newState;
+            try
+            {
+                currentState.OnEnterSync();
+                OnStateChanged?.Invoke(oldStateId, newStateId);
+
+                // 상태 변경 시간 기록
+                stateChangeTime = Time.time;
+
+                if (enableDebugLog)
+                    Debug.Log($"[FSM] 상태 변경됨(동기): {oldStateId} -> {newStateId}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[FSM] 상태 {newStateId} 진입 중 오류: {e.Message}");
+                currentState = null;
+            }
+        }
+
+        /// <summary>
+        /// 비동기 상태 전환 (GameFlow용)
+        /// </summary>
         private async Awaitable ChangeStateAsync(string newStateId)
         {
             if (!states.TryGetValue(newStateId, out var newState))
@@ -331,7 +390,12 @@ namespace FSM.Core
                 stateChangeTime = Time.time;
 
                 if (enableDebugLog)
-                    Debug.Log($"[FSM] 상태 변경됨: {oldStateId} -> {newStateId}");
+                    Debug.Log($"[FSM] 상태 변경됨(비동기): {oldStateId} -> {newStateId}");
+            }
+            catch (System.OperationCanceledException)
+            {
+                // CancellationToken이 취소된 경우 (정상적인 종료 상황)
+                currentState = null;
             }
             catch (Exception e)
             {
@@ -340,6 +404,31 @@ namespace FSM.Core
             }
         }
 
+        /// <summary>
+        /// 동기 상태 종료 (Combat용)
+        /// </summary>
+        private void ExitCurrentStateSync()
+        {
+            if (currentState != null)
+            {
+                try
+                {
+                    currentState.OnExitSync();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[FSM] 상태 {currentState.Id} 종료 중 오류: {e.Message}");
+                }
+                finally
+                {
+                    currentState = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 비동기 상태 종료 (GameFlow용)
+        /// </summary>
         private async Awaitable ExitCurrentStateAsync()
         {
             if (currentState != null)
@@ -347,6 +436,11 @@ namespace FSM.Core
                 try
                 {
                     await currentState.OnExit(cancellationTokenSource.Token);
+                }
+                catch (System.OperationCanceledException)
+                {
+                    // CancellationToken이 취소된 경우 (정상적인 종료 상황)
+                    // 에러가 아니므로 로그 출력 안 함
                 }
                 catch (Exception e)
                 {
