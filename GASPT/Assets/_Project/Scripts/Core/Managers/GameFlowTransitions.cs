@@ -238,6 +238,30 @@ namespace GameFlow
     }
 
     /// <summary>
+    /// Preload 완료 전환 (조건 기반)
+    /// </summary>
+    public class PreloadCompleteTransition : GameTransition
+    {
+        private PreloadState preloadState;
+
+        public PreloadCompleteTransition(PreloadState state, GameFlowManager manager)
+            : base(GameStateType.Preload, GameStateType.Main, manager, 10) // 높은 우선순위
+        {
+            preloadState = state;
+        }
+
+        protected override bool CheckTransitionCondition()
+        {
+            if (preloadState != null && preloadState.IsCompleted)
+            {
+                TriggerTransition();
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 게임 플로우 전환 설정 도우미 클래스
     /// </summary>
     public static class GameFlowTransitionSetup
@@ -247,6 +271,13 @@ namespace GameFlow
         /// </summary>
         public static void SetupDefaultTransitions(StateMachine stateMachine, GameFlowManager gameFlowManager)
         {
+            // Preload -> Main (리소스 로딩 완료)
+            var preloadState = stateMachine.States["Preload"] as PreloadState;
+            if (preloadState != null)
+            {
+                stateMachine.AddTransition(new PreloadCompleteTransition(preloadState, gameFlowManager));
+            }
+
             // Main -> Loading (게임 시작)
             stateMachine.AddTransition(new EventTransition(
                 GameStateType.Main, GameStateType.Loading,

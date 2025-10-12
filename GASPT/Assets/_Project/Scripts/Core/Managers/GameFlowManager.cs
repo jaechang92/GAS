@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using FSM.Core;
+using Core;
 
 namespace GameFlow
 {
     /// <summary>
     /// 게임 흐름을 관리하는 FSM 컨트롤러
+    /// SingletonManager 패턴으로 DontDestroyOnLoad 자동 설정
     /// </summary>
-    public class GameFlowManager : MonoBehaviour
+    public class GameFlowManager : SingletonManager<GameFlowManager>
     {
+
         [Header("UI 참조")]
         [SerializeField] private GameObject mainMenuUI;
         [SerializeField] private GameObject loadingScreenUI;
@@ -24,6 +27,7 @@ namespace GameFlow
         [SerializeField] private Text loadingText;
 
         [Header("설정")]
+        [SerializeField] private bool autoStart = true;
         [SerializeField] private GameStateType initialState = GameStateType.Preload;
 
         // FSM 관련
@@ -41,7 +45,7 @@ namespace GameFlow
         public event Action<GameStateType, GameStateType> OnStateChanged;
         public event Action<GameEventType> OnEventTriggered;
 
-        private void Awake()
+        protected override void OnSingletonAwake()
         {
             InitializeStateMachine();
             InitializeEventHandlers();
@@ -50,8 +54,11 @@ namespace GameFlow
 
         private void Start()
         {
-            // 초기 상태로 시작
-            stateMachine.StartStateMachine(initialState.ToString());
+            // autoStart가 true일 때만 자동으로 시작
+            if (autoStart)
+            {
+                stateMachine.StartStateMachine(initialState.ToString());
+            }
         }
 
         /// <summary>
@@ -75,6 +82,9 @@ namespace GameFlow
 
             // 상태 변경 이벤트 구독
             stateMachine.OnStateChanged += OnGameStateChanged;
+
+            // Transition 이벤트 구독 (씬 로딩 처리)
+            stateMachine.OnTransitionStarted += OnTransitionStarted;
         }
 
         /// <summary>
@@ -130,6 +140,17 @@ namespace GameFlow
         }
 
         /// <summary>
+        /// FSM 수동 시작 (autoStart = false일 때 사용)
+        /// </summary>
+        public void StartManually(GameStateType startState)
+        {
+            if (stateMachine != null)
+            {
+                stateMachine.StartStateMachine(startState.ToString());
+            }
+        }
+
+        /// <summary>
         /// 상태 변경 이벤트 핸들러
         /// </summary>
         private void OnGameStateChanged(string fromState, string toState)
@@ -139,6 +160,36 @@ namespace GameFlow
             {
                 OnStateChanged?.Invoke(from, to);
                 Debug.Log($"[GameFlow] State changed: {from} -> {to}");
+            }
+        }
+
+        /// <summary>
+        /// Transition 시작 이벤트 핸들러 (씬 로딩 처리)
+        /// </summary>
+        private void OnTransitionStarted(FSM.Core.ITransition transition)
+        {
+            // Preload → Main 전환 시 씬 로드
+            if (transition.FromStateId == GameStateType.Preload.ToString() &&
+                transition.ToStateId == GameStateType.Main.ToString())
+            {
+                _ = LoadSceneForTransition(Core.Enums.SceneType.Preload, Core.Enums.SceneType.Main);
+            }
+            // 필요시 다른 씬 전환도 여기에 추가 가능
+        }
+
+        /// <summary>
+        /// Transition을 위한 씬 로딩
+        /// </summary>
+        private async Awaitable LoadSceneForTransition(Core.Enums.SceneType fromScene, Core.Enums.SceneType toScene)
+        {
+            if (Core.Managers.SceneLoader.Instance != null)
+            {
+                Debug.Log($"[GameFlow] Transition에서 씬 로드: {fromScene} → {toScene}");
+                await Core.Managers.SceneLoader.Instance.TransitionToSceneAsync(fromScene, toScene);
+            }
+            else
+            {
+                Debug.LogWarning("[GameFlow] SceneLoader가 없습니다. 씬 전환을 건너뜁니다.");
             }
         }
 
@@ -297,6 +348,7 @@ namespace GameFlow
             if (stateMachine != null)
             {
                 stateMachine.OnStateChanged -= OnGameStateChanged;
+                stateMachine.OnTransitionStarted -= OnTransitionStarted;
             }
         }
 
