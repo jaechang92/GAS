@@ -1,0 +1,121 @@
+# GASPT 프로젝트 기본 정보
+# Spec Kit v1.0
+
+project:
+  name: GASPT
+  full_name: "Generic Ability System + FSM Platform Game"
+  description: "Skul: The Hero Slayer 스타일의 2D 플랫포머 액션 게임 프레임워크"
+  version: "0.7.5"
+
+  # 개발 환경
+  unity_version: "2023.3+"
+  csharp_version: "11"
+  language: "C# with async/await"
+
+  # 개발자 정보
+  developer: JaeChang
+  team: "GASPT Development Team"
+  license: MIT
+  start_date: "2025-09"
+
+  # 프로젝트 경로
+  root: "D:/JaeChang/UintyDev/GASPT/GASPT"
+
+  # 현재 상태
+  phase: 2
+  completion: 75%
+  status: "Phase 2 - Combat System & Enemy AI 구현 완료"
+
+# 핵심 컨셉
+concept:
+  - "스컬 교체 시스템: 다양한 능력을 가진 캐릭터로 즉시 전환"
+  - "정밀한 플랫포머 물리: Skul 스타일의 부드러운 이동감"
+  - "확장 가능한 전투: 콤보 기반 액션 전투 시스템"
+  - "모듈형 아키텍처: 재사용 가능한 시스템 설계"
+
+# 개발 원칙
+principles:
+  - name: "완성 우선 원칙"
+    description: "완벽한 시스템보다 플레이 가능한 게임을 먼저"
+
+  - name: "단계적 개발 원칙"
+    description: "작은 단위로 나누어 개발하고 지속적으로 테스트"
+
+  - name: "생산성 우선 원칙"
+    description: "시스템 설계에 충분한 시간 투자"
+
+  - name: "코드 품질 원칙"
+    description: "OOP, SOLID 준수"
+
+# Phase 진행 상황
+phases:
+  - phase: 1
+    name: "Core 시스템 구축"
+    completion: 100%
+    status: "완료"
+    systems:
+      - GAS (Gameplay Ability System)
+      - FSM (Finite State Machine)
+      - GameFlow 시스템
+
+  - phase: 2
+    name: "Combat & Physics 시스템"
+    completion: 85%
+    status: "진행 중"
+    systems:
+      - Combat System (DamageSystem, HealthSystem, ComboSystem)
+      - CharacterPhysics
+      - Player-Combat 통합
+      - Enemy AI 시스템
+
+  - phase: 3
+    name: "콘텐츠 확장"
+    completion: 0%
+    status: "대기"
+    systems:
+      - 절차적 레벨 생성
+      - 아이템 시스템
+      - 스컬 각성 시스템
+
+  - phase: 4
+    name: "UI/UX"
+    completion: 40%
+    status: "진행 중"
+    systems:
+      - HUD System
+
+  - phase: 5
+    name: "최적화 및 배포"
+    completion: 0%
+    status: "대기"
+
+# 주요 문서
+documentation:
+  getting_started:
+    - "docs/getting-started/QuickStart.md"
+    - "docs/getting-started/ProjectOverview.md"
+    - "docs/getting-started/FolderStructure.md"
+    - "docs/getting-started/PlayerSetup.md"
+    - "docs/getting-started/SceneSetupGuide.md"
+
+  development:
+    - "docs/development/CurrentStatus.md"  # 항상 먼저 확인
+    - "docs/development/CodingGuidelines.md"
+    - "docs/development/Roadmap.md"
+    - "docs/development/SkulSystemDesign.md"
+
+  infrastructure:
+    - "docs/infrastructure/SceneManagementSystem.md"
+    - "docs/infrastructure/EncodingGuide.md"
+
+  testing:
+    - "docs/testing/TestingGuide.md"
+
+# Git 설정
+git:
+  remote: "https://github.com/[username]/GASPT"
+  branch_main: master
+  encoding:
+    - "UTF-8 with BOM for .cs files"
+    - "CRLF line endings"
+    - "See: .gitattributes, .editorconfig"

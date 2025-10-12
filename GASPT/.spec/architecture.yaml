@@ -1,0 +1,352 @@
+# GASPT 시스템 아키텍처
+# Spec Kit v1.0
+
+# 핵심 시스템
+core_systems:
+  - name: GAS (Gameplay Ability System)
+    path: Assets/Plugins/GAS_Core
+    description: "게임플레이 어빌리티를 관리하는 범용 시스템"
+    features:
+      - ScriptableObject 기반 데이터 관리
+      - 쿨다운 및 리소스 관리
+      - 이펙트 및 태그 시스템
+      - 확장 가능한 어빌리티 구조
+    status: "완료 (100%)"
+
+  - name: FSM (Finite State Machine)
+    path: Assets/Plugins/FSM_Core
+    description: "게임 객체의 상태를 관리하는 유한상태머신"
+    features:
+      - Unity 2023+ Awaitable 기반 비동기 처리
+      - 이벤트 기반 상태 전환
+      - Inspector 디버깅 도구
+      - 동기/비동기 하이브리드 인터페이스
+    status: "완료 (100%)"
+
+  - name: GameFlow System
+    path: Assets/_Project/Scripts/Core/Managers
+    description: "게임 흐름 관리 FSM"
+    states:
+      - Preload
+      - Main
+      - Loading
+      - Ingame
+      - Pause
+      - Menu
+      - Lobby
+    status: "완료 (100%)"
+
+# 게임플레이 시스템
+gameplay_systems:
+  - name: Combat System
+    path: Assets/_Project/Scripts/Gameplay/Combat
+    description: "콤보 기반 전투 시스템"
+    components:
+      - DamageSystem: "데미지 계산 및 적용 (Singleton)"
+      - HealthSystem: "체력 관리"
+      - ComboSystem: "콤보 체인 관리"
+      - HitboxController: "히트박스/허트박스 관리"
+      - AttackAnimationHandler: "공격 애니메이션 연동"
+    dependencies: [GAS, FSM]
+    status: "진행 중 (85%)"
+
+  - name: Player System
+    path: Assets/_Project/Scripts/Gameplay/Player
+    description: "플레이어 캐릭터 시스템"
+    components:
+      - PlayerController: "메인 컨트롤러"
+      - CharacterPhysics: "커스텀 물리 시스템"
+      - InputHandler: "입력 처리"
+      - States: "FSM 상태들 (Idle, Move, Jump, Attack, Dash, Hit, Death)"
+    dependencies: [FSM, Combat]
+    assembly: Player.asmdef
+    status: "진행 중 (85%)"
+
+  - name: Enemy System
+    path: Assets/_Project/Scripts/Gameplay/Enemy
+    description: "적 AI 시스템"
+    components:
+      - EnemyController: "FSM 기반 적 컨트롤러"
+      - EnemyData: "ScriptableObject 기반 데이터"
+      - States: "FSM 상태들 (Idle, Patrol, Chase, Attack, Hit, Death)"
+    dependencies: [FSM, Combat]
+    assembly: Enemy.asmdef
+    status: "완료 (100%)"
+
+# 매니저 시스템
+managers:
+  base_class: SingletonManager<T>
+  base_location: Assets/_Project/Scripts/Core/Utilities/SingletonManager.cs
+
+  initialization_method: OnSingletonAwake()
+
+  lifecycle:
+    - "Awake: SingletonManager가 자동 처리"
+    - "OnSingletonAwake: 초기화 로직 작성"
+    - "Start: 추가 초기화 (필요시)"
+    - "OnDestroy: 정리 작업"
+
+  dont_destroy_on_load: "SingletonManager가 자동 처리"
+
+  list:
+    - name: GameFlowManager
+      path: Assets/_Project/Scripts/Core/Managers/GameFlowManager.cs
+      description: "게임 흐름 FSM 관리"
+      dependencies: [FSM, SceneLoader]
+
+    - name: SceneLoader
+      path: Assets/_Project/Scripts/Core/Managers/SceneLoader.cs
+      description: "씬 로드/언로드 관리"
+      dependencies: [SceneTransitionManager]
+
+    - name: SceneTransitionManager
+      path: Assets/_Project/Scripts/Core/Managers/SceneTransitionManager.cs
+      description: "씬 전환 효과 (페이드 인/아웃)"
+      dependencies: []
+
+    - name: GameResourceManager
+      path: Assets/_Project/Scripts/Core/Managers/GameResourceManager.cs
+      description: "리소스 로딩 및 관리"
+      dependencies: []
+
+# 데이터 구조
+data_structures:
+  base_type: ScriptableObject
+
+  pattern: |
+    // ScriptableObject 기반 데이터 정의
+    [CreateAssetMenu(fileName = "NewData", menuName = "GASPT/Data/...")]
+    public class SomeData : ScriptableObject
+    {
+        [Header("기본 정보")]
+        public string displayName;
+        public Sprite icon;
+
+        [Header("수치")]
+        public float value;
+    }
+
+  examples:
+    - EnemyData: "적 데이터 (체력, 공격력, 속도 등)"
+    - ComboData: "콤보 데이터 (히트박스, 데미지, 타이밍 등)"
+    - SkullData: "스컬 데이터 (능력, 스탯 등)"
+
+# FSM 패턴
+fsm_pattern:
+  base_state_interface: IState
+  base_state_class: BaseState (for gameplay) or GameState (for GameFlow)
+
+  state_lifecycle:
+    synchronous:
+      - OnEnterSync()
+      - OnUpdate(deltaTime)
+      - OnExitSync()
+
+    asynchronous:
+      - OnEnter(cancellationToken)
+      - OnUpdate(deltaTime)
+      - OnExit(cancellationToken)
+
+  hybrid_interface: |
+    // IState는 동기/비동기 모두 지원
+    public interface IState
+    {
+        // 동기 메서드
+        void OnEnterSync();
+        void OnExitSync();
+
+        // 비동기 메서드
+        Awaitable OnEnter(CancellationToken cancellationToken);
+        Awaitable OnExit(CancellationToken cancellationToken);
+
+        // 공통
+        void OnUpdate(float deltaTime);
+    }
+
+  state_naming:
+    pattern: "[Entity][Action]State"
+    examples:
+      - PlayerAttackState
+      - PlayerJumpState
+      - EnemyChaseState
+      - EnemyIdleState
+
+# 물리 시스템
+physics:
+  approach: Transform-based
+  description: "Rigidbody2D 대신 Transform 직접 조작"
+
+  features:
+    - "커스텀 중력"
+    - "정밀한 충돌 감지"
+    - "코요테 타임"
+    - "점프 버퍼"
+    - "자기 자신 충돌 제외"
+
+  collision_detection:
+    method: Physics2D.OverlapBoxAll
+    filter: "자기 자신 Collider 제외"
+    layers: LayerMask 기반
+
+  component: CharacterPhysics
+  location: Assets/_Project/Scripts/Gameplay/Player/CharacterPhysics.cs
+
+# UI 시스템
+ui_system:
+  path: Assets/_Project/Scripts/UI
+
+  architecture: |
+    HUDManager (루트)
+    ├─ PlayerInfoPanel
+    │  ├─ HealthBarUI
+    │  └─ ResourcePanel (골드/다이아)
+    └─ ItemSlotsPanel
+       └─ ItemSlotUI (x4)
+
+  components:
+    - HealthBarUI: "체력바 (보라색 게이지, lerp 애니메이션)"
+    - ItemSlotUI: "아이템/스킬 슬롯 (쿨다운, 개수)"
+    - ResourcePanel: "골드/다이아 표시"
+    - HUDManager: "HUD 전체 관리"
+
+  status: "진행 중 (40%)"
+
+# 이벤트 시스템
+event_system:
+  pattern: C# events
+  usage: |
+    // 이벤트 정의
+    public event Action<DamageData> OnDamaged;
+
+    // 이벤트 발생
+    OnDamaged?.Invoke(damageData);
+
+    // 이벤트 구독
+    healthSystem.OnDamaged += HandleDamage;
+
+    // 이벤트 구독 해제
+    healthSystem.OnDamaged -= HandleDamage;
+
+  best_practices:
+    - "구독 해제 필수 (OnDestroy 등)"
+    - "null 체크 (?.Invoke)"
+    - "직접 참조 대신 이벤트 사용"
+
+# 데미지 시스템
+damage_system:
+  singleton: true
+  class: DamageSystem
+  location: Assets/_Project/Scripts/Gameplay/Combat/Core/DamageSystem.cs
+
+  damage_types:
+    - Physical
+    - Magical
+    - True
+    - Fire
+    - Ice
+    - Lightning
+    - Poison
+    - Dark
+    - Holy
+    - Environmental
+    - Percent
+
+  methods:
+    - ApplyDamage(HealthSystem, DamageData)
+    - ApplyBoxDamage(Vector2 center, Vector2 size, LayerMask, DamageData)
+    - ApplyCircleDamage(Vector2 center, float radius, LayerMask, DamageData)
+
+# 콤보 시스템
+combo_system:
+  class: ComboSystem
+  location: Assets/_Project/Scripts/Gameplay/Combat/Core/ComboSystem.cs
+
+  flow:
+    - "RegisterHit() 호출 → 첫 공격은 StartCombo"
+    - "콤보 윈도우 내 재입력 → AdvanceCombo"
+    - "콤보 인덱스 증가 (0 → 1 → 2)"
+    - "콤보 완료 또는 타임아웃 → ResetCombo"
+
+  events:
+    - OnComboStarted
+    - OnComboAdvanced
+    - OnComboCompleted
+    - OnComboReset
+
+# 씬 관리
+scene_management:
+  bootstrap_flow: |
+    Bootstrap (씬 0)
+      ↓ 매니저 초기화
+    Preload (씬 1)
+      ↓ 리소스 로딩
+    Main (씬 2)
+      ↓ 게임 시작
+    Loading (씬 3, Additive)
+      ↓ 게임플레이 리소스
+    Gameplay (씬 4)
+
+  scenes:
+    - name: Bootstrap
+      index: 0
+      purpose: "게임 진입점, 매니저 초기화"
+
+    - name: Preload
+      index: 1
+      purpose: "Essential + MainMenu 리소스 로딩"
+
+    - name: Main
+      index: 2
+      purpose: "메인 메뉴"
+
+    - name: Loading
+      index: 3
+      purpose: "로딩 화면 (Additive)"
+
+    - name: Gameplay
+      index: 4
+      purpose: "실제 게임플레이"
+
+    - name: Pause
+      index: 5
+      purpose: "일시정지 메뉴 (Additive)"
+
+  manager: SceneLoader
+  transition: SceneTransitionManager (페이드 효과)
+
+# 어셈블리 참조 관계
+assembly_references:
+  FSM.Core:
+    references: []
+    referenced_by: [Player, Combat, Enemy, Core.Managers]
+
+  GAS.Core:
+    references: []
+    referenced_by: [Player, Combat]
+
+  Core.Utilities:
+    references: []
+    referenced_by: [Core.Managers, Combat, Player]
+
+  Combat:
+    references: [GAS.Core, FSM.Core, Core.Utilities]
+    referenced_by: [Player, Enemy, Combat.Demo]
+
+  Player:
+    references: [FSM.Core, Combat]
+    referenced_by: []
+
+  Enemy:
+    references: [FSM.Core, Combat]
+    referenced_by: []
+
+  Combat.Demo:
+    references: [Combat, Player, Enemy, Core.Utilities]
+    referenced_by: []
+
+# 의존성 원칙
+dependency_principles:
+  - "순환 참조 금지"
+  - "고수준 모듈은 저수준 모듈에 의존하지 않음"
+  - "인터페이스를 통한 의존성 역전"
+  - "Core 시스템은 독립적"

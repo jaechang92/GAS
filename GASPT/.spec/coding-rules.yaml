@@ -1,0 +1,267 @@
+# GASPT 코딩 규칙
+# Spec Kit v1.0
+
+# 네이밍 규칙
+naming:
+  variables:
+    style: camelCase
+    no_underscores: true
+    examples:
+      - moveSpeed
+      - jumpForce
+      - maxHealth
+      - isGrounded
+
+  properties:
+    style: PascalCase
+    examples:
+      - MaxHealth
+      - IsAlive
+      - CurrentState
+
+  methods:
+    style: PascalCase
+    examples:
+      - CalculateVelocity
+      - OnStateEnter
+      - UpdateMovement
+
+  classes:
+    style: PascalCase
+    suffix_rules:
+      managers: Manager
+      states: State
+      data: Data
+      systems: System
+      controllers: Controller
+    examples:
+      - GameFlowManager
+      - PlayerAttackState
+      - EnemyData
+      - DamageSystem
+      - PlayerController
+
+  constants:
+    style: PascalCase
+    examples:
+      - MaxComboCount
+      - DefaultFadeDuration
+
+  private_fields:
+    style: camelCase
+    no_leading_underscore: true
+    examples:
+      - "✅ private float moveSpeed"
+      - "❌ private float _moveSpeed"
+      - "❌ private float move_speed"
+
+# 비동기 패턴 (필수)
+async_patterns:
+  required:
+    type: Awaitable
+    namespace: UnityEngine
+    examples:
+      - "public async Awaitable LoadResourceAsync()"
+      - "await Awaitable.NextFrameAsync()"
+      - "await Awaitable.WaitForSecondsAsync(1f)"
+
+  forbidden:
+    - type: IEnumerator
+      reason: "Unity Coroutine 사용 금지"
+    - type: "yield return"
+      reason: "async/await 패턴으로 대체"
+    - namespace: System.Collections
+      reason: "Coroutine 관련 네임스페이스"
+
+  test_patterns:
+    use: "[Test] + async void"
+    avoid: "[UnityTest] + IEnumerator"
+    example: |
+      // ✅ 올바른 방법
+      [Test]
+      public async void TestMethod()
+      {
+          await Awaitable.NextFrameAsync();
+      }
+
+      // ❌ 금지
+      [UnityTest]
+      public IEnumerator TestMethod()
+      {
+          yield return null;
+      }
+
+# Singleton 패턴
+singleton:
+  required_base_class: SingletonManager<T>
+  location: "Assets/_Project/Scripts/Core/Utilities/SingletonManager.cs"
+
+  usage:
+    inheritance: "public class MyManager : SingletonManager<MyManager>"
+    initialization: "protected override void OnSingletonAwake()"
+    access: "MyManager.Instance"
+
+  forbidden:
+    - "수동 Singleton 구현"
+    - "public static Instance { get; private set; }"
+    - "private void Awake() with manual DontDestroyOnLoad"
+
+  example: |
+    // ✅ 올바른 방법
+    using Core;
+
+    public class GameFlowManager : SingletonManager<GameFlowManager>
+    {
+        protected override void OnSingletonAwake()
+        {
+            // 초기화 로직
+        }
+    }
+
+    // ❌ 금지
+    public class GameFlowManager : MonoBehaviour
+    {
+        public static GameFlowManager Instance { get; private set; }
+
+        private void Awake()
+        {
+            if (Instance != null) Destroy(gameObject);
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+    }
+
+# Unity API 버전
+unity_api:
+  version: "2023+"
+  unity6_compatible: true
+
+  use:
+    - FindAnyObjectByType<T>()
+    - rb.linearVelocity
+    - Awaitable.NextFrameAsync()
+    - Awaitable.WaitForSecondsAsync()
+
+  avoid:
+    - api: FindObjectOfType<T>()
+      replacement: FindAnyObjectByType<T>()
+      warning: CS0618
+
+    - api: rb.velocity
+      replacement: rb.linearVelocity
+      warning: CS0618
+
+# 코드 구조
+code_structure:
+  using_order:
+    - System namespaces
+    - UnityEngine namespaces
+    - Third-party namespaces
+    - Custom namespaces
+
+  member_order:
+    - Serialized fields ([SerializeField])
+    - Public properties
+    - Private fields
+    - Unity callbacks (Awake, Start, Update, etc.)
+    - Public methods
+    - Protected methods
+    - Private methods
+
+  method_structure:
+    max_lines: 50
+    prefer_small_methods: true
+
+  file_size:
+    warning_lines: 500
+    action: "500줄 이상이면 파일 분할 고려"
+
+# 주석 규칙
+comments:
+  language: Korean
+  style: |
+    /// <summary>
+    /// 한글로 메서드 설명
+    /// </summary>
+
+  inline_comments: "// 한글 주석 허용"
+
+  examples: |
+    /// <summary>
+    /// 플레이어의 이동 속도를 계산합니다.
+    /// </summary>
+    /// <param name="direction">이동 방향</param>
+    /// <returns>계산된 속도 벡터</returns>
+    public Vector2 CalculateMoveSpeed(Vector2 direction)
+    {
+        // 속도 계산 로직
+        return direction * moveSpeed;
+    }
+
+# Assembly Definition
+assembly_definitions:
+  naming: "[FolderName].asmdef"
+
+  required_for:
+    - "새로운 독립 시스템"
+    - "주요 폴더 (Player, Combat, Enemy 등)"
+    - "플러그인 (GAS_Core, FSM_Core)"
+
+  check_circular_references: true
+
+  existing_assemblies:
+    - Player.asmdef
+    - Combat.asmdef
+    - Combat.Demo.asmdef
+    - Enemy.asmdef
+    - Core.Managers.asmdef
+    - FSM.Core.asmdef
+    - GAS.Core.asmdef
+
+# SOLID 원칙
+solid_principles:
+  - name: SRP (Single Responsibility Principle)
+    description: "하나의 클래스는 하나의 책임만"
+
+  - name: OCP (Open/Closed Principle)
+    description: "확장에는 열려있고 수정에는 닫혀있어야 함"
+
+  - name: LSP (Liskov Substitution Principle)
+    description: "하위 타입은 상위 타입을 대체할 수 있어야 함"
+
+  - name: ISP (Interface Segregation Principle)
+    description: "클라이언트는 사용하지 않는 인터페이스에 의존하지 않아야 함"
+
+  - name: DIP (Dependency Inversion Principle)
+    description: "고수준 모듈은 저수준 모듈에 의존하지 않아야 함"
+
+# 인코딩 설정
+encoding:
+  charset: UTF-8
+  bom: required for .cs files
+  line_endings: CRLF
+  config_files:
+    - .gitattributes
+    - .editorconfig
+
+# 금지 사항
+forbidden:
+  patterns:
+    - "Coroutine (IEnumerator, yield return)"
+    - "수동 Singleton 구현"
+    - "private 필드에 언더스코어(_) 사용"
+    - "Deprecated Unity API (FindObjectOfType, velocity 등)"
+
+  practices:
+    - "500줄 이상의 긴 파일"
+    - "한 메서드에 50줄 이상"
+    - "중복 코드"
+    - "매직 넘버 (상수로 정의)"
+
+# 권장 사항
+recommended:
+  - "ScriptableObject 기반 데이터 관리"
+  - "이벤트 기반 통신 (직접 참조 최소화)"
+  - "컴포넌트 조합 패턴 (Composition over Inheritance)"
+  - "Transform 기반 물리 (Rigidbody2D 최소 사용)"
+  - "Unit Test 작성"
