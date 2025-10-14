@@ -10,7 +10,9 @@
         "Core.Utilities",
         "Core.Enums",
         "Core.Data",
-        "Skull"
+        "Skull",
+        "Enemy",
+        "UI.Menu"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

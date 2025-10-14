@@ -301,7 +301,7 @@ namespace Tests.Demo
                 data.chaseRange = 10f;
                 data.attackRange = 1.5f;
                 data.enablePatrol = true;
-                data.patrolDistance = 3f;
+                data.patrolRange = 3f;
                 data.patrolWaitTime = 1.5f;
                 data.hitboxSize = new Vector2(1.5f, 1.0f);
                 data.hitboxOffset = new Vector2(0.8f, 0f);
