@@ -21,9 +21,15 @@ namespace GUIDValidation
         private int selectedTab = 0;
         private readonly string[] tabNames = { "검증 결과", "중복 GUID", "손상된 참조", "고아 메타파일" };
 
-        // 폴더 선택
+        // 폴더 선택 (기존 방식 - 호환성)
         private List<FolderSelection> assetFolders = new List<FolderSelection>();
         private bool showFolderSelection = true;
+
+        // 에셋 트리 (새 방식)
+        private AssetTreeNode rootNode;
+        private HashSet<string> previouslyScannedPaths = new HashSet<string>();
+        private const string PREF_KEY_SCANNED_PATHS = "GUIDValidator.ScannedPaths";
+        private GUIStyle newLabelStyle;
 
         // UI 스타일
         private GUIStyle headerStyle;
@@ -52,6 +58,36 @@ namespace GUIDValidation
             }
         }
 
+        /// <summary>
+        /// 에셋 트리 노드 (폴더 또는 파일)
+        /// </summary>
+        [System.Serializable]
+        private class AssetTreeNode
+        {
+            public string Path;                     // 전체 경로 (예: "Assets/_Project/Scripts")
+            public string Name;                     // 이름만 (예: "Scripts")
+            public bool IsFolder;                   // 폴더 여부
+            public bool IsSelected;                 // 체크박스 선택 여부
+            public bool IsFoldedOut;                // 펼쳐짐 여부 (폴더만)
+            public bool IsNew;                      // 새로 생성된 항목 여부
+            public List<AssetTreeNode> Children;    // 하위 노드들
+            public int Depth;                       // 들여쓰기 깊이
+
+            public AssetTreeNode(string path, bool isFolder, int depth)
+            {
+                Path = path;
+                Name = System.IO.Path.GetFileName(path);
+                if (string.IsNullOrEmpty(Name))
+                    Name = "Assets";
+                IsFolder = isFolder;
+                IsSelected = true; // 기본적으로 모두 선택
+                IsFoldedOut = depth < 2; // 2단계까지만 기본 펼침
+                IsNew = false;
+                Children = new List<AssetTreeNode>();
+                Depth = depth;
+            }
+        }
+
         #endregion
 
         #region 메뉴 등록
@@ -71,29 +107,93 @@ namespace GUIDValidation
         void OnEnable()
         {
             InitializeStyles();
-            InitializeFolders();
+            LoadPreviouslyScannedPaths();
+            BuildAssetTree();
         }
 
-        private void InitializeFolders()
+        /// <summary>
+        /// 이전에 검사했던 경로 불러오기
+        /// </summary>
+        private void LoadPreviouslyScannedPaths()
         {
-            if (assetFolders.Count > 0)
-                return; // 이미 초기화됨
+            string savedPaths = EditorPrefs.GetString(PREF_KEY_SCANNED_PATHS, "");
+            previouslyScannedPaths.Clear();
 
-            // Assets 하위 1레벨 폴더들 스캔
-            if (System.IO.Directory.Exists("Assets"))
+            if (!string.IsNullOrEmpty(savedPaths))
             {
-                var directories = System.IO.Directory.GetDirectories("Assets");
-                foreach (var dir in directories)
+                string[] paths = savedPaths.Split(';');
+                foreach (string path in paths)
                 {
-                    string folderPath = dir.Replace("\\", "/");
-                    assetFolders.Add(new FolderSelection(folderPath, true)); // 기본적으로 모두 선택
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        previouslyScannedPaths.Add(path);
+                    }
                 }
             }
 
-            // 폴더가 없으면 Assets 자체를 추가
-            if (assetFolders.Count == 0)
+            Debug.Log($"[GUIDValidator] 이전 검사 기록: {previouslyScannedPaths.Count}개 항목");
+        }
+
+        /// <summary>
+        /// 에셋 트리 구축
+        /// </summary>
+        private void BuildAssetTree()
+        {
+            rootNode = new AssetTreeNode("Assets", true, 0);
+            BuildTreeRecursive(rootNode, "Assets", 0);
+            Debug.Log("[GUIDValidator] 에셋 트리 구축 완료");
+        }
+
+        /// <summary>
+        /// 재귀적으로 트리 구축
+        /// </summary>
+        private void BuildTreeRecursive(AssetTreeNode parentNode, string directoryPath, int depth)
+        {
+            if (!System.IO.Directory.Exists(directoryPath))
+                return;
+
+            try
             {
-                assetFolders.Add(new FolderSelection("Assets", true));
+                // 하위 폴더들 추가
+                string[] directories = System.IO.Directory.GetDirectories(directoryPath);
+                foreach (string dir in directories)
+                {
+                    string folderPath = dir.Replace("\\", "/");
+
+                    // .meta 폴더나 숨김 폴더 제외
+                    string folderName = System.IO.Path.GetFileName(folderPath);
+                    if (folderName.StartsWith("."))
+                        continue;
+
+                    var folderNode = new AssetTreeNode(folderPath, true, depth + 1);
+                    folderNode.IsNew = !previouslyScannedPaths.Contains(folderPath);
+                    parentNode.Children.Add(folderNode);
+
+                    // 재귀적으로 하위 폴더 탐색 (최대 5단계까지)
+                    if (depth < 5)
+                    {
+                        BuildTreeRecursive(folderNode, folderPath, depth + 1);
+                    }
+                }
+
+                // 하위 파일들 추가
+                string[] files = System.IO.Directory.GetFiles(directoryPath);
+                foreach (string file in files)
+                {
+                    string filePath = file.Replace("\\", "/");
+
+                    // .meta 파일 제외
+                    if (filePath.EndsWith(".meta"))
+                        continue;
+
+                    var fileNode = new AssetTreeNode(filePath, false, depth + 1);
+                    fileNode.IsNew = !previouslyScannedPaths.Contains(filePath);
+                    parentNode.Children.Add(fileNode);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[GUIDValidator] {directoryPath} 스캔 실패: {e.Message}");
             }
         }
 
@@ -147,6 +247,16 @@ namespace GUIDValidation
                 successStyle = new GUIStyle(EditorStyles.helpBox);
                 successStyle.normal.textColor = new Color(0.3f, 1f, 0.3f);
             }
+
+            if (newLabelStyle == null)
+            {
+                newLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    normal = { textColor = new Color(0.5f, 1f, 0.5f) }, // 연두색
+                    fontSize = 10,
+                    fontStyle = FontStyle.Bold
+                };
+            }
         }
 
         private void DrawHeader()
@@ -160,37 +270,50 @@ namespace GUIDValidation
 
         private void DrawScanControls()
         {
-            // 폴더 선택 UI
+            // 폴더 선택 UI (트리 구조)
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
-            showFolderSelection = EditorGUILayout.Foldout(showFolderSelection, "검증 대상 폴더 선택", true);
+            showFolderSelection = EditorGUILayout.Foldout(showFolderSelection, "검증 대상 폴더/파일 선택 (Export Package 스타일)", true);
 
             if (GUILayout.Button("모두 선택", GUILayout.Width(80)))
             {
-                SelectAllFolders(true);
+                SelectAllTreeNodes(rootNode, true);
             }
 
             if (GUILayout.Button("모두 해제", GUILayout.Width(80)))
             {
-                SelectAllFolders(false);
+                SelectAllTreeNodes(rootNode, false);
+            }
+
+            if (GUILayout.Button("새로고침", GUILayout.Width(80)))
+            {
+                BuildAssetTree();
             }
 
             EditorGUILayout.EndHorizontal();
 
-            if (showFolderSelection)
+            if (showFolderSelection && rootNode != null)
             {
-                folderScrollPosition = EditorGUILayout.BeginScrollView(folderScrollPosition, GUILayout.MaxHeight(150));
+                folderScrollPosition = EditorGUILayout.BeginScrollView(folderScrollPosition, GUILayout.MaxHeight(300));
 
-                int selectedCount = 0;
-                foreach (var folder in assetFolders)
-                {
-                    folder.IsSelected = EditorGUILayout.ToggleLeft($"  {folder.DisplayName}", folder.IsSelected);
-                    if (folder.IsSelected) selectedCount++;
-                }
+                // 트리 루트부터 그리기
+                DrawTreeNode(rootNode);
 
                 EditorGUILayout.EndScrollView();
 
-                EditorGUILayout.LabelField($"선택된 폴더: {selectedCount} / {assetFolders.Count}", EditorStyles.miniLabel);
+                // 통계 표시
+                int selectedCount = CountSelectedNodes(rootNode);
+                int totalCount = CountTotalNodes(rootNode);
+                int newCount = CountNewNodes(rootNode);
+
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField($"선택: {selectedCount} / {totalCount}", EditorStyles.miniLabel);
+                if (newCount > 0)
+                {
+                    GUILayout.FlexibleSpace();
+                    EditorGUILayout.LabelField($"새 항목: {newCount}개", newLabelStyle);
+                }
+                EditorGUILayout.EndHorizontal();
             }
 
             EditorGUILayout.EndVertical();
@@ -217,12 +340,143 @@ namespace GUIDValidation
             EditorGUILayout.Space();
         }
 
-        private void SelectAllFolders(bool selected)
+        /// <summary>
+        /// 트리 노드 재귀적으로 그리기
+        /// </summary>
+        private void DrawTreeNode(AssetTreeNode node)
         {
-            foreach (var folder in assetFolders)
+            if (node == null)
+                return;
+
+            EditorGUILayout.BeginHorizontal();
+
+            // 들여쓰기
+            GUILayout.Space(node.Depth * 16);
+
+            // NEW 라벨 (새 항목인 경우)
+            if (node.IsNew)
             {
-                folder.IsSelected = selected;
+                GUILayout.Label("NEW", newLabelStyle, GUILayout.Width(35));
             }
+            else
+            {
+                GUILayout.Space(35); // 정렬을 위한 공백
+            }
+
+            // 폴더인 경우 접기/펼치기 아이콘
+            if (node.IsFolder && node.Children.Count > 0)
+            {
+                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true, GUILayout.Width(12));
+            }
+            else
+            {
+                GUILayout.Space(12);
+            }
+
+            // 체크박스와 이름
+            bool newSelected = EditorGUILayout.ToggleLeft(
+                node.IsFolder ? $"📁 {node.Name}" : $"📄 {node.Name}",
+                node.IsSelected
+            );
+
+            // 체크박스 변경 시 하위 항목도 일괄 변경
+            if (newSelected != node.IsSelected)
+            {
+                node.IsSelected = newSelected;
+                if (node.IsFolder)
+                {
+                    PropagateSelectionToChildren(node, newSelected);
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            // 하위 항목 그리기 (펼쳐져 있을 때만)
+            if (node.IsFoldedOut && node.Children.Count > 0)
+            {
+                foreach (var child in node.Children)
+                {
+                    DrawTreeNode(child);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 하위 노드들에게 선택 상태 전파
+        /// </summary>
+        private void PropagateSelectionToChildren(AssetTreeNode node, bool isSelected)
+        {
+            foreach (var child in node.Children)
+            {
+                child.IsSelected = isSelected;
+                if (child.IsFolder)
+                {
+                    PropagateSelectionToChildren(child, isSelected);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 모든 트리 노드 선택/해제
+        /// </summary>
+        private void SelectAllTreeNodes(AssetTreeNode node, bool selected)
+        {
+            if (node == null)
+                return;
+
+            node.IsSelected = selected;
+            foreach (var child in node.Children)
+            {
+                SelectAllTreeNodes(child, selected);
+            }
+        }
+
+        /// <summary>
+        /// 선택된 노드 개수 계산
+        /// </summary>
+        private int CountSelectedNodes(AssetTreeNode node)
+        {
+            if (node == null)
+                return 0;
+
+            int count = node.IsSelected ? 1 : 0;
+            foreach (var child in node.Children)
+            {
+                count += CountSelectedNodes(child);
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 전체 노드 개수 계산
+        /// </summary>
+        private int CountTotalNodes(AssetTreeNode node)
+        {
+            if (node == null)
+                return 0;
+
+            int count = 1;
+            foreach (var child in node.Children)
+            {
+                count += CountTotalNodes(child);
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 새 항목 개수 계산
+        /// </summary>
+        private int CountNewNodes(AssetTreeNode node)
+        {
+            if (node == null)
+                return 0;
+
+            int count = node.IsNew ? 1 : 0;
+            foreach (var child in node.Children)
+            {
+                count += CountNewNodes(child);
+            }
+            return count;
         }
 
         private void DrawResultTabs()
@@ -450,15 +704,9 @@ namespace GUIDValidation
 
             try
             {
-                // 선택된 폴더 목록 구성
+                // 선택된 폴더 목록 구성 (트리에서)
                 var selectedFolders = new List<string>();
-                foreach (var folder in assetFolders)
-                {
-                    if (folder.IsSelected)
-                    {
-                        selectedFolders.Add(folder.Path);
-                    }
-                }
+                CollectSelectedFolders(rootNode, selectedFolders);
 
                 // 선택된 폴더가 없으면 경고
                 if (selectedFolders.Count == 0)
@@ -470,11 +718,56 @@ namespace GUIDValidation
                 // 검증 실행
                 lastResult = GUIDValidator.ValidateProject(includePackages, selectedFolders);
                 selectedTab = 0; // 결과 탭으로 이동
+
+                // 검증 완료 후 경로 저장 (다음에 NEW 표시 안 하도록)
+                SaveScannedPaths(rootNode);
             }
             finally
             {
                 isScanning = false;
             }
+        }
+
+        /// <summary>
+        /// 선택된 폴더만 수집
+        /// </summary>
+        private void CollectSelectedFolders(AssetTreeNode node, List<string> selectedFolders)
+        {
+            if (node == null)
+                return;
+
+            // 선택되고 폴더인 경우에만 추가
+            if (node.IsSelected && node.IsFolder)
+            {
+                selectedFolders.Add(node.Path);
+            }
+
+            // 하위 노드도 재귀적으로 검사
+            foreach (var child in node.Children)
+            {
+                CollectSelectedFolders(child, selectedFolders);
+            }
+        }
+
+        /// <summary>
+        /// 검증한 경로들 저장
+        /// </summary>
+        private void SaveScannedPaths(AssetTreeNode node)
+        {
+            if (node == null)
+                return;
+
+            previouslyScannedPaths.Add(node.Path);
+            foreach (var child in node.Children)
+            {
+                SaveScannedPaths(child);
+            }
+
+            // EditorPrefs에 저장
+            string pathsString = string.Join(";", previouslyScannedPaths);
+            EditorPrefs.SetString(PREF_KEY_SCANNED_PATHS, pathsString);
+
+            Debug.Log($"[GUIDValidator] {previouslyScannedPaths.Count}개 경로 저장 완료");
         }
 
         private void FixDuplicateGuids()
