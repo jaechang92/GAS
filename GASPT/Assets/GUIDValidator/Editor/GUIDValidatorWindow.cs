@@ -262,7 +262,7 @@ namespace GUIDValidation
             if (foldoutStyle == null)
             {
                 foldoutStyle = new GUIStyle(EditorStyles.foldout);
-                foldoutStyle.margin = new RectOffset(0, -15, 0, 0); // 오른쪽 여백을 음수로 설정하여 제거
+                foldoutStyle.margin = new RectOffset(0, 0, 0, 0); // 오른쪽 여백을 음수로 설정하여 제거
                 foldoutStyle.padding = new RectOffset(0, 0, 0, 0);
                 foldoutStyle.fixedWidth = 12f;
             }
@@ -375,7 +375,12 @@ namespace GUIDValidation
             // 폴더인 경우 접기/펼치기 아이콘
             if (node.IsFolder && node.Children.Count > 0)
             {
-                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true, foldoutStyle);
+                // Foldout 대신 클릭 가능한 화살표 표시
+                string arrow = node.IsFoldedOut ? "▼" : "▶";
+                if (GUILayout.Button(arrow, EditorStyles.label, GUILayout.Width(12)))
+                {
+                    node.IsFoldedOut = !node.IsFoldedOut;
+                }
             }
             else
             {
