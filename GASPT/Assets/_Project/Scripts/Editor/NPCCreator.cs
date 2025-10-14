@@ -8,14 +8,11 @@ using Gameplay.NPC;
 namespace Editor.Tools
 {
     /// <summary>
-    /// NPC 생성 도구 (간소화 버전)
+    /// NPC 생성 도구 - 빠른 생성 (MenuItem)
     /// Menu: GASPT → NPC Creator
     /// </summary>
     public static class NPCCreator
     {
-        private const string PREFAB_PATH = "Assets/_Project/Prefabs/NPC";
-        private const string DATA_PATH = "Assets/_Project/Resources/NPCData";
-
         #region 메뉴 항목
 
         [MenuItem("GASPT/NPC Creator/Create StoryNPC (마을사람)", priority = 1)]
@@ -26,7 +23,7 @@ namespace Editor.Tools
             try
             {
                 // 1. 폴더 생성
-                EnsureDirectories();
+                NPCCreatorHelper.EnsureDirectories();
 
                 // 2. NPCData 생성
                 var data = CreateStoryNPCData();
@@ -55,8 +52,8 @@ namespace Editor.Tools
                 Debug.Log($"[NPCCreator] StoryNPC 생성 완료!");
                 EditorUtility.DisplayDialog("생성 완료",
                     "StoryNPC가 생성되었습니다.\n" +
-                    $"Data: {DATA_PATH}\n" +
-                    $"Prefab: {PREFAB_PATH}",
+                    $"Data: {NPCCreatorHelper.DATA_PATH}\n" +
+                    $"Prefab: {NPCCreatorHelper.PREFAB_PATH}",
                     "확인");
             }
             finally
@@ -73,7 +70,7 @@ namespace Editor.Tools
             try
             {
                 // 1. 폴더 생성
-                EnsureDirectories();
+                NPCCreatorHelper.EnsureDirectories();
 
                 // 2. NPCData 생성
                 var data = CreateShopNPCData();
@@ -102,8 +99,8 @@ namespace Editor.Tools
                 Debug.Log($"[NPCCreator] ShopNPC 생성 완료!");
                 EditorUtility.DisplayDialog("생성 완료",
                     "ShopNPC가 생성되었습니다.\n" +
-                    $"Data: {DATA_PATH}\n" +
-                    $"Prefab: {PREFAB_PATH}",
+                    $"Data: {NPCCreatorHelper.DATA_PATH}\n" +
+                    $"Prefab: {NPCCreatorHelper.PREFAB_PATH}",
                     "확인");
             }
             finally
@@ -131,8 +128,8 @@ namespace Editor.Tools
         [MenuItem("GASPT/NPC Creator/Open NPC Folder", priority = 20)]
         private static void OpenNPCFolder()
         {
-            EnsureDirectories();
-            EditorUtility.RevealInFinder(PREFAB_PATH);
+            NPCCreatorHelper.EnsureDirectories();
+            EditorUtility.RevealInFinder(NPCCreatorHelper.PREFAB_PATH);
         }
 
         #endregion
@@ -141,7 +138,7 @@ namespace Editor.Tools
 
         private static NPCData CreateStoryNPCData()
         {
-            string path = $"{DATA_PATH}/StoryNPC_VillagerData.asset";
+            string path = $"{NPCCreatorHelper.DATA_PATH}/StoryNPC_VillagerData.asset";
 
             // 기존 파일 확인
             NPCData existing = AssetDatabase.LoadAssetAtPath<NPCData>(path);
@@ -171,7 +168,7 @@ namespace Editor.Tools
 
         private static NPCData CreateShopNPCData()
         {
-            string path = $"{DATA_PATH}/ShopNPC_MerchantData.asset";
+            string path = $"{NPCCreatorHelper.DATA_PATH}/ShopNPC_MerchantData.asset";
 
             // 기존 파일 확인
             NPCData existing = AssetDatabase.LoadAssetAtPath<NPCData>(path);
@@ -204,7 +201,7 @@ namespace Editor.Tools
 
         private static GameObject CreateStoryNPCPrefab(NPCData data)
         {
-            string path = $"{PREFAB_PATH}/StoryNPC_Villager.prefab";
+            string path = $"{NPCCreatorHelper.PREFAB_PATH}/StoryNPC_Villager.prefab";
 
             // 기존 프리팹 삭제
             if (File.Exists(path))
@@ -218,7 +215,7 @@ namespace Editor.Tools
 
             // SpriteRenderer
             SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
-            sr.sprite = CreateTempSprite(new Color(0.3f, 0.6f, 0.9f)); // 파란색
+            sr.sprite = NPCCreatorHelper.CreateTempSprite(new Color(0.3f, 0.6f, 0.9f)); // 파란색
             sr.sortingOrder = 10;
 
             // BoxCollider2D
@@ -248,7 +245,7 @@ namespace Editor.Tools
 
         private static GameObject CreateShopNPCPrefab(NPCData data)
         {
-            string path = $"{PREFAB_PATH}/ShopNPC_Merchant.prefab";
+            string path = $"{NPCCreatorHelper.PREFAB_PATH}/ShopNPC_Merchant.prefab";
 
             // 기존 프리팹 삭제
             if (File.Exists(path))
@@ -262,7 +259,7 @@ namespace Editor.Tools
 
             // SpriteRenderer
             SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
-            sr.sprite = CreateTempSprite(new Color(0.9f, 0.6f, 0.2f)); // 주황색
+            sr.sprite = NPCCreatorHelper.CreateTempSprite(new Color(0.9f, 0.6f, 0.2f)); // 주황색
             sr.sortingOrder = 10;
 
             // BoxCollider2D
@@ -288,50 +285,6 @@ namespace Editor.Tools
 
             Debug.Log($"[NPCCreator] ShopNPC Prefab 생성: {path}");
             return prefab;
-        }
-
-        #endregion
-
-        #region Helper Methods
-
-        private static void EnsureDirectories()
-        {
-            // Prefab 폴더
-            if (!Directory.Exists(PREFAB_PATH))
-            {
-                Directory.CreateDirectory(PREFAB_PATH);
-                Debug.Log($"[NPCCreator] 폴더 생성: {PREFAB_PATH}");
-            }
-
-            // NPCData 폴더
-            if (!Directory.Exists(DATA_PATH))
-            {
-                Directory.CreateDirectory(DATA_PATH);
-                Debug.Log($"[NPCCreator] 폴더 생성: {DATA_PATH}");
-            }
-
-            AssetDatabase.Refresh();
-        }
-
-        private static Sprite CreateTempSprite(Color color)
-        {
-            Texture2D tex = new Texture2D(32, 48);
-            Color[] pixels = new Color[32 * 48];
-
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                pixels[i] = color;
-            }
-
-            tex.SetPixels(pixels);
-            tex.Apply();
-
-            return Sprite.Create(
-                tex,
-                new Rect(0, 0, 32, 48),
-                new Vector2(0.5f, 0f), // Pivot at bottom center
-                32f
-            );
         }
 
         #endregion
