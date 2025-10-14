@@ -5,7 +5,9 @@
         "UI.Core",
         "Core.Enums",
         "Core.Utilities",
-        "Core.Managers"
+        "Core.Managers",
+        "Gameplay.Dialogue",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
