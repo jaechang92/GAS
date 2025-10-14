@@ -19,22 +19,21 @@ namespace Editor.Tools
         private const string SCENE_FOLDER = "Assets/_Project/Scenes";
 
         // 씬 이름 정의 (SceneType Enum과 일치)
+        // 주의: Loading과 Pause는 GameState이므로 포함하지 않음
         private static readonly string[] SCENE_NAMES = new string[]
         {
-            "Bootstrap",  // 0
-            "Preload",    // 1
-            "Main",       // 2
-            "Loading",    // 3
-            "Gameplay",   // 4
-            "Pause"       // 5
+            "Bootstrap",  // 0 - SceneType.Bootstrap
+            "Preload",    // 1 - SceneType.Preload
+            "Main",       // 2 - SceneType.MainMenu (파일명은 Main.unity)
+            "Gameplay",   // 3 - SceneType.Game (파일명은 Gameplay.unity)
+            "Lobby"       // 4 - SceneType.Lobby
         };
 
         private bool createBootstrap = true;
         private bool createPreload = true;
         private bool createMain = true;
-        private bool createLoading = true;
         private bool createGameplay = true;
-        private bool createPause = true;
+        private bool createLobby = true;
 
         private bool addToBuildSettings = true;
         private bool setupSceneObjects = true;
@@ -67,7 +66,8 @@ namespace Editor.Tools
             EditorGUILayout.LabelField("씬 자동 생성 및 설정 도구", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "이 도구는 GASPT 프로젝트의 씬 구조를 자동으로 생성합니다.\n" +
-                "Bootstrap → Preload → Main → Gameplay 흐름에 필요한 모든 씬을 설정합니다.",
+                "Bootstrap → Preload → Main → Gameplay → Lobby 씬을 설정합니다.\n\n" +
+                "※ Loading과 Pause는 GameState이므로 씬으로 생성하지 않습니다.",
                 MessageType.Info
             );
             EditorGUILayout.Space(10);
@@ -80,9 +80,8 @@ namespace Editor.Tools
             createBootstrap = EditorGUILayout.Toggle("Bootstrap (진입점)", createBootstrap);
             createPreload = EditorGUILayout.Toggle("Preload (초기 로딩)", createPreload);
             createMain = EditorGUILayout.Toggle("Main (메인 메뉴)", createMain);
-            createLoading = EditorGUILayout.Toggle("Loading (로딩 화면)", createLoading);
             createGameplay = EditorGUILayout.Toggle("Gameplay (게임플레이)", createGameplay);
-            createPause = EditorGUILayout.Toggle("Pause (일시정지)", createPause);
+            createLobby = EditorGUILayout.Toggle("Lobby (로비)", createLobby);
 
             EditorGUILayout.Space(10);
         }
@@ -147,9 +146,8 @@ namespace Editor.Tools
             if (createBootstrap) createdCount += CreateBootstrapScene() ? 1 : 0;
             if (createPreload) createdCount += CreatePreloadScene() ? 1 : 0;
             if (createMain) createdCount += CreateMainScene() ? 1 : 0;
-            if (createLoading) createdCount += CreateLoadingScene() ? 1 : 0;
             if (createGameplay) createdCount += CreateGameplayScene() ? 1 : 0;
-            if (createPause) createdCount += CreatePauseScene() ? 1 : 0;
+            if (createLobby) createdCount += CreateLobbyScene() ? 1 : 0;
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -278,35 +276,6 @@ namespace Editor.Tools
             return true;
         }
 
-        private bool CreateLoadingScene()
-        {
-            string scenePath = $"{SCENE_FOLDER}/Loading.unity";
-
-            if (File.Exists(scenePath))
-            {
-                Debug.LogWarning($"[SceneSetupTool] Loading 씬이 이미 존재합니다: {scenePath}");
-                return false;
-            }
-
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            if (setupSceneObjects)
-            {
-                // LoadingScreen UI
-                GameObject loadingUI = new GameObject("LoadingScreenUI");
-                Canvas canvas = loadingUI.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 100; // 최상위에 렌더링
-                loadingUI.AddComponent<UnityEngine.UI.CanvasScaler>();
-                loadingUI.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-            }
-
-            EditorSceneManager.SaveScene(scene, scenePath);
-            Debug.Log($"[SceneSetupTool] Loading 씬 생성: {scenePath}");
-
-            return true;
-        }
-
         private bool CreateGameplayScene()
         {
             string scenePath = $"{SCENE_FOLDER}/Gameplay.unity";
@@ -350,13 +319,13 @@ namespace Editor.Tools
             return true;
         }
 
-        private bool CreatePauseScene()
+        private bool CreateLobbyScene()
         {
-            string scenePath = $"{SCENE_FOLDER}/Pause.unity";
+            string scenePath = $"{SCENE_FOLDER}/Lobby.unity";
 
             if (File.Exists(scenePath))
             {
-                Debug.LogWarning($"[SceneSetupTool] Pause 씬이 이미 존재합니다: {scenePath}");
+                Debug.LogWarning($"[SceneSetupTool] Lobby 씬이 이미 존재합니다: {scenePath}");
                 return false;
             }
 
@@ -364,17 +333,31 @@ namespace Editor.Tools
 
             if (setupSceneObjects)
             {
-                // Pause Menu UI
-                GameObject pauseUI = new GameObject("PauseMenuUI");
-                Canvas canvas = pauseUI.AddComponent<Canvas>();
+                // Main Camera
+                CreateCamera("Main Camera");
+
+                // Directional Light
+                CreateDirectionalLight();
+
+                // EventSystem
+                CreateEventSystem();
+
+                // Ground (플랫폼)
+                CreateGround();
+
+                // NPC Spawn Points
+                CreateNPCSpawnPoints();
+
+                // Lobby UI
+                GameObject lobbyUI = new GameObject("LobbyUI");
+                Canvas canvas = lobbyUI.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 50;
-                pauseUI.AddComponent<UnityEngine.UI.CanvasScaler>();
-                pauseUI.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+                lobbyUI.AddComponent<UnityEngine.UI.CanvasScaler>();
+                lobbyUI.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
 
             EditorSceneManager.SaveScene(scene, scenePath);
-            Debug.Log($"[SceneSetupTool] Pause 씬 생성: {scenePath}");
+            Debug.Log($"[SceneSetupTool] Lobby 씬 생성: {scenePath}");
 
             return true;
         }
@@ -449,6 +432,26 @@ namespace Editor.Tools
             GameObject enemy2Spawn = new GameObject("Enemy2Spawn");
             enemy2Spawn.transform.SetParent(spawnPoints.transform);
             enemy2Spawn.transform.position = new Vector3(10f, 2f, 0f);
+        }
+
+        private void CreateNPCSpawnPoints()
+        {
+            GameObject npcSpawnPoints = new GameObject("NPCSpawnPoints");
+
+            // Story NPC Spawn
+            GameObject storyNPCSpawn = new GameObject("StoryNPC_Spawn");
+            storyNPCSpawn.transform.SetParent(npcSpawnPoints.transform);
+            storyNPCSpawn.transform.position = new Vector3(-5f, 1f, 0f);
+
+            // Shop NPC Spawn
+            GameObject shopNPCSpawn = new GameObject("ShopNPC_Spawn");
+            shopNPCSpawn.transform.SetParent(npcSpawnPoints.transform);
+            shopNPCSpawn.transform.position = new Vector3(5f, 1f, 0f);
+
+            // Quest NPC Spawn
+            GameObject questNPCSpawn = new GameObject("QuestNPC_Spawn");
+            questNPCSpawn.transform.SetParent(npcSpawnPoints.transform);
+            questNPCSpawn.transform.position = new Vector3(0f, 1f, 0f);
         }
 
         #endregion
