@@ -117,9 +117,6 @@ namespace ProjectTools
             // 새 폴더 구조 생성
             CreateNewFolderStructure();
 
-            // TODO: Unity에서 안전하게 폴더 이동하는 로직 구현
-            // AssetDatabase.MoveAsset 사용
-
             Debug.Log("폴더 구조 정리가 완료되었습니다!");
         }
     }

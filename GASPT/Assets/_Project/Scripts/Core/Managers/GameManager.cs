@@ -5,7 +5,6 @@ namespace Core.Managers
 {
     /// <summary>
     /// 게임 전체 상태를 관리하는 매니저
-    /// 최소 기능: 점수, 생명, 게임오버 상태 관리
     /// </summary>
     public class GameManager : SingletonManager<GameManager>
     {
@@ -17,6 +16,9 @@ namespace Core.Managers
         [Header("리소스 설정")]
         [SerializeField] private int currentGold = 0;
         [SerializeField] private int currentDiamond = 0;
+
+        [Header("디버그")]
+        [SerializeField] private bool showDebugLog = false;
 
         // 기본 프로퍼티
         public int CurrentLives => currentLives;
@@ -39,7 +41,7 @@ namespace Core.Managers
 
         protected override void OnSingletonAwake()
         {
-            Debug.Log("[GameManager] 게임 매니저 초기화");
+            Log("게임 매니저 초기화");
             InitializeGame();
         }
 
@@ -57,7 +59,7 @@ namespace Core.Managers
             OnGoldChanged?.Invoke(currentGold);
             OnDiamondChanged?.Invoke(currentDiamond);
 
-            Debug.Log($"[GameManager] 게임 초기화 완료 - 생명: {currentLives}, 점수: {currentScore}, 골드: {currentGold}, 다이아: {currentDiamond}");
+            Log($"게임 초기화 완료 - 생명: {currentLives}, 점수: {currentScore}");
         }
 
         /// <summary>
@@ -68,7 +70,7 @@ namespace Core.Managers
             if (!IsGameOver)
             {
                 OnGameStart?.Invoke();
-                Debug.Log("[GameManager] 게임 시작");
+                Log("게임 시작");
             }
         }
 
@@ -81,7 +83,7 @@ namespace Core.Managers
 
             currentScore += Mathf.Max(0, points);
             OnScoreChanged?.Invoke(currentScore);
-            Debug.Log($"[GameManager] 점수 추가: +{points}, 총점: {currentScore}");
+            Log($"점수 추가: +{points}, 총점: {currentScore}");
         }
 
         /// <summary>
@@ -93,12 +95,9 @@ namespace Core.Managers
 
             currentLives = Mathf.Max(0, currentLives - 1);
             OnLivesChanged?.Invoke(currentLives);
-            Debug.Log($"[GameManager] 생명 감소, 남은 생명: {currentLives}");
+            Log($"생명 감소, 남은 생명: {currentLives}");
 
-            if (currentLives <= 0)
-            {
-                TriggerGameOver();
-            }
+            if (currentLives <= 0) TriggerGameOver();
         }
 
         /// <summary>
@@ -108,7 +107,7 @@ namespace Core.Managers
         {
             IsGameOver = true;
             OnGameOver?.Invoke();
-            Debug.Log("[GameManager] 게임 오버!");
+            Log("게임 오버!");
         }
 
         /// <summary>
@@ -117,7 +116,7 @@ namespace Core.Managers
         public void RestartGame()
         {
             InitializeGame();
-            Debug.Log("[GameManager] 게임 재시작");
+            Log("게임 재시작");
         }
 
         #region 리소스 관리
@@ -131,7 +130,6 @@ namespace Core.Managers
 
             currentGold += amount;
             OnGoldChanged?.Invoke(currentGold);
-            Debug.Log($"[GameManager] 골드 추가: +{amount}, 총 골드: {currentGold}");
         }
 
         /// <summary>
@@ -139,15 +137,10 @@ namespace Core.Managers
         /// </summary>
         public bool SpendGold(int amount)
         {
-            if (amount <= 0 || currentGold < amount)
-            {
-                Debug.LogWarning($"[GameManager] 골드가 부족합니다. 필요: {amount}, 보유: {currentGold}");
-                return false;
-            }
+            if (amount <= 0 || currentGold < amount) return false;
 
             currentGold -= amount;
             OnGoldChanged?.Invoke(currentGold);
-            Debug.Log($"[GameManager] 골드 사용: -{amount}, 남은 골드: {currentGold}");
             return true;
         }
 
@@ -158,7 +151,6 @@ namespace Core.Managers
         {
             currentGold = Mathf.Max(0, amount);
             OnGoldChanged?.Invoke(currentGold);
-            Debug.Log($"[GameManager] 골드 설정: {currentGold}");
         }
 
         /// <summary>
@@ -170,7 +162,6 @@ namespace Core.Managers
 
             currentDiamond += amount;
             OnDiamondChanged?.Invoke(currentDiamond);
-            Debug.Log($"[GameManager] 다이아 추가: +{amount}, 총 다이아: {currentDiamond}");
         }
 
         /// <summary>
@@ -178,15 +169,10 @@ namespace Core.Managers
         /// </summary>
         public bool SpendDiamond(int amount)
         {
-            if (amount <= 0 || currentDiamond < amount)
-            {
-                Debug.LogWarning($"[GameManager] 다이아가 부족합니다. 필요: {amount}, 보유: {currentDiamond}");
-                return false;
-            }
+            if (amount <= 0 || currentDiamond < amount) return false;
 
             currentDiamond -= amount;
             OnDiamondChanged?.Invoke(currentDiamond);
-            Debug.Log($"[GameManager] 다이아 사용: -{amount}, 남은 다이아: {currentDiamond}");
             return true;
         }
 
@@ -197,7 +183,6 @@ namespace Core.Managers
         {
             currentDiamond = Mathf.Max(0, amount);
             OnDiamondChanged?.Invoke(currentDiamond);
-            Debug.Log($"[GameManager] 다이아 설정: {currentDiamond}");
         }
 
         /// <summary>
@@ -218,11 +203,9 @@ namespace Core.Managers
 
         #endregion
 
-        // TODO: 차후 구현 예정
-        // - 플레이어 데이터 저장/로드
-        // - 업적 시스템
-        // - 리더보드 연동
-        // - 게임 설정 관리
-        // - 치트 코드 시스템
+        private void Log(string message)
+        {
+            if (showDebugLog) Debug.Log($"[GameManager] {message}");
+        }
     }
 }

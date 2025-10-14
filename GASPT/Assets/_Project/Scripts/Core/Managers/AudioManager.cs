@@ -18,6 +18,9 @@ namespace Core.Managers
         [SerializeField] private float musicVolume = 0.7f;
         [SerializeField] private float sfxVolume = 1f;
 
+        [Header("디버그")]
+        [SerializeField] private bool showDebugLog = false;
+
         // 프로퍼티
         public float MasterVolume
         {
@@ -53,7 +56,7 @@ namespace Core.Managers
 
         protected override void OnSingletonAwake()
         {
-            Debug.Log("[AudioManager] 오디오 매니저 초기화");
+            Log("오디오 매니저 초기화");
             SetupAudioSources();
         }
 
@@ -106,7 +109,7 @@ namespace Core.Managers
 
             musicSource.clip = clip;
             musicSource.Play();
-            Debug.Log($"[AudioManager] 음악 재생: {clip.name}");
+            Log($"음악 재생: {clip.name}");
         }
 
         /// <summary>
@@ -114,11 +117,10 @@ namespace Core.Managers
         /// </summary>
         public void StopMusic()
         {
-            if (musicSource != null)
-            {
-                musicSource.Stop();
-                Debug.Log("[AudioManager] 음악 정지");
-            }
+            if (musicSource == null) return;
+
+            musicSource.Stop();
+            Log("음악 정지");
         }
 
         /// <summary>
@@ -131,12 +133,12 @@ namespace Core.Managers
             if (pause)
             {
                 musicSource.Pause();
-                Debug.Log("[AudioManager] 음악 일시정지");
+                Log("음악 일시정지");
             }
             else
             {
                 musicSource.UnPause();
-                Debug.Log("[AudioManager] 음악 재개");
+                Log("음악 재개");
             }
         }
 
@@ -148,15 +150,12 @@ namespace Core.Managers
             if (sfxSource == null || clip == null) return;
 
             sfxSource.PlayOneShot(clip);
-            Debug.Log($"[AudioManager] 효과음 재생: {clip.name}");
+            Log($"효과음 재생: {clip.name}");
         }
 
-        // TODO: 차후 구현 예정
-        // - 3D 사운드 지원
-        // - 사운드 풀링 시스템
-        // - 오디오 믹서 그룹 지원
-        // - 페이드 인/아웃 효과
-        // - 오디오 설정 저장/로드
-        // - 다중 음악 레이어 지원
+        private void Log(string message)
+        {
+            if (showDebugLog) Debug.Log($"[AudioManager] {message}");
+        }
     }
 }
