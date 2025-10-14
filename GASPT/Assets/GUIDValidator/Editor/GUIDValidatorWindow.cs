@@ -262,7 +262,7 @@ namespace GUIDValidation
             if (foldoutStyle == null)
             {
                 foldoutStyle = new GUIStyle(EditorStyles.foldout);
-                foldoutStyle.margin = new RectOffset(0, 0, 0, 0);
+                foldoutStyle.margin = new RectOffset(0, -15, 0, 0); // 오른쪽 여백을 음수로 설정하여 제거
                 foldoutStyle.padding = new RectOffset(0, 0, 0, 0);
                 foldoutStyle.fixedWidth = 12f;
             }
