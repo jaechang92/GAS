@@ -382,6 +382,9 @@ namespace GUIDValidation
                 GUILayout.Space(12);
             }
 
+            // Foldout과 체크박스 사이 간격
+            GUILayout.Space(5);
+
             // 체크박스와 이름
             bool newSelected = EditorGUILayout.ToggleLeft(
                 node.IsFolder ? $"📁 {node.Name}" : $"📄 {node.Name}",
