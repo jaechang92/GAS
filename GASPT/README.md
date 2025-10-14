@@ -56,13 +56,30 @@ Skul 스타일의 정밀한 플랫포머 물리 (Transform 기반, 3가지 점�
 - [플레이어 설정](docs/getting-started/PlayerSetup.md) - 캐릭터 만들기
 
 ### 개발 문서 💻
-- [현재 진행 상황](docs/development/CurrentStatus.md) - 최신 작업 내용
+- [현재 진행 상황](docs/development/CURRENT_WORK.md) - 최신 작업 내용
+- [리팩토링 계획](docs/development/REFACTORING_PLAN.md) - 리팩토링 진행 현황
 - [개발 로드맵](docs/development/Roadmap.md) - 전체 개발 계획
 - [코딩 가이드라인](docs/development/CodingGuidelines.md) - 코딩 규칙
-- [Skul 시스템 설계](docs/development/SkulSystemDesign.md) - 시스템 상세 설계
 
-### 테스트 & 기타 🧪
-- [테스트 가이드](docs/testing/TestingGuide.md) - 테스트 방법
+### 아키텍처 🏗️
+- [프로젝트 아키텍처](docs/architecture/PROJECT_ARCHITECTURE.md) - 전체 시스템 구조
+- [어셈블리 아키텍처](docs/architecture/ASSEMBLY_ARCHITECTURE.md) - 의존성 구조
+- [아키텍처 다이어그램](docs/architecture/ARCHITECTURE_DIAGRAMS.md) - 시각화 자료
+
+### 가이드 📖
+- [FSM-GAS 통합](docs/guides/FSM_GAS_INTEGRATION_SUMMARY.md) - FSM과 GAS 연동
+- [UI 시스템 설계](docs/guides/UI_SYSTEM_DESIGN.md) - UI 구조와 사용법
+- [게임 플로우 가이드](docs/guides/FULL_GAME_FLOW_GUIDE.md) - 게임 흐름 관리
+- [Prefab 생성 가이드](docs/guides/PREFAB_CREATION_GUIDE.md) - Prefab 제작 방법
+
+### 레퍼런스 📝
+- [빠른 참조](docs/reference/QUICK_REFERENCE.md) - 자주 사용하는 기능 모음
+
+### 테스트 🧪
+- [테스트 가이드](docs/testing/TESTING_GUIDE.md) - 테스트 방법
+- [테스트 리포트](docs/testing/TEST_REPORT.md) - 테스트 결과
+
+### 기타 🔧
 - [인코딩 가이드](docs/infrastructure/EncodingGuide.md) - 한글 인코딩
 - [작업 일지](docs/archive/Worklog.md) - 일별 작업 기록
 
@@ -113,6 +130,9 @@ GASPT/
 └── docs/                           # 프로젝트 문서
     ├── getting-started/            # 시작 가이드
     ├── development/                # 개발 문서
+    ├── architecture/               # 아키텍처 문서
+    ├── guides/                     # 사용 가이드
+    ├── reference/                  # 레퍼런스
     ├── testing/                    # 테스트 가이드
     ├── infrastructure/             # 인프라 문서
     └── archive/                    # 작업 히스토리
@@ -200,7 +220,7 @@ stateMachine.RequestTransition("Attack");
 
 ### 개발자라면
 1. [코딩 가이드라인](docs/development/CodingGuidelines.md) 숙지
-2. [현재 진행 상황](docs/development/CurrentStatus.md) 확인
+2. [현재 진행 상황](docs/development/CURRENT_WORK.md) 확인
 3. [개발 로드맵](docs/development/Roadmap.md)에서 작업 선택
 
 ### 테스터라면
@@ -237,7 +257,7 @@ stateMachine.RequestTransition("Attack");
 
 ### 개발자
 → [코딩 가이드라인](docs/development/CodingGuidelines.md) 숙지
-→ [현재 진행 상황](docs/development/CurrentStatus.md) 확인
+→ [현재 진행 상황](docs/development/CURRENT_WORK.md) 확인
 → [개발 로드맵](docs/development/Roadmap.md)에서 작업 선택
 
 ### 신규 사용자

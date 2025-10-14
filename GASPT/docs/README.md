@@ -25,15 +25,68 @@
 
 | 문서 | 설명 | 대상 |
 |------|------|------|
-| **[현재 진행 상황](development/CurrentStatus.md)** | 최신 작업 내용 및 다음 작업 | 모든 개발자 |
+| **[현재 진행 상황](development/CURRENT_WORK.md)** | 최신 작업 내용 및 다음 작업 | 모든 개발자 |
+| **[리팩토링 계획](development/REFACTORING_PLAN.md)** | 리팩토링 작업 진행 현황 | 모든 개발자 |
+| **[씬 리팩토링 노트](development/SCENE_REFACTORING_NOTES.md)** | SceneType 분리 내역 | 시스템 개발자 |
 | **[개발 로드맵](development/Roadmap.md)** | 전체 개발 계획 및 마일스톤 | 프로젝트 매니저 |
 | **[코딩 가이드라인](development/CodingGuidelines.md)** | 코딩 규칙 및 금지 사항 | 모든 개발자 |
 | **[Skul 시스템 설계](development/SkulSystemDesign.md)** | Skul 스타일 구현 마스터플랜 | 시스템 설계자 |
 
 **필수 문서**:
 - 개발 시작 전: **CodingGuidelines** ⚠️
-- 작업 시작 전: **CurrentStatus** ✅
+- 작업 시작 전: **CURRENT_WORK** ✅
+- 리팩토링 시: **REFACTORING_PLAN** 🔧
 - 기획 검토 시: **SkulSystemDesign** 📋
+
+---
+
+### 🏗️ 아키텍처 (architecture/)
+> 프로젝트 구조 및 설계 문서
+
+| 문서 | 설명 | 대상 |
+|------|------|------|
+| **[프로젝트 아키텍처](architecture/PROJECT_ARCHITECTURE.md)** | 전체 시스템 구조 및 5-Layer 설계 | 시스템 아키텍트 |
+| **[어셈블리 아키텍처](architecture/ASSEMBLY_ARCHITECTURE.md)** | Assembly Definition 의존성 구조 | 시스템 개발자 |
+| **[어셈블리 검증 리포트](architecture/ASSEMBLY_VALIDATION_REPORT.md)** | 의존성 검증 결과 | 시스템 개발자 |
+| **[아키텍처 다이어그램](architecture/ARCHITECTURE_DIAGRAMS.md)** | 시각화 자료 및 다이어그램 | 모든 개발자 |
+
+**활용 시나리오**:
+- 새 시스템 설계 시: **PROJECT_ARCHITECTURE** 📐
+- 의존성 확인 시: **ASSEMBLY_ARCHITECTURE** 🔗
+- 구조 이해 시: **ARCHITECTURE_DIAGRAMS** 📊
+
+---
+
+### 📖 가이드 (guides/)
+> 기능별 사용 가이드 및 튜토리얼
+
+| 문서 | 설명 | 대상 |
+|------|------|------|
+| **[FSM-GAS 통합](guides/FSM_GAS_INTEGRATION_SUMMARY.md)** | FSM과 GAS 연동 방법 | 게임플레이 개발자 |
+| **[UI 시스템 설계](guides/UI_SYSTEM_DESIGN.md)** | Panel 기반 UI 구조와 사용법 | UI 개발자 |
+| **[게임 플로우 가이드](guides/FULL_GAME_FLOW_GUIDE.md)** | 게임 흐름 및 상태 관리 | 게임플레이 개발자 |
+| **[게임 데모 가이드](guides/FULL_GAME_DEMO_GUIDE.md)** | 전체 게임 데모 실행 방법 | 테스터 |
+| **[Prefab 생성 가이드](guides/PREFAB_CREATION_GUIDE.md)** | Prefab 제작 및 설정 방법 | 콘텐츠 제작자 |
+| **[Prefab Maker 사용법](guides/PREFAB_MAKER_USAGE.md)** | 자동 Prefab 생성 도구 | 콘텐츠 제작자 |
+
+**추천 순서**:
+- UI 개발: **UI_SYSTEM_DESIGN** → **FULL_GAME_FLOW_GUIDE**
+- 게임플레이: **FSM_GAS_INTEGRATION_SUMMARY** → **FULL_GAME_FLOW_GUIDE**
+- 콘텐츠 제작: **PREFAB_CREATION_GUIDE** → **PREFAB_MAKER_USAGE**
+
+---
+
+### 📝 레퍼런스 (reference/)
+> 빠른 참조 자료
+
+| 문서 | 설명 | 대상 |
+|------|------|------|
+| **[빠른 참조](reference/QUICK_REFERENCE.md)** | 자주 사용하는 기능 및 API 모음 | 모든 개발자 |
+
+**활용법**:
+- 개발 중 빠른 API 찾기
+- 코드 스니펫 참조
+- 일반적인 패턴 확인
 
 ---
 
@@ -42,7 +95,9 @@
 
 | 문서 | 설명 | 대상 |
 |------|------|------|
-| **[테스트 가이드](testing/TestingGuide.md)** | 전체 테스트 방법 및 절차 | 테스터, QA |
+| **[테스트 가이드](testing/TESTING_GUIDE.md)** | 전체 테스트 방법 및 절차 | 테스터, QA |
+| **[테스트 리포트](testing/TEST_REPORT.md)** | 테스트 결과 및 이슈 | 테스터, QA |
+| **[레거시 테스트 가이드](testing/TestingGuide.md)** | 이전 테스트 문서 (참고용) | 참고 |
 
 **테스트 범위**:
 - ✅ 단위 테스트 (Unit Tests)
@@ -121,6 +176,9 @@
 ### 문서 위치
 - **시작 가이드**: `getting-started/` - 신규 사용자 대상
 - **개발 문서**: `development/` - 개발자 대상
+- **아키텍처**: `architecture/` - 시스템 구조 문서
+- **가이드**: `guides/` - 기능별 사용 가이드
+- **레퍼런스**: `reference/` - 빠른 참조 자료
 - **테스트 문서**: `testing/` - 테스터 대상
 - **인프라 문서**: `infrastructure/` - 환경 설정 관련
 - **히스토리**: `archive/` - 과거 기록
@@ -142,19 +200,23 @@
 ## 🔍 빠른 검색
 
 ### 자주 찾는 문서
-- **지금 뭘 해야 하나요?** → [CurrentStatus.md](development/CurrentStatus.md)
+- **지금 뭘 해야 하나요?** → [CURRENT_WORK.md](development/CURRENT_WORK.md)
 - **어떻게 시작하나요?** → [QuickStart.md](getting-started/QuickStart.md)
 - **코딩 규칙이 뭐죠?** → [CodingGuidelines.md](development/CodingGuidelines.md)
+- **아키텍처가 궁금해요** → [PROJECT_ARCHITECTURE.md](architecture/PROJECT_ARCHITECTURE.md)
+- **UI 어떻게 만드나요?** → [UI_SYSTEM_DESIGN.md](guides/UI_SYSTEM_DESIGN.md)
 - **한글이 깨져요!** → [EncodingGuide.md](infrastructure/EncodingGuide.md)
-- **테스트 어떻게 하나요?** → [TestingGuide.md](testing/TestingGuide.md)
+- **테스트 어떻게 하나요?** → [TESTING_GUIDE.md](testing/TESTING_GUIDE.md)
 - **전체 계획이 궁금해요** → [Roadmap.md](development/Roadmap.md)
 
 ### 키워드 검색
-- **GAS** → ProjectOverview.md, SkulSystemDesign.md
-- **FSM** → ProjectOverview.md, SkulSystemDesign.md
-- **Combat** → CurrentStatus.md, Roadmap.md
-- **CharacterPhysics** → CurrentStatus.md, ProjectOverview.md
-- **테스트** → TestingGuide.md, CurrentStatus.md
+- **GAS** → FSM_GAS_INTEGRATION_SUMMARY.md, ProjectOverview.md
+- **FSM** → FSM_GAS_INTEGRATION_SUMMARY.md, FULL_GAME_FLOW_GUIDE.md
+- **UI** → UI_SYSTEM_DESIGN.md, QUICK_REFERENCE.md
+- **아키텍처** → PROJECT_ARCHITECTURE.md, ASSEMBLY_ARCHITECTURE.md
+- **리팩토링** → REFACTORING_PLAN.md, SCENE_REFACTORING_NOTES.md
+- **Combat** → CURRENT_WORK.md, Roadmap.md
+- **테스트** → TESTING_GUIDE.md, TEST_REPORT.md
 - **인코딩** → EncodingGuide.md
 
 ---
@@ -163,16 +225,19 @@
 
 ### 문서 개수
 - **시작 가이드**: 4개
-- **개발 문서**: 4개
-- **테스트 문서**: 1개
-- **인프라 문서**: 1개
+- **개발 문서**: 6개
+- **아키텍처**: 4개
+- **가이드**: 6개
+- **레퍼런스**: 1개
+- **테스트 문서**: 3개
+- **인프라 문서**: 2개
 - **히스토리**: 1개
-- **전체**: 11개 문서
+- **전체**: 27개 문서
 
 ### 최근 업데이트
-- **2025-10-04**: CurrentStatus.md, Worklog.md 업데이트
-- **2025-10-04**: 문서 재구성 완료 (11개 문서)
-- **2025-10-03**: Worklog.md 추가 (HUD 시스템)
+- **2025-10-15**: 문서 구조 대폭 개편 (27개 문서)
+- **2025-10-15**: Phase 2 리팩토링 완료 (GameEvents, Panel Preload, SceneType 분리)
+- **2025-10-15**: 아키텍처, 가이드, 레퍼런스 섹션 추가
 
 ---
 
@@ -211,5 +276,5 @@
 
 ---
 
-*최종 업데이트: 2025-10-04*
+*최종 업데이트: 2025-10-15*
 *GASPT 프로젝트 문서팀*
