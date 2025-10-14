@@ -1,180 +1,477 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 using Core;
-using System.Linq;
+using UI.Core;
 
 namespace Core.Managers
 {
     /// <summary>
-    /// UI 관리 매니저
-    /// 최소 기능: UI 패널 표시/숨김, 로딩 오버레이
+    /// 모든 UI Panel을 관리하는 중앙 매니저
+    /// Panel Prefab 로딩, 생명주기 관리, Stack 관리
     /// </summary>
     public class UIManager : SingletonManager<UIManager>
     {
-        [Header("메인 캔버스")]
-        [SerializeField] private Canvas mainCanvas;
+        [Header("Prefab 경로 설정")]
+        [SerializeField] private string panelPrefabPath = "UI/Panels/";
 
-        [Header("공통 UI")]
-        [SerializeField] private GameObject loadingOverlay;
+        [Header("Layer Canvas")]
+        [SerializeField] private Canvas backgroundCanvas;
+        [SerializeField] private Canvas normalCanvas;
+        [SerializeField] private Canvas popupCanvas;
+        [SerializeField] private Canvas systemCanvas;
+        [SerializeField] private Canvas transitionCanvas;
 
-        // 현재 활성 UI 패널들
-        private HashSet<GameObject> activePanels = new HashSet<GameObject>();
+        [Header("디버그")]
+        [SerializeField] private bool showDebugLog = true;
 
-        // 이벤트
-        public event System.Action<string> OnUIChanged;
+        // Panel 캐시 (PanelType별로 인스턴스 보관)
+        private Dictionary<PanelType, BasePanel> panelCache = new Dictionary<PanelType, BasePanel>();
+
+        // Panel Stack (뒤로가기 기능)
+        private Stack<BasePanel> panelStack = new Stack<BasePanel>();
+
+        // 현재 열려있는 Panel들
+        private HashSet<BasePanel> openPanels = new HashSet<BasePanel>();
 
         protected override void OnSingletonAwake()
         {
-            Debug.Log("[UIManager] UI 매니저 초기화");
-            SetupMainCanvas();
+            CreateLayerCanvases();
+            Log("[UIManager] 초기화 완료");
         }
 
         /// <summary>
-        /// 메인 캔버스 설정
+        /// Layer별 Canvas 생성
         /// </summary>
-        private void SetupMainCanvas()
+        private void CreateLayerCanvases()
         {
-            if (mainCanvas == null)
+            backgroundCanvas = CreateCanvas("BackgroundCanvas", UILayer.Background);
+            normalCanvas = CreateCanvas("NormalCanvas", UILayer.Normal);
+            popupCanvas = CreateCanvas("PopupCanvas", UILayer.Popup);
+            systemCanvas = CreateCanvas("SystemCanvas", UILayer.System);
+            transitionCanvas = CreateCanvas("TransitionCanvas", UILayer.Transition);
+
+            Log("[UIManager] Layer Canvas 생성 완료");
+        }
+
+        /// <summary>
+        /// Canvas 생성 헬퍼
+        /// </summary>
+        private Canvas CreateCanvas(string name, UILayer layer)
+        {
+            GameObject canvasObj = new GameObject(name);
+            canvasObj.transform.SetParent(transform);
+
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = (int)layer;
+
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            return canvas;
+        }
+
+        /// <summary>
+        /// Panel 열기 (제네릭)
+        /// </summary>
+        public async Awaitable<T> OpenPanel<T>(bool addToStack = false) where T : BasePanel
+        {
+            PanelType panelType = GetPanelTypeFromClass<T>();
+            BasePanel panel = await OpenPanel(panelType, addToStack);
+            return panel as T;
+        }
+
+        /// <summary>
+        /// Panel 열기 (PanelType)
+        /// </summary>
+        public async Awaitable<BasePanel> OpenPanel(PanelType panelType, bool addToStack = false)
+        {
+            Log($"[UIManager] Panel 열기 시도: {panelType}");
+
+            // 캐시에서 찾기
+            if (!panelCache.TryGetValue(panelType, out BasePanel panel))
             {
-                GameObject canvasGO = new GameObject("MainCanvas");
-                canvasGO.transform.SetParent(transform);
-
-                mainCanvas = canvasGO.AddComponent<Canvas>();
-                mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                mainCanvas.sortingOrder = 0;
-
-                canvasGO.AddComponent<UnityEngine.UI.CanvasScaler>();
-                canvasGO.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-
-                Debug.Log("[UIManager] 메인 캔버스 생성 완료");
+                // 없으면 로드
+                panel = await LoadPanel(panelType);
+                if (panel == null)
+                {
+                    Debug.LogError($"[UIManager] Panel을 로드할 수 없습니다: {panelType}");
+                    return null;
+                }
+                panelCache[panelType] = panel;
             }
+
+            // Stack에 추가
+            if (addToStack)
+            {
+                panelStack.Push(panel);
+                Log($"[UIManager] Panel을 Stack에 추가: {panelType}");
+            }
+
+            // Panel 열기 (단순 활성화)
+            panel.Open();
+            openPanels.Add(panel);
+
+            Log($"[UIManager] Panel 열기 완료: {panelType}");
+            return panel;
         }
 
         /// <summary>
-        /// UI 패널 활성화/비활성화
+        /// Panel 미리 로드 (생성만 하고 Open하지 않음)
+        /// 첫 Open 시 지연을 없애기 위해 사용
         /// </summary>
-        public void SetUIActive(GameObject uiPanel, bool active)
+        public async Awaitable PreloadPanel(PanelType panelType)
         {
-            if (uiPanel == null) return;
-
-            if (active)
+            // 이미 캐시에 있으면 스킵
+            if (panelCache.ContainsKey(panelType))
             {
-                activePanels.Add(uiPanel);
-                uiPanel.SetActive(true);
-                OnUIChanged?.Invoke($"{uiPanel.name}_Opened");
-                Debug.Log($"[UIManager] UI 활성화: {uiPanel.name}");
+                Log($"[UIManager] 이미 로드됨: {panelType}");
+                return;
+            }
+
+            Log($"[UIManager] Panel Preload 시작: {panelType}");
+
+            // LoadPanel만 호출 (Instantiate만 하고 Open은 안 함)
+            BasePanel panel = await LoadPanel(panelType);
+            if (panel != null)
+            {
+                panelCache[panelType] = panel;
+                Log($"[UIManager] Panel Preload 완료: {panelType}");
             }
             else
             {
-                activePanels.Remove(uiPanel);
-                uiPanel.SetActive(false);
-                OnUIChanged?.Invoke($"{uiPanel.name}_Closed");
-                Debug.Log($"[UIManager] UI 비활성화: {uiPanel.name}");
+                Debug.LogError($"[UIManager] Panel Preload 실패: {panelType}");
             }
         }
 
         /// <summary>
-        /// 모든 UI 패널 숨김
+        /// 여러 Panel을 한번에 Preload
         /// </summary>
-        public void HideAllUI()
+        public async Awaitable PreloadPanels(PanelType[] panelTypes)
         {
-            foreach (var panel in activePanels.ToArray())
+            Log($"[UIManager] {panelTypes.Length}개 Panel Preload 시작");
+
+            foreach (var panelType in panelTypes)
             {
-                panel.SetActive(false);
+                await PreloadPanel(panelType);
             }
 
-            activePanels.Clear();
-            OnUIChanged?.Invoke("AllUI_Closed");
-            Debug.Log("[UIManager] 모든 UI 숨김");
+            Log($"[UIManager] 전체 Panel Preload 완료");
         }
 
         /// <summary>
-        /// 로딩 오버레이 표시/숨김
+        /// Panel 닫기 (제네릭)
         /// </summary>
-        public void ShowLoadingOverlay(bool show)
+        public async Awaitable ClosePanel<T>() where T : BasePanel
         {
-            if (loadingOverlay == null)
+            PanelType panelType = GetPanelTypeFromClass<T>();
+            await ClosePanel(panelType);
+        }
+
+        /// <summary>
+        /// Panel 닫기 (PanelType)
+        /// </summary>
+        public async Awaitable ClosePanel(PanelType panelType)
+        {
+            Log($"[UIManager] Panel 닫기 시도: {panelType}");
+
+            if (!panelCache.TryGetValue(panelType, out BasePanel panel))
             {
-                CreateLoadingOverlay();
+                Debug.LogWarning($"[UIManager] Panel을 찾을 수 없습니다: {panelType}");
+                return;
             }
 
-            SetUIActive(loadingOverlay, show);
+            // Panel 닫기 (단순 비활성화)
+            panel.Close();
+            openPanels.Remove(panel);
+
+            // Stack에서 제거 (있다면)
+            if (panelStack.Contains(panel))
+            {
+                // Stack을 임시 리스트로 변환 후 제거
+                List<BasePanel> tempList = new List<BasePanel>(panelStack);
+                tempList.Remove(panel);
+                panelStack.Clear();
+                foreach (var p in tempList)
+                {
+                    panelStack.Push(p);
+                }
+            }
+
+            Log($"[UIManager] Panel 닫기 완료: {panelType}");
         }
 
         /// <summary>
-        /// 기본 로딩 오버레이 생성
+        /// 뒤로가기 (Stack 최상위 Panel 닫기)
         /// </summary>
-        private void CreateLoadingOverlay()
+        public async Awaitable GoBack()
         {
-            if (mainCanvas == null) return;
+            if (panelStack.Count > 0)
+            {
+                BasePanel panel = panelStack.Pop();
+                panel.Close();
+                openPanels.Remove(panel);
 
-            GameObject overlayGO = new GameObject("LoadingOverlay");
-            overlayGO.transform.SetParent(mainCanvas.transform, false);
-
-            // 전체 화면을 덮는 이미지
-            var rectTransform = overlayGO.AddComponent<RectTransform>();
-            rectTransform.anchorMin = Vector2.zero;
-            rectTransform.anchorMax = Vector2.one;
-            rectTransform.sizeDelta = Vector2.zero;
-            rectTransform.anchoredPosition = Vector2.zero;
-
-            var image = overlayGO.AddComponent<UnityEngine.UI.Image>();
-            image.color = new Color(0, 0, 0, 0.8f); // 반투명 검정
-
-            // 로딩 텍스트
-            GameObject textGO = new GameObject("LoadingText");
-            textGO.transform.SetParent(overlayGO.transform, false);
-
-            var textRect = textGO.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.anchoredPosition = Vector2.zero;
-
-            var text = textGO.AddComponent<UnityEngine.UI.Text>();
-            text.text = "Loading...";
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = 24;
-            text.color = Color.white;
-            text.alignment = TextAnchor.MiddleCenter;
-
-            loadingOverlay = overlayGO;
-            loadingOverlay.SetActive(false);
-
-            Debug.Log("[UIManager] 로딩 오버레이 생성 완료");
+                Log($"[UIManager] 뒤로가기: {panel.PanelType} 닫음");
+            }
+            else
+            {
+                Log("[UIManager] 뒤로가기: Stack이 비어있습니다.");
+            }
         }
 
         /// <summary>
-        /// 메인 캔버스 가져오기
+        /// 모든 Panel 닫기
         /// </summary>
-        public Canvas GetMainCanvas()
+        public async Awaitable CloseAllPanels(UILayer? targetLayer = null)
         {
-            return mainCanvas;
+            Log($"[UIManager] 모든 Panel 닫기 (Layer: {targetLayer?.ToString() ?? "All"})");
+
+            List<BasePanel> panelsToClose = new List<BasePanel>(openPanels);
+
+            foreach (var panel in panelsToClose)
+            {
+                if (targetLayer == null || panel.Layer == targetLayer)
+                {
+                    panel.Close();
+                    openPanels.Remove(panel);
+                }
+            }
+
+            panelStack.Clear();
+            Log("[UIManager] 모든 Panel 닫기 완료");
         }
 
         /// <summary>
-        /// 활성 UI 개수 확인
+        /// Panel이 열려있는지 확인
         /// </summary>
-        public int GetActiveUICount()
+        public bool IsPanelOpen(PanelType panelType)
         {
-            return activePanels.Count;
+            if (panelCache.TryGetValue(panelType, out BasePanel panel))
+            {
+                return panel.IsOpen;
+            }
+            return false;
         }
 
         /// <summary>
-        /// 특정 UI가 활성화되어 있는지 확인
+        /// Panel 인스턴스 가져오기
         /// </summary>
-        public bool IsUIActive(GameObject uiPanel)
+        public T GetPanel<T>(PanelType panelType) where T : BasePanel
         {
-            return activePanels.Contains(uiPanel);
+            if (panelCache.TryGetValue(panelType, out BasePanel panel))
+            {
+                return panel as T;
+            }
+            return null;
         }
 
-        // TODO: 차후 구현 예정
-        // - UI 스택 관리 (뒤로가기 기능)
-        // - 애니메이션 효과
-        // - 알림 패널 시스템
-        // - 확인 대화상자
-        // - UI 사운드 효과
-        // - 해상도별 UI 스케일링
-        // - UI 테마 시스템
+        /// <summary>
+        /// Panel 언로드 (메모리에서 제거)
+        /// </summary>
+        public void UnloadPanel(PanelType panelType)
+        {
+            if (!panelCache.TryGetValue(panelType, out BasePanel panel))
+            {
+                Log($"[UIManager] Unload 실패: Panel이 로드되지 않음 - {panelType}");
+                return;
+            }
+
+            // 열려있는 Panel은 Unload 불가
+            if (panel.IsOpen)
+            {
+                Debug.LogWarning($"[UIManager] 열려있는 Panel은 Unload할 수 없습니다: {panelType}");
+                return;
+            }
+
+            // GameObject 파괴 및 캐시에서 제거
+            Destroy(panel.gameObject);
+            panelCache.Remove(panelType);
+
+            Log($"[UIManager] Panel Unload 완료: {panelType}");
+        }
+
+        /// <summary>
+        /// 여러 Panel을 한번에 Unload
+        /// </summary>
+        public void UnloadPanels(PanelType[] panelTypes)
+        {
+            Log($"[UIManager] {panelTypes.Length}개 Panel Unload 시작");
+
+            foreach (var panelType in panelTypes)
+            {
+                UnloadPanel(panelType);
+            }
+
+            Log($"[UIManager] 전체 Panel Unload 완료");
+        }
+
+        /// <summary>
+        /// Panel Prefab 로드
+        /// </summary>
+        private async Awaitable<BasePanel> LoadPanel(PanelType panelType)
+        {
+            string path = $"{panelPrefabPath}{panelType}Panel";
+            Log($"[UIManager] Panel Prefab 로드 시도: {path}");
+
+            // Resources.LoadAsync 사용
+            ResourceRequest request = Resources.LoadAsync<GameObject>(path);
+
+            while (!request.isDone)
+            {
+                await Awaitable.NextFrameAsync();
+            }
+
+            GameObject prefab = request.asset as GameObject;
+            if (prefab == null)
+            {
+                Debug.LogError($"[UIManager] Panel Prefab을 찾을 수 없습니다: {path}");
+                return null;
+            }
+
+            // Prefab에서 BasePanel 컴포넌트 확인
+            BasePanel panelComponent = prefab.GetComponent<BasePanel>();
+            if (panelComponent == null)
+            {
+                Debug.LogError($"[UIManager] Prefab에 BasePanel 컴포넌트가 없습니다: {path}");
+                return null;
+            }
+
+            // 적절한 Layer Canvas 하위에 인스턴스화
+            Canvas parentCanvas = GetCanvasForLayer(panelComponent.Layer);
+            GameObject instance = Instantiate(prefab, parentCanvas.transform, false);
+
+            // Instantiate 직후 명시적으로 비활성화 (Prefab 상태와 무관하게)
+            instance.SetActive(false);
+            instance.name = $"{panelType}Panel";
+
+            BasePanel panel = instance.GetComponent<BasePanel>();
+            Log($"[UIManager] Panel Prefab 로드 완료 (비활성 상태): {panelType}");
+
+            return panel;
+        }
+
+        /// <summary>
+        /// Layer에 맞는 Canvas 반환
+        /// </summary>
+        private Canvas GetCanvasForLayer(UILayer layer)
+        {
+            return layer switch
+            {
+                UILayer.Background => backgroundCanvas,
+                UILayer.Normal => normalCanvas,
+                UILayer.Popup => popupCanvas,
+                UILayer.System => systemCanvas,
+                UILayer.Transition => transitionCanvas,
+                _ => normalCanvas
+            };
+        }
+
+        /// <summary>
+        /// 클래스 타입에서 PanelType 추출
+        /// </summary>
+        private PanelType GetPanelTypeFromClass<T>() where T : BasePanel
+        {
+            // Type 이름에서 "Panel" 제거
+            string typeName = typeof(T).Name.Replace("Panel", "");
+
+            // PanelType enum으로 변환
+            if (System.Enum.TryParse(typeName, out PanelType result))
+            {
+                return result;
+            }
+
+            Debug.LogWarning($"[UIManager] PanelType을 찾을 수 없습니다: {typeName}");
+            return PanelType.None;
+        }
+
+        private void Update()
+        {
+            // ESC 키 처리
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                HandleEscapeKey();
+            }
+        }
+
+        /// <summary>
+        /// ESC 키 처리
+        /// closeOnEscape가 true인 Panel 중 Layer가 가장 높은 것을 닫음
+        /// </summary>
+        private void HandleEscapeKey()
+        {
+            BasePanel targetPanel = null;
+            int highestLayer = int.MinValue;
+
+            // 열려있는 Panel 중 closeOnEscape가 true이고 Layer가 가장 높은 것 찾기
+            foreach (var panel in openPanels)
+            {
+                if (panel.CloseOnEscape)
+                {
+                    int layerValue = (int)panel.Layer;
+
+                    if (layerValue > highestLayer)
+                    {
+                        highestLayer = layerValue;
+                        targetPanel = panel;
+                    }
+                }
+            }
+
+            // 대상 Panel 닫기
+            if (targetPanel != null)
+            {
+                Log($"[UIManager] ESC 키로 Panel 닫기: {targetPanel.PanelType}");
+                ClosePanel(targetPanel.PanelType);
+            }
+            else
+            {
+                Log("[UIManager] ESC 키: 닫을 수 있는 Panel이 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// 디버그 로그
+        /// </summary>
+        private void Log(string message)
+        {
+            if (showDebugLog)
+            {
+                Debug.Log(message);
+            }
+        }
+
+        #region 디버그 정보
+
+        /// <summary>
+        /// 현재 상태 출력 (디버그용)
+        /// </summary>
+        [ContextMenu("Print UI State")]
+        public void PrintUIState()
+        {
+            Debug.Log("=== UI Manager State ===");
+            Debug.Log($"Cached Panels: {panelCache.Count}");
+            Debug.Log($"Open Panels: {openPanels.Count}");
+            Debug.Log($"Stack Size: {panelStack.Count}");
+
+            Debug.Log("\n=== Open Panels ===");
+            foreach (var panel in openPanels)
+            {
+                Debug.Log($"- {panel.PanelType} (Layer: {panel.Layer})");
+            }
+
+            Debug.Log("\n=== Panel Stack ===");
+            int index = 0;
+            foreach (var panel in panelStack)
+            {
+                Debug.Log($"{index++}. {panel.PanelType}");
+            }
+        }
+
+        #endregion
     }
 }

@@ -1,0 +1,16 @@
+{
+    "name": "UI.Core",
+    "rootNamespace": "UI.Core",
+    "references": [
+        "Core.Utilities"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

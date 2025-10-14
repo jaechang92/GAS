@@ -1,0 +1,18 @@
+{
+    "name": "UI.Menu",
+    "rootNamespace": "UI.Menu",
+    "references": [
+        "Core.Managers",
+        "Core.Enums",
+        "Core.Utilities"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

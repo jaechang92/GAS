@@ -1,0 +1,20 @@
+{
+    "name": "UI.Panels",
+    "rootNamespace": "UI.Panels",
+    "references": [
+        "UI.Core",
+        "Core.Enums",
+        "Core.Utilities",
+        "Combat.Core",
+        "Core.Managers"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
