@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using FSM.Core;
@@ -32,7 +31,6 @@ namespace GameFlow
 
         // FSM 관련
         private StateMachine stateMachine;
-        private Dictionary<GameEventType, Action> eventHandlers;
 
         // 현재 상태 정보
         public GameStateType CurrentState =>
@@ -48,7 +46,6 @@ namespace GameFlow
         protected override void OnSingletonAwake()
         {
             InitializeStateMachine();
-            InitializeEventHandlers();
             InitializeUI();
         }
 
@@ -87,23 +84,6 @@ namespace GameFlow
             stateMachine.OnTransitionStarted += OnTransitionStarted;
         }
 
-        /// <summary>
-        /// 이벤트 핸들러 초기화
-        /// </summary>
-        private void InitializeEventHandlers()
-        {
-            eventHandlers = new Dictionary<GameEventType, Action>
-            {
-                { GameEventType.StartGame, () => TransitionTo(GameStateType.Loading) },
-                { GameEventType.LoadComplete, () => TransitionTo(GameStateType.Ingame) },
-                { GameEventType.PauseGame, () => TransitionTo(GameStateType.Pause) },
-                { GameEventType.ResumeGame, () => TransitionTo(GameStateType.Ingame) },
-                { GameEventType.OpenMenu, () => TransitionTo(GameStateType.Menu) },
-                { GameEventType.CloseMenu, () => TransitionTo(GameStateType.Ingame) },
-                { GameEventType.GoToLobby, () => TransitionTo(GameStateType.Lobby) },
-                { GameEventType.GoToMain, () => TransitionTo(GameStateType.Main) }
-            };
-        }
 
         /// <summary>
         /// UI 초기화
@@ -116,27 +96,35 @@ namespace GameFlow
 
         /// <summary>
         /// 게임 이벤트 트리거
+        /// EventTransition이 이벤트를 받아서 FSM 전환 처리
         /// </summary>
         public void TriggerEvent(GameEventType eventType)
         {
             Debug.Log($"[GameFlow] Event triggered: {eventType}");
             OnEventTriggered?.Invoke(eventType);
-
-            if (eventHandlers.TryGetValue(eventType, out var handler))
-            {
-                handler?.Invoke();
-            }
         }
 
         /// <summary>
-        /// 특정 상태로 전환
+        /// 특정 상태로 전환 (비동기)
         /// </summary>
-        public void TransitionTo(GameStateType targetState)
+        public async void TransitionTo(GameStateType targetState)
         {
-            if (stateMachine != null)
+            Debug.Log($"[GameFlow] TransitionTo 호출: {CurrentState} -> {targetState}");
+
+            if (stateMachine == null)
             {
-                stateMachine.ForceTransitionTo(targetState.ToString());
+                Debug.LogError("[GameFlow] StateMachine이 null입니다!");
+                return;
             }
+
+            if (!stateMachine.IsRunning)
+            {
+                Debug.LogError("[GameFlow] StateMachine이 실행 중이 아닙니다!");
+                return;
+            }
+
+            Debug.Log($"[GameFlow] ForceTransitionToAsync 실행: {targetState}");
+            await stateMachine.ForceTransitionToAsync(targetState.ToString());
         }
 
         /// <summary>

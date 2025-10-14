@@ -96,16 +96,63 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // 메인 메뉴 UI 활성화
-            gameFlowManager?.ShowMainMenu();
+            Debug.Log("[MainState] ========== 메인 메뉴 진입 시작 ==========");
+
+            // 1. FadeOut (화면 어둡게)
+            Debug.Log("[MainState] 1단계: 화면 FadeOut");
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeOutAsync(0.3f);
+            }
+
+            // 2. Main 씬 로드
+            Debug.Log("[MainState] 2단계: Main 씬 로드");
+            if (Core.Managers.SceneLoader.Instance != null)
+            {
+                await Core.Managers.SceneLoader.Instance.LoadSceneAsync(
+                    Core.Enums.SceneType.Main,
+                    UnityEngine.SceneManagement.LoadSceneMode.Single
+                );
+            }
+
+            // 3. 프레임 대기 (씬 로드 완료 보장, 모든 오브젝트 Awake/Start 실행)
+            Debug.Log("[MainState] 3단계: 씬 로드 완료 대기");
             await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync(); // 한 프레임 더 대기 (안정성)
+
+            // 4. MainMenuPanel Open
+            Debug.Log("[MainState] 4단계: MainMenuPanel Open");
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.OpenPanel(UI.Core.PanelType.MainMenu);
+            }
+
+            gameFlowManager?.ShowMainMenu();
+
+            // 프레임 대기 (Panel 활성화 완료)
+            await Awaitable.NextFrameAsync();
+
+            // 5. FadeIn (Panel이 서서히 보임)
+            Debug.Log("[MainState] 5단계: FadeIn");
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeInAsync(0.5f);
+            }
+
+            Debug.Log("[MainState] ========== 메인 메뉴 표시 완료 ==========");
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // 메인 메뉴 UI 비활성화
+            Debug.Log("[MainState] 메인 메뉴 종료");
+
+            // 메인 메뉴 Panel 닫기
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.ClosePanel(UI.Core.PanelType.MainMenu);
+            }
+
             gameFlowManager?.HideMainMenu();
-            await Awaitable.NextFrameAsync();
         }
 
         protected override void UpdateState(float deltaTime)
@@ -116,41 +163,163 @@ namespace GameFlow
 
     /// <summary>
     /// 게임플레이 리소스 로딩 상태
-    /// Gameplay 카테고리 리소스를 로드
+    /// 실제 진행률 기반 로딩 화면
     /// </summary>
     public class LoadingState : GameState
     {
+        private float totalProgress = 0f;
+
+        // 진행률 가중치
+        private const float SCENE_WEIGHT = 0.5f;      // 씬 로드: 0~50%
+        private const float RESOURCE_WEIGHT = 0.2f;   // 리소스: 50~70%
+        private const float OBJECT_WEIGHT = 0.3f;     // 오브젝트: 70~100%
+
+        // 타이밍 설정
+        private const float FADE_OUT_DURATION = 0.3f;
+        private const float LOADING_FADE_IN_DURATION = 0.2f;
+        private const float LOADING_FADE_OUT_DURATION = 0.3f;
+        private const float MINIMUM_DISPLAY_TIME = 1.5f;
+
         public LoadingState() : base(GameStateType.Loading) { }
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            Debug.Log("[LoadingState] 게임플레이 리소스 로딩 시작...");
+            Debug.Log("[LoadingState] ========== 로딩 시작 ==========");
+            float startTime = Time.time;
 
-            // 로딩 화면 활성화
+            // === 1단계: 현재 화면 FadeOut ===
+            Debug.Log("[LoadingState] 1단계: 화면 FadeOut");
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeOutAsync(FADE_OUT_DURATION);
+            }
+
+            // === 2단계: LoadingUI 표시 ===
+            Debug.Log("[LoadingState] 2단계: LoadingUI 표시");
+            ShowLoadingUI();
             gameFlowManager?.ShowLoadingScreen();
 
-            bool success = true;
-            bool hasResourceManager = false;
+            // FadeCanvas를 투명하게 해서 LoadingUI가 보이도록
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                Core.Managers.SceneTransitionManager.Instance.SetFadeIn();
+            }
 
-            // GameResourceManager가 존재하는 경우에만 리소스 로드 시도
+            // 잠시 대기 후 로딩 화면이 안정화되도록
+            await Awaitable.WaitForSecondsAsync(LOADING_FADE_IN_DURATION, cancellationToken);
+
+            // === 3단계: 실제 로딩 작업 (진행률 추적) ===
+            Debug.Log("[LoadingState] 3단계: 실제 로딩 시작");
+            totalProgress = 0f;
+
+            // 3-1. 씬 로드 (0% → 50%)
+            await LoadSceneWithProgress(cancellationToken);
+
+            // 3-2. 리소스 로드 (50% → 70%)
+            await LoadResourcesWithProgress(cancellationToken);
+
+            // 3-3. 오브젝트 초기화 (70% → 100%)
+            await InitializeObjectsWithProgress(cancellationToken);
+
+            // 100% 표시
+            UpdateProgress(1f);
+            Debug.Log("[LoadingState] 로딩 100% 완료!");
+
+            // === 4단계: 최소 표시 시간 보장 ===
+            float elapsed = Time.time - startTime;
+            float remainingTime = Mathf.Max(0f, MINIMUM_DISPLAY_TIME - elapsed);
+            if (remainingTime > 0f)
+            {
+                Debug.Log($"[LoadingState] 최소 시간 보장: {remainingTime:F1}초 대기");
+                await Awaitable.WaitForSecondsAsync(remainingTime, cancellationToken);
+            }
+
+            // === 5단계: Loading 화면 FadeOut ===
+            Debug.Log("[LoadingState] 5단계: Loading 화면 종료");
+            // FadeOut은 Ingame 진입 시 처리
+
+            // === 6단계: Ingame 전환 ===
+            Debug.Log("[LoadingState] 6단계: Ingame 전환");
+            await StateMachine.ForceTransitionToAsync(GameStateType.Ingame.ToString());
+
+            Debug.Log("[LoadingState] ========== 로딩 완료 ==========");
+        }
+
+        /// <summary>
+        /// 3-1. 씬 로드 (0% → 50%)
+        /// </summary>
+        private async Awaitable LoadSceneWithProgress(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingState] [1/3] 씬 로드 시작...");
+
+            if (Core.Managers.SceneLoader.Instance == null)
+            {
+                Debug.LogError("[LoadingState] SceneLoader가 없습니다!");
+                totalProgress += SCENE_WEIGHT;
+                UpdateProgress(totalProgress);
+                return;
+            }
+
+            float sceneProgress = 0f;
+
+            // 씬 로드 진행률 이벤트 구독
+            void OnSceneProgress(float progress)
+            {
+                // Unity의 AsyncOperation.progress는 0.9가 최대
+                sceneProgress = Mathf.Clamp01(progress / 0.9f); // 0~0.9를 0~1로 정규화
+                float currentProgress = sceneProgress * SCENE_WEIGHT;
+                UpdateProgress(currentProgress);
+            }
+
+            Core.Managers.SceneLoader.Instance.OnLoadProgressChanged += OnSceneProgress;
+
+            // 씬 로드 실행
+            await Core.Managers.SceneLoader.Instance.LoadSceneAsync(
+                Core.Enums.SceneType.Gameplay,
+                UnityEngine.SceneManagement.LoadSceneMode.Single
+            );
+
+            // 이벤트 구독 해제
+            Core.Managers.SceneLoader.Instance.OnLoadProgressChanged -= OnSceneProgress;
+
+            totalProgress = SCENE_WEIGHT;
+            UpdateProgress(totalProgress);
+            Debug.Log($"[LoadingState] [1/3] 씬 로드 완료 ({totalProgress * 100:F0}%)");
+        }
+
+        /// <summary>
+        /// 3-2. 리소스 로드 (50% → 70%)
+        /// </summary>
+        private async Awaitable LoadResourcesWithProgress(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingState] [2/3] 리소스 로드 시작...");
+
             try
             {
                 var resourceManager = Core.Managers.GameResourceManager.Instance;
 
                 if (resourceManager != null)
                 {
-                    hasResourceManager = true;
-                    // 로드 진행률 이벤트 구독
-                    resourceManager.OnLoadProgress += OnResourceLoadProgress;
+                    float resourceProgress = 0f;
+
+                    // 리소스 로드 진행률 이벤트 구독
+                    void OnResourceProgress(Core.Enums.ResourceCategory category, float progress, string resourceName)
+                    {
+                        resourceProgress = progress;
+                        float currentProgress = SCENE_WEIGHT + (resourceProgress * RESOURCE_WEIGHT);
+                        UpdateProgress(currentProgress);
+                    }
+
+                    resourceManager.OnLoadProgress += OnResourceProgress;
 
                     // Gameplay 카테고리 로드
-                    success = await resourceManager.LoadCategoryAsync(
+                    await resourceManager.LoadCategoryAsync(
                         Core.Enums.ResourceCategory.Gameplay,
                         cancellationToken
                     );
 
                     // 이벤트 구독 해제
-                    resourceManager.OnLoadProgress -= OnResourceLoadProgress;
+                    resourceManager.OnLoadProgress -= OnResourceProgress;
                 }
                 else
                 {
@@ -159,49 +328,58 @@ namespace GameFlow
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[LoadingState] 리소스 로딩 중 예외 발생: {ex.Message}. 계속 진행합니다.");
-                success = true; // 예외 발생 시에도 계속 진행
+                Debug.LogWarning($"[LoadingState] 리소스 로딩 중 예외: {ex.Message}");
             }
 
-            // 리소스 매니저가 없으면 수동으로 진행률 업데이트 (시뮬레이션)
-            if (!hasResourceManager)
+            totalProgress = SCENE_WEIGHT + RESOURCE_WEIGHT;
+            UpdateProgress(totalProgress);
+            Debug.Log($"[LoadingState] [2/3] 리소스 로드 완료 ({totalProgress * 100:F0}%)");
+        }
+
+        /// <summary>
+        /// 3-3. 오브젝트 초기화 (70% → 100%)
+        /// </summary>
+        private async Awaitable InitializeObjectsWithProgress(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingState] [3/3] 오브젝트 초기화 시작...");
+
+            // 오브젝트 초기화 시뮬레이션 (실제로는 게임플레이 오브젝트 생성/초기화)
+            int steps = 5;
+            for (int i = 0; i < steps; i++)
             {
-                Debug.Log("[LoadingState] 리소스 로딩 시뮬레이션 시작...");
+                await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
 
-                // 진행률을 수동으로 업데이트 (0% → 100%)
-                for (float progress = 0f; progress <= 1f; progress += 0.25f)
-                {
-                    gameFlowManager?.UpdateLoadingProgress(progress);
-                    Debug.Log($"[LoadingState] 로딩 진행률: {progress * 100:F0}%");
-                    await Awaitable.WaitForSecondsAsync(0.3f, cancellationToken);
-                }
-
-                gameFlowManager?.UpdateLoadingProgress(1f);
-                Debug.Log("[LoadingState] 로딩 시뮬레이션 완료!");
+                float objectProgress = (float)(i + 1) / steps;
+                float currentProgress = SCENE_WEIGHT + RESOURCE_WEIGHT + (objectProgress * OBJECT_WEIGHT);
+                UpdateProgress(currentProgress);
             }
 
-            // 성공 여부와 관계없이 Ingame으로 전환 (데모/테스트 환경 고려)
-            if (success)
-            {
-                Debug.Log("[LoadingState] 게임플레이 리소스 로딩 완료!");
-            }
-            else
-            {
-                Debug.LogWarning("[LoadingState] 리소스 로딩 실패했지만 계속 진행합니다.");
-            }
+            totalProgress = 1f;
+            UpdateProgress(totalProgress);
+            Debug.Log($"[LoadingState] [3/3] 오브젝트 초기화 완료 (100%)");
+        }
 
-            // 잠시 대기 후 인게임으로 전환
-            await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
-
-            Debug.Log("[LoadingState] Ingame으로 전환 시도...");
-            // 비동기 전환 사용 (TriggerEvent는 동기 방식이므로 StateMachine에 직접 접근)
-            await StateMachine.ForceTransitionToAsync(GameStateType.Ingame.ToString());
+        /// <summary>
+        /// 진행률 업데이트 (UI 반영)
+        /// </summary>
+        private void UpdateProgress(float progress)
+        {
+            UpdateLoadingUIProgress(progress);
+            gameFlowManager?.UpdateLoadingProgress(progress);
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
             // 로딩 화면 비활성화
             gameFlowManager?.HideLoadingScreen();
+            HideLoadingUI();
+
+            // FadeIn (게임 화면 보이기)
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeInAsync(LOADING_FADE_OUT_DURATION);
+            }
+
             await Awaitable.NextFrameAsync();
         }
 
@@ -210,11 +388,41 @@ namespace GameFlow
             // 로딩 중에는 특별한 업데이트 로직 없음
         }
 
-        private void OnResourceLoadProgress(Core.Enums.ResourceCategory category, float progress, string resourceName)
+        // LoadingPanel 참조 (캐싱)
+        private UI.Core.BasePanel loadingPanel;
+
+        /// <summary>
+        /// LoadingPanel 열기
+        /// </summary>
+        private async void ShowLoadingUI()
         {
-            // UI 업데이트
-            gameFlowManager?.UpdateLoadingProgress(progress);
-            Debug.Log($"[LoadingState] {category} 로딩 중... {progress * 100:F0}% - {resourceName}");
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                loadingPanel = await Core.Managers.UIManager.Instance.OpenPanel(UI.Core.PanelType.Loading);
+            }
+        }
+
+        /// <summary>
+        /// LoadingPanel 닫기
+        /// </summary>
+        private async void HideLoadingUI()
+        {
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.ClosePanel(UI.Core.PanelType.Loading);
+                loadingPanel = null;
+            }
+        }
+
+        /// <summary>
+        /// LoadingPanel의 UpdateProgress 메서드 호출
+        /// </summary>
+        private void UpdateLoadingUIProgress(float progress)
+        {
+            if (loadingPanel != null)
+            {
+                loadingPanel.UpdateProgress(progress);
+            }
         }
     }
 
@@ -227,8 +435,21 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
+            Debug.Log("[IngameState] Ingame 상태 진입");
+
+            // GameplayManager 찾기 또는 생성
+            SetupGameplayManager();
+
+            // GameplayHUD Panel 열기
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.OpenPanel(UI.Core.PanelType.GameplayHUD);
+            }
+
             // 인게임 UI 활성화
             gameFlowManager?.ShowIngameUI();
+
+            await Awaitable.NextFrameAsync();
 
             // 게임 시간 복구
             Time.timeScale = 1f;
@@ -238,8 +459,11 @@ namespace GameFlow
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
-            // 인게임 UI 처리
-            await Awaitable.NextFrameAsync();
+            // GameplayHUD Panel 닫기
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.ClosePanel(UI.Core.PanelType.GameplayHUD);
+            }
         }
 
         protected override void UpdateState(float deltaTime)
@@ -251,6 +475,36 @@ namespace GameFlow
                 gameFlowManager?.TriggerEvent(GameEventType.PauseGame);
             }
         }
+
+        /// <summary>
+        /// GameplayManager 설정 (동적 검색)
+        /// </summary>
+        private void SetupGameplayManager()
+        {
+            // GameplayManager 타입을 동적으로 검색
+            var gameplayManagerType = System.Type.GetType("Gameplay.GameplayManager, Gameplay.Manager");
+
+            if (gameplayManagerType == null)
+            {
+                Debug.LogWarning("[IngameState] GameplayManager 타입을 찾을 수 없습니다.");
+                return;
+            }
+
+            // 씬에서 GameplayManager 찾기
+            var existingManager = Object.FindAnyObjectByType(gameplayManagerType);
+
+            if (existingManager != null)
+            {
+                Debug.Log("[IngameState] GameplayManager 이미 존재함");
+                return;
+            }
+
+            // 새로 생성
+            GameObject managerObject = new GameObject("GameplayManager");
+            managerObject.AddComponent(gameplayManagerType);
+            Debug.Log("[IngameState] GameplayManager 생성 완료");
+        }
+
     }
 
     /// <summary>

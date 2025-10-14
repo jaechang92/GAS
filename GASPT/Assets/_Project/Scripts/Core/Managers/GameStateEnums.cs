@@ -21,17 +21,18 @@ namespace GameFlow
     /// </summary>
     public enum GameEventType
     {
-        StartGame,      // 게임 시작
-        LoadComplete,   // 로딩 완료
-        PauseGame,      // 게임 일시정지
-        ResumeGame,     // 게임 재개
-        OpenMenu,       // 메뉴 열기
-        CloseMenu,      // 메뉴 닫기
-        GoToLobby,      // 로비로 이동
-        GoToMain,       // 메인으로 이동
-        GameEnd,        // 게임 종료
-        OpenSettings,   // 설정 열기
-        CloseSettings   // 설정 닫기
+        StartGame,          // 게임 시작
+        LoadComplete,       // 로딩 완료
+        PauseGame,          // 게임 일시정지
+        ResumeGame,         // 게임 재개
+        OpenMenu,           // 메뉴 열기
+        CloseMenu,          // 메뉴 닫기
+        GoToLobby,          // 로비로 이동
+        GoToMain,           // 메인으로 이동
+        GameEnd,            // 게임 종료
+        OpenSettings,       // 설정 열기
+        CloseSettings,      // 설정 닫기
+        ReturnToMainMenu    // 메인 메뉴로 복귀
     }
 
     /// <summary>

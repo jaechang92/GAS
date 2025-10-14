@@ -5,7 +5,8 @@
         "FSM.Core",
         "Core.Utilities",
         "Core.Enums",
-        "Core.Data"
+        "Core.Data",
+        "UI.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
