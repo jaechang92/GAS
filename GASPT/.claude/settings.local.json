@@ -16,7 +16,14 @@
       "Bash(fi)",
       "Bash(git rm:*)",
       "Bash(git restore:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(for f in Assets/_Project/Scripts/*.asmdef Assets/Plugins/*/*.asmdef)",
+      "Bash(do if [ -f \"$f\" ])",
+      "Bash(then echo \"=== $f ===\")",
+      "Bash(cat:*)",
+      "Bash(done)",
+      "Bash(if [ ! -d \"Interfaces\" ])",
+      "Bash(then echo \"Directory needs to be created\")"
     ],
     "deny": [],
     "ask": []
