@@ -112,9 +112,14 @@ namespace Editor.Tools
             string assetPath = $"{NPCDATA_SAVE_PATH}StoryNPC_VillagerData.asset";
             AssetDatabase.CreateAsset(npcData, assetPath);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
             Debug.Log($"[NPCPrefabMaker] StoryNPC Data 생성 완료: {assetPath}");
+
+            // Project 뷰에서 생성된 에셋 선택 및 하이라이트
+            EditorGUIUtility.PingObject(npcData);
+            Selection.activeObject = npcData;
+
             EditorUtility.DisplayDialog("생성 완료", $"StoryNPC Data가 생성되었습니다.\n{assetPath}", "확인");
         }
 
@@ -137,9 +142,14 @@ namespace Editor.Tools
             string assetPath = $"{NPCDATA_SAVE_PATH}ShopNPC_MerchantData.asset";
             AssetDatabase.CreateAsset(npcData, assetPath);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
             Debug.Log($"[NPCPrefabMaker] ShopNPC Data 생성 완료: {assetPath}");
+
+            // Project 뷰에서 생성된 에셋 선택 및 하이라이트
+            EditorGUIUtility.PingObject(npcData);
+            Selection.activeObject = npcData;
+
             EditorUtility.DisplayDialog("생성 완료", $"ShopNPC Data가 생성되었습니다.\n{assetPath}", "확인");
         }
 
@@ -189,15 +199,21 @@ namespace Editor.Tools
 
             // Prefab 저장
             string prefabPath = $"{PREFAB_SAVE_PATH}StoryNPC_Villager.prefab";
-            PrefabUtility.SaveAsPrefabAsset(npcObj, prefabPath);
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(npcObj, prefabPath);
 
             // Hierarchy에서 삭제
             DestroyImmediate(npcObj);
 
-            Debug.Log($"[NPCPrefabMaker] StoryNPC Prefab 생성 완료: {prefabPath}");
-            EditorUtility.DisplayDialog("생성 완료", $"StoryNPC Prefab이 생성되었습니다.\n{prefabPath}", "확인");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
-            AssetDatabase.Refresh();
+            Debug.Log($"[NPCPrefabMaker] StoryNPC Prefab 생성 완료: {prefabPath}");
+
+            // Project 뷰에서 생성된 프리팹 선택 및 하이라이트
+            EditorGUIUtility.PingObject(prefab);
+            Selection.activeObject = prefab;
+
+            EditorUtility.DisplayDialog("생성 완료", $"StoryNPC Prefab이 생성되었습니다.\n{prefabPath}", "확인");
         }
 
         /// <summary>
@@ -242,15 +258,21 @@ namespace Editor.Tools
 
             // Prefab 저장
             string prefabPath = $"{PREFAB_SAVE_PATH}ShopNPC_Merchant.prefab";
-            PrefabUtility.SaveAsPrefabAsset(npcObj, prefabPath);
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(npcObj, prefabPath);
 
             // Hierarchy에서 삭제
             DestroyImmediate(npcObj);
 
-            Debug.Log($"[NPCPrefabMaker] ShopNPC Prefab 생성 완료: {prefabPath}");
-            EditorUtility.DisplayDialog("생성 완료", $"ShopNPC Prefab이 생성되었습니다.\n{prefabPath}", "확인");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
-            AssetDatabase.Refresh();
+            Debug.Log($"[NPCPrefabMaker] ShopNPC Prefab 생성 완료: {prefabPath}");
+
+            // Project 뷰에서 생성된 프리팹 선택 및 하이라이트
+            EditorGUIUtility.PingObject(prefab);
+            Selection.activeObject = prefab;
+
+            EditorUtility.DisplayDialog("생성 완료", $"ShopNPC Prefab이 생성되었습니다.\n{prefabPath}", "확인");
         }
 
         #endregion
@@ -280,6 +302,10 @@ namespace Editor.Tools
             // Prefab 생성
             CreateStoryNPCPrefab();
             CreateShopNPCPrefab();
+
+            // 최종 강제 갱신
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
             Debug.Log("[NPCPrefabMaker] 모든 NPC 생성 완료!");
             EditorUtility.DisplayDialog(
