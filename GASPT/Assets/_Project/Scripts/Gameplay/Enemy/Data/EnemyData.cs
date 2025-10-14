@@ -47,7 +47,7 @@ namespace Enemy.Data
         public bool enablePatrol = true;
 
         [Tooltip("정찰 이동 거리")]
-        public float patrolDistance = 5f;
+        public float patrolRange = 5f;
 
         [Tooltip("정찰 전환 대기 시간 (초)")]
         public float patrolWaitTime = 2f;

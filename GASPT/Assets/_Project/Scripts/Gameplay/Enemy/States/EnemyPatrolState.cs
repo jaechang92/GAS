@@ -51,7 +51,7 @@ namespace Enemy
             float currentDistance = Vector3.Distance(enemy.transform.position, enemy.PatrolStartPosition);
 
             // 정찰 거리 초과 시 대기 및 방향 전환
-            if (currentDistance >= enemy.Data.patrolDistance)
+            if (currentDistance >= enemy.Data.patrolRange)
             {
                 StopMovement();
                 isWaiting = true;

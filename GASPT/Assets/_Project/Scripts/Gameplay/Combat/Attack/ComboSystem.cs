@@ -145,7 +145,7 @@ namespace Combat.Attack
         {
             isComboActive = true;
             comboTimer = comboResetTime;
-
+            currentComboIndex++;
             OnComboStarted?.Invoke(startIndex);
             LogDebug($"Combo started: index {startIndex}");
         }
