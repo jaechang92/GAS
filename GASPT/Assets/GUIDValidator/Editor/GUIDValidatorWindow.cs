@@ -30,6 +30,7 @@ namespace GUIDValidation
         private HashSet<string> previouslyScannedPaths = new HashSet<string>();
         private const string PREF_KEY_SCANNED_PATHS = "GUIDValidator.ScannedPaths";
         private GUIStyle newLabelStyle;
+        private GUIStyle foldoutStyle;
 
         // UI 스타일
         private GUIStyle headerStyle;
@@ -257,6 +258,14 @@ namespace GUIDValidation
                     fontStyle = FontStyle.Bold
                 };
             }
+
+            if (foldoutStyle == null)
+            {
+                foldoutStyle = new GUIStyle(EditorStyles.foldout);
+                foldoutStyle.margin = new RectOffset(0, 0, 0, 0);
+                foldoutStyle.padding = new RectOffset(0, 0, 0, 0);
+                foldoutStyle.fixedWidth = 12f;
+            }
         }
 
         private void DrawHeader()
@@ -366,7 +375,7 @@ namespace GUIDValidation
             // 폴더인 경우 접기/펼치기 아이콘
             if (node.IsFolder && node.Children.Count > 0)
             {
-                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true);
+                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true, foldoutStyle);
             }
             else
             {
