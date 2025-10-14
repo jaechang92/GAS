@@ -1,7 +1,11 @@
 {
-    "name": "FSM.Core",
-    "rootNamespace": "FSM.Core",
-    "references": [],
+    "name": "FSM.GAS.Integration",
+    "rootNamespace": "FSM.Core.Integration",
+    "references": [
+        "FSM.Core",
+        "GAS.Core",
+        "Core.Enums"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

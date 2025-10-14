@@ -24,6 +24,7 @@ namespace FSM.Core
         bool CanTransitionTo(string stateId);
         bool TryTransitionTo(string stateId);
         void ForceTransitionTo(string stateId);
+        Awaitable ForceTransitionToAsync(string stateId);
 
         void StartStateMachine(string initialStateId = null);
         void Stop();
