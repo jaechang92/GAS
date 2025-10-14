@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using Core.Enums;
 using Core.Utilities.Interfaces;
+using Core.Utilities;
 
 namespace Combat.Core
 {
@@ -22,6 +23,9 @@ namespace Combat.Core
 
         // 무적 타이머
         private float invincibilityTimer = 0f;
+
+        // 플레이어 여부 캐싱
+        private bool isPlayer = false;
 
         // 이벤트
         public event Action<DamageData> OnDamaged;          // 데미지 받을 때
@@ -63,6 +67,9 @@ namespace Combat.Core
         private void Awake()
         {
             currentHealth = maxHealth;
+
+            // 플레이어 태그 확인 (GameEvents 발생용)
+            isPlayer = CompareTag("Player");
         }
 
         private void Update()
@@ -102,6 +109,12 @@ namespace Combat.Core
             // 이벤트 발생
             OnDamaged?.Invoke(damage);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+            // 플레이어인 경우 글로벌 이벤트 발생
+            if (isPlayer)
+            {
+                GameEvents.InvokePlayerHealthChanged(currentHealth, maxHealth);
+            }
 
             // 무적 시간 적용
             if (invincibilityDuration > 0f)
@@ -153,6 +166,12 @@ namespace Combat.Core
 
                 OnHealed?.Invoke(actualHeal);
                 OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+                // 플레이어인 경우 글로벌 이벤트 발생
+                if (isPlayer)
+                {
+                    GameEvents.InvokePlayerHealthChanged(currentHealth, maxHealth);
+                }
             }
         }
 
@@ -176,6 +195,12 @@ namespace Combat.Core
             LogDebug("사망!");
 
             OnDeath?.Invoke();
+
+            // 플레이어인 경우 글로벌 이벤트 발생
+            if (isPlayer)
+            {
+                GameEvents.InvokePlayerDeath();
+            }
         }
 
         /// <summary>
@@ -226,6 +251,12 @@ namespace Combat.Core
             }
 
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+            // 플레이어인 경우 글로벌 이벤트 발생
+            if (isPlayer)
+            {
+                GameEvents.InvokePlayerHealthChanged(currentHealth, maxHealth);
+            }
         }
 
         /// <summary>
@@ -236,6 +267,12 @@ namespace Combat.Core
             bool wasAlive = IsAlive;
             currentHealth = Mathf.Clamp(health, 0f, maxHealth);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+            // 플레이어인 경우 글로벌 이벤트 발생
+            if (isPlayer)
+            {
+                GameEvents.InvokePlayerHealthChanged(currentHealth, maxHealth);
+            }
 
             if (currentHealth <= 0f && wasAlive)
             {

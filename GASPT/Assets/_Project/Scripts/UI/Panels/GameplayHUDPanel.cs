@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UI.Core;
 using Core.Utilities.Interfaces;
+using Core.Utilities;
 using GameFlow;
 
 namespace UI.Panels
@@ -53,6 +54,7 @@ namespace UI.Panels
         {
             Debug.Log("[GameplayHUDPanel] 게임플레이 HUD 표시");
             SetupHealthSystem();
+            SubscribeToGameEvents();
         }
 
         private void OnPanelClosed(BasePanel panel)
@@ -65,6 +67,9 @@ namespace UI.Panels
                 playerHealthSystem.OnHealthChanged -= OnPlayerHealthChanged;
                 playerHealthSystem = null;
             }
+
+            // GameEvents 구독 해제
+            UnsubscribeFromGameEvents();
         }
 
         /// <summary>
@@ -102,6 +107,28 @@ namespace UI.Panels
         }
 
         /// <summary>
+        /// GameEvents 구독
+        /// </summary>
+        private void SubscribeToGameEvents()
+        {
+            GameEvents.OnComboChanged += OnComboChangedEvent;
+            GameEvents.OnScoreChanged += OnScoreChangedEvent;
+            GameEvents.OnEnemyCountChanged += OnEnemyCountChangedEvent;
+            Debug.Log("[GameplayHUDPanel] GameEvents 구독 완료");
+        }
+
+        /// <summary>
+        /// GameEvents 구독 해제
+        /// </summary>
+        private void UnsubscribeFromGameEvents()
+        {
+            GameEvents.OnComboChanged -= OnComboChangedEvent;
+            GameEvents.OnScoreChanged -= OnScoreChangedEvent;
+            GameEvents.OnEnemyCountChanged -= OnEnemyCountChangedEvent;
+            Debug.Log("[GameplayHUDPanel] GameEvents 구독 해제 완료");
+        }
+
+        /// <summary>
         /// 플레이어 체력 변경 이벤트 핸들러
         /// </summary>
         private void OnPlayerHealthChanged(float current, float max)
@@ -136,12 +163,40 @@ namespace UI.Panels
             }
         }
 
-        #region 공개 API
+        #region GameEvents 핸들러
+
+        /// <summary>
+        /// 콤보 변경 이벤트 핸들러
+        /// </summary>
+        private void OnComboChangedEvent(int combo)
+        {
+            UpdateCombo(combo);
+        }
+
+        /// <summary>
+        /// 점수 변경 이벤트 핸들러
+        /// </summary>
+        private void OnScoreChangedEvent(int score)
+        {
+            UpdateScore(score);
+        }
+
+        /// <summary>
+        /// 적 수 변경 이벤트 핸들러
+        /// </summary>
+        private void OnEnemyCountChangedEvent(int count)
+        {
+            UpdateEnemyCount(count);
+        }
+
+        #endregion
+
+        #region UI 업데이트 (내부 메서드)
 
         /// <summary>
         /// 콤보 업데이트
         /// </summary>
-        public void UpdateCombo(int combo)
+        private void UpdateCombo(int combo)
         {
             currentCombo = combo;
 
@@ -162,7 +217,7 @@ namespace UI.Panels
         /// <summary>
         /// 적 카운트 업데이트
         /// </summary>
-        public void UpdateEnemyCount(int count)
+        private void UpdateEnemyCount(int count)
         {
             enemyCount = count;
 
@@ -175,7 +230,7 @@ namespace UI.Panels
         /// <summary>
         /// 점수 업데이트
         /// </summary>
-        public void UpdateScore(int newScore)
+        private void UpdateScore(int newScore)
         {
             score = newScore;
 
@@ -183,14 +238,6 @@ namespace UI.Panels
             {
                 scoreText.text = $"점수: {score}";
             }
-        }
-
-        /// <summary>
-        /// 점수 추가
-        /// </summary>
-        public void AddScore(int amount)
-        {
-            UpdateScore(score + amount);
         }
 
         #endregion
@@ -207,6 +254,9 @@ namespace UI.Panels
             {
                 pauseButton.onClick.RemoveListener(OnPauseButtonClicked);
             }
+
+            // GameEvents 구독 해제 (안전성)
+            UnsubscribeFromGameEvents();
 
             // Panel 이벤트 구독 해제
             OnOpened -= OnPanelOpened;

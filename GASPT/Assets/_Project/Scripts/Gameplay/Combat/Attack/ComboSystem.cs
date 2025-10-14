@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Core.Utilities;
 
 namespace Combat.Attack
 {
@@ -147,6 +148,10 @@ namespace Combat.Attack
             comboTimer = comboResetTime;
             currentComboIndex++;
             OnComboStarted?.Invoke(startIndex);
+
+            // 글로벌 이벤트 발생
+            GameEvents.InvokeComboChanged(currentComboIndex);
+
             LogDebug($"Combo started: index {startIndex}");
         }
 
@@ -166,6 +171,10 @@ namespace Combat.Attack
 
             comboTimer = comboResetTime;
             OnComboAdvanced?.Invoke(currentComboIndex);
+
+            // 글로벌 이벤트 발생
+            GameEvents.InvokeComboChanged(currentComboIndex);
+
             LogDebug($"Combo advanced to: index {currentComboIndex}");
         }
 
@@ -193,6 +202,10 @@ namespace Combat.Attack
             comboTimer = 0f;
 
             OnComboReset?.Invoke();
+
+            // 글로벌 이벤트 발생 (콤보 0으로 리셋)
+            GameEvents.InvokeComboChanged(0);
+
             LogDebug("Combo reset");
         }
 
