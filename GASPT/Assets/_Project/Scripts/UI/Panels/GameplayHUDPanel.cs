@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UI.Core;
-using Combat.Core;
+using Core.Utilities.Interfaces;
 using GameFlow;
 
 namespace UI.Panels
@@ -24,8 +24,8 @@ namespace UI.Panels
         private int enemyCount = 0;
         private int score = 0;
 
-        // 체력 시스템 참조
-        private HealthSystem playerHealthSystem;
+        // 체력 시스템 참조 (인터페이스 사용)
+        private IHealthEventProvider playerHealthSystem;
 
         protected override void Awake()
         {
@@ -80,8 +80,8 @@ namespace UI.Panels
                 return;
             }
 
-            // HealthSystem 찾기
-            playerHealthSystem = player.GetComponent<HealthSystem>();
+            // IHealthEventProvider 찾기 (인터페이스 사용)
+            playerHealthSystem = player.GetComponent<IHealthEventProvider>();
             if (playerHealthSystem != null && healthBar != null)
             {
                 // 초기 체력 설정 (Reflection 사용)
@@ -97,7 +97,7 @@ namespace UI.Panels
 
                 // 체력 변경 이벤트 구독
                 playerHealthSystem.OnHealthChanged += OnPlayerHealthChanged;
-                Debug.Log("[GameplayHUDPanel] 플레이어 HealthSystem 연결 완료");
+                Debug.Log("[GameplayHUDPanel] 플레이어 IHealthEventProvider 연결 완료");
             }
         }
 

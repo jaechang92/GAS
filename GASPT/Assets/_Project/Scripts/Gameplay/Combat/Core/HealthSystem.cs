@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using Core.Enums;
+using Core.Utilities.Interfaces;
 
 namespace Combat.Core
 {
@@ -8,7 +9,7 @@ namespace Combat.Core
     /// 체력 관리 시스템
     /// 플레이어 및 적의 체력을 관리하고 데미지/힐 처리
     /// </summary>
-    public class HealthSystem : MonoBehaviour
+    public class HealthSystem : MonoBehaviour, IHealthEventProvider
     {
         [Header("체력 설정")]
         [SerializeField] private float maxHealth = 100f;

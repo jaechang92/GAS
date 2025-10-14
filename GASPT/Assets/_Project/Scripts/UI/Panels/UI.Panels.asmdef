@@ -5,7 +5,6 @@
         "UI.Core",
         "Core.Enums",
         "Core.Utilities",
-        "Combat.Core",
         "Core.Managers"
     ],
     "includePlatforms": [],

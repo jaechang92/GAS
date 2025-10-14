@@ -40,6 +40,7 @@ namespace Core.Bootstrap
 
         /// <summary>
         /// 핵심 매니저들 초기화 및 DontDestroyOnLoad 설정
+        /// SingletonManager<T>가 자동으로 DontDestroyOnLoad 처리
         /// </summary>
         private async Awaitable InitializeManagers()
         {
@@ -74,10 +75,14 @@ namespace Core.Bootstrap
             await Awaitable.NextFrameAsync();
 
             Debug.Log("[Bootstrap] 매니저 초기화 완료");
+
+            // 디버그: 모든 싱글톤 출력
+            Core.SingletonManager<UIManager>.LogAllSingletons();
         }
 
         /// <summary>
-        /// 매니저 GameObject 생성 및 DontDestroyOnLoad 설정
+        /// 매니저 GameObject 생성
+        /// SingletonManager<T>가 자동으로 DontDestroyOnLoad 처리
         /// </summary>
         private T CreateManager<T>(string managerName) where T : MonoBehaviour
         {
@@ -89,10 +94,9 @@ namespace Core.Bootstrap
                 return existingManager;
             }
 
-            // 새로 생성
+            // 새로 생성 (SingletonManager가 Awake에서 DontDestroyOnLoad 처리)
             GameObject managerGO = new GameObject(managerName);
             T manager = managerGO.AddComponent<T>();
-            DontDestroyOnLoad(managerGO);
 
             Debug.Log($"[Bootstrap] {managerName} 생성 완료");
 
@@ -101,6 +105,7 @@ namespace Core.Bootstrap
 
         /// <summary>
         /// EventSystem 생성 (UI 입력 처리)
+        /// EventSystem은 Unity 기본 컴포넌트이므로 수동으로 DontDestroyOnLoad
         /// </summary>
         private void CreateEventSystem()
         {
@@ -109,6 +114,7 @@ namespace Core.Bootstrap
             if (existingEventSystem != null)
             {
                 Debug.LogWarning("[Bootstrap] EventSystem이 이미 존재합니다. 기존 인스턴스 사용.");
+                DontDestroyOnLoad(existingEventSystem.gameObject);
                 return;
             }
 

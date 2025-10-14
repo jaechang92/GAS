@@ -2,7 +2,8 @@
     "name": "Combat.Core",
     "rootNamespace": "Combat.Core",
     "references": [
-        "Core.Enums"
+        "Core.Enums",
+        "Core.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
