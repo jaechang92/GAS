@@ -40,10 +40,6 @@ namespace UI.Panels
         {
             base.Awake();
 
-            // PanelType 설정
-            panelType = PanelType.Dialog;
-            panelLayer = PanelLayer.Popup;
-
             // Continue 버튼 이벤트
             if (continueButton != null)
             {
@@ -51,23 +47,19 @@ namespace UI.Panels
             }
         }
 
-        protected override void OnPanelOpened()
+        private void OnEnable()
         {
-            base.OnPanelOpened();
-
             // DialogueManager에 리스너 등록
             if (DialogueManager.Instance != null)
             {
                 DialogueManager.Instance.RegisterListener(this);
             }
 
-            Log("DialoguePanel 열림");
+            Log("DialoguePanel 활성화");
         }
 
-        protected override void OnPanelClosed()
+        private void OnDisable()
         {
-            base.OnPanelClosed();
-
             // DialogueManager에서 리스너 제거
             if (DialogueManager.Instance != null)
             {
@@ -81,7 +73,7 @@ namespace UI.Panels
                 typingCoroutine = null;
             }
 
-            Log("DialoguePanel 닫힘");
+            Log("DialoguePanel 비활성화");
         }
 
         #region IDialogueListener 구현
@@ -89,12 +81,6 @@ namespace UI.Panels
         public void OnDialogueStart(string episodeID)
         {
             Log($"대화 시작: {episodeID}");
-
-            // Panel 열기 (아직 안 열려 있으면)
-            if (!IsOpen)
-            {
-                _ = Core.Managers.UIManager.Instance?.OpenPanel(PanelType.Dialog);
-            }
 
             // UI 초기화
             ClearChoices();
@@ -154,7 +140,7 @@ namespace UI.Panels
             Log("대화 종료");
 
             // Panel 닫기
-            _ = Close();
+            Close();
         }
 
         #endregion

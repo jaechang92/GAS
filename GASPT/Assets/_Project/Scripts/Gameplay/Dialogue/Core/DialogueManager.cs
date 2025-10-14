@@ -97,6 +97,9 @@ namespace Gameplay.Dialogue
             IsPlaying = true;
             Log($"=== 에피소드 시작: {currentEpisode} ===");
 
+            // DialoguePanel 열기
+            OpenDialoguePanel();
+
             // 리스너에게 통보
             NotifyDialogueStart(episodeID);
             OnDialogueStarted?.Invoke(episodeID);
@@ -105,6 +108,17 @@ namespace Gameplay.Dialogue
             ShowCurrentNode();
 
             return true;
+        }
+
+        /// <summary>
+        /// DialoguePanel 열기
+        /// </summary>
+        private async void OpenDialoguePanel()
+        {
+            if (Core.Managers.UIManager.Instance != null)
+            {
+                await Core.Managers.UIManager.Instance.OpenPanel(UI.Core.PanelType.Dialog);
+            }
         }
 
         /// <summary>
