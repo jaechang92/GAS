@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   category: 2
   displayName: "\uAC8C\uC784\uD50C\uB808\uC774 \uB9AC\uC18C\uC2A4"
-  resources: []
+  resources:
+  - path: 
+    typeName: 
+    description: 
   useAsyncLoading: 1
   minimumLoadTime: 1
