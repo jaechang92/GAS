@@ -110,7 +110,7 @@ namespace GameFlow
             if (Core.Managers.SceneLoader.Instance != null)
             {
                 await Core.Managers.SceneLoader.Instance.LoadSceneAsync(
-                    Core.Enums.SceneType.Main,
+                    Core.Enums.SceneType.MainMenu,
                     UnityEngine.SceneManagement.LoadSceneMode.Single
                 );
             }
@@ -275,7 +275,7 @@ namespace GameFlow
 
             // 씬 로드 실행
             await Core.Managers.SceneLoader.Instance.LoadSceneAsync(
-                Core.Enums.SceneType.Gameplay,
+                Core.Enums.SceneType.Game,
                 UnityEngine.SceneManagement.LoadSceneMode.Single
             );
 

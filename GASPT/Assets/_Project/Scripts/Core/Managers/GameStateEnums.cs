@@ -35,13 +35,6 @@ namespace GameFlow
         ReturnToMainMenu    // 메인 메뉴로 복귀
     }
 
-    /// <summary>
-    /// 씬 타입
-    /// </summary>
-    public enum SceneType
-    {
-        MainMenu,
-        GameScene,
-        LoadingScene
-    }
+    // SceneType은 Core.Enums.SceneType을 사용
+    // 물리적 씬: Bootstrap, Preload, MainMenu, Game
 }

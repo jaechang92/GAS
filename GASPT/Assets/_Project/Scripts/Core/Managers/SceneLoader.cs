@@ -35,11 +35,25 @@ namespace Core.Managers
         }
 
         /// <summary>
+        /// SceneType을 실제 씬 이름으로 매핑
+        /// (리팩토링 중: 추후 씬 파일명을 enum과 일치시킬 예정)
+        /// </summary>
+        private string GetSceneName(SceneType sceneType)
+        {
+            return sceneType switch
+            {
+                SceneType.MainMenu => "Main",         // Main.unity
+                SceneType.Game => "Gameplay",         // Gameplay.unity
+                _ => sceneType.ToString()             // Bootstrap, Preload
+            };
+        }
+
+        /// <summary>
         /// 씬 로드 (Single 모드 - 기존 씬 언로드)
         /// </summary>
         public async Awaitable LoadSceneAsync(SceneType sceneType, LoadSceneMode mode = LoadSceneMode.Single)
         {
-            string sceneName = sceneType.ToString();
+            string sceneName = GetSceneName(sceneType);
 
             try
             {
@@ -96,7 +110,7 @@ namespace Core.Managers
         /// </summary>
         public async Awaitable UnloadSceneAsync(SceneType sceneType)
         {
-            string sceneName = sceneType.ToString();
+            string sceneName = GetSceneName(sceneType);
 
             try
             {
@@ -234,16 +248,16 @@ namespace Core.Managers
             _ = LoadSceneAsync(SceneType.Preload);
         }
 
-        [ContextMenu("Main 로드")]
-        private void LoadMain()
+        [ContextMenu("MainMenu 로드")]
+        private void LoadMainMenu()
         {
-            _ = LoadSceneAsync(SceneType.Main);
+            _ = LoadSceneAsync(SceneType.MainMenu);
         }
 
-        [ContextMenu("Gameplay 로드")]
-        private void LoadGameplay()
+        [ContextMenu("Game 로드")]
+        private void LoadGame()
         {
-            _ = LoadSceneAsync(SceneType.Gameplay);
+            _ = LoadSceneAsync(SceneType.Game);
         }
 
         [ContextMenu("로드된 씬 목록 출력")]

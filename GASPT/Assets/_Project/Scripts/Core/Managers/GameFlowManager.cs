@@ -160,7 +160,7 @@ namespace GameFlow
             if (transition.FromStateId == GameStateType.Preload.ToString() &&
                 transition.ToStateId == GameStateType.Main.ToString())
             {
-                _ = LoadSceneForTransition(Core.Enums.SceneType.Preload, Core.Enums.SceneType.Main);
+                _ = LoadSceneForTransition(Core.Enums.SceneType.Preload, Core.Enums.SceneType.MainMenu);
             }
             // 필요시 다른 씬 전환도 여기에 추가 가능
         }
