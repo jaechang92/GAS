@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace GUIDValidation
@@ -16,14 +17,40 @@ namespace GUIDValidation
         private bool isScanning = false;
         private bool includePackages = false;
         private Vector2 scrollPosition;
+        private Vector2 folderScrollPosition;
         private int selectedTab = 0;
         private readonly string[] tabNames = { "검증 결과", "중복 GUID", "손상된 참조", "고아 메타파일" };
+
+        // 폴더 선택
+        private List<FolderSelection> assetFolders = new List<FolderSelection>();
+        private bool showFolderSelection = true;
 
         // UI 스타일
         private GUIStyle headerStyle;
         private GUIStyle errorStyle;
         private GUIStyle warningStyle;
         private GUIStyle successStyle;
+
+        #endregion
+
+        #region 데이터 구조
+
+        [System.Serializable]
+        private class FolderSelection
+        {
+            public string Path;
+            public bool IsSelected;
+            public string DisplayName;
+
+            public FolderSelection(string path, bool isSelected)
+            {
+                Path = path;
+                IsSelected = isSelected;
+                DisplayName = path.Replace("Assets/", "");
+                if (string.IsNullOrEmpty(DisplayName))
+                    DisplayName = "Assets (Root)";
+            }
+        }
 
         #endregion
 
@@ -44,6 +71,30 @@ namespace GUIDValidation
         void OnEnable()
         {
             InitializeStyles();
+            InitializeFolders();
+        }
+
+        private void InitializeFolders()
+        {
+            if (assetFolders.Count > 0)
+                return; // 이미 초기화됨
+
+            // Assets 하위 1레벨 폴더들 스캔
+            if (System.IO.Directory.Exists("Assets"))
+            {
+                var directories = System.IO.Directory.GetDirectories("Assets");
+                foreach (var dir in directories)
+                {
+                    string folderPath = dir.Replace("\\", "/");
+                    assetFolders.Add(new FolderSelection(folderPath, true)); // 기본적으로 모두 선택
+                }
+            }
+
+            // 폴더가 없으면 Assets 자체를 추가
+            if (assetFolders.Count == 0)
+            {
+                assetFolders.Add(new FolderSelection("Assets", true));
+            }
         }
 
         void OnGUI()
@@ -109,9 +160,47 @@ namespace GUIDValidation
 
         private void DrawScanControls()
         {
+            // 폴더 선택 UI
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            showFolderSelection = EditorGUILayout.Foldout(showFolderSelection, "검증 대상 폴더 선택", true);
+
+            if (GUILayout.Button("모두 선택", GUILayout.Width(80)))
+            {
+                SelectAllFolders(true);
+            }
+
+            if (GUILayout.Button("모두 해제", GUILayout.Width(80)))
+            {
+                SelectAllFolders(false);
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            if (showFolderSelection)
+            {
+                folderScrollPosition = EditorGUILayout.BeginScrollView(folderScrollPosition, GUILayout.MaxHeight(150));
+
+                int selectedCount = 0;
+                foreach (var folder in assetFolders)
+                {
+                    folder.IsSelected = EditorGUILayout.ToggleLeft($"  {folder.DisplayName}", folder.IsSelected);
+                    if (folder.IsSelected) selectedCount++;
+                }
+
+                EditorGUILayout.EndScrollView();
+
+                EditorGUILayout.LabelField($"선택된 폴더: {selectedCount} / {assetFolders.Count}", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+
+            // 스캔 옵션 및 버튼
             EditorGUILayout.BeginHorizontal();
 
-            // 스캔 옵션
+            // 패키지 포함 옵션
             includePackages = EditorGUILayout.Toggle("패키지 포함", includePackages);
 
             GUILayout.FlexibleSpace();
@@ -126,6 +215,14 @@ namespace GUIDValidation
 
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space();
+        }
+
+        private void SelectAllFolders(bool selected)
+        {
+            foreach (var folder in assetFolders)
+            {
+                folder.IsSelected = selected;
+            }
         }
 
         private void DrawResultTabs()
@@ -353,7 +450,25 @@ namespace GUIDValidation
 
             try
             {
-                lastResult = GUIDValidator.ValidateProject(includePackages);
+                // 선택된 폴더 목록 구성
+                var selectedFolders = new List<string>();
+                foreach (var folder in assetFolders)
+                {
+                    if (folder.IsSelected)
+                    {
+                        selectedFolders.Add(folder.Path);
+                    }
+                }
+
+                // 선택된 폴더가 없으면 경고
+                if (selectedFolders.Count == 0)
+                {
+                    EditorUtility.DisplayDialog("경고", "검증할 폴더를 하나 이상 선택해주세요.", "확인");
+                    return;
+                }
+
+                // 검증 실행
+                lastResult = GUIDValidator.ValidateProject(includePackages, selectedFolders);
                 selectedTab = 0; // 결과 탭으로 이동
             }
             finally

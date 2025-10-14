@@ -86,7 +86,9 @@ namespace GUIDValidation
         /// <summary>
         /// 전체 프로젝트 GUID 검증 실행
         /// </summary>
-        public static ValidationResult ValidateProject(bool includePackages = false)
+        /// <param name="includePackages">Packages 폴더 포함 여부</param>
+        /// <param name="selectedFolders">검증할 폴더 목록 (null이면 전체)</param>
+        public static ValidationResult ValidateProject(bool includePackages = false, List<string> selectedFolders = null)
         {
             var startTime = EditorApplication.timeSinceStartup;
             var result = new ValidationResult();
@@ -95,8 +97,13 @@ namespace GUIDValidation
             {
                 Debug.Log("[GUIDValidator] 프로젝트 GUID 검증 시작...");
 
+                if (selectedFolders != null && selectedFolders.Count > 0)
+                {
+                    Debug.Log($"[GUIDValidator] 검증 대상 폴더: {string.Join(", ", selectedFolders)}");
+                }
+
                 // 1. 모든 에셋 파일 수집
-                var assetFiles = CollectAssetFiles(includePackages);
+                var assetFiles = CollectAssetFiles(includePackages, selectedFolders);
                 result.TotalAssetsScanned = assetFiles.Count;
 
                 Debug.Log($"[GUIDValidator] {assetFiles.Count}개 에셋 파일 스캔 중...");
@@ -111,7 +118,7 @@ namespace GUIDValidation
                 result.BrokenReferences = FindBrokenReferences(assetFiles);
 
                 // 5. 고아 메타파일 검사
-                result.OrphanedMetaFiles = FindOrphanedMetaFiles();
+                result.OrphanedMetaFiles = FindOrphanedMetaFiles(selectedFolders);
 
                 result.ScanDuration = (float)(EditorApplication.timeSinceStartup - startTime);
 
@@ -129,12 +136,31 @@ namespace GUIDValidation
         /// <summary>
         /// 에셋 파일 수집
         /// </summary>
-        private static List<string> CollectAssetFiles(bool includePackages)
+        /// <param name="includePackages">Packages 폴더 포함 여부</param>
+        /// <param name="selectedFolders">검증할 폴더 목록 (null이면 전체)</param>
+        private static List<string> CollectAssetFiles(bool includePackages, List<string> selectedFolders)
         {
             var assetFiles = new List<string>();
 
-            // Assets 폴더 스캔
-            string[] searchFolders = includePackages ? null : new[] { "Assets" };
+            // 검증할 폴더 결정
+            string[] searchFolders;
+
+            if (selectedFolders != null && selectedFolders.Count > 0)
+            {
+                // 선택된 폴더만 검색
+                searchFolders = selectedFolders.ToArray();
+            }
+            else if (includePackages)
+            {
+                // 전체 (Assets + Packages)
+                searchFolders = null;
+            }
+            else
+            {
+                // Assets만
+                searchFolders = new[] { "Assets" };
+            }
+
             string[] guids = AssetDatabase.FindAssets("", searchFolders);
 
             foreach (string guid in guids)
@@ -258,25 +284,45 @@ namespace GUIDValidation
         /// <summary>
         /// 고아 메타파일 찾기
         /// </summary>
-        private static List<OrphanedMetaInfo> FindOrphanedMetaFiles()
+        /// <param name="selectedFolders">검증할 폴더 목록 (null이면 Assets 전체)</param>
+        private static List<OrphanedMetaInfo> FindOrphanedMetaFiles(List<string> selectedFolders)
         {
             var orphanedMetas = new List<OrphanedMetaInfo>();
 
-            string[] metaFiles = Directory.GetFiles("Assets", "*.meta", SearchOption.AllDirectories);
+            // 검색할 폴더 결정
+            var foldersToScan = new List<string>();
 
-            foreach (string metaPath in metaFiles)
+            if (selectedFolders != null && selectedFolders.Count > 0)
             {
-                string assetPath = metaPath.Substring(0, metaPath.Length - 5); // .meta 제거
+                foldersToScan.AddRange(selectedFolders);
+            }
+            else
+            {
+                foldersToScan.Add("Assets");
+            }
 
-                if (!File.Exists(assetPath) && !Directory.Exists(assetPath))
+            // 각 폴더에서 메타파일 검색
+            foreach (string folder in foldersToScan)
+            {
+                if (!Directory.Exists(folder))
+                    continue;
+
+                string[] metaFiles = Directory.GetFiles(folder, "*.meta", SearchOption.AllDirectories);
+
+                foreach (string metaPath in metaFiles)
                 {
-                    string guid = ExtractGuidFromMetaFile(metaPath);
-                    orphanedMetas.Add(new OrphanedMetaInfo
+                    string assetPath = metaPath.Substring(0, metaPath.Length - 5); // .meta 제거
+
+                    if (!File.Exists(assetPath) && !Directory.Exists(assetPath))
                     {
-                        MetaFilePath = metaPath,
-                        ExpectedAssetPath = assetPath,
-                        Guid = guid ?? "Unknown"
-                    });
+                        string guid = ExtractGuidFromMetaFile(metaPath);
+                        orphanedMetas.Add(new OrphanedMetaInfo
+                        {
+                            MetaFilePath = metaPath,
+                            ExpectedAssetPath = assetPath,
+                            Guid = guid ?? "Unknown"
+                        });
+                    }
                 }
             }
 
