@@ -366,7 +366,7 @@ namespace GUIDValidation
             // 폴더인 경우 접기/펼치기 아이콘
             if (node.IsFolder && node.Children.Count > 0)
             {
-                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true, GUILayout.Width(12));
+                node.IsFoldedOut = EditorGUILayout.Foldout(node.IsFoldedOut, "", true);
             }
             else
             {
