@@ -15,6 +15,14 @@ namespace Core.Managers
         [Header("Prefab 경로 설정")]
         [SerializeField] private string panelPrefabPath = "UI/Panels/";
 
+        [Header("Preload 설정")]
+        [Tooltip("게임 시작 시 미리 로드할 Panel 목록 (빠른 반응이 필요한 Panel)")]
+        [SerializeField] private PanelType[] preloadPanels = new PanelType[]
+        {
+            PanelType.Loading,  // 자주 사용, 즉시 표시 필요
+            PanelType.Pause     // ESC로 즉시 표시 필요
+        };
+
         [Header("Layer Canvas")]
         [SerializeField] private Canvas backgroundCanvas;
         [SerializeField] private Canvas normalCanvas;
@@ -37,7 +45,23 @@ namespace Core.Managers
         protected override void OnSingletonAwake()
         {
             CreateLayerCanvases();
+
+            // 설정된 Panel 자동 Preload
+            _ = AutoPreloadPanels();
+
             Log("[UIManager] 초기화 완료");
+        }
+
+        /// <summary>
+        /// 설정된 Panel들을 자동으로 Preload
+        /// </summary>
+        private async Awaitable AutoPreloadPanels()
+        {
+            if (preloadPanels != null && preloadPanels.Length > 0)
+            {
+                Log($"[UIManager] 자동 Preload 시작: {preloadPanels.Length}개 Panel");
+                await PreloadPanels(preloadPanels);
+            }
         }
 
         /// <summary>
@@ -446,6 +470,15 @@ namespace Core.Managers
         }
 
         #region 디버그 정보
+
+        /// <summary>
+        /// 설정된 Panel들을 수동으로 Preload (테스트용)
+        /// </summary>
+        [ContextMenu("Preload Configured Panels")]
+        private void TestPreloadPanels()
+        {
+            _ = AutoPreloadPanels();
+        }
 
         /// <summary>
         /// 현재 상태 출력 (디버그용)
