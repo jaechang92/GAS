@@ -32,6 +32,12 @@ namespace Core.Enums
         /// 게임플레이 (Gameplay 씬)
         /// Build Index: 3
         /// </summary>
-        Game = 3
+        Game = 3,
+
+        /// <summary>
+        /// 로비 (Lobby 씬)
+        /// Build Index: 4
+        /// </summary>
+        Lobby = 4
     }
 }

@@ -1,0 +1,17 @@
+{
+    "name": "Gameplay.NPC",
+    "rootNamespace": "Gameplay.NPC",
+    "references": [
+        "Gameplay.Dialogue",
+        "Core.Utilities"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

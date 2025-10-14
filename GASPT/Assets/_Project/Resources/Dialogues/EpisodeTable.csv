@@ -1,0 +1,4 @@
+EpisodeID,EpisodeName,NPCName,EpisodeType,Description
+EP_STORY_001,첫 만남,마을사람,Story,마을사람과의 첫 대화
+EP_STORY_002,재방문,마을사람,Story,마을사람과의 두 번째 대화
+EP_SHOP_001,상점 대화,상인,Shop,상인과의 상점 대화
