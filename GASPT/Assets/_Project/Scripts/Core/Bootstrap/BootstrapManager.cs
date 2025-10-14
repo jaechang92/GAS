@@ -1,6 +1,9 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using Core.Managers;
 using Core.Enums;
+using UnityEngine.UIElements.InputSystem;
+using UnityEngine.InputSystem.UI;
 
 namespace Core.Bootstrap
 {
@@ -42,15 +45,24 @@ namespace Core.Bootstrap
         {
             Debug.Log("[Bootstrap] 매니저 초기화 시작...");
 
-            // 1. SceneLoader 생성
+            // 1. EventSystem 생성 (UI 입력 처리)
+            CreateEventSystem();
+            await Awaitable.NextFrameAsync();
+
+            // 2. SceneLoader 생성
             CreateManager<SceneLoader>("SceneLoader");
             await Awaitable.NextFrameAsync();
 
-            // 2. SceneTransitionManager 생성
+            // 3. SceneTransitionManager 생성
             CreateManager<SceneTransitionManager>("SceneTransitionManager");
             await Awaitable.NextFrameAsync();
 
-            // 3. GameFlowManager 생성
+            // 4. UIManager 생성 (Panel 기반 시스템)
+            CreateManager<UIManager>("UIManager");
+            await Awaitable.NextFrameAsync();
+            // UIManager는 Panel을 필요할 때 Prefab에서 동적 로딩
+
+            // 5. GameFlowManager 생성
             var gameFlowManager = CreateManager<GameFlow.GameFlowManager>("GameFlowManager");
             if (gameFlowManager != null)
             {
@@ -80,10 +92,33 @@ namespace Core.Bootstrap
             // 새로 생성
             GameObject managerGO = new GameObject(managerName);
             T manager = managerGO.AddComponent<T>();
+            DontDestroyOnLoad(managerGO);
 
             Debug.Log($"[Bootstrap] {managerName} 생성 완료");
 
             return manager;
+        }
+
+        /// <summary>
+        /// EventSystem 생성 (UI 입력 처리)
+        /// </summary>
+        private void CreateEventSystem()
+        {
+            // 이미 존재하는지 확인
+            EventSystem existingEventSystem = FindAnyObjectByType<EventSystem>();
+            if (existingEventSystem != null)
+            {
+                Debug.LogWarning("[Bootstrap] EventSystem이 이미 존재합니다. 기존 인스턴스 사용.");
+                return;
+            }
+
+            // 새로 생성
+            GameObject eventSystemGO = new GameObject("EventSystem");
+            EventSystem eventSystem = eventSystemGO.AddComponent<EventSystem>();
+            eventSystemGO.AddComponent<InputSystemUIInputModule>();
+            DontDestroyOnLoad(eventSystemGO);
+
+            Debug.Log("[Bootstrap] EventSystem 생성 완료");
         }
 
         /// <summary>
