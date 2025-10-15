@@ -60,7 +60,6 @@ namespace Editor.Tools
             DrawNPCTypeSelection();
             DrawBasicSettings();
             DrawSpriteSelection();
-            DrawPreview();
             DrawEpisodeSettings();
             DrawCreateButton();
 
@@ -167,39 +166,6 @@ namespace Editor.Tools
                     MessageType.Info
                 );
             }
-
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.Space(5);
-        }
-
-        private void DrawPreview()
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("미리보기", EditorStyles.boldLabel);
-
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-
-            if (npcSprite != null && previewTexture != null)
-            {
-                // 스프라이트 미리보기
-                GUILayout.Box(previewTexture, previewBoxStyle, GUILayout.Width(PREVIEW_SIZE), GUILayout.Height(PREVIEW_SIZE));
-            }
-            else
-            {
-                // 기본 색상 미리보기
-                Color previewColor = npcType == NPCType.Story
-                    ? new Color(0.3f, 0.6f, 0.9f)
-                    : new Color(0.9f, 0.6f, 0.2f);
-
-                Color oldColor = GUI.backgroundColor;
-                GUI.backgroundColor = previewColor;
-                GUILayout.Box("기본 스프라이트\n(단색)", previewBoxStyle, GUILayout.Width(PREVIEW_SIZE), GUILayout.Height(PREVIEW_SIZE));
-                GUI.backgroundColor = oldColor;
-            }
-
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(5);
