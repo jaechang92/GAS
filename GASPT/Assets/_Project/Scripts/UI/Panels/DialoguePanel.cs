@@ -36,6 +36,9 @@ namespace UI.Panels
         private CancellationTokenSource typingCancellation;
         private bool isTyping = false;
 
+        // 키 입력 처리
+        private CancellationTokenSource keyInputCancellation;
+
         protected override void Awake()
         {
             base.Awake();
@@ -49,13 +52,21 @@ namespace UI.Panels
 
         private void OnEnable()
         {
+            Log("OnEnable 시작");
+
             // DialogueManager에 리스너 등록
             if (DialogueManager.Instance != null)
             {
                 DialogueManager.Instance.RegisterListener(this);
+                Log("DialogueManager 리스너 등록 완료");
             }
 
-            Log("DialoguePanel 활성화");
+            // 키 입력 감지 시작
+            keyInputCancellation = new CancellationTokenSource();
+            _ = WaitForKeyInputAsync(keyInputCancellation.Token);
+            Log("키 입력 감지 시작");
+
+            Log($"DialoguePanel 활성화 완료 (IsOpen: {IsOpen})");
         }
 
         private void OnDisable()
@@ -65,6 +76,11 @@ namespace UI.Panels
             {
                 DialogueManager.Instance.UnregisterListener(this);
             }
+
+            // 키 입력 감지 중지
+            keyInputCancellation?.Cancel();
+            keyInputCancellation?.Dispose();
+            keyInputCancellation = null;
 
             // 타이핑 효과 중지
             typingCancellation?.Cancel();
@@ -78,7 +94,7 @@ namespace UI.Panels
 
         public void OnDialogueStart(string episodeID)
         {
-            Log($"대화 시작: {episodeID}");
+            Log($"OnDialogueStart 호출: {episodeID} (IsOpen: {IsOpen})");
 
             // UI 초기화
             ClearChoices();
@@ -86,12 +102,17 @@ namespace UI.Panels
             {
                 continueButton.gameObject.SetActive(false);
             }
+
+            // currentNode 명시적으로 null 초기화
+            currentNode = null;
+            Log("대화 시작 준비 완료");
         }
 
         public async Awaitable OnDialogueNodeChanged(DialogueNode node)
         {
+            Log($"OnDialogueNodeChanged 호출: {node?.dialogueText} (IsOpen: {IsOpen})");
+
             currentNode = node;
-            Log($"노드 변경: {node}");
 
             // 화자 이름 표시
             if (speakerNameText != null)
@@ -113,10 +134,13 @@ namespace UI.Panels
             if (continueButton != null)
             {
                 continueButton.gameObject.SetActive(!node.hasChoices);
+                Log($"Continue 버튼 표시: {!node.hasChoices}");
             }
 
             // 선택지 숨김
             ClearChoices();
+
+            Log($"노드 변경 완료 (currentNode: {currentNode != null}, hasChoices: {node.hasChoices})");
         }
 
         public void OnDialogueChoicesShown(DialogueNode node, List<DialogueChoice> choices)
@@ -279,14 +303,18 @@ namespace UI.Panels
         /// </summary>
         private void OnContinueButtonClicked()
         {
+            Log($"OnContinueButtonClicked 호출 (isTyping: {isTyping})");
+
             // 타이핑 중이면 스킵
             if (isTyping)
             {
+                Log("타이핑 중 - 스킵");
                 SkipTyping();
                 return;
             }
 
             // 다음 노드로 진행
+            Log("DialogueManager.ShowNextNode() 호출");
             DialogueManager.Instance?.ShowNextNode();
         }
 
@@ -303,17 +331,40 @@ namespace UI.Panels
 
         #endregion
 
-        private void Update()
+        #region 키 입력 처리
+
+        /// <summary>
+        /// 키 입력 대기 (이벤트 기반)
+        /// Space 또는 Enter로 대화 진행
+        /// </summary>
+        private async Awaitable WaitForKeyInputAsync(CancellationToken cancellationToken)
         {
-            // Space 또는 Enter로 대화 진행
-            if (IsOpen && !currentNode.hasChoices)
+            Log("WaitForKeyInputAsync 시작");
+
+            try
             {
-                if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    OnContinueButtonClicked();
+                    await Awaitable.NextFrameAsync(cancellationToken);
+
+                    // Panel이 열려있고, currentNode가 null이 아니며, 선택지가 없을 때만 체크
+                    if (IsOpen && currentNode != null && !currentNode.hasChoices)
+                    {
+                        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+                        {
+                            Log("키 입력 감지! OnContinueButtonClicked 호출");
+                            OnContinueButtonClicked();
+                        }
+                    }
                 }
             }
+            catch (System.OperationCanceledException)
+            {
+                Log("WaitForKeyInputAsync 취소됨");
+            }
         }
+
+        #endregion
 
         private void Log(string message)
         {

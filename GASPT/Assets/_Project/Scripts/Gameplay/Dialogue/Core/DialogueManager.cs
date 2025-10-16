@@ -97,23 +97,41 @@ namespace Gameplay.Dialogue
             IsPlaying = true;
             Log($"=== 에피소드 시작: {currentEpisode} ===");
 
-            // DialoguePanel 열기
-            OpenDialoguePanel();
-
-            // 리스너에게 통보
-            NotifyDialogueStart(episodeID);
-            OnDialogueStarted?.Invoke(episodeID);
-
-            // 첫 노드 표시 (비동기 fire-and-forget)
-            _ = ShowCurrentNode();
+            // DialoguePanel 열기 및 대화 시작 (비동기)
+            _ = StartDialogueAsync(episodeID);
 
             return true;
         }
 
         /// <summary>
-        /// DialoguePanel 열기
+        /// 대화 시작 비동기 처리
+        /// Panel을 열고 완전히 준비된 후 대화 시작
         /// </summary>
-        private async void OpenDialoguePanel()
+        private async Awaitable StartDialogueAsync(string episodeID)
+        {
+            // 1. DialoguePanel 열기 (완료될 때까지 대기)
+            Log("DialoguePanel 열기 시작");
+            await OpenDialoguePanelAsync();
+
+            // 2. 프레임 대기 (Panel OnEnable 완료 보장)
+            await Awaitable.NextFrameAsync();
+            Log("DialoguePanel 준비 완료");
+
+            // 3. 리스너에게 통보
+            NotifyDialogueStart(episodeID);
+            OnDialogueStarted?.Invoke(episodeID);
+
+            // 4. 프레임 대기 (리스너 초기화 완료)
+            await Awaitable.NextFrameAsync();
+
+            // 5. 첫 노드 표시
+            await ShowCurrentNode();
+        }
+
+        /// <summary>
+        /// DialoguePanel 열기 (async 버전)
+        /// </summary>
+        private async Awaitable OpenDialoguePanelAsync()
         {
             if (Core.Managers.UIManager.Instance != null)
             {
@@ -314,7 +332,9 @@ namespace Gameplay.Dialogue
 
         private void NotifyDialogueStart(string episodeID)
         {
-            foreach (var listener in listeners)
+            // 리스트 복사본 순회 (순회 중 리스너가 제거될 수 있음)
+            var listenersCopy = new List<IDialogueListener>(listeners);
+            foreach (var listener in listenersCopy)
             {
                 listener.OnDialogueStart(episodeID);
             }
@@ -322,7 +342,9 @@ namespace Gameplay.Dialogue
 
         private async Awaitable NotifyNodeChanged(DialogueNode node)
         {
-            foreach (var listener in listeners)
+            // 리스트 복사본 순회 (순회 중 리스너가 제거될 수 있음)
+            var listenersCopy = new List<IDialogueListener>(listeners);
+            foreach (var listener in listenersCopy)
             {
                 await listener.OnDialogueNodeChanged(node);
             }
@@ -330,7 +352,9 @@ namespace Gameplay.Dialogue
 
         private void NotifyChoicesShown(DialogueNode node, List<DialogueChoice> choices)
         {
-            foreach (var listener in listeners)
+            // 리스트 복사본 순회 (순회 중 리스너가 제거될 수 있음)
+            var listenersCopy = new List<IDialogueListener>(listeners);
+            foreach (var listener in listenersCopy)
             {
                 listener.OnDialogueChoicesShown(node, choices);
             }
@@ -338,7 +362,9 @@ namespace Gameplay.Dialogue
 
         private void NotifyDialogueEnd()
         {
-            foreach (var listener in listeners)
+            // 리스트 복사본 순회 (OnDialogueEnd에서 UnregisterListener가 호출될 수 있음)
+            var listenersCopy = new List<IDialogueListener>(listeners);
+            foreach (var listener in listenersCopy)
             {
                 listener.OnDialogueEnd();
             }
