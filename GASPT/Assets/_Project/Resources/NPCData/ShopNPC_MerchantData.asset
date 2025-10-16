@@ -20,4 +20,4 @@ MonoBehaviour:
   interactionRange: 2
   interactionKey: 101
   showInteractionPrompt: 1
-  interactionPromptText: "E\uB97C \uB20C\uB7EC \uC0C1\uC810 \uC5F4\uAE30"
+  interactionPromptText: E
