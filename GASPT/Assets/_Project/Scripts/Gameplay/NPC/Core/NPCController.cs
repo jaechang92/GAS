@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 using Gameplay.Dialogue;
 
 namespace Gameplay.NPC
@@ -28,7 +29,9 @@ namespace Gameplay.NPC
         // 상호작용 프롬프트 UI (World Space)
         protected GameObject interactionPrompt;
 
-        public virtual bool CanInteract => playerInRange && !DialogueManager.Instance.IsPlaying;
+        public virtual bool CanInteract => playerInRange &&
+                                           DialogueManager.Instance != null &&
+                                           !DialogueManager.Instance.IsPlaying;
 
         protected virtual void Awake()
         {
@@ -47,13 +50,28 @@ namespace Gameplay.NPC
 
         protected virtual void Start()
         {
+            Log($"NPC 초기화 시작: {gameObject.name}");
+
+            // NPCData 검증
+            if (npcData == null)
+            {
+                Debug.LogError($"[{gameObject.name}] NPCData가 설정되지 않았습니다! Inspector에서 NPCData를 할당하세요.");
+                return;
+            }
+
+            Log($"NPCData 확인: {npcData.npcName}, showPrompt={npcData.showInteractionPrompt}");
+
             // 상호작용 프롬프트 생성
-            if (npcData != null && npcData.showInteractionPrompt)
+            if (npcData.showInteractionPrompt)
             {
                 CreateInteractionPrompt();
             }
+            else
+            {
+                Log("showInteractionPrompt가 false로 설정되어 프롬프트를 생성하지 않습니다.");
+            }
 
-            Log($"NPC 초기화: {GetNPCName()}");
+            Log($"NPC 초기화 완료: {GetNPCName()}");
         }
 
         protected virtual void Update()
@@ -148,25 +166,69 @@ namespace Gameplay.NPC
         #region 상호작용 프롬프트
 
         /// <summary>
-        /// 상호작용 프롬프트 생성 (World Space UI)
+        /// 상호작용 프롬프트 생성 (World Space Canvas + TextMeshPro)
         /// </summary>
         protected virtual void CreateInteractionPrompt()
         {
-            // 프롬프트 오브젝트 생성 (간단한 TextMesh로 구현)
+            Log("상호작용 프롬프트 생성 시작");
+
+            // Canvas 오브젝트 생성
             interactionPrompt = new GameObject("InteractionPrompt");
             interactionPrompt.transform.SetParent(transform);
             interactionPrompt.transform.localPosition = new Vector3(0, 1.5f, 0);
 
-            // TextMesh 추가 (간단한 구현)
-            var textMesh = interactionPrompt.AddComponent<TextMesh>();
-            textMesh.text = npcData.interactionPromptText;
-            textMesh.fontSize = 20;
-            textMesh.color = Color.white;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.alignment = TextAlignment.Center;
+            // Canvas 추가 (World Space)
+            var canvas = interactionPrompt.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+
+            var canvasScaler = interactionPrompt.AddComponent<UnityEngine.UI.CanvasScaler>();
+            canvasScaler.dynamicPixelsPerUnit = 10;
+
+            // RectTransform 설정
+            var rectTransform = interactionPrompt.GetComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(2, 0.5f);
+
+            // TextMeshProUGUI 추가
+            var textObj = new GameObject("Text");
+            textObj.transform.SetParent(interactionPrompt.transform);
+            textObj.transform.localPosition = Vector3.zero;
+            textObj.transform.localRotation = Quaternion.identity;
+            textObj.transform.localScale = Vector3.one;
+
+            var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+            tmpText.text = npcData.interactionPromptText;
+            tmpText.fontSize = 18;
+            tmpText.color = Color.white;
+            tmpText.alignment = TextAlignmentOptions.Center;
+            tmpText.fontStyle = FontStyles.Bold;
+
+            var textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+
+            // 배경 추가 (가독성 향상)
+            var bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(interactionPrompt.transform);
+            bgObj.transform.SetAsFirstSibling(); // 텍스트 뒤로
+            bgObj.transform.localPosition = Vector3.zero;
+            bgObj.transform.localRotation = Quaternion.identity;
+            bgObj.transform.localScale = Vector3.one;
+
+            var bgImage = bgObj.AddComponent<UnityEngine.UI.Image>();
+            bgImage.color = new Color(0, 0, 0, 0.7f);
+
+            var bgRect = bgObj.GetComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.sizeDelta = Vector2.zero;
+            bgRect.anchoredPosition = Vector2.zero;
 
             // 초기에는 숨김
             interactionPrompt.SetActive(false);
+
+            Log("상호작용 프롬프트 생성 완료");
         }
 
         /// <summary>
@@ -174,13 +236,21 @@ namespace Gameplay.NPC
         /// </summary>
         protected virtual void UpdateInteractionPrompt()
         {
-            if (interactionPrompt == null) return;
+            if (interactionPrompt == null)
+            {
+                if (showDebugLog && playerInRange)
+                {
+                    Debug.LogWarning($"[{GetNPCName()}] interactionPrompt가 null입니다!");
+                }
+                return;
+            }
 
             // 상호작용 가능할 때만 표시
             bool shouldShow = CanInteract;
             if (interactionPrompt.activeSelf != shouldShow)
             {
                 interactionPrompt.SetActive(shouldShow);
+                Log($"프롬프트 표시 상태 변경: {shouldShow} (playerInRange={playerInRange}, DialogueManager={(DialogueManager.Instance != null)})");
             }
         }
 
@@ -210,14 +280,22 @@ namespace Gameplay.NPC
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            Log($"OnTriggerEnter2D: {other.gameObject.name} (Tag: {other.tag})");
+
             if (other.CompareTag("Player"))
             {
                 OnPlayerEnterRange();
+            }
+            else
+            {
+                Log($"Player 태그가 아님! 현재 태그: {other.tag}");
             }
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
+            Log($"OnTriggerExit2D: {other.gameObject.name} (Tag: {other.tag})");
+
             if (other.CompareTag("Player"))
             {
                 OnPlayerExitRange();
