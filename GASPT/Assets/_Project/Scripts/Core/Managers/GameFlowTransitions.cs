@@ -278,10 +278,15 @@ namespace GameFlow
                 stateMachine.AddTransition(new PreloadCompleteTransition(preloadState, gameFlowManager));
             }
 
-            // Main -> Loading (게임 시작)
+            // Main -> Lobby (게임 시작)
             stateMachine.AddTransition(new EventTransition(
-                GameStateType.Main, GameStateType.Loading,
+                GameStateType.Main, GameStateType.Lobby,
                 GameEventType.StartGame, gameFlowManager, 5));
+
+            // Lobby -> Loading (Gameplay 진입)
+            stateMachine.AddTransition(new EventTransition(
+                GameStateType.Lobby, GameStateType.Loading,
+                GameEventType.EnterGameplay, gameFlowManager, 5));
 
             // Loading -> Ingame (로딩 완료)
             stateMachine.AddTransition(new LoadingCompleteTransition(gameFlowManager));

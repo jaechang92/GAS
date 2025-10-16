@@ -312,6 +312,14 @@ namespace GameFlow
         }
 
         /// <summary>
+        /// Gameplay 진입 (Lobby에서 포탈 사용 시)
+        /// </summary>
+        public void EnterGameplay()
+        {
+            TriggerEvent(GameEventType.EnterGameplay);
+        }
+
+        /// <summary>
         /// 인게임 메뉴 열기
         /// </summary>
         public void OpenInGameMenu()

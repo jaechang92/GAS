@@ -21,7 +21,8 @@ namespace GameFlow
     /// </summary>
     public enum GameEventType
     {
-        StartGame,          // 게임 시작
+        StartGame,          // 게임 시작 (Main -> Lobby)
+        EnterGameplay,      // Gameplay 진입 (Lobby -> Loading -> Ingame)
         LoadComplete,       // 로딩 완료
         PauseGame,          // 게임 일시정지
         ResumeGame,         // 게임 재개

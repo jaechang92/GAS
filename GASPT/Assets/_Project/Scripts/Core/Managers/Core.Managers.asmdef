@@ -6,7 +6,8 @@
         "Core.Utilities",
         "Core.Enums",
         "Core.Data",
-        "UI.Core"
+        "UI.Core",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -582,13 +582,53 @@ namespace GameFlow
 
         protected override async Awaitable EnterState(CancellationToken cancellationToken)
         {
-            // 로비 UI 활성화
-            gameFlowManager?.ShowLobby();
+            Debug.Log("[LobbyState] ========== 로비 진입 시작 ==========");
+
+            // 1. FadeOut (화면 어둡게)
+            Debug.Log("[LobbyState] 1단계: 화면 FadeOut");
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeOutAsync(0.3f);
+            }
+
+            // 2. Lobby 씬 로드
+            Debug.Log("[LobbyState] 2단계: Lobby 씬 로드");
+            if (Core.Managers.SceneLoader.Instance != null)
+            {
+                await Core.Managers.SceneLoader.Instance.LoadSceneAsync(
+                    Core.Enums.SceneType.Lobby,
+                    UnityEngine.SceneManagement.LoadSceneMode.Single
+                );
+            }
+
+            // 3. 프레임 대기 (씬 로드 완료 보장)
+            Debug.Log("[LobbyState] 3단계: 씬 로드 완료 대기");
             await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
+
+            // 4. LobbyManager 설정 (Player 생성)
+            Debug.Log("[LobbyState] 4단계: LobbyManager 설정");
+            SetupLobbyManager();
+
+            // 5. 로비 UI 활성화
+            Debug.Log("[LobbyState] 5단계: 로비 UI 활성화");
+            gameFlowManager?.ShowLobby();
+
+            await Awaitable.NextFrameAsync();
+
+            // 6. FadeIn (로비 씬이 서서히 보임)
+            Debug.Log("[LobbyState] 6단계: FadeIn");
+            if (Core.Managers.SceneTransitionManager.Instance != null)
+            {
+                await Core.Managers.SceneTransitionManager.Instance.FadeInAsync(0.5f);
+            }
+
+            Debug.Log("[LobbyState] ========== 로비 표시 완료 ==========");
         }
 
         protected override async Awaitable ExitState(CancellationToken cancellationToken)
         {
+            Debug.Log("[LobbyState] 로비 종료");
             // 로비 UI 비활성화
             gameFlowManager?.HideLobby();
             await Awaitable.NextFrameAsync();
@@ -597,6 +637,35 @@ namespace GameFlow
         protected override void UpdateState(float deltaTime)
         {
             // 로비 업데이트 로직
+        }
+
+        /// <summary>
+        /// LobbyManager 설정 (동적 검색)
+        /// </summary>
+        private void SetupLobbyManager()
+        {
+            // LobbyManager 타입을 동적으로 검색
+            var lobbyManagerType = System.Type.GetType("Gameplay.LobbyManager, Gameplay.Manager");
+
+            if (lobbyManagerType == null)
+            {
+                Debug.LogWarning("[LobbyState] LobbyManager 타입을 찾을 수 없습니다.");
+                return;
+            }
+
+            // 씬에서 LobbyManager 찾기
+            var existingManager = Object.FindAnyObjectByType(lobbyManagerType);
+
+            if (existingManager != null)
+            {
+                Debug.Log("[LobbyState] LobbyManager 이미 존재함");
+                return;
+            }
+
+            // 새로 생성
+            GameObject managerObject = new GameObject("LobbyManager");
+            managerObject.AddComponent(lobbyManagerType);
+            Debug.Log("[LobbyState] LobbyManager 생성 완료");
         }
     }
 
