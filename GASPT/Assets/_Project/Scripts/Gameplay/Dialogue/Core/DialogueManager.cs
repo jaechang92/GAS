@@ -104,8 +104,8 @@ namespace Gameplay.Dialogue
             NotifyDialogueStart(episodeID);
             OnDialogueStarted?.Invoke(episodeID);
 
-            // 첫 노드 표시
-            ShowCurrentNode();
+            // 첫 노드 표시 (비동기 fire-and-forget)
+            _ = ShowCurrentNode();
 
             return true;
         }
@@ -157,7 +157,7 @@ namespace Gameplay.Dialogue
                 return;
             }
 
-            ShowCurrentNode();
+            _ = ShowCurrentNode();
         }
 
         /// <summary>
@@ -222,7 +222,7 @@ namespace Gameplay.Dialogue
             }
 
             currentChoices = null;
-            ShowCurrentNode();
+            _ = ShowCurrentNode();
         }
 
         /// <summary>
@@ -251,12 +251,12 @@ namespace Gameplay.Dialogue
         /// <summary>
         /// 현재 노드 표시
         /// </summary>
-        private void ShowCurrentNode()
+        private async Awaitable ShowCurrentNode()
         {
             Log($"노드 표시: {currentNode}");
 
             // 리스너에게 노드 변경 통보
-            NotifyNodeChanged(currentNode);
+            await NotifyNodeChanged(currentNode);
             OnNodeChanged?.Invoke(currentNode);
 
             // 선택지가 있는 경우
@@ -320,11 +320,11 @@ namespace Gameplay.Dialogue
             }
         }
 
-        private void NotifyNodeChanged(DialogueNode node)
+        private async Awaitable NotifyNodeChanged(DialogueNode node)
         {
             foreach (var listener in listeners)
             {
-                listener.OnDialogueNodeChanged(node);
+                await listener.OnDialogueNodeChanged(node);
             }
         }
 

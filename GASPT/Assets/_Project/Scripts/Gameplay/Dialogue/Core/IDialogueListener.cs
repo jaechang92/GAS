@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Gameplay.Dialogue
 {
     /// <summary>
@@ -14,7 +16,7 @@ namespace Gameplay.Dialogue
         /// <summary>
         /// 대화 노드 변경 시 호출
         /// </summary>
-        void OnDialogueNodeChanged(DialogueNode node);
+        Awaitable OnDialogueNodeChanged(DialogueNode node);
 
         /// <summary>
         /// 선택지 표시 시 호출

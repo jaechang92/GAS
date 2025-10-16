@@ -1,5 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -32,8 +32,8 @@ namespace UI.Panels
         private DialogueNode currentNode;
         private List<Button> activeChoiceButtons = new List<Button>();
 
-        // 타이핑 효과 코루틴
-        private Coroutine typingCoroutine;
+        // 타이핑 효과
+        private CancellationTokenSource typingCancellation;
         private bool isTyping = false;
 
         protected override void Awake()
@@ -67,11 +67,9 @@ namespace UI.Panels
             }
 
             // 타이핑 효과 중지
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
-            }
+            typingCancellation?.Cancel();
+            typingCancellation?.Dispose();
+            typingCancellation = null;
 
             Log("DialoguePanel 비활성화");
         }
@@ -90,7 +88,7 @@ namespace UI.Panels
             }
         }
 
-        public void OnDialogueNodeChanged(DialogueNode node)
+        public async Awaitable OnDialogueNodeChanged(DialogueNode node)
         {
             currentNode = node;
             Log($"노드 변경: {node}");
@@ -104,7 +102,7 @@ namespace UI.Panels
             // 대화 텍스트 표시
             if (useTypingEffect)
             {
-                ShowDialogueWithTyping(node.dialogueText);
+                await ShowDialogueWithTyping(node.dialogueText);
             }
             else
             {
@@ -162,32 +160,42 @@ namespace UI.Panels
         /// <summary>
         /// 대화 타이핑 효과로 표시
         /// </summary>
-        private void ShowDialogueWithTyping(string text)
+        private async Awaitable ShowDialogueWithTyping(string text)
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-            }
+            typingCancellation?.Cancel();
+            typingCancellation?.Dispose();
 
-            typingCoroutine = StartCoroutine(TypeText(text));
+            typingCancellation = new CancellationTokenSource();
+            await TypeTextAsync(text, typingCancellation.Token);
         }
 
         /// <summary>
-        /// 타이핑 효과 코루틴
+        /// 타이핑 효과 비동기 메서드
         /// </summary>
-        private IEnumerator TypeText(string text)
+        private async Awaitable TypeTextAsync(string text, CancellationToken cancellationToken)
         {
             isTyping = true;
             dialogueText.text = "";
 
-            foreach (char c in text)
+            try
             {
-                dialogueText.text += c;
-                yield return new WaitForSeconds(typingSpeed);
-            }
+                foreach (char c in text)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
 
-            isTyping = false;
-            typingCoroutine = null;
+                    dialogueText.text += c;
+                    await Awaitable.WaitForSecondsAsync(typingSpeed, cancellationToken);
+                }
+            }
+            catch (System.OperationCanceledException)
+            {
+                // 취소된 경우 예외 무시
+            }
+            finally
+            {
+                isTyping = false;
+            }
         }
 
         /// <summary>
@@ -195,10 +203,9 @@ namespace UI.Panels
         /// </summary>
         private void SkipTyping()
         {
-            if (isTyping && typingCoroutine != null)
+            if (isTyping)
             {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
+                typingCancellation?.Cancel();
                 isTyping = false;
 
                 if (currentNode != null)
