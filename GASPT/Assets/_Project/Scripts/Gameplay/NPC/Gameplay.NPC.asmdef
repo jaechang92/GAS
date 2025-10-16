@@ -3,7 +3,8 @@
     "rootNamespace": "Gameplay.NPC",
     "references": [
         "Gameplay.Dialogue",
-        "Core.Utilities"
+        "Core.Utilities",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
