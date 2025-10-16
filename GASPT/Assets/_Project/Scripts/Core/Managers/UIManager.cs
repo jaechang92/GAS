@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Core;
 using UI.Core;
+using TMPro;
 
 namespace Core.Managers
 {
@@ -13,7 +14,8 @@ namespace Core.Managers
     public class UIManager : SingletonManager<UIManager>
     {
         [Header("Prefab 경로 설정")]
-        [SerializeField] private string panelPrefabPath = "UI/Panels/";
+        private const string PREFAB_PATH = "UI/";  // Resources 폴더 기준 상대 경로
+        private const string PANEL_PREFAB_PATH = "UI/Panels/";
 
         [Header("Preload 설정")]
         [Tooltip("게임 시작 시 미리 로드할 Panel 목록 (빠른 반응이 필요한 Panel)")]
@@ -30,6 +32,14 @@ namespace Core.Managers
         [SerializeField] private Canvas systemCanvas;
         [SerializeField] private Canvas transitionCanvas;
 
+        [Header("Overlay Canvas (InteractionPrompt용)")]
+        [SerializeField] private Canvas overlayCanvas;
+
+        [Header("InteractionPrompt 설정")]
+        [SerializeField] private string interactionPromptPrefabPath = $"{PREFAB_PATH}InteractionPrompt";
+        [SerializeField] private Vector3 defaultPromptOffset = new Vector3(0, 1.5f, 0);
+        [SerializeField] private float promptFontSize = 18f;
+
         [Header("디버그")]
         [SerializeField] private bool showDebugLog = true;
 
@@ -42,9 +52,17 @@ namespace Core.Managers
         // 현재 열려있는 Panel들
         private HashSet<BasePanel> openPanels = new HashSet<BasePanel>();
 
+        // InteractionPrompt 관련
+        private GameObject interactionPrompt;
+        private TextMeshProUGUI interactionPromptText;
+        private Transform interactionPromptTarget;
+        private Vector3 interactionPromptOffset;
+
         protected override void OnSingletonAwake()
         {
             CreateLayerCanvases();
+            CreateOverlayCanvas();
+            CreateInteractionPrompt();
 
             // 설정된 Panel 자동 Preload
             _ = AutoPreloadPanels();
@@ -76,6 +94,145 @@ namespace Core.Managers
             transitionCanvas = CreateCanvas("TransitionCanvas", UILayer.Transition);
 
             Log("[UIManager] Layer Canvas 생성 완료");
+        }
+
+        /// <summary>
+        /// Overlay Canvas 생성 (Screen Space - Camera)
+        /// </summary>
+        private void CreateOverlayCanvas()
+        {
+            GameObject canvasObj = new GameObject("OverlayCanvas");
+            canvasObj.transform.SetParent(transform);
+
+            overlayCanvas = canvasObj.AddComponent<Canvas>();
+            overlayCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            overlayCanvas.worldCamera = Camera.main;
+            overlayCanvas.sortingOrder = 1000; // 다른 UI 위에 표시
+
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            Log("[UIManager] Overlay Canvas 생성 완료");
+        }
+
+        /// <summary>
+        /// InteractionPrompt 생성 (재사용 가능한 단일 인스턴스)
+        /// </summary>
+        private void CreateInteractionPrompt()
+        {
+            if (overlayCanvas == null)
+            {
+                Debug.LogError("[UIManager] Overlay Canvas가 null입니다. CreateInteractionPrompt 실패.");
+                return;
+            }
+
+            // 이미 생성되어 있으면 스킵
+            if (interactionPrompt != null)
+            {
+                Log("[UIManager] InteractionPrompt가 이미 존재합니다.");
+                return;
+            }
+
+            Log("[UIManager] InteractionPrompt 생성 시작");
+
+            // 1. GameResourceManager에서 Prefab 로드 시도
+            if (GameResourceManager.Instance != null)
+            {
+                GameObject prefab = GameResourceManager.Instance.Load<GameObject>(interactionPromptPrefabPath);
+
+                if (prefab != null)
+                {
+                    Log($"[UIManager] Prefab에서 InteractionPrompt 생성: {interactionPromptPrefabPath}");
+                    interactionPrompt = Instantiate(prefab, overlayCanvas.transform, false);
+                    interactionPrompt.name = "InteractionPrompt";
+
+                    // Prefab에서 TextMeshProUGUI 컴포넌트 찾기
+                    interactionPromptText = interactionPrompt.GetComponentInChildren<TextMeshProUGUI>();
+
+                    if (interactionPromptText == null)
+                    {
+                        Debug.LogError("[UIManager] Prefab에 TextMeshProUGUI 컴포넌트가 없습니다!");
+                        Destroy(interactionPrompt);
+                        interactionPrompt = null;
+                    }
+                    else
+                    {
+                        // 초기에는 숨김
+                        interactionPrompt.SetActive(false);
+                        Log("[UIManager] InteractionPrompt Prefab 생성 완료");
+                        return;
+                    }
+                }
+                else
+                {
+                    Log($"[UIManager] Prefab을 찾을 수 없습니다: {interactionPromptPrefabPath}. 코드로 생성합니다.");
+                }
+            }
+            else
+            {
+                Log("[UIManager] GameResourceManager가 없습니다. 코드로 생성합니다.");
+            }
+
+            // 2. Prefab이 없으면 코드로 생성
+            CreateInteractionPromptFromCode();
+        }
+
+        /// <summary>
+        /// InteractionPrompt를 코드로 생성 (Prefab 폴백)
+        /// </summary>
+        private void CreateInteractionPromptFromCode()
+        {
+            Log("[UIManager] 코드로 InteractionPrompt 생성 시작");
+
+            // InteractionPrompt 오브젝트 생성
+            interactionPrompt = new GameObject("InteractionPrompt");
+            interactionPrompt.transform.SetParent(overlayCanvas.transform, false);
+
+            // RectTransform 설정
+            var rectTransform = interactionPrompt.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(200, 50); // 픽셀 단위 크기
+            rectTransform.anchorMin = new Vector2(0, 0);
+            rectTransform.anchorMax = new Vector2(0, 0);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // 배경 추가 (가독성 향상)
+            var bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(interactionPrompt.transform, false);
+
+            var bgRect = bgObj.AddComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.sizeDelta = Vector2.zero;
+            bgRect.anchoredPosition = Vector2.zero;
+
+            var bgImage = bgObj.AddComponent<Image>();
+            bgImage.color = new Color(0, 0, 0, 0.7f);
+
+            // TextMeshProUGUI 추가
+            var textObj = new GameObject("Text");
+            textObj.transform.SetParent(interactionPrompt.transform, false);
+
+            var textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+
+            interactionPromptText = textObj.AddComponent<TextMeshProUGUI>();
+            interactionPromptText.text = ""; // 초기 비어있음
+            interactionPromptText.fontSize = promptFontSize;
+            interactionPromptText.enableAutoSizing = true;
+            interactionPromptText.color = Color.white;
+            interactionPromptText.alignment = TextAlignmentOptions.Center;
+            interactionPromptText.fontStyle = FontStyles.Normal;
+
+            // 초기에는 숨김
+            interactionPrompt.SetActive(false);
+
+            Log("[UIManager] 코드로 InteractionPrompt 생성 완료");
         }
 
         /// <summary>
@@ -294,6 +451,83 @@ namespace Core.Managers
             return null;
         }
 
+        #region InteractionPrompt 관리
+
+        /// <summary>
+        /// 상호작용 프롬프트 표시
+        /// </summary>
+        /// <param name="target">프롬프트를 표시할 대상 Transform (보통 NPC)</param>
+        /// <param name="text">표시할 텍스트</param>
+        /// <param name="offset">대상으로부터의 오프셋 (기본값 사용 시 null)</param>
+        public void ShowInteractionPrompt(Transform target, string text, Vector3? offset = null)
+        {
+            if (interactionPrompt == null || interactionPromptText == null)
+            {
+                Debug.LogWarning("[UIManager] InteractionPrompt가 초기화되지 않았습니다.");
+                return;
+            }
+
+            if (target == null)
+            {
+                Debug.LogWarning("[UIManager] ShowInteractionPrompt: target이 null입니다.");
+                return;
+            }
+
+            interactionPromptTarget = target;
+            interactionPromptOffset = offset ?? defaultPromptOffset;
+            interactionPromptText.text = text;
+
+            // 프롬프트 활성화 및 위치 업데이트
+            interactionPrompt.SetActive(true);
+            UpdateInteractionPromptPosition();
+
+            Log($"[UIManager] InteractionPrompt 표시: {text}");
+        }
+
+        /// <summary>
+        /// 상호작용 프롬프트 숨김
+        /// </summary>
+        public void HideInteractionPrompt()
+        {
+            if (interactionPrompt == null) return;
+
+            interactionPrompt.SetActive(false);
+            interactionPromptTarget = null;
+
+            Log("[UIManager] InteractionPrompt 숨김");
+        }
+
+        /// <summary>
+        /// InteractionPrompt 위치 업데이트 (매 프레임 호출)
+        /// </summary>
+        private void UpdateInteractionPromptPosition()
+        {
+            if (interactionPrompt == null || interactionPromptTarget == null) return;
+            if (Camera.main == null) return;
+
+            // Target의 월드 위치 + 오프셋
+            Vector3 worldPosition = interactionPromptTarget.position + interactionPromptOffset;
+
+            // 월드 좌표를 스크린 좌표로 변환
+            Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition);
+
+            // 카메라 뒤에 있으면 숨김
+            if (screenPosition.z < 0)
+            {
+                interactionPrompt.SetActive(false);
+                return;
+            }
+
+            // RectTransform 위치 설정
+            RectTransform rectTransform = interactionPrompt.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchoredPosition = screenPosition;
+            }
+        }
+
+        #endregion
+
         /// <summary>
         /// Panel 언로드 (메모리에서 제거)
         /// </summary>
@@ -339,7 +573,7 @@ namespace Core.Managers
         /// </summary>
         private async Awaitable<BasePanel> LoadPanel(PanelType panelType)
         {
-            string path = $"{panelPrefabPath}{panelType}Panel";
+            string path = $"{PANEL_PREFAB_PATH}{panelType}Panel";
             Log($"[UIManager] Panel Prefab 로드 시도: {path}");
 
             // Resources.LoadAsync 사용
@@ -419,6 +653,17 @@ namespace Core.Managers
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 HandleEscapeKey();
+            }
+
+            // InteractionPrompt 위치 추적
+            if (interactionPrompt != null && interactionPrompt.activeSelf && interactionPromptTarget != null)
+            {
+                UpdateInteractionPromptPosition();
+            }
+            else if (interactionPrompt != null && interactionPrompt.activeSelf && interactionPromptTarget == null)
+            {
+                // Target이 파괴되었으면 프롬프트 숨김
+                HideInteractionPrompt();
             }
         }
 

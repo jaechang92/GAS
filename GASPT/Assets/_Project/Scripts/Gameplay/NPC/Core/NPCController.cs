@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using Gameplay.Dialogue;
+using Core.Managers;
 
 namespace Gameplay.NPC
 {
@@ -25,9 +26,6 @@ namespace Gameplay.NPC
         // 상태
         protected bool playerInRange = false;
         protected int currentEpisodeIndex = 0;
-
-        // 상호작용 프롬프트 UI (World Space)
-        protected GameObject interactionPrompt;
 
         public virtual bool CanInteract => playerInRange &&
                                            DialogueManager.Instance != null &&
@@ -59,18 +57,13 @@ namespace Gameplay.NPC
                 return;
             }
 
+            // DialogueManager 이벤트 구독
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.OnDialogueEnded += OnDialogueEnded;
+            }
+
             Log($"NPCData 확인: {npcData.npcName}, showPrompt={npcData.showInteractionPrompt}");
-
-            // 상호작용 프롬프트 생성
-            if (npcData.showInteractionPrompt)
-            {
-                CreateInteractionPrompt();
-            }
-            else
-            {
-                Log("showInteractionPrompt가 false로 설정되어 프롬프트를 생성하지 않습니다.");
-            }
-
             Log($"NPC 초기화 완료: {GetNPCName()}");
         }
 
@@ -81,9 +74,21 @@ namespace Gameplay.NPC
             {
                 OnInteract();
             }
+        }
 
-            // 상호작용 프롬프트 표시/숨김
-            UpdateInteractionPrompt();
+        protected virtual void OnDisable()
+        {
+            // DialogueManager 이벤트 구독 해제
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.OnDialogueEnded -= OnDialogueEnded;
+            }
+
+            // NPC가 비활성화될 때 프롬프트 숨김
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.HideInteractionPrompt();
+            }
         }
 
         #region INPCInteractable 구현
@@ -92,12 +97,18 @@ namespace Gameplay.NPC
         {
             playerInRange = true;
             Log($"플레이어 진입: {GetNPCName()}");
+
+            // 프롬프트 표시
+            ShowInteractionPrompt();
         }
 
         public virtual void OnPlayerExitRange()
         {
             playerInRange = false;
             Log($"플레이어 이탈: {GetNPCName()}");
+
+            // 프롬프트 숨김
+            HideInteractionPrompt();
         }
 
         public virtual void OnInteract()
@@ -166,92 +177,48 @@ namespace Gameplay.NPC
         #region 상호작용 프롬프트
 
         /// <summary>
-        /// 상호작용 프롬프트 생성 (World Space Canvas + TextMeshPro)
+        /// 상호작용 프롬프트 표시
         /// </summary>
-        protected virtual void CreateInteractionPrompt()
+        protected virtual void ShowInteractionPrompt()
         {
-            Log("상호작용 프롬프트 생성 시작");
+            // NPCData가 없거나 프롬프트 표시 설정이 false면 스킵
+            if (npcData == null || !npcData.showInteractionPrompt)
+                return;
 
-            // Canvas 오브젝트 생성
-            interactionPrompt = new GameObject("InteractionPrompt");
-            interactionPrompt.transform.SetParent(transform);
-            interactionPrompt.transform.localPosition = new Vector3(0, 1.5f, 0);
-
-            // Canvas 추가 (World Space)
-            var canvas = interactionPrompt.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
-
-            var canvasScaler = interactionPrompt.AddComponent<UnityEngine.UI.CanvasScaler>();
-            canvasScaler.dynamicPixelsPerUnit = 10;
-
-            // RectTransform 설정
-            var rectTransform = interactionPrompt.GetComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(2, 0.5f);
-
-            // TextMeshProUGUI 추가
-            var textObj = new GameObject("Text");
-            textObj.transform.SetParent(interactionPrompt.transform);
-            textObj.transform.localPosition = Vector3.zero;
-            textObj.transform.localRotation = Quaternion.identity;
-            textObj.transform.localScale = Vector3.one;
-
-            var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-            tmpText.text = npcData.interactionPromptText;
-            tmpText.fontSize = 18;
-            tmpText.color = Color.white;
-            tmpText.alignment = TextAlignmentOptions.Center;
-            tmpText.fontStyle = FontStyles.Bold;
-
-            var textRect = textObj.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.anchoredPosition = Vector2.zero;
-
-            // 배경 추가 (가독성 향상)
-            var bgObj = new GameObject("Background");
-            bgObj.transform.SetParent(interactionPrompt.transform);
-            bgObj.transform.SetAsFirstSibling(); // 텍스트 뒤로
-            bgObj.transform.localPosition = Vector3.zero;
-            bgObj.transform.localRotation = Quaternion.identity;
-            bgObj.transform.localScale = Vector3.one;
-
-            var bgImage = bgObj.AddComponent<UnityEngine.UI.Image>();
-            bgImage.color = new Color(0, 0, 0, 0.7f);
-
-            var bgRect = bgObj.GetComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.sizeDelta = Vector2.zero;
-            bgRect.anchoredPosition = Vector2.zero;
-
-            // 초기에는 숨김
-            interactionPrompt.SetActive(false);
-
-            Log("상호작용 프롬프트 생성 완료");
-        }
-
-        /// <summary>
-        /// 상호작용 프롬프트 업데이트
-        /// </summary>
-        protected virtual void UpdateInteractionPrompt()
-        {
-            if (interactionPrompt == null)
+            // UIManager가 없으면 경고
+            if (UIManager.Instance == null)
             {
-                if (showDebugLog && playerInRange)
+                if (showDebugLog)
                 {
-                    Debug.LogWarning($"[{GetNPCName()}] interactionPrompt가 null입니다!");
+                    Debug.LogWarning($"[{GetNPCName()}] UIManager.Instance가 null입니다!");
                 }
                 return;
             }
 
-            // 상호작용 가능할 때만 표시
-            bool shouldShow = CanInteract;
-            if (interactionPrompt.activeSelf != shouldShow)
-            {
-                interactionPrompt.SetActive(shouldShow);
-                Log($"프롬프트 표시 상태 변경: {shouldShow} (playerInRange={playerInRange}, DialogueManager={(DialogueManager.Instance != null)})");
-            }
+            // 대화 중이 아닐 때만 표시
+            if (DialogueManager.Instance != null && DialogueManager.Instance.IsPlaying)
+                return;
+
+            // UIManager를 통해 프롬프트 표시
+            UIManager.Instance.ShowInteractionPrompt(
+                transform,
+                npcData.interactionPromptText,
+                new Vector3(0, 1.5f, 0)
+            );
+
+            Log("상호작용 프롬프트 표시");
+        }
+
+        /// <summary>
+        /// 상호작용 프롬프트 숨김
+        /// </summary>
+        protected virtual void HideInteractionPrompt()
+        {
+            if (UIManager.Instance == null)
+                return;
+
+            UIManager.Instance.HideInteractionPrompt();
+            Log("상호작용 프롬프트 숨김");
         }
 
         #endregion
@@ -264,6 +231,9 @@ namespace Gameplay.NPC
         protected virtual void OnDialogueStarted()
         {
             Log("대화 시작됨");
+
+            // 대화 중에는 프롬프트 숨김
+            HideInteractionPrompt();
         }
 
         /// <summary>
@@ -272,6 +242,12 @@ namespace Gameplay.NPC
         protected virtual void OnDialogueEnded()
         {
             Log("대화 종료됨");
+
+            // 플레이어가 여전히 범위 내에 있으면 프롬프트 다시 표시
+            if (playerInRange)
+            {
+                ShowInteractionPrompt();
+            }
         }
 
         #endregion

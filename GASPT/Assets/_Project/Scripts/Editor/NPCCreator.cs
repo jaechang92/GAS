@@ -157,7 +157,7 @@ namespace Editor.Tools
             data.interactionRange = 2f;
             data.interactionKey = KeyCode.E;
             data.showInteractionPrompt = true;
-            data.interactionPromptText = "E를 눌러 대화하기";
+            data.interactionPromptText = "E";
 
             AssetDatabase.CreateAsset(data, path);
             AssetDatabase.SaveAssets();

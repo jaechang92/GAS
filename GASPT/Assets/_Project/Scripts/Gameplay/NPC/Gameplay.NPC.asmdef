@@ -4,6 +4,7 @@
     "references": [
         "Gameplay.Dialogue",
         "Core.Utilities",
+        "Core.Managers",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
