@@ -5,7 +5,11 @@
         "Core.Data",
         "Core.Enums",
         "UI.HUD",
-        "Gameplay.NPC"
+        "Gameplay.NPC",
+        "Unity.TextMeshPro",
+        "UI.Panels",
+        "UI.Core",
+        "UI.Components"
     ],
     "includePlatforms": [
         "Editor"

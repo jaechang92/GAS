@@ -1,14 +1,7 @@
 {
-    "name": "UI.Panels",
-    "rootNamespace": "UI.Panels",
+    "name": "UI.Components",
+    "rootNamespace": "UI.Components",
     "references": [
-        "UI.Core",
-        "UI.Components",
-        "Core.Enums",
-        "Core.Utilities",
-        "Core.Managers",
-        "Gameplay.Dialogue",
-        "Combat.Core",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

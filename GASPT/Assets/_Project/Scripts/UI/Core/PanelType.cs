@@ -14,6 +14,7 @@ namespace UI.Core
 
         // === Normal Layer (sortingOrder: 100) ===
         GameplayHUD,        // 게임플레이 HUD
+        PlayerHUD,          // 플레이어 HUD (HP/MP/스킬)
         Inventory,          // 인벤토리
         Shop,               // 상점
         CharacterStatus,    // 캐릭터 정보
