@@ -24,11 +24,23 @@ namespace Player
             attackTriggered = false;
             attackAnimationTime = 0f;
 
-            // 공격 입력 즉시 리셋 (중복 전환 방지)
-            playerController.PlayerInput?.ResetAttack();
+            // InputHandler에서 요청된 어빌리티 ID 가져오기
+            string abilityId = playerController.PlayerInput?.PendingAbilityId;
 
-            // GAS가 체이닝을 자동으로 처리
-            playerController.ActivateAbility("PlayerAttack_1");
+            // 체이닝 중이 아닐 때만 입력된 어빌리티 사용
+            // 체이닝 중이면 AbilitySystem이 자동으로 다음 체인 실행
+            if (string.IsNullOrEmpty(abilityId))
+            {
+                // 기본값: PlayerAttack_1
+                abilityId = "PlayerAttack_1";
+            }
+
+            // 공격 입력 리셋
+            playerController.PlayerInput?.ResetAttack();
+            playerController.PlayerInput?.ResetPendingAbility();
+
+            // GAS를 통해 어빌리티 실행 (체이닝은 AbilitySystem이 자동 처리)
+            playerController.ActivateAbility(abilityId);
             attackTriggered = true;
         }
 

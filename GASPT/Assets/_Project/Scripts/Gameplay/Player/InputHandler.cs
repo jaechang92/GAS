@@ -22,6 +22,9 @@ namespace Player
         // 입력 기반 이동 상태 추적
         private bool wasMovingInput = false;
 
+        // 요청된 어빌리티 ID (FSM과 GAS 연동용)
+        private string pendingAbilityId = null;
+
         // 입력 이벤트
         public event Action<Vector2> OnMovementInput;
         public event Action OnJumpPressed;
@@ -38,6 +41,7 @@ namespace Player
         public bool IsDashPressed => dashPressed;
         public bool IsAttackPressed => attackPressed;
         public bool IsSlidePressed => slidePressed;
+        public string PendingAbilityId => pendingAbilityId;
 
         private void Update()
         {
@@ -106,8 +110,22 @@ namespace Player
         /// </summary>
         private void HandleAttackInput()
         {
+            // 기본 공격
             if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X))
             {
+                pendingAbilityId = "PlayerAttack_1";
+                OnAttackPressed?.Invoke();
+            }
+            // 스킬 1 (예: Z키)
+            else if (Input.GetKeyDown(KeyCode.Z))
+            {
+                pendingAbilityId = "Skill1";
+                OnAttackPressed?.Invoke();
+            }
+            // 스킬 2 (예: C키)
+            else if (Input.GetKeyDown(KeyCode.C))
+            {
+                pendingAbilityId = "Skill2";
                 OnAttackPressed?.Invoke();
             }
         }
@@ -167,6 +185,11 @@ namespace Player
         public void ResetSlide()
         {
             slidePressed = false;
+        }
+
+        public void ResetPendingAbility()
+        {
+            pendingAbilityId = null;
         }
 
         /// <summary>
