@@ -446,6 +446,13 @@ namespace GAS.Core
         /// </summary>
         private void StartCooldown()
         {
+            // 쿨다운이 0이면 즉시 Ready 상태로
+            if (data.CooldownDuration <= 0)
+            {
+                currentState = AbilityState.Ready;
+                return;
+            }
+
             currentState = AbilityState.Cooldown;
             cooldown?.StartCooldown();
         }
