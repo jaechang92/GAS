@@ -18,7 +18,8 @@ Unity 에디터 상단 메뉴에서 **`GASPT`** 메뉴를 클릭하면 모든 �
 GASPT/
 ├─ Prefabs/
 │  ├─ UI Panels/          # UI Panel Prefab 자동 생성
-│  └─ NPC/                # NPC Prefab 자동 생성
+│  ├─ NPC/                # NPC Prefab 자동 생성
+│  └─ Dialogue/           # 대화 시스템 Prefab 자동 생성
 ├─ Scene Setup/           # 씬 자동 생성 및 설정
 ├─ Resources/             # Resource Manifest 관리
 ├─ Character/             # 캐릭터 생성 도구
@@ -81,6 +82,52 @@ GASPT/
 4. (선택) 스프라이트 할당
 5. (선택) Episode ID 입력
 6. "NPC 생성" 버튼 클릭
+
+---
+
+## 💬 Prefabs - Dialogue
+
+**위치**: `GASPT → Prefabs → Dialogue`
+
+### 기능
+- **Create DialoguePanel**: 대화 패널 Prefab 생성 (NPC 대화 시스템용)
+- **Create ChoiceButton**: 선택지 버튼 Prefab 생성 (DialoguePanel용)
+
+### 저장 위치
+- **DialoguePanel**: `Assets/_Project/Resources/UI/Panels/DialogPanel.prefab`
+- **ChoiceButton**: `Assets/_Project/Resources/UI/Prefabs/ChoiceButton.prefab`
+
+### 사용 방법
+
+#### DialoguePanel 생성
+1. `GASPT → Prefabs → Dialogue → Create DialoguePanel` 실행
+2. 자동으로 DialogPanel Prefab 생성
+3. NPC 대화 시스템에서 사용
+
+#### ChoiceButton 생성
+1. `GASPT → Prefabs → Dialogue → Create ChoiceButton` 실행
+2. 자동으로 ChoiceButton Prefab 생성
+3. DialoguePanel이 선택지 표시 시 사용
+
+### 주의사항
+- DialoguePanel을 생성하기 전에 ChoiceButton을 먼저 생성하는 것을 권장
+- 두 Prefab은 NPC 대화 시스템에서 함께 사용됨
+
+### 포함 컴포넌트
+
+#### DialoguePanel
+- 반투명 배경
+- 대화 창 (DialogueBox)
+- 화자 이름 패널
+- 대화 텍스트 영역
+- 계속 버튼
+- 선택지 버튼 컨테이너
+- 타이핑 효과 설정
+
+#### ChoiceButton
+- 버튼 배경 (Image)
+- 텍스트 (TextMeshProUGUI)
+- 호버/클릭 효과 (ColorBlock)
 
 ---
 
@@ -231,12 +278,13 @@ GASPT → Scene Setup → Update Build Settings
 
 ## 📝 변경 이력
 
-### 2025-10-19: GASPT 메뉴 통합
+### 2025-10-19: GASPT 메뉴 통합 완료
 - 모든 GASPT 도구를 단일 메뉴 아래 통합
-- 레거시 도구 제거 (LegacyFolderCleanup, FolderStructureOrganizer, HUDPrefabCreator)
+- 레거시 도구 제거 (LegacyFolderCleanup, FolderStructureOrganizer, HUDPrefabCreator, PlayerHUDPanelPrefabGenerator)
 - PrefabMaker를 PanelPrefabCreator로 교체 (MenuItem 기반)
 - GASPTMenuGuide 윈도우 추가
 - PlayerCharacterCreator 메뉴 경로 변경 (Tools/Project → GASPT/Character)
+- Dialogue 도구 통합 (Tools/Dialogue → GASPT/Prefabs/Dialogue)
 
 ---
 
