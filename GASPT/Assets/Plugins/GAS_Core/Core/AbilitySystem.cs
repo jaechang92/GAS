@@ -449,22 +449,17 @@ namespace GAS.Core
 
             if (isChainActive && !string.IsNullOrEmpty(nextChainAbilityId))
             {
-                // 체인 스타터 입력만 체인 진행 가능
-                if (abilityId == currentChainStarterId)
-                {
-                    targetAbilityId = nextChainAbilityId;
-                    Debug.Log($"<color=#FFA500>[AbilitySystem] ⚡ 체인 진행: {abilityId} → {nextChainAbilityId}</color>");
+                // nextChainAbilityId가 있으면 다음 공격 실행
+                targetAbilityId = nextChainAbilityId;
+                Debug.Log($"<color=#FFA500>[AbilitySystem] ⚡ 체인 진행: {abilityId} → {nextChainAbilityId}</color>");
 
-                    // 체인 즉시 소비 (중복 진행 방지)
-                    nextChainAbilityId = null;
-                    isChainActive = false;
-                }
-                else
-                {
-                    // 잘못된 입력 무시
-                    Debug.LogWarning($"<color=#FF0000>[AbilitySystem] ✗ 체인 활성 중 - 잘못된 입력 무시: {abilityId}</color>");
-                    return false;
-                }
+                // 체인 즉시 소비 (중복 진행 방지)
+                string consumedChain = nextChainAbilityId;
+                nextChainAbilityId = null;
+                isChainActive = false;
+
+                // targetAbilityId가 소비된 체인 ID로 설정됨
+                targetAbilityId = consumedChain;
             }
 
             // 어빌리티 실행
