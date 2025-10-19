@@ -138,6 +138,15 @@ namespace Editor
 
             EditorGUILayout.Space(5);
 
+            // Dialogue 섹션
+            DrawSection("Prefabs - Dialogue", new[]
+            {
+                ("Create DialoguePanel", "대화 패널 Prefab 생성 (NPC 대화 시스템용)"),
+                ("Create ChoiceButton", "선택지 버튼 Prefab 생성 (DialoguePanel용)")
+            }, "GASPT/Prefabs/Dialogue/");
+
+            EditorGUILayout.Space(5);
+
             // Character 섹션
             DrawSection("Character", new[]
             {

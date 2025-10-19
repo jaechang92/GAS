@@ -8,14 +8,14 @@ namespace Editor.Tools
 {
     /// <summary>
     /// ChoiceButton Prefab을 프로그래매틱하게 생성하는 Editor 도구
-    /// Menu: Tools/Dialogue/Create ChoiceButton Prefab
+    /// Menu: GASPT/Prefabs/Dialogue/Create ChoiceButton
     /// </summary>
     public static class ChoiceButtonPrefabGenerator
     {
         private const string PREFAB_PATH = "Assets/_Project/Resources/UI/Prefabs/ChoiceButton.prefab";
         private const string FOLDER_PATH = "Assets/_Project/Resources/UI/Prefabs";
 
-        [MenuItem("Tools/Dialogue/Create ChoiceButton Prefab")]
+        [MenuItem("GASPT/Prefabs/Dialogue/Create ChoiceButton", priority = 22)]
         public static void CreateChoiceButtonPrefab()
         {
             // 폴더 생성

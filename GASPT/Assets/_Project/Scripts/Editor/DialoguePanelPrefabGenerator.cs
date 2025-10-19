@@ -10,7 +10,7 @@ namespace Editor.Tools
 {
     /// <summary>
     /// DialoguePanel Prefab을 프로그래매틱하게 생성하는 Editor 도구
-    /// Menu: Tools/Dialogue/Create DialoguePanel Prefab
+    /// Menu: GASPT/Prefabs/Dialogue/Create DialoguePanel
     /// </summary>
     public static class DialoguePanelPrefabGenerator
     {
@@ -18,7 +18,7 @@ namespace Editor.Tools
         private const string FOLDER_PATH = "Assets/_Project/Resources/UI/Panels";
         private const string CHOICE_BUTTON_PATH = "UI/Prefabs/ChoiceButton";
 
-        [MenuItem("Tools/Dialogue/Create DialoguePanel Prefab")]
+        [MenuItem("GASPT/Prefabs/Dialogue/Create DialoguePanel", priority = 21)]
         public static void CreateDialoguePanelPrefab()
         {
             // 폴더 생성
@@ -306,7 +306,7 @@ namespace Editor.Tools
             else
             {
                 Debug.LogWarning($"[DialoguePanelPrefabGenerator] ChoiceButton Prefab을 찾을 수 없습니다: {CHOICE_BUTTON_PATH}");
-                Debug.LogWarning("[DialoguePanelPrefabGenerator] Tools/Dialogue/Create ChoiceButton Prefab를 먼저 실행하세요.");
+                Debug.LogWarning("[DialoguePanelPrefabGenerator] GASPT → Prefabs → Dialogue → Create ChoiceButton을 먼저 실행하세요.");
             }
 
             // 타이핑 효과 설정
