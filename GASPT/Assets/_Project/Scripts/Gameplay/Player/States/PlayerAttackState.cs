@@ -27,19 +27,19 @@ namespace Player
             // InputHandler에서 요청된 어빌리티 ID 가져오기
             string abilityId = playerController.PlayerInput?.PendingAbilityId;
 
-            // 체이닝 중이 아닐 때만 입력된 어빌리티 사용
-            // 체이닝 중이면 AbilitySystem이 자동으로 다음 체인 실행
+            // 입력이 없으면 기본 공격 사용
             if (string.IsNullOrEmpty(abilityId))
             {
-                // 기본값: PlayerAttack_1
-                abilityId = "PlayerAttack_1";
+                abilityId = "NormalAttack";
             }
 
             // 공격 입력 리셋
             playerController.PlayerInput?.ResetAttack();
             playerController.PlayerInput?.ResetPendingAbility();
 
-            // GAS를 통해 어빌리티 실행 (체이닝은 AbilitySystem이 자동 처리)
+            // GAS를 통해 어빌리티 실행
+            // PlayerController가 추상적인 ID를 실제 ID로 변환
+            // AbilitySystem이 체이닝 상태를 확인하여 적절한 어빌리티 실행
             playerController.ActivateAbility(abilityId);
             attackTriggered = true;
         }

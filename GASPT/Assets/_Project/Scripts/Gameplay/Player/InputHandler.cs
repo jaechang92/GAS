@@ -110,10 +110,10 @@ namespace Player
         /// </summary>
         private void HandleAttackInput()
         {
-            // 기본 공격
+            // 기본 공격 (추상적인 입력 타입)
             if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X))
             {
-                pendingAbilityId = "PlayerAttack_1";
+                pendingAbilityId = "NormalAttack";
                 OnAttackPressed?.Invoke();
             }
             // 스킬 1 (예: Z키)

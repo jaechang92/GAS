@@ -19,6 +19,12 @@ namespace Player
         [Tooltip("플레이어 어빌리티 목록")]
         [SerializeField] private List<AbilityData> playerAbilities = new List<AbilityData>();
 
+        [Header("GAS - Ability 매핑")]
+        [Tooltip("추상적인 입력 타입을 실제 어빌리티 ID로 매핑")]
+        [SerializeField] private string normalAttackStartId = "PlayerAttack_1";
+        [SerializeField] private string skill1StartId = "Skill1_1";
+        [SerializeField] private string skill2StartId = "Skill2_1";
+
         [Header("디버그")]
         [SerializeField] private bool showDebugInfo = false;
 
@@ -535,10 +541,21 @@ namespace Player
 
         /// <summary>
         /// GAS 어빌리티 활성화
+        /// 추상적인 입력 타입("NormalAttack", "Skill1" 등)을 실제 어빌리티 ID로 변환
         /// </summary>
         public void ActivateAbility(string abilityId)
         {
-            abilitySystem?.ActivateAbility(abilityId);
+            // 추상적인 입력 타입을 실제 어빌리티 ID로 매핑
+            string targetAbilityId = abilityId switch
+            {
+                "NormalAttack" => normalAttackStartId,
+                "Skill1" => skill1StartId,
+                "Skill2" => skill2StartId,
+                _ => abilityId // 이미 실제 ID인 경우 그대로 사용
+            };
+
+            LogDebug($"어빌리티 활성화 요청: {abilityId} → {targetAbilityId}");
+            abilitySystem?.ActivateAbility(targetAbilityId);
         }
 
         /// <summary>
