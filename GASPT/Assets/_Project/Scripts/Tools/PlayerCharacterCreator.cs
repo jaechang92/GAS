@@ -37,7 +37,7 @@ namespace ProjectTools
 
         private Vector2 scrollPosition;
 
-        [MenuItem("Tools/Project/Character Creator (New Physics)")]
+        [MenuItem("GASPT/Character/Create Player (Skul Physics)")]
         public static void ShowWindow()
         {
             var window = GetWindow<PlayerCharacterCreator>("Character Creator");

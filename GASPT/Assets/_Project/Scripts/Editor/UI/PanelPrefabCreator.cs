@@ -1,56 +1,95 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.UI;
-
-#if UNITY_EDITOR
 using UnityEditor;
-#endif
+using System.IO;
 
-namespace Tools
+namespace Editor.UI
 {
     /// <summary>
-    /// Panel Prefab을 자동으로 생성하는 유틸리티
-    /// ContextMenu를 사용하여 Inspector에서 실행 가능
+    /// Panel Prefab을 자동으로 생성하는 에디터 유틸리티
+    /// Menu: GASPT → Prefabs → UI Panels
     /// </summary>
-    public class PrefabMaker : MonoBehaviour
+    public static class PanelPrefabCreator
     {
-        [Header("Prefab 저장 경로")]
-        [SerializeField] private string prefabSavePath = "Assets/_Project/Resources/UI/Panels/";
+        private const string PREFAB_SAVE_PATH = "Assets/_Project/Resources/UI/Panels/";
+        private static readonly Vector2 REFERENCE_RESOLUTION = new Vector2(1920, 1080);
 
-        [Header("Canvas 설정")]
-        [SerializeField] private Vector2 referenceResolution = new Vector2(1920, 1080);
+        #region 메뉴 항목
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// 모든 Panel Prefab 생성
-        /// </summary>
-        [ContextMenu("Create All Panel Prefabs")]
-        private void CreateAllPanelPrefabs()
+        [MenuItem("GASPT/Prefabs/UI Panels/Create All Panels", priority = 1)]
+        private static void CreateAllPanels()
         {
-            Debug.Log("[PrefabMaker] 모든 Panel Prefab 생성 시작...");
+            if (!EditorUtility.DisplayDialog(
+                "모든 Panel Prefab 생성",
+                "MainMenu, Loading, GameplayHUD, Pause Panel을 생성하시겠습니까?",
+                "생성",
+                "취소"))
+            {
+                return;
+            }
+
+            Debug.Log("[PanelPrefabCreator] 모든 Panel Prefab 생성 시작...");
+
+            EnsurePrefabDirectory();
 
             CreateMainMenuPanelPrefab();
             CreateLoadingPanelPrefab();
             CreateGameplayHUDPanelPrefab();
             CreatePausePanelPrefab();
 
-            Debug.Log("[PrefabMaker] 모든 Panel Prefab 생성 완료!");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+
+            Debug.Log("[PanelPrefabCreator] 모든 Panel Prefab 생성 완료!");
+            EditorUtility.DisplayDialog("생성 완료", "모든 Panel Prefab이 생성되었습니다!", "확인");
         }
+
+        [MenuItem("GASPT/Prefabs/UI Panels/Create MainMenu Panel", priority = 11)]
+        private static void MenuCreateMainMenuPanel()
+        {
+            CreateMainMenuPanelPrefab();
+            FinalizeCreation("MainMenu Panel");
+        }
+
+        [MenuItem("GASPT/Prefabs/UI Panels/Create Loading Panel", priority = 12)]
+        private static void MenuCreateLoadingPanel()
+        {
+            CreateLoadingPanelPrefab();
+            FinalizeCreation("Loading Panel");
+        }
+
+        [MenuItem("GASPT/Prefabs/UI Panels/Create GameplayHUD Panel", priority = 13)]
+        private static void MenuCreateGameplayHUDPanel()
+        {
+            CreateGameplayHUDPanelPrefab();
+            FinalizeCreation("GameplayHUD Panel");
+        }
+
+        [MenuItem("GASPT/Prefabs/UI Panels/Create Pause Panel", priority = 14)]
+        private static void MenuCreatePausePanel()
+        {
+            CreatePausePanelPrefab();
+            FinalizeCreation("Pause Panel");
+        }
+
+        [MenuItem("GASPT/Prefabs/UI Panels/Open Prefabs Folder", priority = 30)]
+        private static void OpenPrefabsFolder()
+        {
+            EnsurePrefabDirectory();
+            EditorUtility.RevealInFinder(PREFAB_SAVE_PATH);
+        }
+
+        #endregion
 
         #region MainMenuPanel
 
-        /// <summary>
-        /// MainMenuPanel Prefab 생성
-        /// </summary>
-        [ContextMenu("Create MainMenuPanel Prefab")]
-        private void CreateMainMenuPanelPrefab()
+        private static void CreateMainMenuPanelPrefab()
         {
-            Debug.Log("[PrefabMaker] MainMenuPanel Prefab 생성 중...");
+            Debug.Log("[PanelPrefabCreator] MainMenuPanel Prefab 생성 중...");
 
-            // Panel Root 생성
             GameObject panelObj = CreatePanelRoot("MainMenuPanel");
-            var panel = panelObj.AddComponent<UI.Panels.MainMenuPanel>();
+            var panel = panelObj.AddComponent<global::UI.Panels.MainMenuPanel>();
 
             // 제목 텍스트
             GameObject titleObj = CreateText(panelObj.transform, "TitleText", "GASPT", 72);
@@ -80,27 +119,21 @@ namespace Tools
             so.FindProperty("titleText").objectReferenceValue = titleObj.GetComponent<Text>();
             so.ApplyModifiedProperties();
 
-            // Prefab 저장
             SavePrefab(panelObj, "MainMenuPanel");
 
-            Debug.Log("[PrefabMaker] MainMenuPanel Prefab 생성 완료!");
+            Debug.Log("[PanelPrefabCreator] MainMenuPanel Prefab 생성 완료!");
         }
 
         #endregion
 
         #region LoadingPanel
 
-        /// <summary>
-        /// LoadingPanel Prefab 생성
-        /// </summary>
-        [ContextMenu("Create LoadingPanel Prefab")]
-        private void CreateLoadingPanelPrefab()
+        private static void CreateLoadingPanelPrefab()
         {
-            Debug.Log("[PrefabMaker] LoadingPanel Prefab 생성 중...");
+            Debug.Log("[PanelPrefabCreator] LoadingPanel Prefab 생성 중...");
 
-            // Panel Root 생성
             GameObject panelObj = CreatePanelRoot("LoadingPanel");
-            var panel = panelObj.AddComponent<UI.Panels.LoadingPanel>();
+            var panel = panelObj.AddComponent<global::UI.Panels.LoadingPanel>();
 
             // 배경 패널
             GameObject bgObj = CreateImage(panelObj.transform, "BackgroundPanel", new Color(0.1f, 0.1f, 0.1f, 1f));
@@ -135,29 +168,23 @@ namespace Tools
             so.FindProperty("loadingText").objectReferenceValue = loadingTextObj.GetComponent<Text>();
             so.ApplyModifiedProperties();
 
-            // Prefab 저장
             SavePrefab(panelObj, "LoadingPanel");
 
-            Debug.Log("[PrefabMaker] LoadingPanel Prefab 생성 완료!");
+            Debug.Log("[PanelPrefabCreator] LoadingPanel Prefab 생성 완료!");
         }
 
         #endregion
 
         #region GameplayHUDPanel
 
-        /// <summary>
-        /// GameplayHUDPanel Prefab 생성
-        /// </summary>
-        [ContextMenu("Create GameplayHUDPanel Prefab")]
-        private void CreateGameplayHUDPanelPrefab()
+        private static void CreateGameplayHUDPanelPrefab()
         {
-            Debug.Log("[PrefabMaker] GameplayHUDPanel Prefab 생성 중...");
+            Debug.Log("[PanelPrefabCreator] GameplayHUDPanel Prefab 생성 중...");
 
-            // Panel Root 생성
             GameObject panelObj = CreatePanelRoot("GameplayHUDPanel");
-            var panel = panelObj.AddComponent<UI.Panels.GameplayHUDPanel>();
+            var panel = panelObj.AddComponent<global::UI.Panels.GameplayHUDPanel>();
 
-            // 체력바 (빈 GameObject - 나중에 HealthBarUI 추가)
+            // 체력바 (빈 GameObject)
             GameObject healthBarObj = new GameObject("HealthBar");
             healthBarObj.transform.SetParent(panelObj.transform, false);
             var healthBarRect = healthBarObj.AddComponent<RectTransform>();
@@ -197,27 +224,21 @@ namespace Tools
             so.FindProperty("pauseButton").objectReferenceValue = pauseButtonObj.GetComponent<Button>();
             so.ApplyModifiedProperties();
 
-            // Prefab 저장
             SavePrefab(panelObj, "GameplayHUDPanel");
 
-            Debug.Log("[PrefabMaker] GameplayHUDPanel Prefab 생성 완료!");
+            Debug.Log("[PanelPrefabCreator] GameplayHUDPanel Prefab 생성 완료!");
         }
 
         #endregion
 
         #region PausePanel
 
-        /// <summary>
-        /// PausePanel Prefab 생성
-        /// </summary>
-        [ContextMenu("Create PausePanel Prefab")]
-        private void CreatePausePanelPrefab()
+        private static void CreatePausePanelPrefab()
         {
-            Debug.Log("[PrefabMaker] PausePanel Prefab 생성 중...");
+            Debug.Log("[PanelPrefabCreator] PausePanel Prefab 생성 중...");
 
-            // Panel Root 생성
             GameObject panelObj = CreatePanelRoot("PausePanel");
-            var panel = panelObj.AddComponent<UI.Panels.PausePanel>();
+            var panel = panelObj.AddComponent<global::UI.Panels.PausePanel>();
 
             // 어두운 배경
             GameObject dimmedBgObj = CreateImage(panelObj.transform, "DimmedBackground", new Color(0, 0, 0, 0.7f));
@@ -256,28 +277,46 @@ namespace Tools
             so.FindProperty("titleText").objectReferenceValue = titleObj.GetComponent<Text>();
             so.ApplyModifiedProperties();
 
-            // Prefab 저장
             SavePrefab(panelObj, "PausePanel");
 
-            Debug.Log("[PrefabMaker] PausePanel Prefab 생성 완료!");
+            Debug.Log("[PanelPrefabCreator] PausePanel Prefab 생성 완료!");
         }
 
         #endregion
 
         #region Helper Methods
 
-        /// <summary>
-        /// Panel Root GameObject 생성 (Canvas 없이 RectTransform만)
-        /// BasePanel이 자동으로 Canvas를 추가하므로 여기서는 생성하지 않음
-        /// </summary>
-        private GameObject CreatePanelRoot(string name)
+        private static void EnsurePrefabDirectory()
+        {
+            if (!AssetDatabase.IsValidFolder(PREFAB_SAVE_PATH))
+            {
+                string parentPath = Path.GetDirectoryName(PREFAB_SAVE_PATH).Replace('\\', '/');
+                string folderName = Path.GetFileName(PREFAB_SAVE_PATH);
+
+                if (!AssetDatabase.IsValidFolder(parentPath))
+                {
+                    Directory.CreateDirectory(PREFAB_SAVE_PATH);
+                    AssetDatabase.Refresh();
+                }
+                else
+                {
+                    AssetDatabase.CreateFolder(parentPath, folderName);
+                }
+            }
+        }
+
+        private static void FinalizeCreation(string panelName)
+        {
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            EditorUtility.DisplayDialog("생성 완료", $"{panelName} Prefab이 생성되었습니다!", "확인");
+        }
+
+        private static GameObject CreatePanelRoot(string name)
         {
             GameObject panelObj = new GameObject(name);
-
-            // RectTransform 추가 (Canvas 없음)
             RectTransform rectTransform = panelObj.AddComponent<RectTransform>();
 
-            // 전체 화면으로 설정
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
             rectTransform.offsetMin = Vector2.zero;
@@ -286,10 +325,7 @@ namespace Tools
             return panelObj;
         }
 
-        /// <summary>
-        /// Text UI 생성
-        /// </summary>
-        private GameObject CreateText(Transform parent, string name, string text, int fontSize)
+        private static GameObject CreateText(Transform parent, string name, string text, int fontSize)
         {
             GameObject textObj = new GameObject(name);
             textObj.transform.SetParent(parent, false);
@@ -300,28 +336,19 @@ namespace Tools
             textComp.alignment = TextAnchor.MiddleCenter;
             textComp.color = Color.white;
 
-            // Maplestory Light 폰트 사용 (Maplestory Light)
-            //textComp.font = Resources.GetBuiltinResource<Font>("Maplestory Light SDF");
-
             return textObj;
         }
 
-        /// <summary>
-        /// Button UI 생성
-        /// </summary>
-        private GameObject CreateButton(Transform parent, string name, string text, int fontSize)
+        private static GameObject CreateButton(Transform parent, string name, string text, int fontSize)
         {
             GameObject buttonObj = new GameObject(name);
             buttonObj.transform.SetParent(parent, false);
 
-            // Button 이미지 배경
             Image buttonImage = buttonObj.AddComponent<Image>();
             buttonImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
 
-            // Button 컴포넌트
             Button button = buttonObj.AddComponent<Button>();
 
-            // Button 텍스트
             GameObject textObj = CreateText(buttonObj.transform, "Text", text, fontSize);
             RectTransform textRect = textObj.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
@@ -332,10 +359,7 @@ namespace Tools
             return buttonObj;
         }
 
-        /// <summary>
-        /// Image UI 생성
-        /// </summary>
-        private GameObject CreateImage(Transform parent, string name, Color color)
+        private static GameObject CreateImage(Transform parent, string name, Color color)
         {
             GameObject imageObj = new GameObject(name);
             imageObj.transform.SetParent(parent, false);
@@ -346,15 +370,11 @@ namespace Tools
             return imageObj;
         }
 
-        /// <summary>
-        /// Slider UI 생성
-        /// </summary>
-        private GameObject CreateSlider(Transform parent, string name)
+        private static GameObject CreateSlider(Transform parent, string name)
         {
             GameObject sliderObj = new GameObject(name);
             sliderObj.transform.SetParent(parent, false);
 
-            // Slider 컴포넌트
             Slider slider = sliderObj.AddComponent<Slider>();
             slider.minValue = 0f;
             slider.maxValue = 1f;
@@ -373,16 +393,12 @@ namespace Tools
             GameObject fillObj = CreateImage(fillAreaObj.transform, "Fill", new Color(0.2f, 0.8f, 0.2f, 1f));
             SetRectTransformStretch(fillObj);
 
-            // Slider 연결
             slider.fillRect = fillObj.GetComponent<RectTransform>();
 
             return sliderObj;
         }
 
-        /// <summary>
-        /// RectTransform 설정
-        /// </summary>
-        private void SetRectTransform(GameObject obj, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot,
+        private static void SetRectTransform(GameObject obj, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot,
             Vector2 anchoredPosition, Vector2 sizeDelta)
         {
             RectTransform rect = obj.GetComponent<RectTransform>();
@@ -396,10 +412,7 @@ namespace Tools
             rect.sizeDelta = sizeDelta;
         }
 
-        /// <summary>
-        /// RectTransform 전체 화면으로 설정 (Stretch)
-        /// </summary>
-        private void SetRectTransformStretch(GameObject obj)
+        private static void SetRectTransformStretch(GameObject obj)
         {
             RectTransform rect = obj.GetComponent<RectTransform>();
             if (rect == null)
@@ -411,37 +424,24 @@ namespace Tools
             rect.offsetMax = Vector2.zero;
         }
 
-        /// <summary>
-        /// Prefab 저장
-        /// </summary>
-        private void SavePrefab(GameObject obj, string prefabName)
+        private static void SavePrefab(GameObject obj, string prefabName)
         {
-            // 저장 폴더 확인
-            if (!AssetDatabase.IsValidFolder(prefabSavePath))
-            {
-                Debug.LogError($"[PrefabMaker] 저장 경로가 존재하지 않습니다: {prefabSavePath}");
-                DestroyImmediate(obj);
-                return;
-            }
+            EnsurePrefabDirectory();
 
-            string prefabPath = $"{prefabSavePath}{prefabName}.prefab";
+            string prefabPath = $"{PREFAB_SAVE_PATH}{prefabName}.prefab";
 
-            // 기존 Prefab이 있으면 덮어쓰기
             if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
             {
-                Debug.LogWarning($"[PrefabMaker] 기존 Prefab을 덮어씁니다: {prefabPath}");
+                Debug.LogWarning($"[PanelPrefabCreator] 기존 Prefab을 덮어씁니다: {prefabPath}");
             }
 
-            // Prefab 저장
             PrefabUtility.SaveAsPrefabAsset(obj, prefabPath);
+            Object.DestroyImmediate(obj);
 
-            // Hierarchy에서 삭제
-            DestroyImmediate(obj);
-
-            Debug.Log($"[PrefabMaker] Prefab 저장 완료: {prefabPath}");
+            Debug.Log($"[PanelPrefabCreator] Prefab 저장 완료: {prefabPath}");
         }
 
         #endregion
-#endif
     }
 }
+#endif
