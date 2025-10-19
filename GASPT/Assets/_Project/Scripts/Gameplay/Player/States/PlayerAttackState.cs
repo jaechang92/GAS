@@ -27,35 +27,9 @@ namespace Player
             // 공격 입력 즉시 리셋 (중복 전환 방지)
             playerController.PlayerInput?.ResetAttack();
 
-            // ComboSystem에 타격 등록
-            if (playerController.ComboSystem != null)
-            {
-                var comboSystem = playerController.ComboSystem;
-                int currentComboIndex = comboSystem.CurrentComboIndex;
-
-                bool registered = comboSystem.RegisterHit(currentComboIndex);
-
-                if (registered)
-                {
-                    LogStateDebug($"콤보 등록 성공: index {currentComboIndex}");
-
-                    // GAS 어빌리티 활성화 (VFX/사운드/애니메이션 자동 처리)
-                    string abilityId = $"Combo_{currentComboIndex}";
-                    playerController.ActivateAbility(abilityId);
-
-                    attackTriggered = true;
-                }
-                else
-                {
-                    LogStateDebug("콤보 등록 실패 - 기본 공격 실행");
-                    ExecuteBasicAttack();
-                }
-            }
-            else
-            {
-                LogStateDebug("ComboSystem 없음 - 기본 공격 실행");
-                ExecuteBasicAttack();
-            }
+            // GAS가 체이닝을 자동으로 처리
+            playerController.ActivateAbility("PlayerAttack");
+            attackTriggered = true;
         }
 
         protected override void ExitStateSync()
@@ -75,16 +49,6 @@ namespace Player
             // FSM의 Attack→Attack 자동 전환에 의존하여 콤보 처리
 
             CheckForStateTransitions();
-        }
-
-        /// <summary>
-        /// 기본 공격 실행 (ComboSystem 없을 때)
-        /// </summary>
-        private void ExecuteBasicAttack()
-        {
-            // GAS 시스템을 통한 기본 공격
-            playerController.ActivateAbility("BasicAttack");
-            attackTriggered = true;
         }
 
         private void CheckForStateTransitions()

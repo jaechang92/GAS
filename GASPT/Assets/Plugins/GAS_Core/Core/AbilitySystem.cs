@@ -28,6 +28,12 @@ namespace GAS.Core
         // 게임플레이 컨텍스트
         private IGameplayContext gameplayContext;
 
+        // 체이닝 관리 (콤보 시스템)
+        private string currentChainStarterId = null;   // 현재 체인의 시작점
+        private string nextChainAbilityId = null;       // 다음 준비된 어빌리티
+        private float chainTimer = 0f;                  // 체인 윈도우 타이머
+        private bool isChainActive = false;
+
         // 프로퍼티
         public IReadOnlyDictionary<string, IAbility> Abilities => abilities;
         public bool UseResourceSystem => useResourceSystem;
@@ -111,6 +117,9 @@ namespace GAS.Core
             {
                 UpdateResourceRegeneration();
             }
+
+            // 체이닝 타이머 업데이트
+            UpdateChainTimer();
         }
 
         /// <summary>
@@ -135,6 +144,65 @@ namespace GAS.Core
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 체이닝 타이머 업데이트
+        /// </summary>
+        private void UpdateChainTimer()
+        {
+            if (isChainActive && chainTimer > 0f)
+            {
+                chainTimer -= Time.deltaTime;
+
+                if (chainTimer <= 0f)
+                {
+                    // 체인 윈도우 만료
+                    ResetChain();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 다음 체인 준비
+        /// </summary>
+        private void PrepareNextChain(string nextAbilityId, float windowDuration)
+        {
+            nextChainAbilityId = nextAbilityId;
+            chainTimer = windowDuration;
+            isChainActive = true;
+
+            Debug.Log($"[AbilitySystem] 다음 체인 준비: {nextAbilityId} (윈도우: {windowDuration}초)");
+        }
+
+        /// <summary>
+        /// 체인 리셋 (첫 콤보로)
+        /// </summary>
+        private void ResetChain()
+        {
+            if (!string.IsNullOrEmpty(currentChainStarterId))
+            {
+                nextChainAbilityId = currentChainStarterId;
+                Debug.Log($"[AbilitySystem] 체인 리셋: {currentChainStarterId}");
+            }
+            else
+            {
+                ClearChain();
+            }
+
+            chainTimer = 0f;
+            isChainActive = false;
+        }
+
+        /// <summary>
+        /// 체인 완전 초기화
+        /// </summary>
+        private void ClearChain()
+        {
+            nextChainAbilityId = null;
+            currentChainStarterId = null;
+            chainTimer = 0f;
+            isChainActive = false;
         }
 
         /// <summary>
@@ -378,12 +446,36 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// 어빌리티 활성화 (편의 메서드)
-        /// TryUseAbility의 별칭
+        /// 어빌리티 활성화 (편의 메서드, 체이닝 지원)
         /// </summary>
         public bool ActivateAbility(string abilityId)
         {
-            return TryUseAbility(abilityId);
+            // 체이닝 활성 중이면 nextChainAbilityId 사용
+            string targetAbilityId = abilityId;
+
+            if (isChainActive && !string.IsNullOrEmpty(nextChainAbilityId))
+            {
+                targetAbilityId = nextChainAbilityId;
+                Debug.Log($"[AbilitySystem] 체인 진행: {abilityId} → {nextChainAbilityId}");
+            }
+
+            // 어빌리티 실행
+            bool result = TryUseAbility(targetAbilityId);
+
+            if (result && abilities.TryGetValue(targetAbilityId, out var ability))
+            {
+                // 체인 스타터 등록
+                if (ability.Data is AbilityData data && data.IsComboAbility && data.IsChainStarter)
+                {
+                    currentChainStarterId = targetAbilityId;
+                    Debug.Log($"[AbilitySystem] 체인 시작: {targetAbilityId}");
+                }
+
+                // 완료 시 체이닝 처리 (비동기로 대기)
+                _ = HandleAbilityChaining(ability);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -393,6 +485,41 @@ namespace GAS.Core
         public void DeactivateAbility(string abilityId)
         {
             CancelAbility(abilityId);
+        }
+
+        /// <summary>
+        /// 어빌리티 체이닝 처리 (비동기)
+        /// </summary>
+        private async Awaitable HandleAbilityChaining(IAbility ability)
+        {
+            // 어빌리티 실행 완료 대기
+            // Ability 클래스의 State를 모니터링
+            while (ability.State == AbilityState.Casting || ability.State == AbilityState.Active)
+            {
+                await Awaitable.WaitForSecondsAsync(0.05f);
+            }
+
+            // 체이닝 처리
+            if (ability.Data is AbilityData data && data.IsComboAbility)
+            {
+                if (!string.IsNullOrEmpty(data.NextAbilityId))
+                {
+                    // 다음 체인 준비
+                    PrepareNextChain(data.NextAbilityId, data.ChainWindowDuration);
+                }
+                else
+                {
+                    // 체인 종료 (마지막 콤보)
+                    if (data.AutoResetChain)
+                    {
+                        ResetChain();
+                    }
+                    else
+                    {
+                        ClearChain();
+                    }
+                }
+            }
         }
 
         /// <summary>

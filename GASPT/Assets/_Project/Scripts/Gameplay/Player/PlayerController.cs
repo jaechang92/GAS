@@ -16,13 +16,9 @@ namespace Player
     [RequireComponent(typeof(AbilitySystem))]
     public class PlayerController : MonoBehaviour
     {
-        [Header("GAS - Combo Abilities")]
-        [Tooltip("1단 콤보 어빌리티 데이터")]
-        [SerializeField] private ComboAbilityData combo0Data;
-        [Tooltip("2단 콤보 어빌리티 데이터")]
-        [SerializeField] private ComboAbilityData combo1Data;
-        [Tooltip("3단 콤보 어빌리티 데이터")]
-        [SerializeField] private ComboAbilityData combo2Data;
+        [Header("GAS - Abilities")]
+        [Tooltip("플레이어 어빌리티 목록")]
+        [SerializeField] private List<AbilityData> playerAbilities = new List<AbilityData>();
 
         [Header("디버그")]
         [SerializeField] private bool showDebugInfo = false;
@@ -35,7 +31,6 @@ namespace Player
 
         // === Combat 시스템 ===
         private HealthSystem healthSystem;
-        private ComboSystem comboSystem;
         private AttackAnimationHandler attackAnimationHandler;
 
         // === FSM 관련 ===
@@ -60,7 +55,6 @@ namespace Player
 
         // === Combat 프로퍼티 ===
         public HealthSystem HealthSystem => healthSystem;
-        public ComboSystem ComboSystem => comboSystem;
         public AttackAnimationHandler AttackAnimationHandler => attackAnimationHandler;
         public bool IsAlive => healthSystem?.IsAlive ?? true;
         public bool IsAttacking => attackAnimationHandler?.IsAttacking ?? false;
@@ -81,7 +75,7 @@ namespace Player
 
         private void Start()
         {
-            InitializeComboAbilities();
+            InitializeAbilities();
             StartFSM();
         }
 
@@ -131,14 +125,6 @@ namespace Player
                 LogDebug("HealthSystem 컴포넌트가 자동으로 추가되었습니다.");
             }
 
-            // ComboSystem 초기화
-            comboSystem = GetComponent<ComboSystem>();
-            if (comboSystem == null)
-            {
-                comboSystem = gameObject.AddComponent<ComboSystem>();
-                LogDebug("ComboSystem 컴포넌트가 자동으로 추가되었습니다.");
-            }
-
             // AttackAnimationHandler 초기화
             attackAnimationHandler = GetComponent<AttackAnimationHandler>();
             if (attackAnimationHandler == null)
@@ -152,52 +138,32 @@ namespace Player
             if (animator != null && attackAnimationHandler != null)
             {
                 attackAnimationHandler.SetAnimator(animator);
-                attackAnimationHandler.SetComboSystem(comboSystem);
             }
         }
 
         /// <summary>
-        /// 콤보 어빌리티 초기화 (GAS 등록)
+        /// 어빌리티 초기화 (GAS 등록)
         /// </summary>
-        private void InitializeComboAbilities()
+        private void InitializeAbilities()
         {
             if (abilitySystem == null)
             {
-                Debug.LogError("[PlayerController] AbilitySystem이 없어 ComboAbility를 등록할 수 없습니다.");
+                Debug.LogError("[PlayerController] AbilitySystem이 없어 어빌리티를 등록할 수 없습니다.");
                 return;
             }
 
-            // Combo_0 등록 (1단 공격)
-            if (combo0Data != null)
+            foreach (var abilityData in playerAbilities)
             {
-                abilitySystem.AddAbility(combo0Data);
-                LogDebug($"Combo_0 어빌리티 등록: {combo0Data.AbilityName}");
-            }
-            else
-            {
-                Debug.LogWarning("[PlayerController] combo0Data가 할당되지 않았습니다.");
+                if (abilityData != null)
+                {
+                    abilitySystem.AddAbility(abilityData);
+                    LogDebug($"어빌리티 등록: {abilityData.AbilityName} ({abilityData.AbilityId})");
+                }
             }
 
-            // Combo_1 등록 (2단 공격)
-            if (combo1Data != null)
+            if (playerAbilities.Count == 0)
             {
-                abilitySystem.AddAbility(combo1Data);
-                LogDebug($"Combo_1 어빌리티 등록: {combo1Data.AbilityName}");
-            }
-            else
-            {
-                Debug.LogWarning("[PlayerController] combo1Data가 할당되지 않았습니다.");
-            }
-
-            // Combo_2 등록 (3단 공격)
-            if (combo2Data != null)
-            {
-                abilitySystem.AddAbility(combo2Data);
-                LogDebug($"Combo_2 어빌리티 등록: {combo2Data.AbilityName}");
-            }
-            else
-            {
-                Debug.LogWarning("[PlayerController] combo2Data가 할당되지 않았습니다.");
+                Debug.LogWarning("[PlayerController] playerAbilities가 비어있습니다. Inspector에서 어빌리티를 할당해주세요.");
             }
         }
 

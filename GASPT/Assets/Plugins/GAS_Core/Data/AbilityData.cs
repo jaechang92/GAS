@@ -54,6 +54,23 @@ namespace GAS.Core
         [Header("커스텀 프로퍼티")]
         [SerializeField] private List<CustomProperty> customProperties = new List<CustomProperty>();
 
+        [Header("어빌리티 체이닝 (콤보 시스템)")]
+        [Tooltip("이 어빌리티가 체인(콤보) 시스템을 사용하는지 여부")]
+        [SerializeField] private bool isComboAbility = false;
+
+        [Tooltip("체인의 시작점인지 여부 (첫 콤보)")]
+        [SerializeField] private bool isChainStarter = false;
+
+        [Tooltip("다음 어빌리티 ID (체인 연결)")]
+        [SerializeField] private string nextAbilityId = "";
+
+        [Tooltip("다음 어빌리티 입력 가능 시간 (초)")]
+        [Range(0.1f, 2f)]
+        [SerializeField] private float chainWindowDuration = 0.5f;
+
+        [Tooltip("체인 실패 시 자동으로 첫 체인으로 리셋")]
+        [SerializeField] private bool autoResetChain = true;
+
         // IAbilityData 구현
         public string AbilityId
         {
@@ -102,6 +119,13 @@ namespace GAS.Core
         public GameObject EffectPrefab => effectPrefab;
         public AudioClip SoundEffect => soundEffect;
 
+        // 체이닝 프로퍼티
+        public bool IsComboAbility => isComboAbility;
+        public bool IsChainStarter => isChainStarter;
+        public string NextAbilityId => nextAbilityId;
+        public float ChainWindowDuration => chainWindowDuration;
+        public bool AutoResetChain => autoResetChain;
+
         /// <summary>
         /// 커스텀 프로퍼티 값 가져오기
         /// </summary>
@@ -148,6 +172,32 @@ namespace GAS.Core
         public bool HasTag(string tag)
         {
             return abilityTags.Contains(tag);
+        }
+
+        /// <summary>
+        /// 에디터 검증 (Inspector 값 변경 시 호출)
+        /// </summary>
+        private void OnValidate()
+        {
+            // 콤보 어빌리티가 아니면 체이닝 필드 초기화
+            if (!isComboAbility)
+            {
+                isChainStarter = false;
+                nextAbilityId = "";
+                chainWindowDuration = 0.5f;
+                autoResetChain = true;
+            }
+
+            // 체인 스타터는 nextAbilityId 필수
+            if (isComboAbility && isChainStarter && string.IsNullOrEmpty(nextAbilityId))
+            {
+                Debug.LogWarning($"[{abilityName}] 체인 스타터는 NextAbilityId가 필요합니다.");
+            }
+
+            // 기본 검증
+            if (cooldownDuration < 0) cooldownDuration = 0;
+            if (castTime < 0) castTime = 0;
+            if (duration < 0) duration = 0;
         }
     }
 
