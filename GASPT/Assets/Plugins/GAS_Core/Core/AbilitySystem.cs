@@ -33,6 +33,7 @@ namespace GAS.Core
         private string nextChainAbilityId = null;       // 다음 준비된 어빌리티
         private float chainTimer = 0f;                  // 체인 윈도우 타이머
         private bool isChainActive = false;
+        private string currentChainingAbilityId = null; // 현재 체이닝 처리 중인 어빌리티 (중복 방지)
 
         // 프로퍼티
         public IReadOnlyDictionary<string, IAbility> Abilities => abilities;
@@ -157,8 +158,9 @@ namespace GAS.Core
 
                 if (chainTimer <= 0f)
                 {
-                    // 체인 윈도우 만료
-                    ResetChain();
+                    // 체인 윈도우 만료 - 완전 초기화
+                    Debug.Log($"<color=#FF6B6B>[AbilitySystem] ⏱ 체인 타임아웃</color>");
+                    ClearChain();
                 }
             }
         }
@@ -176,33 +178,20 @@ namespace GAS.Core
         }
 
         /// <summary>
-        /// 체인 리셋 (첫 콤보로)
-        /// </summary>
-        private void ResetChain()
-        {
-            if (!string.IsNullOrEmpty(currentChainStarterId))
-            {
-                nextChainAbilityId = currentChainStarterId;
-                Debug.Log($"<color=#FF6B6B>[AbilitySystem] ↺ 체인 리셋: {currentChainStarterId}</color>");
-            }
-            else
-            {
-                ClearChain();
-            }
-
-            chainTimer = 0f;
-            isChainActive = false;
-        }
-
-        /// <summary>
         /// 체인 완전 초기화
         /// </summary>
         private void ClearChain()
         {
+            if (!string.IsNullOrEmpty(currentChainStarterId))
+            {
+                Debug.Log($"<color=#9370DB>[AbilitySystem] ✓ 체인 완료/초기화</color>");
+            }
+
             nextChainAbilityId = null;
             currentChainStarterId = null;
             chainTimer = 0f;
             isChainActive = false;
+            currentChainingAbilityId = null;
         }
 
         /// <summary>
@@ -492,6 +481,15 @@ namespace GAS.Core
         /// </summary>
         private async Awaitable HandleAbilityChaining(IAbility ability)
         {
+            // 중복 실행 방지
+            string abilityId = ability.Data.AbilityId;
+            if (currentChainingAbilityId == abilityId)
+            {
+                return; // 이미 처리 중
+            }
+
+            currentChainingAbilityId = abilityId;
+
             // 어빌리티 실행 완료 대기
             // Ability 클래스의 State를 모니터링
             while (ability.State == AbilityState.Casting || ability.State == AbilityState.Active)
@@ -509,16 +507,15 @@ namespace GAS.Core
                 }
                 else
                 {
-                    // 체인 종료 (마지막 콤보)
-                    if (data.AutoResetChain)
-                    {
-                        ResetChain();
-                    }
-                    else
-                    {
-                        ClearChain();
-                    }
+                    // 체인 종료 (마지막 콤보) - 완전 초기화
+                    ClearChain();
                 }
+            }
+
+            // 처리 완료
+            if (currentChainingAbilityId == abilityId)
+            {
+                currentChainingAbilityId = null;
             }
         }
 
