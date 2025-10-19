@@ -3,6 +3,7 @@ using FSM.Core;
 using GAS.Core;
 using Combat.Core;
 using Combat.Attack;
+using Combat.Data;
 using System.Collections.Generic;
 
 namespace Player
@@ -15,6 +16,14 @@ namespace Player
     [RequireComponent(typeof(AbilitySystem))]
     public class PlayerController : MonoBehaviour
     {
+        [Header("GAS - Combo Abilities")]
+        [Tooltip("1단 콤보 어빌리티 데이터")]
+        [SerializeField] private ComboAbilityData combo0Data;
+        [Tooltip("2단 콤보 어빌리티 데이터")]
+        [SerializeField] private ComboAbilityData combo1Data;
+        [Tooltip("3단 콤보 어빌리티 데이터")]
+        [SerializeField] private ComboAbilityData combo2Data;
+
         [Header("디버그")]
         [SerializeField] private bool showDebugInfo = false;
 
@@ -72,6 +81,7 @@ namespace Player
 
         private void Start()
         {
+            InitializeComboAbilities();
             StartFSM();
         }
 
@@ -143,6 +153,51 @@ namespace Player
             {
                 attackAnimationHandler.SetAnimator(animator);
                 attackAnimationHandler.SetComboSystem(comboSystem);
+            }
+        }
+
+        /// <summary>
+        /// 콤보 어빌리티 초기화 (GAS 등록)
+        /// </summary>
+        private void InitializeComboAbilities()
+        {
+            if (abilitySystem == null)
+            {
+                Debug.LogError("[PlayerController] AbilitySystem이 없어 ComboAbility를 등록할 수 없습니다.");
+                return;
+            }
+
+            // Combo_0 등록 (1단 공격)
+            if (combo0Data != null)
+            {
+                abilitySystem.AddAbility(combo0Data);
+                LogDebug($"Combo_0 어빌리티 등록: {combo0Data.AbilityName}");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] combo0Data가 할당되지 않았습니다.");
+            }
+
+            // Combo_1 등록 (2단 공격)
+            if (combo1Data != null)
+            {
+                abilitySystem.AddAbility(combo1Data);
+                LogDebug($"Combo_1 어빌리티 등록: {combo1Data.AbilityName}");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] combo1Data가 할당되지 않았습니다.");
+            }
+
+            // Combo_2 등록 (3단 공격)
+            if (combo2Data != null)
+            {
+                abilitySystem.AddAbility(combo2Data);
+                LogDebug($"Combo_2 어빌리티 등록: {combo2Data.AbilityName}");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] combo2Data가 할당되지 않았습니다.");
             }
         }
 

@@ -1,10 +1,10 @@
 {
-    "name": "Combat.Core",
-    "rootNamespace": "Combat.Core",
+    "name": "Combat.Abilities",
+    "rootNamespace": "Combat.Abilities",
     "references": [
-        "Core.Enums",
-        "Core.Utilities",
-        "GAS.Core"
+        "Combat.Core",
+        "GAS.Core",
+        "Core.Enums"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

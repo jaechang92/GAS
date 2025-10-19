@@ -55,8 +55,16 @@ namespace GAS.Core
         [SerializeField] private List<CustomProperty> customProperties = new List<CustomProperty>();
 
         // IAbilityData 구현
-        public string AbilityId => abilityId;
-        public string AbilityName => abilityName;
+        public string AbilityId
+        {
+            get => abilityId;
+            set => abilityId = value;
+        }
+        public string AbilityName
+        {
+            get => abilityName;
+            set => abilityName = value;
+        }
         public string Description => description;
         public AbilityType AbilityType => abilityType;
         public float CooldownDuration => cooldownDuration;
