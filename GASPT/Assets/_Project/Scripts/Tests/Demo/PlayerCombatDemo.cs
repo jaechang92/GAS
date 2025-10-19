@@ -231,6 +231,9 @@ namespace Combat.Demo
                 };
             }
 
+            // ComboSystem 제거됨 - GAS 체이닝으로 대체
+            // TODO: GAS AbilitySystem 이벤트로 대체 필요
+            /*
             if (playerController.ComboSystem != null)
             {
                 playerController.ComboSystem.OnComboStarted += (index) =>
@@ -248,6 +251,7 @@ namespace Combat.Demo
                     LogEvent($"[Player] 콤보 완료!");
                 };
             }
+            */
 
             LogEvent($"[Player] 생성 완료 - 위치: {playerSpawnPosition}, Layer: {LayerMask.LayerToName(player.layer)}");
         }
@@ -466,9 +470,15 @@ namespace Combat.Demo
 
         /// <summary>
         /// 플레이어 콤보 설정
+        /// ComboSystem 제거됨 - GAS 체이닝으로 대체
         /// </summary>
         private void SetupPlayerCombo()
         {
+            // ComboSystem 제거됨 - GAS AbilityData ScriptableObject로 대체
+            // Unity Inspector에서 PlayerController에 PlayerAttack AbilityData 할당 필요
+            LogEvent("[Combo] ComboSystem 제거됨 - GAS 체이닝 사용");
+
+            /*
             if (playerController == null || playerController.ComboSystem == null)
             {
                 LogEvent("[Combo] PlayerController 또는 ComboSystem 없음");
@@ -502,6 +512,7 @@ namespace Combat.Demo
             comboSystem.SetComboResetTime(1.5f); // 콤보 리셋 1.5초로 증가
 
             LogEvent($"[Combo] {comboCount}단 콤보 설정 완료");
+            */
         }
 
         #endregion
@@ -561,15 +572,21 @@ namespace Combat.Demo
 
         /// <summary>
         /// 콤보 리셋
+        /// ComboSystem 제거됨 - GAS가 자동으로 체인 리셋 처리
         /// </summary>
         [ContextMenu("Test: Reset Combo")]
         public void ResetCombo()
         {
+            // ComboSystem 제거됨 - GAS가 타임아웃 시 자동 리셋
+            LogEvent("[Combo] ComboSystem 제거됨 - GAS가 자동 리셋 처리");
+
+            /*
             if (playerController?.ComboSystem != null)
             {
                 playerController.ComboSystem.ResetCombo();
                 LogEvent("[Combo] 리셋됨");
             }
+            */
         }
 
         /// <summary>
@@ -683,12 +700,17 @@ H : 도움말
                     DrawHealthBar(health.HealthPercentage, Color.green);
                 }
 
+                // ComboSystem 제거됨 - GAS 체이닝으로 대체
+                GUILayout.Label($"Combo: GAS 체이닝 사용 중", labelStyle);
+
+                /*
                 var combo = playerController.ComboSystem;
                 if (combo != null)
                 {
                     GUILayout.Label($"Combo: {combo.CurrentComboIndex} / {combo.GetComboCount()}", labelStyle);
                     GUILayout.Label($"Combo Active: {combo.IsComboActive}", labelStyle);
                 }
+                */
             }
 
             GUILayout.Space(15);

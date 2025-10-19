@@ -44,15 +44,6 @@ namespace Combat.Attack
         [SerializeField] private bool drawDebugGizmos = true;
 
         private GameObject currentHitbox;
-        private ComboSystem comboSystem;
-
-        /// <summary>
-        /// 초기화 (ComboSystem 연결)
-        /// </summary>
-        public void InitializeWithCombo(ComboSystem combo)
-        {
-            comboSystem = combo;
-        }
 
         /// <summary>
         /// 공격 실행
@@ -70,9 +61,6 @@ namespace Combat.Attack
 
             // 히트박스 생성 및 활성화
             await CreateAndActivateHitbox(cancellationToken);
-
-            // NOTE: ComboSystem.RegisterHit()는 PlayerAttackState에서 이미 호출됨
-            // 여기서 다시 호출하면 중복 진행되므로 제거함
         }
 
         /// <summary>

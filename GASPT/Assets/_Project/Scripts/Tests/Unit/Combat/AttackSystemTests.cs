@@ -10,7 +10,12 @@ namespace Combat.Tests.Unit
 {
     /// <summary>
     /// 공격 시스템 테스트
+    ///
+    /// ⚠️ 주의: ComboSystem이 제거되어 이 테스트들은 비활성화되었습니다.
+    /// GAS 체이닝 시스템으로 대체됨.
+    /// TODO: GAS AbilitySystem 체이닝 테스트로 재작성 필요
     /// </summary>
+    [Ignore("ComboSystem 제거됨 - GAS 체이닝으로 대체")]
     public class AttackSystemTests
     {
         private GameObject attackerObject;

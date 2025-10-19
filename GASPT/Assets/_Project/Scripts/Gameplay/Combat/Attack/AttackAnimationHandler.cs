@@ -4,14 +4,14 @@ namespace Combat.Attack
 {
     /// <summary>
     /// 공격 애니메이션 핸들러
-    /// 공격 애니메이션과 게임플레이 로직 연동
+    /// 공격 애니메이션 상태 추적 및 Animation Event 처리
+    /// GAS가 애니메이션을 직접 트리거하므로, 이 클래스는 상태 추적만 담당
     /// </summary>
     [RequireComponent(typeof(Animator))]
     public class AttackAnimationHandler : MonoBehaviour
     {
         [Header("참조")]
         [SerializeField] private Animator animator;
-        [SerializeField] private ComboSystem comboSystem;
 
         [Header("애니메이션 파라미터")]
         [SerializeField] private string attackTriggerParameter = "Attack";
@@ -57,33 +57,6 @@ namespace Combat.Attack
             if (animator == null)
             {
                 animator = GetComponent<Animator>();
-            }
-
-            if (comboSystem == null)
-            {
-                comboSystem = GetComponent<ComboSystem>();
-            }
-        }
-
-        private void OnEnable()
-        {
-            // 콤보 시스템 이벤트 구독
-            if (comboSystem != null)
-            {
-                comboSystem.OnComboStarted += OnComboStarted;
-                comboSystem.OnComboAdvanced += OnComboAdvanced;
-                comboSystem.OnComboReset += OnComboReset;
-            }
-        }
-
-        private void OnDisable()
-        {
-            // 콤보 시스템 이벤트 구독 해제
-            if (comboSystem != null)
-            {
-                comboSystem.OnComboStarted -= OnComboStarted;
-                comboSystem.OnComboAdvanced -= OnComboAdvanced;
-                comboSystem.OnComboReset -= OnComboReset;
             }
         }
 
@@ -137,34 +110,6 @@ namespace Combat.Attack
             if (animator == null) return;
 
             animator.SetFloat(attackSpeedParameter, speed);
-        }
-
-        #endregion
-
-        #region 콤보 시스템 이벤트 처리
-
-        /// <summary>
-        /// 콤보 시작 이벤트
-        /// </summary>
-        private void OnComboStarted(int comboIndex)
-        {
-            TriggerAttackAnimation(comboIndex, defaultAttackSpeed);
-        }
-
-        /// <summary>
-        /// 콤보 진행 이벤트
-        /// </summary>
-        private void OnComboAdvanced(int comboIndex)
-        {
-            TriggerAttackAnimation(comboIndex, defaultAttackSpeed);
-        }
-
-        /// <summary>
-        /// 콤보 리셋 이벤트
-        /// </summary>
-        private void OnComboReset()
-        {
-            StopAttackAnimation();
         }
 
         #endregion
@@ -262,30 +207,6 @@ namespace Combat.Attack
         public void SetAnimator(Animator anim)
         {
             animator = anim;
-        }
-
-        /// <summary>
-        /// ComboSystem 설정
-        /// </summary>
-        public void SetComboSystem(ComboSystem combo)
-        {
-            // 기존 이벤트 구독 해제
-            if (comboSystem != null)
-            {
-                comboSystem.OnComboStarted -= OnComboStarted;
-                comboSystem.OnComboAdvanced -= OnComboAdvanced;
-                comboSystem.OnComboReset -= OnComboReset;
-            }
-
-            comboSystem = combo;
-
-            // 새 이벤트 구독
-            if (comboSystem != null)
-            {
-                comboSystem.OnComboStarted += OnComboStarted;
-                comboSystem.OnComboAdvanced += OnComboAdvanced;
-                comboSystem.OnComboReset += OnComboReset;
-            }
         }
 
         /// <summary>
