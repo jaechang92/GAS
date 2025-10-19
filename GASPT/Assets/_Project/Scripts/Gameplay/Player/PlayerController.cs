@@ -3,7 +3,6 @@ using FSM.Core;
 using GAS.Core;
 using Combat.Core;
 using Combat.Attack;
-using Combat.Data;
 using System.Collections.Generic;
 
 namespace Player
