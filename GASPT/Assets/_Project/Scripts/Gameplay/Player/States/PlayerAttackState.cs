@@ -28,7 +28,7 @@ namespace Player
             playerController.PlayerInput?.ResetAttack();
 
             // GAS가 체이닝을 자동으로 처리
-            playerController.ActivateAbility("PlayerAttack");
+            playerController.ActivateAbility("PlayerAttack_1");
             attackTriggered = true;
         }
 

@@ -29,7 +29,6 @@ namespace GAS.Core
         private IGameplayContext gameplayContext;
 
         // 체이닝 관리 (콤보 시스템)
-        private string currentChainStarterId = null;   // 현재 체인의 시작점
         private string nextChainAbilityId = null;       // 다음 준비된 어빌리티
         private float chainTimer = 0f;                  // 체인 윈도우 타이머
         private bool isChainActive = false;
@@ -182,13 +181,12 @@ namespace GAS.Core
         /// </summary>
         private void ClearChain()
         {
-            if (!string.IsNullOrEmpty(currentChainStarterId))
+            if (isChainActive || !string.IsNullOrEmpty(nextChainAbilityId))
             {
                 Debug.Log($"<color=#9370DB>[AbilitySystem] ✓ 체인 완료/초기화</color>");
             }
 
             nextChainAbilityId = null;
-            currentChainStarterId = null;
             chainTimer = 0f;
             isChainActive = false;
             currentChainingAbilityId = null;
@@ -472,13 +470,6 @@ namespace GAS.Core
 
             if (result && abilities.TryGetValue(targetAbilityId, out var ability))
             {
-                // 체인 스타터 등록
-                if (ability.Data is AbilityData data && data.IsComboAbility && data.IsChainStarter)
-                {
-                    currentChainStarterId = targetAbilityId;
-                    Debug.Log($"<color=#00FF00>[AbilitySystem] ▶ 체인 시작: {targetAbilityId}</color>");
-                }
-
                 // 완료 시 체이닝 처리 (비동기로 대기)
                 _ = HandleAbilityChaining(ability);
             }

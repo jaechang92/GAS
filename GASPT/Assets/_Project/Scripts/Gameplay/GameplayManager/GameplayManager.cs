@@ -14,7 +14,7 @@ namespace Gameplay
     {
         [Header("생성 설정")]
         [SerializeField] private bool autoSetup = true;
-        [SerializeField] private bool createPlayer = true;
+        [SerializeField] private bool createPlayer = false; // PlayerSpawner 사용으로 변경
         [SerializeField] private bool createEnemies = true;
         [SerializeField] private bool createGround = true;
         [SerializeField] private int enemyCount = 3;
@@ -44,7 +44,7 @@ namespace Gameplay
         /// <summary>
         /// Gameplay 씬 초기화
         /// </summary>
-        public void Setup()
+        public async void Setup()
         {
             Debug.Log("[GameplayManager] Gameplay 씬 초기화 시작");
 
@@ -62,11 +62,14 @@ namespace Gameplay
                 CreateGround();
             }
 
-            // Player 생성
+            // Player 생성 (PlayerSpawner 사용)
             if (createPlayer)
             {
                 CreatePlayer();
             }
+
+            // 프레임 대기 (PlayerSpawner가 플레이어를 생성할 시간 확보)
+            await Awaitable.NextFrameAsync();
 
             // Enemy 생성
             if (createEnemies)
@@ -187,9 +190,11 @@ namespace Gameplay
             }
 
             // Target 설정 (플레이어)
-            if (playerObject != null)
+            // PlayerSpawner가 생성한 플레이어 찾기
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
             {
-                controller.Target = playerObject.transform;
+                controller.Target = player.transform;
             }
 
             return enemy;

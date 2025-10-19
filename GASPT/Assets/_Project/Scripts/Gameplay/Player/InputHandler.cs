@@ -106,14 +106,7 @@ namespace Player
         /// </summary>
         private void HandleAttackInput()
         {
-            // 이전 프레임 상태 저장
-            bool previousAttackPressed = attackPressed;
-
-            // 현재 프레임 입력 상태 업데이트
-            attackPressed = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X);
-
-            // 버튼이 눌러진 순간 (이전: false, 현재: true)
-            if (attackPressed && !previousAttackPressed)
+            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.X))
             {
                 OnAttackPressed?.Invoke();
             }

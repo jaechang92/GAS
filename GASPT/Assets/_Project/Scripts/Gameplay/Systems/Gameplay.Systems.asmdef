@@ -2,7 +2,11 @@
     "name": "Gameplay.Systems",
     "rootNamespace": "Gameplay.Systems",
     "references": [
-        "Core.Enums"
+        "Core.Enums",
+        "Core.Managers",
+        "Core.Data",
+        "Player",
+        "Combat.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

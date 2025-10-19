@@ -63,7 +63,11 @@ namespace GameFlow
         /// </summary>
         private void InitializeStateMachine()
         {
-            stateMachine = gameObject.AddComponent<StateMachine>();
+            stateMachine = gameObject.GetComponent<StateMachine>();
+            if (stateMachine == null)
+            {
+                stateMachine = gameObject.AddComponent<StateMachine>();
+            }
 
             // 상태들 추가
             stateMachine.AddState(new PreloadState());  // 초기 리소스 로딩 상태

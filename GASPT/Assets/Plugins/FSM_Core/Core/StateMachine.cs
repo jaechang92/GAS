@@ -170,12 +170,6 @@ namespace FSM.Core
         public void TriggerEvent(string eventId)
         {
             eventTriggers[eventId] = true;
-
-            // TouchGround 이벤트 디버깅
-            if (enableDebugLog && eventId == "TouchGround")
-            {
-                Debug.Log($"[FSM] TouchGround 이벤트 발생! 현재 상태: {CurrentStateId}");
-            }
         }
 
         /// <summary>

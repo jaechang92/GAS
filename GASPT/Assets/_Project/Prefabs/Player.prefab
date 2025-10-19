@@ -19,7 +19,6 @@ GameObject:
   - component: {fileID: 664145411800844673}
   - component: {fileID: 9050943442927028969}
   - component: {fileID: 5221444057667323770}
-  - component: {fileID: 1810642945478714789}
   - component: {fileID: 1586015217911682013}
   - component: {fileID: 2004102841019998328}
   - component: {fileID: 8006068266002125102}
@@ -281,64 +280,6 @@ MonoBehaviour:
   isInvincible: 0
   invincibilityDuration: 1
   enableDebugLogs: 1
---- !u!114 &1810642945478714789
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1831242324115758965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4df7552e1329c4046bb38eb451d39b87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Combat.Attack::Combat.Attack.ComboSystem
-  combos:
-  - comboName: Combo_1
-    comboIndex: 0
-    inputWindowStart: 0
-    inputWindowEnd: 1
-    damageMultiplier: 1
-    animationTrigger: Attack_0
-    animationSpeed: 1
-    hitboxSize: {x: 1.5, y: 1}
-    hitboxOffset: {x: 0.8, y: 0}
-    hitboxDuration: 0.2
-    effectPrefab: {fileID: 0}
-    soundEffect: {fileID: 0}
-    knockbackForce: {x: 5, y: 2}
-    useHitDirection: 1
-  - comboName: Combo_2
-    comboIndex: 1
-    inputWindowStart: 0
-    inputWindowEnd: 1
-    damageMultiplier: 1.2
-    animationTrigger: Attack_1
-    animationSpeed: 1.1
-    hitboxSize: {x: 1.8, y: 1}
-    hitboxOffset: {x: 0.8, y: 0}
-    hitboxDuration: 0.2
-    effectPrefab: {fileID: 0}
-    soundEffect: {fileID: 0}
-    knockbackForce: {x: 7, y: 2}
-    useHitDirection: 1
-  - comboName: Combo_3
-    comboIndex: 2
-    inputWindowStart: 0
-    inputWindowEnd: 1
-    damageMultiplier: 1.4
-    animationTrigger: Attack_2
-    animationSpeed: 1.2
-    hitboxSize: {x: 2.1, y: 1}
-    hitboxOffset: {x: 0.8, y: 0}
-    hitboxDuration: 0.2
-    effectPrefab: {fileID: 0}
-    soundEffect: {fileID: 0}
-    knockbackForce: {x: 9, y: 2}
-    useHitDirection: 1
-  comboWindowTime: 1
-  comboResetTime: 1.5
-  enableDebugLogs: 0
 --- !u!95 &1586015217911682013
 Animator:
   serializedVersion: 7
@@ -374,7 +315,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Combat.Attack::Combat.Attack.AttackAnimationHandler
   animator: {fileID: 1586015217911682013}
-  comboSystem: {fileID: 1810642945478714789}
   attackTriggerParameter: Attack
   comboIndexParameter: ComboIndex
   attackSpeedParameter: AttackSpeed
@@ -394,7 +334,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c07151da8676cd4a9c764d49dfe5c33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FSM.Core::FSM.Core.StateMachine
-  enableDebugLog: 1
+  enableDebugLog: 0
   initialStateId: 
   currentStateDisplay: Jump
   previousStateDisplay: Idle

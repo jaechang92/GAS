@@ -440,6 +440,9 @@ namespace GameFlow
             // GameplayManager 찾기 또는 생성
             SetupGameplayManager();
 
+            // PlayerSpawner 찾기 및 플레이어 생성
+            SetupPlayer();
+
             // GameplayHUD Panel 열기
             if (Core.Managers.UIManager.Instance != null)
             {
@@ -503,6 +506,32 @@ namespace GameFlow
             GameObject managerObject = new GameObject("GameplayManager");
             managerObject.AddComponent(gameplayManagerType);
             Debug.Log("[IngameState] GameplayManager 생성 완료");
+        }
+
+        /// <summary>
+        /// PlayerSpawner 찾기 및 플레이어 생성
+        /// </summary>
+        private void SetupPlayer()
+        {
+            // PlayerSpawner 타입을 동적으로 검색
+            var playerSpawnerType = System.Type.GetType("Gameplay.Systems.PlayerSpawner, Gameplay.Systems");
+
+            if (playerSpawnerType == null)
+            {
+                Debug.LogWarning("[IngameState] PlayerSpawner 타입을 찾을 수 없습니다. 씬에 PlayerSpawner를 배치해주세요.");
+                return;
+            }
+
+            // 씬에서 PlayerSpawner 찾기
+            var playerSpawner = Object.FindAnyObjectByType(playerSpawnerType);
+
+            if (playerSpawner == null)
+            {
+                Debug.LogWarning("[IngameState] 씬에 PlayerSpawner가 없습니다. 수동으로 배치해주세요.");
+                return;
+            }
+
+            Debug.Log("[IngameState] PlayerSpawner 발견, 플레이어 생성은 자동으로 처리됩니다.");
         }
 
     }
@@ -606,18 +635,22 @@ namespace GameFlow
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
 
-            // 4. LobbyManager 설정 (Player 생성)
+            // 4. LobbyManager 설정
             Debug.Log("[LobbyState] 4단계: LobbyManager 설정");
             SetupLobbyManager();
 
-            // 5. 로비 UI 활성화
-            Debug.Log("[LobbyState] 5단계: 로비 UI 활성화");
+            // 5. PlayerSpawner 찾기 및 플레이어 생성
+            Debug.Log("[LobbyState] 5단계: PlayerSpawner 찾기");
+            SetupPlayer();
+
+            // 6. 로비 UI 활성화
+            Debug.Log("[LobbyState] 6단계: 로비 UI 활성화");
             gameFlowManager?.ShowLobby();
 
             await Awaitable.NextFrameAsync();
 
-            // 6. FadeIn (로비 씬이 서서히 보임)
-            Debug.Log("[LobbyState] 6단계: FadeIn");
+            // 7. FadeIn (로비 씬이 서서히 보임)
+            Debug.Log("[LobbyState] 7단계: FadeIn");
             if (Core.Managers.SceneTransitionManager.Instance != null)
             {
                 await Core.Managers.SceneTransitionManager.Instance.FadeInAsync(0.5f);
@@ -666,6 +699,32 @@ namespace GameFlow
             GameObject managerObject = new GameObject("LobbyManager");
             managerObject.AddComponent(lobbyManagerType);
             Debug.Log("[LobbyState] LobbyManager 생성 완료");
+        }
+
+        /// <summary>
+        /// PlayerSpawner 찾기 및 플레이어 생성
+        /// </summary>
+        private void SetupPlayer()
+        {
+            // PlayerSpawner 타입을 동적으로 검색
+            var playerSpawnerType = System.Type.GetType("Gameplay.Systems.PlayerSpawner, Gameplay.Systems");
+
+            if (playerSpawnerType == null)
+            {
+                Debug.LogWarning("[LobbyState] PlayerSpawner 타입을 찾을 수 없습니다. 씬에 PlayerSpawner를 배치해주세요.");
+                return;
+            }
+
+            // 씬에서 PlayerSpawner 찾기
+            var playerSpawner = Object.FindAnyObjectByType(playerSpawnerType);
+
+            if (playerSpawner == null)
+            {
+                Debug.LogWarning("[LobbyState] 씬에 PlayerSpawner가 없습니다. 수동으로 배치해주세요.");
+                return;
+            }
+
+            Debug.Log("[LobbyState] PlayerSpawner 발견, 플레이어 생성은 자동으로 처리됩니다.");
         }
     }
 

@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4dcc895d8b28a214cad75b005b055a32, type: 3}
-  m_Name: PlayerAttack
-  m_EditorClassIdentifier:
-  abilityId: PlayerAttack
+  m_Name: PlayerAttack_1
+  m_EditorClassIdentifier: 
+  abilityId: PlayerAttack_1
   abilityName: "\uAE30\uBCF8 \uACF5\uACA9 1\uB2E8"
-  description: "\uD50C\uB808\uC774\uC5B4\uC758 \uAE30\uBCF8 \uACF5\uACA9 \uCCAB \uBC88\uC9F8 \uD0C0\uACA9"
+  description: "\uD50C\uB808\uC774\uC5B4\uC758 \uAE30\uBCF8 \uACF5\uACA9 \uCCAB \uBC88\uC9F8
+    \uD0C0\uACA9"
   icon: {fileID: 0}
   abilityType: 0
   targetType: 6
@@ -37,7 +38,5 @@ MonoBehaviour:
   soundEffect: {fileID: 0}
   customProperties: []
   isComboAbility: 1
-  isChainStarter: 1
   nextAbilityId: PlayerAttack_2
   chainWindowDuration: 0.5
-  autoResetChain: 1

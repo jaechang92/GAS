@@ -12,7 +12,7 @@ namespace Gameplay
     {
         [Header("생성 설정")]
         [SerializeField] private bool autoSetup = true;
-        [SerializeField] private bool createPlayer = true;
+        [SerializeField] private bool createPlayer = false; // PlayerSpawner 사용으로 변경
         [SerializeField] private bool createGround = true;
 
         [Header("스폰 위치")]

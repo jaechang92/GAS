@@ -37,7 +37,5 @@ MonoBehaviour:
   soundEffect: {fileID: 0}
   customProperties: []
   isComboAbility: 1
-  isChainStarter: 0
   nextAbilityId:
   chainWindowDuration: 0
-  autoResetChain: 1
