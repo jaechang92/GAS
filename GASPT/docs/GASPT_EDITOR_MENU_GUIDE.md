@@ -19,7 +19,8 @@ GASPT/
 ├─ Prefabs/
 │  ├─ UI Panels/          # UI Panel Prefab 자동 생성
 │  ├─ NPC/                # NPC Prefab 자동 생성
-│  └─ Dialogue/           # 대화 시스템 Prefab 자동 생성
+│  ├─ Dialogue/           # 대화 시스템 Prefab 자동 생성
+│  └─ Gameplay/           # 게임플레이 Prefab 자동 생성 (Portal 등)
 ├─ Scene Setup/           # 씬 자동 생성 및 설정
 ├─ Resources/             # Resource Manifest 관리
 ├─ Character/             # 캐릭터 생성 도구
@@ -128,6 +129,70 @@ GASPT/
 - 버튼 배경 (Image)
 - 텍스트 (TextMeshProUGUI)
 - 호버/클릭 효과 (ColorBlock)
+
+---
+
+## 🌀 Prefabs - Gameplay
+
+**위치**: `GASPT → Prefabs → Gameplay`
+
+### 기능
+- **Create Portal**: 씬 전환 포탈 Prefab 생성
+- **Open Gameplay Prefabs Folder**: Gameplay Prefab 폴더 열기
+
+### 저장 위치
+`Assets/_Project/Prefabs/Gameplay/Portal.prefab`
+
+### 사용 방법
+
+#### Portal Prefab 생성
+1. `GASPT → Prefabs → Gameplay → Create Portal` 실행
+2. 자동으로 Portal Prefab 생성
+3. Lobby 씬에 배치하여 사용
+
+#### Lobby 씬에 Portal 배치
+1. Lobby 씬 열기
+2. Project 창에서 `Assets/_Project/Prefabs/Gameplay/Portal.prefab` 찾기
+3. Hierarchy 창으로 드래그 앤 드롭
+4. 원하는 위치로 이동 (예: X=5, Y=1, Z=0)
+
+### 포함 컴포넌트
+
+#### Portal
+- **SpriteRenderer**: 원형 파란색 스프라이트 (펄스 애니메이션)
+- **CircleCollider2D**: Trigger 충돌 감지
+- **Portal 스크립트**: 씬 전환 로직
+- **PromptText**: 상호작용 안내 텍스트
+
+### 기본 설정
+- **목표 씬**: Gameplay (SceneType.Game)
+- **상호작용 키**: E
+- **프롬프트**: "E를 눌러 게임 시작"
+- **색상**: 반투명 파란색
+- **펄스 효과**: 활성화
+
+### 커스터마이징
+
+#### Inspector에서 설정 변경
+1. Portal GameObject 선택
+2. Inspector에서 Portal 컴포넌트 확인
+3. 설정 변경:
+   - **Target Scene**: 목표 씬 변경 (SceneType Enum)
+   - **Interaction Key**: 상호작용 키 변경
+   - **Prompt Text**: 안내 텍스트 변경
+   - **Portal Color**: 포탈 색상 변경
+   - **Pulse Speed/Intensity**: 애니메이션 속도/강도 조정
+
+#### 코드로 설정 변경
+```csharp
+Portal portal = GetComponent<Portal>();
+
+// 씬 변경
+portal.SetTargetScene(SceneType.MainMenu);
+
+// 색상 변경
+portal.SetPortalColor(new Color(1f, 0.5f, 0f, 1f)); // 주황색
+```
 
 ---
 
@@ -240,6 +305,13 @@ GASPT/
 ### UI 작업
 ```
 GASPT → Prefabs → UI Panels → Create All Panels
+GASPT → Prefabs → Dialogue → Create DialoguePanel
+GASPT → Prefabs → Dialogue → Create ChoiceButton
+```
+
+### Gameplay 작업
+```
+GASPT → Prefabs → Gameplay → Create Portal
 ```
 
 ### 씬 작업
@@ -277,6 +349,13 @@ GASPT → Scene Setup → Update Build Settings
 ---
 
 ## 📝 변경 이력
+
+### 2025-10-19: Portal 시스템 추가
+- Portal 스크립트 추가 (씬 전환 기능)
+- PortalPrefabGenerator 추가 (GASPT/Prefabs/Gameplay)
+- Lobby → Gameplay 씬 전환 포탈
+- 상호작용 프롬프트 및 펄스 애니메이션
+- 문서 업데이트
 
 ### 2025-10-19: GASPT 메뉴 통합 완료
 - 모든 GASPT 도구를 단일 메뉴 아래 통합

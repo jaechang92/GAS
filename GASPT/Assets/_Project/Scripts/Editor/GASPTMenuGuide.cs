@@ -147,6 +147,15 @@ namespace Editor
 
             EditorGUILayout.Space(5);
 
+            // Gameplay 섹션
+            DrawSection("Prefabs - Gameplay", new[]
+            {
+                ("Create Portal", "씬 전환 포탈 Prefab 생성 (Lobby → Gameplay)"),
+                ("Open Gameplay Prefabs Folder", "Gameplay Prefab 폴더 열기")
+            }, "GASPT/Prefabs/Gameplay/");
+
+            EditorGUILayout.Space(5);
+
             // Character 섹션
             DrawSection("Character", new[]
             {
@@ -212,6 +221,11 @@ namespace Editor
             if (GUILayout.Button("👤 모든 기본 NPC 생성", GUILayout.Height(35)))
             {
                 EditorApplication.ExecuteMenuItem("GASPT/NPC Creator/Create All NPCs");
+            }
+
+            if (GUILayout.Button("🌀 Portal Prefab 생성", GUILayout.Height(35)))
+            {
+                EditorApplication.ExecuteMenuItem("GASPT/Prefabs/Gameplay/Create Portal");
             }
 
             EditorGUILayout.EndVertical();
