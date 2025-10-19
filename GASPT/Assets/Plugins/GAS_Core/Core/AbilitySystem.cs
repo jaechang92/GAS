@@ -172,7 +172,7 @@ namespace GAS.Core
             chainTimer = windowDuration;
             isChainActive = true;
 
-            Debug.Log($"[AbilitySystem] 다음 체인 준비: {nextAbilityId} (윈도우: {windowDuration}초)");
+            Debug.Log($"<color=#00BFFF>[AbilitySystem] ⏳ 다음 체인 준비: {nextAbilityId} (윈도우: {windowDuration}초)</color>");
         }
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace GAS.Core
             if (!string.IsNullOrEmpty(currentChainStarterId))
             {
                 nextChainAbilityId = currentChainStarterId;
-                Debug.Log($"[AbilitySystem] 체인 리셋: {currentChainStarterId}");
+                Debug.Log($"<color=#FF6B6B>[AbilitySystem] ↺ 체인 리셋: {currentChainStarterId}</color>");
             }
             else
             {
@@ -456,7 +456,7 @@ namespace GAS.Core
             if (isChainActive && !string.IsNullOrEmpty(nextChainAbilityId))
             {
                 targetAbilityId = nextChainAbilityId;
-                Debug.Log($"[AbilitySystem] 체인 진행: {abilityId} → {nextChainAbilityId}");
+                Debug.Log($"<color=#FFA500>[AbilitySystem] ⚡ 체인 진행: {abilityId} → {nextChainAbilityId}</color>");
             }
 
             // 어빌리티 실행
@@ -468,7 +468,7 @@ namespace GAS.Core
                 if (ability.Data is AbilityData data && data.IsComboAbility && data.IsChainStarter)
                 {
                     currentChainStarterId = targetAbilityId;
-                    Debug.Log($"[AbilitySystem] 체인 시작: {targetAbilityId}");
+                    Debug.Log($"<color=#00FF00>[AbilitySystem] ▶ 체인 시작: {targetAbilityId}</color>");
                 }
 
                 // 완료 시 체이닝 처리 (비동기로 대기)
