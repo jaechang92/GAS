@@ -252,12 +252,14 @@ namespace GAS.Core
         {
             if (!abilities.TryGetValue(abilityId, out var ability))
             {
+                Debug.LogWarning($"<color=#FF0000>[AbilitySystem] ✗ 어빌리티 없음: {abilityId}</color>");
                 return false;
             }
 
             // 어빌리티 실행 가능 확인
             if (!ability.CanExecute())
             {
+                Debug.LogWarning($"<color=#FF0000>[AbilitySystem] ✗ CanExecute 실패: {abilityId} (상태: {ability.State}, 쿨다운: {ability.RemainingCooldown:F2}초)</color>");
                 return false;
             }
 
@@ -268,6 +270,7 @@ namespace GAS.Core
                 {
                     if (!HasEnoughResource(cost.Key, cost.Value))
                     {
+                        Debug.LogWarning($"<color=#FF0000>[AbilitySystem] ✗ 리소스 부족: {abilityId} (필요: {cost.Key} {cost.Value})</color>");
                         return false;
                     }
                 }
@@ -439,6 +442,8 @@ namespace GAS.Core
         /// </summary>
         public bool ActivateAbility(string abilityId)
         {
+            Debug.Log($"<color=#FFFFFF>[AbilitySystem] → ActivateAbility 호출: {abilityId} (체인활성: {isChainActive}, 다음체인: {nextChainAbilityId})</color>");
+
             // 체이닝 활성 중이면 nextChainAbilityId 사용
             string targetAbilityId = abilityId;
 
@@ -450,6 +455,11 @@ namespace GAS.Core
 
             // 어빌리티 실행
             bool result = TryUseAbility(targetAbilityId);
+
+            if (!result)
+            {
+                Debug.LogWarning($"<color=#FF0000>[AbilitySystem] ✗ 어빌리티 실행 실패: {targetAbilityId}</color>");
+            }
 
             if (result && abilities.TryGetValue(targetAbilityId, out var ability))
             {
