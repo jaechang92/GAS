@@ -151,12 +151,18 @@ namespace Player
                 return;
             }
 
+            Debug.Log($"<color=#FFFF00>[PlayerController] 어빌리티 초기화 시작 (총 {playerAbilities.Count}개)</color>");
+
             foreach (var abilityData in playerAbilities)
             {
                 if (abilityData != null)
                 {
                     abilitySystem.AddAbility(abilityData);
-                    LogDebug($"어빌리티 등록: {abilityData.AbilityName} ({abilityData.AbilityId})");
+                    Debug.Log($"<color=#00FF00>[PlayerController] ✓ 어빌리티 등록: {abilityData.AbilityName} ({abilityData.AbilityId})</color>");
+                }
+                else
+                {
+                    Debug.LogWarning($"<color=#FF0000>[PlayerController] ✗ null 어빌리티 발견</color>");
                 }
             }
 
@@ -164,6 +170,8 @@ namespace Player
             {
                 Debug.LogWarning("[PlayerController] playerAbilities가 비어있습니다. Inspector에서 어빌리티를 할당해주세요.");
             }
+
+            Debug.Log($"<color=#FFFF00>[PlayerController] 어빌리티 초기화 완료</color>");
         }
 
         /// <summary>
@@ -171,7 +179,7 @@ namespace Player
         /// </summary>
         private void InitializeFSM()
         {
-            stateMachine = gameObject.AddComponent<StateMachine>();
+            stateMachine = gameObject.GetComponent<StateMachine>();
 
             // 상태들 등록
             stateMachine.AddState(new PlayerIdleState(this));
