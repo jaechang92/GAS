@@ -1,6 +1,0 @@
-EpisodeID,NodeID,ChoiceID,ChoiceText,NextNodeID,RequiredGold,RewardItem
-EP_STORY_001,3,1,예 돕겠습니다,4,0,
-EP_STORY_001,3,2,나중에요,5,0,
-EP_SHOP_001,2,1,체력 물약 (50G),3,50,HealthPotion
-EP_SHOP_001,2,2,공격력 스킬 (100G),4,100,AttackBoost
-EP_SHOP_001,2,3,돌아가기,999,0,
