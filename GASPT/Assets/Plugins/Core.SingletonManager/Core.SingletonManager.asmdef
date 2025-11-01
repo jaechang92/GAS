@@ -1,6 +1,6 @@
 {
-    "name": "GAS.Core",
-    "rootNamespace": "GAS.Core",
+    "name": "Core.SingletonManager",
+    "rootNamespace": "",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
