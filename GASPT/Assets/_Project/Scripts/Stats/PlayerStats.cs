@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 using Core.Enums;
 using GASPT.Data;
+using UnityEngine;
 
 namespace GASPT.Stats
 {
@@ -13,6 +13,10 @@ namespace GASPT.Stats
     /// </summary>
     public class PlayerStats : MonoBehaviour
     {
+        [Header("테스트 장착용 아이템 (런타임에만 사용됨)")]
+        [SerializeField] [Tooltip("테스트용 아이템")]
+        private Item testItemToEquip;
+
         // ====== 기본 스탯 ======
 
         [Header("기본 스탯")]
@@ -172,6 +176,19 @@ namespace GASPT.Stats
 
 
         // ====== 장비 착용/해제 ======
+        [ContextMenu("Equip Test Item")]
+
+        public void EquipTestItem()
+        {
+            if (testItemToEquip != null)
+            {
+                EquipItem(testItemToEquip);
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerStats] EquipTestItem(): testItemToEquip이 설정되지 않았습니다.");
+            }
+        }
 
         /// <summary>
         /// 아이템 장착
