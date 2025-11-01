@@ -7,7 +7,6 @@
         "Core.Enums",
         "Core.Utilities",
         "Core.Managers",
-        "Gameplay.Dialogue",
         "Combat.Core",
         "Unity.TextMeshPro"
     ],

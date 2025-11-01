@@ -5,7 +5,6 @@
         "Core.Data",
         "Core.Enums",
         "UI.HUD",
-        "Gameplay.NPC",
         "Gameplay.Systems",
         "Unity.TextMeshPro",
         "UI.Panels",

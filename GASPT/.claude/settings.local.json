@@ -26,7 +26,11 @@
       "Bash(then echo \"Directory needs to be created\")",
       "Bash(npm update -g @anthropic-ai/claude-code)",
       "Bash(claude --version)",
-      "Bash(grep -A 3 \"--- !u!1 \" \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\Assets\\_Project\\Scenes\\Lobby.unity\")"
+      "Bash(grep -A 3 \"--- !u!1 \" \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\Assets\\_Project\\Scenes\\Lobby.unity\")",
+      "Bash(git branch:*)",
+      "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
+      "Bash(GASPT/.specify/scripts/bash/create-new-feature.sh:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
