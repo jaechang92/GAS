@@ -1,9 +1,7 @@
 {
     "name": "GAS.Core",
     "rootNamespace": "GAS.Core",
-    "references": [
-        "Core.Enums"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

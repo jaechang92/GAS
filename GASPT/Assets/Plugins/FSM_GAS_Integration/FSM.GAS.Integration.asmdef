@@ -3,8 +3,7 @@
     "rootNamespace": "FSM.Core.Integration",
     "references": [
         "FSM.Core",
-        "GAS.Core",
-        "Core.Enums"
+        "GAS.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
