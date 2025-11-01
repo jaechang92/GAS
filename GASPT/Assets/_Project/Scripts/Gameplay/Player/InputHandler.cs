@@ -18,6 +18,7 @@ namespace Player
         private bool dashPressed;
         private bool attackPressed;
         private bool slidePressed;
+        private bool downPressed;
 
         // 입력 기반 이동 상태 추적
         private bool wasMovingInput = false;
@@ -41,6 +42,7 @@ namespace Player
         public bool IsDashPressed => dashPressed;
         public bool IsAttackPressed => attackPressed;
         public bool IsSlidePressed => slidePressed;
+        public bool IsDownPressed => downPressed;
         public string PendingAbilityId => pendingAbilityId;
 
         private void Update()
@@ -62,6 +64,10 @@ namespace Player
         {
             Vector2 previousInput = inputVector;
             inputVector.x = Input.GetAxisRaw("Horizontal");
+            inputVector.y = Input.GetAxisRaw("Vertical");
+
+            // 아래 방향 키 입력 체크 (낙하 플랫폼 통과용)
+            downPressed = inputVector.y < -0.5f;
 
             if (previousInput != inputVector)
             {
@@ -201,6 +207,7 @@ namespace Player
             dashPressed = false;
             attackPressed = false;
             slidePressed = false;
+            downPressed = false;
         }
 
         /// <summary>

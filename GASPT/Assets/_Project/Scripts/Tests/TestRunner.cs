@@ -5,6 +5,7 @@ using Skull.Tests.Performance;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Gameplay.Common;
 
 namespace Skull.Tests
 {
@@ -664,7 +665,7 @@ namespace Skull.Tests
                 await Awaitable.NextFrameAsync();
 
                 // Mock 스컬 생성
-                var mockSkull = new Unit.MockSkullController(Skull.Data.SkullType.Default);
+                var mockSkull = new Unit.MockSkullController(SkullType.Default);
 
                 // 스컬 추가
                 bool addResult = skullManager.AddSkullToSlot(0, mockSkull);
@@ -718,8 +719,8 @@ namespace Skull.Tests
                 await Awaitable.NextFrameAsync();
 
                 // 두 개의 Mock 스컬 생성
-                var mockSkull1 = new Unit.MockSkullController(Skull.Data.SkullType.Default);
-                var mockSkull2 = new Unit.MockSkullController(Skull.Data.SkullType.Mage);
+                var mockSkull1 = new Unit.MockSkullController(SkullType.Default);
+                var mockSkull2 = new Unit.MockSkullController(SkullType.Mage);
 
                 // 스컬들을 슬롯에 추가
                 skullManager.AddSkullToSlot(0, mockSkull1);
@@ -791,7 +792,7 @@ namespace Skull.Tests
                 await Awaitable.NextFrameAsync();
 
                 // Mock 스컬 생성 및 추가
-                var mockSkull = new Unit.MockSkullController(Skull.Data.SkullType.Default);
+                var mockSkull = new Unit.MockSkullController(SkullType.Default);
                 skullManager.AddSkullToSlot(0, mockSkull);
 
                 // 검증 1: 스컬이 추가되었는지

@@ -1,6 +1,6 @@
 using UnityEngine;
-using Skull.Core;
-using Skull.Data;
+
+using Gameplay.Common;
 using System.Threading;
 
 namespace Skull.Tests.Mocks

@@ -1,0 +1,17 @@
+{
+    "name": "Gameplay.Common",
+    "rootNamespace": "Gameplay.Common",
+    "references": [
+        "Core.Data",
+        "GAS.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

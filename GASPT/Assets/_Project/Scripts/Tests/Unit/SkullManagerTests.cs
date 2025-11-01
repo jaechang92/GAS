@@ -1,10 +1,9 @@
 using UnityEngine;
 using NUnit.Framework;
-using Skull.Core;
-using Skull.Data;
+using Gameplay.Common;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Linq;
+using Skull.Core;
 
 namespace Skull.Tests.Unit
 {

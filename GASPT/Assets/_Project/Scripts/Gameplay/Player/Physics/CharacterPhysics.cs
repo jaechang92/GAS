@@ -1,9 +1,34 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 using Core.Managers;
+using Gameplay.Environment;
+using Gameplay.Common;
+using Gameplay.Player.Physics;
 
 namespace Player.Physics
 {
+    /// <summary>
+    /// 벽 감지 데이터 구조체
+    /// </summary>
+    public struct WallDetectionData
+    {
+        public bool isOnWall;
+        public WallDirection wallDirection;
+        public Vector2 wallNormal;
+        public float distanceToWall;
+        public RaycastHit2D wallHit;
+
+        public WallDetectionData(bool onWall, WallDirection direction, Vector2 normal, float distance, RaycastHit2D hit)
+        {
+            isOnWall = onWall;
+            wallDirection = direction;
+            wallNormal = normal;
+            distanceToWall = distance;
+            wallHit = hit;
+        }
+    }
+
     /// <summary>
     /// Skul 스타일 캐릭터 물리 시스템
     /// 단일 컴포넌트로 모든 물리 처리를 담당
@@ -14,6 +39,7 @@ namespace Player.Physics
     {
         [Header("설정")]
         [SerializeField] private SkulPhysicsConfig configOverride;
+        [SerializeField] private SkullMovementProfile defaultProfile;
 
         [Header("디버그")]
         [SerializeField] private bool enableDebugLogs = false;
@@ -43,13 +69,16 @@ namespace Player.Physics
         private bool jumpPressed;
         private bool jumpHeld;
         private float jumpHoldTime;
+        private bool downPressed; // 아래 방향 입력 (플랫폼 통과용)
 
         // === 물리 상태 ===
         private bool isGrounded;
         private bool isTouchingWall;
         private bool isTouchingLeftWall;
         private bool isTouchingRightWall;
-        private int wallDirection; // -1: 왼쪽, 1: 오른쪽, 0: 없음
+        private WallDirection wallDirection; // 벽 방향 (None, Left, Right)
+        private bool isWallSliding; // 벽 슬라이딩 상태
+        private WallDetectionData currentWallData; // 현재 벽 감지 데이터
 
         // === 타이머 ===
         private float coyoteTimeCounter;
@@ -64,6 +93,12 @@ namespace Player.Physics
         private Vector2 dashDirection;
         private int airDashesUsed;
 
+        // === 플랫폼 상호작용 ===
+        private readonly Dictionary<Collider2D, float> activePlatformCooldowns = new Dictionary<Collider2D, float>();
+
+        // === 스컬 프로필 ===
+        private SkullMovementProfile currentSkullProfile;
+
         // === 점프 상태 ===
         private bool isJumping;
         private bool hasJumped;
@@ -71,17 +106,24 @@ namespace Player.Physics
         // === 프로퍼티 ===
         public bool IsGrounded => isGrounded;
         public bool IsTouchingWall => isTouchingWall;
+        public bool IsWallSliding => isWallSliding;
         public bool CanJump => (isGrounded || coyoteTimeCounter > 0) && !hasJumped;
+        public bool CanWallJump => isTouchingWall && !isGrounded && wallJumpCooldownTimer <= 0;
         public bool CanDash => dashCooldownTimer <= 0 && (!config.canDashInAir || airDashesUsed < config.maxAirDashes || isGrounded);
         public bool IsDashing => isDashing;
         public Vector2 Velocity => rb.linearVelocity;
-        public int WallDirection => wallDirection;
+        public WallDirection WallDirectionState => wallDirection;
+        public WallDetectionData CurrentWallData => currentWallData;
+        public SkullMovementProfile CurrentSkullProfile => currentSkullProfile;
 
         // === 이벤트 ===
         public event Action OnGroundedChanged;
         public event Action OnJump;
         public event Action OnDash;
         public event Action OnWallTouch;
+        public event Action OnWallSlideStart;
+        public event Action OnWallSlideEnd;
+        public event Action OnWallJump;
 
         #region Unity 생명주기
 
@@ -105,6 +147,16 @@ namespace Player.Physics
         private void FixedUpdate()
         {
             HandlePhysics(Time.fixedDeltaTime);
+        }
+
+        private void OnDestroy()
+        {
+            // SkullManager 이벤트 구독 해제
+            var skullManager = FindSkullManager();
+            if (skullManager != null)
+            {
+                skullManager.OnSkullChanged -= HandleSkullChanged;
+            }
         }
 
         #endregion
@@ -157,7 +209,72 @@ namespace Player.Physics
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
+            // 기본 스컬 프로필 적용
+            if (defaultProfile != null)
+            {
+                ApplySkullProfile(defaultProfile);
+            }
+            else
+            {
+                LogDebug("경고: 기본 스컬 프로필이 설정되지 않았습니다.");
+            }
+
+            // Skull System 이벤트 구독
+            SubscribeToSkullSystem();
+
             LogDebug("물리 시스템 초기화 완료");
+        }
+
+        /// <summary>
+        /// Skull System 이벤트 구독
+        /// </summary>
+        private void SubscribeToSkullSystem()
+        {
+            // SkullManager 찾기 (싱글톤)
+            var skullManager = FindSkullManager();
+
+            if (skullManager != null)
+            {
+                skullManager.OnSkullChanged += HandleSkullChanged;
+                LogDebug("SkullManager 이벤트 구독 완료");
+            }
+            else
+            {
+                LogDebug("SkullManager를 찾을 수 없습니다. 스컬 변경 이벤트 구독 불가.");
+            }
+        }
+
+        /// <summary>
+        /// 스컬 변경 이벤트 핸들러
+        /// </summary>
+        private void HandleSkullChanged(ISkullController previousSkull, ISkullController newSkull)
+        {
+            if (newSkull == null || newSkull.SkullData == null) return;
+
+            // 새 스컬의 SkullMovementProfile 가져오기
+            // 현재는 스컬 이름 기반으로 프로필을 찾는 로직이 필요
+            // 일단 기본 프로필 사용 (실제로는 스컬 데이터에서 가져와야 함)
+            LogDebug($"스컬 변경 감지: {previousSkull?.SkullData?.SkullName} -> {newSkull.SkullData?.SkullName}");
+
+            // TODO: 실제로는 SkullData에서 SkullMovementProfile을 가져와서 적용
+            // 현재는 기본 프로필 유지
+        }
+
+        /// <summary>
+        /// SkullManager 찾기 (인터페이스를 통한 간접 참조)
+        /// </summary>
+        private ISkullManager FindSkullManager()
+        {
+            // FindObjectsByType을 사용하여 ISkullManager를 구현한 MonoBehaviour 찾기
+            var allMonoBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            foreach (var mb in allMonoBehaviours)
+            {
+                if (mb is ISkullManager skullManager)
+                {
+                    return skullManager;
+                }
+            }
+            return null;
         }
 
         #endregion
@@ -181,6 +298,12 @@ namespace Player.Physics
             {
                 jumpBufferCounter = config.jumpBufferTime;
                 jumpHoldTime = 0f;
+
+                // 아래 방향 + 점프 입력 동시 감지 (플랫폼 통과)
+                if (downPressed)
+                {
+                    RequestPlatformPassthrough();
+                }
             }
 
             jumpPressed = pressed;
@@ -190,6 +313,14 @@ namespace Player.Physics
             {
                 jumpHoldTime += Time.deltaTime;
             }
+        }
+
+        /// <summary>
+        /// 아래 방향 입력 설정
+        /// </summary>
+        public void SetDownInput(bool pressed)
+        {
+            downPressed = pressed;
         }
 
         /// <summary>
@@ -222,6 +353,7 @@ namespace Player.Physics
             HandleJump(deltaTime);
             HandleGravity(deltaTime);
             HandleWallInteraction(deltaTime);
+            UpdatePlatformCooldowns(deltaTime);
         }
 
         private void HandleMovement(float deltaTime)
@@ -234,7 +366,9 @@ namespace Player.Physics
             }
 
             // 입력 있음 -> 즉시 반응 (가속도 없이 직접 속도 설정)
-            float targetSpeed = horizontalInput * (isGrounded ? config.moveSpeed : config.airMoveSpeed);
+            float baseSpeed = isGrounded ? config.moveSpeed : config.airMoveSpeed;
+            float modifiedSpeed = isGrounded ? GetModifiedSpeed(baseSpeed) : GetModifiedAirSpeed(baseSpeed);
+            float targetSpeed = horizontalInput * modifiedSpeed;
             rb.linearVelocity = new Vector2(targetSpeed, rb.linearVelocity.y);
         }
 
@@ -286,8 +420,11 @@ namespace Player.Physics
         private void ExecuteJump()
         {
             // 점프 힘 계산 (홀드 시간 고려)
-            float jumpForce = Mathf.Lerp(config.minJumpVelocity, config.jumpVelocity,
+            float baseJumpForce = Mathf.Lerp(config.minJumpVelocity, config.jumpVelocity,
                 Mathf.Clamp01(jumpHoldTime / config.minJumpHoldTime));
+
+            // 스컬 프로필 배율 적용
+            float jumpForce = GetModifiedJumpForce(baseJumpForce);
 
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
 
@@ -328,37 +465,73 @@ namespace Player.Physics
 
         private void HandleWallInteraction(float deltaTime)
         {
-            if (!isTouchingWall) return;
+            // 벽 슬라이딩 시작/종료 조건 체크
+            bool shouldBeWallSliding = isTouchingWall && rb.linearVelocity.y < 0 && !isGrounded;
 
-            // 벽 슬라이딩
-            if (rb.linearVelocity.y < 0 && !isGrounded)
+            // 벽 슬라이딩 상태 변경 처리
+            if (shouldBeWallSliding && !isWallSliding)
+            {
+                StartWallSlide();
+            }
+            else if (!shouldBeWallSliding && isWallSliding)
+            {
+                StopWallSlide();
+            }
+
+            // 벽 슬라이딩 중 속도 제어
+            if (isWallSliding)
             {
                 float slideSpeed = Mathf.Max(rb.linearVelocity.y, config.wallSlideSpeed);
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, slideSpeed);
             }
 
             // 벽 점프 처리
-            if (jumpBufferCounter > 0 && wallJumpCooldownTimer <= 0)
+            if (jumpBufferCounter > 0 && CanWallJump)
             {
                 ExecuteWallJump();
             }
         }
 
+        /// <summary>
+        /// 벽 슬라이딩 시작
+        /// </summary>
+        private void StartWallSlide()
+        {
+            isWallSliding = true;
+            OnWallSlideStart?.Invoke();
+            LogDebug($"벽 슬라이딩 시작 - 방향: {wallDirection}");
+        }
+
+        /// <summary>
+        /// 벽 슬라이딩 종료
+        /// </summary>
+        private void StopWallSlide()
+        {
+            isWallSliding = false;
+            OnWallSlideEnd?.Invoke();
+            LogDebug("벽 슬라이딩 종료");
+        }
+
         private void ExecuteWallJump()
         {
-            Vector2 wallJumpForce = new Vector2(
-                config.wallJumpVelocity.x * -wallDirection,
+            Vector2 baseWallJumpForce = new Vector2(
+                config.wallJumpVelocity.x * -(int)wallDirection,
                 config.wallJumpVelocity.y
             );
+
+            // 스컬 프로필 배율 적용
+            Vector2 wallJumpForce = GetModifiedWallJumpVelocity(baseWallJumpForce);
 
             rb.linearVelocity = wallJumpForce;
 
             // 상태 업데이트
+            isWallSliding = false; // 벽 점프 시 슬라이딩 종료
             wallJumpCooldownTimer = config.wallJumpCooldown;
             jumpBufferCounter = 0f;
             hasJumped = true;
 
             OnJump?.Invoke();
+            OnWallJump?.Invoke();
             LogDebug($"벽점프 실행 - 방향: {wallDirection}, 힘: {wallJumpForce}");
         }
 
@@ -402,6 +575,153 @@ namespace Player.Physics
             rb.linearVelocity = new Vector2(rb.linearVelocity.x * 0.7f, rb.linearVelocity.y * 0.5f);
 
             LogDebug("대시 종료");
+        }
+
+        #endregion
+
+        #region 플랫폼 상호작용
+
+        /// <summary>
+        /// 일방향 플랫폼 통과 요청
+        /// 아래 방향 입력 + 점프 입력이 동시에 눌렸을 때 호출
+        /// </summary>
+        public void RequestPlatformPassthrough()
+        {
+            // 현재 접촉 중인 모든 OneWayPlatform 찾기
+            Collider2D[] colliders = Physics2D.OverlapBoxAll(
+                (Vector2)transform.position + col.offset,
+                col.size,
+                0f
+            );
+
+            foreach (var hitCollider in colliders)
+            {
+                // 자기 자신 제외
+                if (hitCollider == col) continue;
+
+                // OneWayPlatform 컴포넌트 확인
+                var platform = hitCollider.GetComponent<OneWayPlatform>();
+                if (platform != null && platform.Type == PlatformType.OneWay)
+                {
+                    // 플랫폼 통과 요청
+                    platform.RequestPassthrough(col);
+                    LogDebug($"플랫폼 통과 요청: {hitCollider.gameObject.name}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 플랫폼 쿨다운 타이머 업데이트
+        /// </summary>
+        private void UpdatePlatformCooldowns(float deltaTime)
+        {
+            // 만료된 플랫폼 수집
+            var expiredPlatforms = new List<Collider2D>();
+
+            foreach (var kvp in activePlatformCooldowns)
+            {
+                activePlatformCooldowns[kvp.Key] -= deltaTime;
+
+                if (activePlatformCooldowns[kvp.Key] <= 0)
+                {
+                    expiredPlatforms.Add(kvp.Key);
+                }
+            }
+
+            // 만료된 쿨다운 제거
+            foreach (var platform in expiredPlatforms)
+            {
+                activePlatformCooldowns.Remove(platform);
+            }
+        }
+
+        #endregion
+
+        #region 스컬 프로필 관리
+
+        /// <summary>
+        /// 스컬 프로필 적용
+        /// </summary>
+        public void ApplySkullProfile(SkullMovementProfile profile)
+        {
+            // Null 체크 및 기본값 처리
+            if (profile == null)
+            {
+                LogDebug("경고: Null 프로필이 전달되었습니다. 기본 프로필을 사용합니다.");
+                profile = defaultProfile;
+
+                if (profile == null)
+                {
+                    LogDebug("오류: 기본 프로필도 없습니다. 프로필 적용 실패.");
+                    return;
+                }
+            }
+
+            var previousProfile = currentSkullProfile;
+            currentSkullProfile = profile;
+
+            LogDebug($"스컬 프로필 적용: {profile.SkullName}");
+
+            // 공중/벽 슬라이딩 중 스컬 변경 처리
+            if (!isGrounded || isWallSliding)
+            {
+                // 현재 속도를 새 배율로 재조정
+                if (previousProfile != null)
+                {
+                    // 수평 속도 재조정
+                    float oldSpeedMultiplier = previousProfile.MoveSpeedMultiplier;
+                    float newSpeedMultiplier = profile.MoveSpeedMultiplier;
+
+                    if (oldSpeedMultiplier > 0)
+                    {
+                        float speedRatio = newSpeedMultiplier / oldSpeedMultiplier;
+                        Vector2 currentVel = rb.linearVelocity;
+                        rb.linearVelocity = new Vector2(currentVel.x * speedRatio, currentVel.y);
+
+                        LogDebug($"공중 속도 재조정: {currentVel.x:F2} -> {rb.linearVelocity.x:F2}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 프로필 배율이 적용된 이동 속도 반환
+        /// </summary>
+        private float GetModifiedSpeed(float baseSpeed)
+        {
+            if (currentSkullProfile == null) return baseSpeed;
+            return baseSpeed * currentSkullProfile.MoveSpeedMultiplier;
+        }
+
+        /// <summary>
+        /// 프로필 배율이 적용된 공중 이동 속도 반환
+        /// </summary>
+        private float GetModifiedAirSpeed(float baseSpeed)
+        {
+            if (currentSkullProfile == null) return baseSpeed;
+            return baseSpeed * currentSkullProfile.AirControlMultiplier;
+        }
+
+        /// <summary>
+        /// 프로필 배율이 적용된 점프력 반환
+        /// </summary>
+        private float GetModifiedJumpForce(float baseForce)
+        {
+            if (currentSkullProfile == null) return baseForce;
+            return baseForce * currentSkullProfile.JumpHeightMultiplier;
+        }
+
+        /// <summary>
+        /// 프로필 배율이 적용된 벽 점프 속도 반환
+        /// </summary>
+        private Vector2 GetModifiedWallJumpVelocity(Vector2 baseVelocity)
+        {
+            if (currentSkullProfile == null) return baseVelocity;
+
+            return new Vector2(
+                baseVelocity.x * currentSkullProfile.WallJumpHorizontalMultiplier,
+                baseVelocity.y * currentSkullProfile.WallJumpVerticalMultiplier
+            );
         }
 
         #endregion
@@ -508,11 +828,24 @@ namespace Player.Physics
             isTouchingWall = isTouchingLeftWall || isTouchingRightWall;
 
             if (isTouchingLeftWall && !isTouchingRightWall)
-                wallDirection = -1;
+                wallDirection = WallDirection.Left;
             else if (!isTouchingLeftWall && isTouchingRightWall)
-                wallDirection = 1;
+                wallDirection = WallDirection.Right;
             else
-                wallDirection = 0;
+                wallDirection = WallDirection.None;
+
+            // WallDetectionData 업데이트
+            if (isTouchingWall)
+            {
+                Vector2 normal = wallDirection == WallDirection.Left ? Vector2.right : Vector2.left;
+                float distance = checkDistance;
+                RaycastHit2D hit = default; // BoxCast를 사용하지 않으므로 기본값
+                currentWallData = new WallDetectionData(true, wallDirection, normal, distance, hit);
+            }
+            else
+            {
+                currentWallData = new WallDetectionData(false, WallDirection.None, Vector2.zero, 0f, default);
+            }
 
             // 벽 터치 상태 변경 처리
             if (wasTouchingWall != isTouchingWall && isTouchingWall)
@@ -530,6 +863,13 @@ namespace Player.Physics
                 isJumping = false;
                 airDashesUsed = 0; // 공중 대시 카운터 리셋
                 coyoteTimeCounter = config.coyoteTime;
+
+                // 벽 슬라이딩 상태 리셋
+                if (isWallSliding)
+                {
+                    StopWallSlide();
+                }
+
                 LogDebug("착지");
             }
             else

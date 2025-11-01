@@ -9,7 +9,9 @@
         "Combat.Attack",
         "Core.Enums",
         "Core.Managers",
-        "Core.Utilities"
+        "Core.Utilities",
+        "Gameplay.Common",
+        "Gameplay.Environment"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

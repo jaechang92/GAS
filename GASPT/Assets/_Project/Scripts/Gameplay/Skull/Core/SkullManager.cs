@@ -1,10 +1,10 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using Skull.Data;
-using Skull.Core;
+using Gameplay.Common;
 using System.Threading;
 using System;
+using Core;
 
 namespace Skull.Core
 {
@@ -12,7 +12,7 @@ namespace Skull.Core
     /// 스컬 인벤토리 및 교체 관리 시스템
     /// 플레이어가 보유한 스컬들을 관리하고 교체 기능 제공
     /// </summary>
-    public class SkullManager : MonoBehaviour
+    public class SkullManager : SingletonManager<SkullManager>, ISkullManager
     {
         [Header("스컬 관리 설정")]
         [SerializeField] private int maxSkullSlots = 2;

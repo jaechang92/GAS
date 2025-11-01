@@ -1,7 +1,5 @@
 using UnityEngine;
-using Skull.Data;
-using Skull.Core;
-using Player;
+using Gameplay.Common;
 using System.Threading;
 
 namespace Skull.Core
@@ -14,7 +12,7 @@ namespace Skull.Core
     public class SkullSystem : MonoBehaviour
     {
         [Header("시스템 연동")]
-        [SerializeField] private PlayerController playerController;
+        [SerializeField] private MonoBehaviour playerController;
         [SerializeField] private bool enableInputHandling = true;
         [SerializeField] private bool enableDebugLogs = true;
 
@@ -24,8 +22,8 @@ namespace Skull.Core
 
         // 컴포넌트 참조
         private SkullManager skullManager;
-        private AnimationController animationController;
-        private InputHandler inputHandler;
+        private MonoBehaviour animationController;
+        private MonoBehaviour inputHandler;
 
         // 상태 관리
         private bool isSystemActive = false;
@@ -69,12 +67,20 @@ namespace Skull.Core
             skullManager = GetComponent<SkullManager>();
 
             if (playerController == null)
-                playerController = GetComponent<PlayerController>();
+                playerController = GetComponentInParent<MonoBehaviour>();
 
             if (playerController != null)
             {
-                animationController = playerController.GetComponent<AnimationController>();
-                inputHandler = playerController.GetComponent<InputHandler>();
+                // AnimationController와 InputHandler를 타입 이름으로 찾기
+                var components = playerController.GetComponents<MonoBehaviour>();
+                foreach (var component in components)
+                {
+                    var typeName = component.GetType().Name;
+                    if (typeName == "AnimationController")
+                        animationController = component;
+                    else if (typeName == "InputHandler")
+                        inputHandler = component;
+                }
             }
 
             LogDebug("컴포넌트 참조 초기화 완료");

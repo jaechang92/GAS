@@ -1,6 +1,6 @@
 using UnityEngine;
 using Skull.Core;
-using Skull.Data;
+using Gameplay.Common;
 using System.Collections.Generic;
 
 namespace Skull.Testing

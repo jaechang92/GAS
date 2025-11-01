@@ -1,5 +1,5 @@
 using UnityEngine;
-using Skull.Data;
+using Gameplay.Common;
 using GAS.Core;
 using System.Threading;
 

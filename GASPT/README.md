@@ -200,28 +200,40 @@ stateMachine.RequestTransition("Attack");
 
 ## 👥 개발 원칙
 
-### 1. **완성 우선 원칙**
-> "완벽한 시스템보다 플레이 가능한 게임을 먼저"
+### 프로젝트 헌법 (Constitution)
+**위치**: `.specify/memory/constitution.md`
 
-### 2. **단계적 개발 원칙**
-> "작은 단위로 나누어 개발하고 지속적으로 테스트"
+이 프로젝트는 **GASPT Constitution v1.1.0**을 기반으로 운영됩니다.
 
-### 3. **생산성 우선 원칙**
-> "시스템 설계에 충분한 시간 투자"
+**9가지 핵심 원칙**:
+1. **완성 우선 원칙** - 완벽한 시스템보다 플레이 가능한 게임을 먼저
+2. **단계적 개발 원칙** - 작은 단위로 나누어 개발하고 지속적으로 테스트
+3. **생산성 우선 원칙** - 시스템 설계에 충분한 시간 투자
+4. **플레이어 경험 우선** - 복잡한 시스템보다 재미있는 게임플레이
+5. **코드 설계 표준** - OOP, SOLID 준수
+6. **비동기 패턴 강제** - async/await + Awaitable (Coroutine 금지)
+7. **로컬라이제이션 & 인코딩** - 한글 주석/변수명 허용, UTF-8 인코딩
+8. **토큰 효율성** - AI 도구 사용 시 효율적인 편집
+9. **Unity 6.0+ 호환성** - 최신 API 사용, deprecated 코드 회피
 
-### 4. **코드 품질 원칙**
-> "OOP, SOLID 준수"
-
-**상세 정보**: [코딩 가이드라인](docs/development/CodingGuidelines.md)
+**상세 정보**:
+- [Constitution](.specify/memory/constitution.md) - 전체 규칙과 워크플로우
+- [코딩 가이드라인](docs/development/CodingGuidelines.md) - 추가 가이드라인
 
 ---
 
 ## 🤝 기여하기
 
 ### 개발자라면
-1. [코딩 가이드라인](docs/development/CodingGuidelines.md) 숙지
-2. [현재 진행 상황](docs/development/CURRENT_WORK.md) 확인
+1. **[Constitution](.specify/memory/constitution.md) 필독** - 프로젝트 헌법
+2. [현재 진행 상황](docs/development/CurrentStatus.md) 확인
 3. [개발 로드맵](docs/development/Roadmap.md)에서 작업 선택
+4. [코딩 가이드라인](docs/development/CodingGuidelines.md) 참조
+
+### AI 에이전트라면
+1. `.specify/memory/constitution.md` 읽기 (필수)
+2. `docs/development/CurrentStatus.md` 읽기 (필수)
+3. Constitution의 "Development Workflow" 섹션 따르기
 
 ### 테스터라면
 1. [테스트 가이드](docs/testing/TestingGuide.md) 확인
@@ -230,9 +242,15 @@ stateMachine.RequestTransition("Attack");
 
 ### 기여 규칙
 - **Commit 메시지**: `feat:`, `fix:`, `docs:`, `refactor:` 등 사용
-- **코드 스타일**: 카멜케이스, `_` 미사용
+- **코드 스타일**: camelCase, `_` 미사용 (Constitution v1.1.0 참조)
 - **비동기 패턴**: `async Awaitable` 필수 (Coroutine 금지)
 - **한글 주석**: UTF-8 인코딩 준수
+
+### Speckit 시스템
+이 프로젝트는 **Speckit v1.1.0**을 사용하여 체계적으로 관리됩니다.
+- Constitution: `.specify/memory/constitution.md`
+- Speckit Commands: `.claude/commands/speckit.*.md`
+- Templates: `.specify/templates/`
 
 ---
 

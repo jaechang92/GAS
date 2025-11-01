@@ -4,7 +4,8 @@
     "references": [
         "GAS.Core",
         "FSM.Core",
-        "Player"
+        "Gameplay.Common",
+        "Core.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

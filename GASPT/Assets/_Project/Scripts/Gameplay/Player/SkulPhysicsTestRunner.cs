@@ -223,13 +223,13 @@ namespace Player
             LogTest("--- 벽 상호작용 테스트 시작 ---");
 
             LogTest($"현재 벽 터치 상태: {characterPhysics.IsTouchingWall}");
-            LogTest($"벽 방향: {characterPhysics.WallDirection}");
+            LogTest($"벽 방향: {characterPhysics.CurrentWallData.wallDirection}");
 
             if (characterPhysics.IsTouchingWall)
             {
                 LogTest("벽 슬라이딩 테스트");
                 // 벽 방향으로 이동 시도
-                characterPhysics.SetHorizontalInput(characterPhysics.WallDirection);
+                characterPhysics.SetHorizontalInput(characterPhysics.CurrentWallData.wallDirection == Gameplay.Player.Physics.WallDirection.Left ? -1 : 1);
                 await Awaitable.WaitForSecondsAsync(0.5f);
 
                 float slideSpeed = characterPhysics.Velocity.y;
@@ -399,7 +399,7 @@ namespace Player
                 GUILayout.Label($"접지 상태: {characterPhysics.IsGrounded}");
                 GUILayout.Label($"속도: {characterPhysics.Velocity:F2}");
                 GUILayout.Label($"벽 터치: {characterPhysics.IsTouchingWall}");
-                GUILayout.Label($"벽 방향: {characterPhysics.WallDirection}");
+                GUILayout.Label($"벽 방향: {characterPhysics.CurrentWallData.wallDirection}");
                 GUILayout.Label($"대시 가능: {characterPhysics.CanDash}");
                 GUILayout.Label($"대시 중: {characterPhysics.IsDashing}");
                 GUILayout.Label($"점프 가능: {characterPhysics.CanJump}");

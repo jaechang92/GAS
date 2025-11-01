@@ -1,7 +1,6 @@
 using UnityEngine;
 using GAS.Core;
-using Skull.Data;
-using Skull.Core;
+using Gameplay.Common;
 using System.Collections.Generic;
 using System.Linq;
 

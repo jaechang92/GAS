@@ -12,7 +12,8 @@
         "Core.Data",
         "Skull",
         "Enemy",
-        "UI.Menu"
+        "UI.Menu",
+        "Gameplay.Common"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
