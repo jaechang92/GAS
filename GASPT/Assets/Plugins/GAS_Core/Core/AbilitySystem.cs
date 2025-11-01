@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Core; // SingletonManager 사용
 
 namespace GAS.Core
 {
