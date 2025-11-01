@@ -1,7 +1,9 @@
 {
     "name": "GAS.Core",
     "rootNamespace": "GAS.Core",
-    "references": [],
+    "references": [
+        "GUID:cf8ff52ffeb6cdf4fbbb73483cd5f3b4"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
