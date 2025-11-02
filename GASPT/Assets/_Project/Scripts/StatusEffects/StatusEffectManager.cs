@@ -82,6 +82,10 @@ namespace GASPT.StatusEffects
                 // 중첩 처리
                 existingEffect.Stack();
                 Debug.Log($"[StatusEffectManager] {effectData.displayName} 효과 중첩 - 대상: {target.name}");
+
+                // 중첩 시에도 이벤트 발생 (UI 업데이트를 위해)
+                OnEffectApplied?.Invoke(target, existingEffect);
+
                 return existingEffect;
             }
 
