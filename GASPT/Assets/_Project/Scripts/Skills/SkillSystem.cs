@@ -298,6 +298,14 @@ namespace GASPT.Skills
         [ContextMenu("Print Skill Slots")]
         private void PrintSkillSlots()
         {
+            DebugPrintSkillSlots();
+        }
+
+        /// <summary>
+        /// 스킬 슬롯 상태 출력 (public, 외부에서 호출 가능)
+        /// </summary>
+        public void DebugPrintSkillSlots()
+        {
             Debug.Log("========== Skill Slots ==========");
             Debug.Log($"최대 슬롯 수: {maxSlots}");
             Debug.Log($"등록된 스킬 수: {skillSlots.Count}");
