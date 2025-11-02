@@ -472,9 +472,14 @@ namespace GASPT.Stats
         public void Revive()
         {
             isDead = false;
+            int oldHP = currentHP;
             currentHP = MaxHP;
 
             Debug.Log($"[PlayerStats] 부활! HP {currentHP}/{MaxHP}");
+
+            // 회복 이벤트 발생 (UI 업데이트용)
+            int healAmount = currentHP - oldHP;
+            OnHealed?.Invoke(healAmount, currentHP, MaxHP);
         }
 
 
