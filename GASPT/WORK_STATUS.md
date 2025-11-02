@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-01-15
-**현재 브랜치**: `008-buff-debuff-system`
-**작업 세션**: Phase 10-11 완료 + GameResourceManager 구현
+**최종 업데이트**: 2025-01-16
+**현재 브랜치**: `009-skill-system`
+**작업 세션**: Phase 12 (Skill System) 구현 완료
 
 ---
 
@@ -165,6 +165,102 @@
 - PlayerStats OnStatChanged 이벤트 트리거
 - 이벤트 구독 타이밍 문제 해결 (Awake → OnEnable)
 
+#### ✅ Phase 12: Skill System (스킬 시스템)
+**완료 Task**: 12개
+
+**핵심 시스템** (4개 파일):
+- SkillEnums.cs (46줄) - 스킬 타입 Enum
+  - SkillType: Damage, Heal, Buff, Utility
+  - TargetType: Self, Enemy, Area, Ally
+- SkillData.cs (165줄) - ScriptableObject 스킬 데이터
+  - 스킬 기본 정보 (이름, 아이콘, 설명)
+  - 스킬 타입 및 타겟팅
+  - 마나 비용, 쿨다운, 캐스팅 시간
+  - 효과값 (데미지, 힐, 버프)
+  - 범위 및 타겟 수
+  - 비주얼/사운드 연동
+- Skill.cs (280줄) - 스킬 실행 및 쿨다운 로직
+  - TryExecute() - 쿨다운/마나/타겟 검증
+  - Execute() - 타입별 효과 적용 (Damage/Heal/Buff)
+  - RunCooldownTimer() - async Awaitable 쿨다운
+  - GetCooldownRatio() - UI용 진행도 (0.0~1.0)
+  - 이벤트: OnCooldownStart, OnCooldownComplete
+- SkillSystem.cs (320줄) - 싱글톤 스킬 슬롯 관리
+  - Dictionary<int, Skill> 슬롯 구조 (0~3번)
+  - RegisterSkill() - 슬롯에 스킬 등록
+  - TryUseSkill() - 스킬 사용 시도
+  - GetSkill(), GetCooldownRatio() - 조회 메서드
+  - 이벤트: OnSkillRegistered, OnSkillUsed, OnSkillFailed, OnCooldownChanged
+
+**UI 시스템** (3개 파일):
+- SkillSlotUI.cs (330줄) - 단일 스킬 슬롯 UI
+  - 스킬 아이콘 표시
+  - 쿨다운 Radial360 오버레이 (fillAmount)
+  - 쿨다운 카운트다운 텍스트 (X.Xs)
+  - 단축키 표시 (1, 2, 3, 4)
+  - 마나 부족 시 비활성 오버레이
+  - 키보드 입력 처리 (Alpha1~4)
+  - RegisterSkill(), ClearSlot(), UpdateCooldownUI()
+- SkillUIPanel.cs (200줄) - 4개 슬롯 관리 패널
+  - SkillSystem 이벤트 구독
+  - 슬롯 인덱스 자동 설정
+  - 기존 스킬 로드 (LoadExistingSkills)
+  - Context Menu: Print Slot Status, Reload All Skills
+- SkillUICreator.cs (264줄) - UI 자동 생성 에디터 도구
+  - Canvas 자동 생성/찾기 (1920x1080, ScreenSpaceOverlay)
+  - SkillUIPanel 하단 중앙 배치 (400x80px)
+  - 4개 SkillSlot 자동 생성 (각 80x80px)
+  - 6개 자식 오브젝트 자동 생성 (Icon, CooldownOverlay, CooldownText, HotkeyText, DisabledOverlay)
+  - SerializedObject로 모든 참조 자동 연결
+  - HorizontalLayoutGroup 레이아웃
+  - Delete Skill UI Panel 유틸리티
+
+**테스트 도구** (2개 파일):
+- SkillSystemTest.cs (430줄) - 8개 Context Menu 테스트
+  - Test01: 초기 상태 확인 (Player, PlayerStats, SkillSystem)
+  - Test02: 스킬 등록 (3개 슬롯)
+  - Test03: 마나 확인 (TrySpendMana, RegenerateMana)
+  - Test04: Damage 스킬 테스트 (Enemy HP 감소)
+  - Test05: Heal 스킬 테스트 (Player HP 회복)
+  - Test06: Buff 스킬 테스트 (Attack 증가)
+  - Test07: 쿨다운 테스트 (재사용 블로킹)
+  - Test08: 마나 부족 테스트 (사용 불가)
+- SkillSystemTestSetup.cs (500줄) - 원클릭 테스트 환경 생성
+  - Menu: Tools > GASPT > 🚀 One-Click Setup
+  - 테스트 씬 자동 생성 (SkillSystemTest.unity)
+  - Player + PlayerStats 생성 (baseMana: 100)
+  - Enemy + EnemyData 생성
+  - SkillSystemTest 컴포넌트 생성 및 참조 연결
+  - 3개 SkillData 자동 생성 (Fireball, Heal, AttackBuff)
+  - 1개 EnemyData 자동 생성 (TEST_Enemy)
+  - 1개 StatusEffectData 자동 생성 (TEST_AttackUp)
+  - Reflection으로 private 필드 설정
+  - SerializedObject로 참조 연결
+
+**기존 시스템 통합** (2개 파일):
+- PlayerStats.cs 수정 - 마나 시스템 추가
+  - baseMana 필드 (기본값: 100)
+  - currentMana, finalMana 내부 상태
+  - MaxMana, CurrentMana 프로퍼티
+  - TrySpendMana(int) - 마나 소비 (부족 시 false)
+  - RegenerateMana(int) - 마나 회복 (MaxMana 제한)
+  - OnManaChanged 이벤트
+  - RecalculateStats()에 마나 계산 추가
+  - Context Menu 테스트 메서드 3개
+- SingletonPreloader.cs 수정
+  - SkillSystem 사전 로딩 추가 (총 8개 싱글톤)
+
+**테스트 에셋** (5개):
+- TEST_FireballSkill.asset - Damage 스킬 (마나 20, 쿨다운 3초, 데미지 50)
+- TEST_HealSkill.asset - Heal 스킬 (마나 15, 쿨다운 5초, 회복 30)
+- TEST_AttackBuffSkill.asset - Buff 스킬 (마나 25, 쿨다운 8초)
+- TEST_AttackUp.asset - Attack +10 버프 (지속시간 5초)
+- TEST_Enemy.asset - 테스트용 Enemy (HP 100, Attack 15)
+
+**문서화**:
+- SKILL_SYSTEM_TEST_GUIDE.md - 수동 테스트 가이드
+- SKILL_SYSTEM_ONE_CLICK_TEST.md - 원클릭 도구 가이드
+
 #### ✅ 추가 구현: GameResourceManager (리소스 관리 시스템)
 **완료 Task**: 6개
 
@@ -211,44 +307,47 @@
 
 ### Git 상태
 ```bash
-브랜치: 008-buff-debuff-system
+브랜치: 009-skill-system
 원격 푸시: 완료
-최종 커밋: 786baeb (기능: GameResourceManager 리소스 관리 시스템 구현)
-Phase 10 커밋: e90f14b
-Phase 11 커밋: 456d199 + 4개 버그 수정 커밋
-GameResourceManager 커밋: 786baeb
+최종 커밋: fa7c6cb (에셋: 테스트 에셋 및 Unity 생성 파일 추가)
+Phase 12 커밋: eff2bbe ~ fa7c6cb (총 6개 커밋)
 ```
 
-### 주요 커밋 목록
+### 주요 커밋 목록 (Phase 12)
 ```
-786baeb 기능: GameResourceManager 리소스 관리 시스템 구현
-fdf66d5 수정: StatusEffectManager 이벤트 구독 타이밍 문제 해결
-6217aa8 수정: StatusEffectManager 중첩 시 OnEffectApplied 이벤트 발생 추가
-39feee9 수정: PlayerStats에서 버프/디버프 적용 시 OnStatChanged 이벤트 발생
-51fddad 개선: StatPanelUI에 버프/디버프 시각적 표시 기능 추가
-456d199 기능: Buff/Debuff 상태이상 시스템 구현 (Phase 11)
-be3af16 리팩토링: SaveSystem을 SingletonManager 사용하도록 변경
-e90f14b 기능: Combat UI & Damage Numbers 구현 (Phase 10)
+fa7c6cb 에셋: 테스트 에셋 및 Unity 생성 파일 추가
+44f5632 기능: Skill UI 시스템 구현 (SkillSlotUI, SkillUIPanel, SkillUICreator)
+38113eb 도구: SkillSystem 원클릭 테스트 환경 자동 생성 툴
+5dd9ac0 테스트: SkillSystem 테스트 스크립트 및 가이드 작성
+658687a 기능: Skill 클래스 및 SkillSystem 싱글톤 구현
+eff2bbe 기능: SkillData ScriptableObject 및 PlayerStats 마나 시스템 추가
 ```
 
-### 싱글톤 시스템 현황 (7개)
+### 싱글톤 시스템 현황 (8개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
-2. **DamageNumberPool** - 데미지 텍스트 풀링
-3. **CurrencySystem** - 골드 관리
-4. **InventorySystem** - 인벤토리 관리
-5. **PlayerLevel** - 레벨/EXP 관리
-6. **SaveSystem** - 저장/로드
-7. **StatusEffectManager** - 상태이상 효과 관리
+2. **SkillSystem** - 스킬 슬롯 관리 및 실행 (NEW)
+3. **DamageNumberPool** - 데미지 텍스트 풀링
+4. **CurrencySystem** - 골드 관리
+5. **InventorySystem** - 인벤토리 관리
+6. **PlayerLevel** - 레벨/EXP 관리
+7. **SaveSystem** - 저장/로드
+8. **StatusEffectManager** - 상태이상 효과 관리
 
 ### PR 생성 대기
-- **Phase 10-11 + GameResourceManager PR**: 생성 필요
+- **Phase 12 (Skill System) PR**: 생성 필요
   - **Base 브랜치**: master
-  - **Compare 브랜치**: 008-buff-debuff-system
+  - **Compare 브랜치**: 009-skill-system
   - **포함 내용**:
-    - Combat UI & Damage Numbers
-    - Buff/Debuff System
-    - GameResourceManager
-    - 버그 수정 4건
+    - SkillData ScriptableObject
+    - Skill 실행 로직 (async Awaitable 쿨다운)
+    - SkillSystem 싱글톤
+    - PlayerStats 마나 시스템
+    - SkillSlotUI (키보드 입력, 쿨다운 애니메이션)
+    - SkillUIPanel (이벤트 구독)
+    - SkillUICreator (자동 UI 생성 도구)
+    - SkillSystemTest (8개 테스트)
+    - SkillSystemTestSetup (원클릭 테스트 환경)
+    - 테스트 에셋 5개
 
 ---
 
@@ -286,11 +385,16 @@ Assets/_Project/Scripts/
 │   └── SaveSystem.cs (SingletonManager 사용)
 ├── Level/
 │   └── PlayerLevel.cs
-├── StatusEffects/ (NEW)
+├── Skills/ (NEW)
+│   ├── SkillEnums.cs
+│   ├── SkillData.cs
+│   ├── Skill.cs
+│   └── SkillSystem.cs
+├── StatusEffects/
 │   ├── StatusEffect.cs
 │   ├── StatusEffectManager.cs
 │   └── StatusEffectTest.cs
-├── Resources/ (NEW)
+├── Resources/
 │   ├── GameResourceManager.cs
 │   └── ResourcePaths.cs
 ├── UI/
@@ -301,27 +405,34 @@ Assets/_Project/Scripts/
 │   ├── BossHealthBar.cs
 │   ├── PlayerHealthBar.cs
 │   ├── PlayerExpBar.cs
-│   ├── DamageNumber.cs (NEW)
-│   └── DamageNumberPool.cs (NEW, 자동 로딩)
+│   ├── DamageNumber.cs
+│   ├── DamageNumberPool.cs (자동 로딩)
+│   ├── SkillSlotUI.cs (NEW)
+│   └── SkillUIPanel.cs (NEW)
 ├── Editor/
 │   ├── StatPanelCreator.cs
 │   ├── ShopUICreator.cs
 │   ├── EnemyUICreator.cs
 │   ├── PlayerHealthBarCreator.cs
 │   ├── PlayerExpBarCreator.cs
-│   └── DamageNumberCreator.cs (NEW)
-└── Tests/
+│   ├── DamageNumberCreator.cs
+│   ├── SkillUICreator.cs (NEW)
+│   └── SkillSystemTestSetup.cs (NEW)
+└── Testing/ (Tests에서 이름 변경)
     ├── CombatTest.cs
     ├── SaveTest.cs
     ├── LevelTest.cs
-    └── StatusEffectTest.cs (NEW)
+    ├── StatusEffectTest.cs
+    └── SkillSystemTest.cs (NEW)
 ```
 
 ### 문서
 ```
 GASPT/
 ├── WORK_STATUS.md (현재 파일)
-├── RESOURCES_GUIDE.md (NEW)
+├── RESOURCES_GUIDE.md
+├── SKILL_SYSTEM_TEST_GUIDE.md (NEW)
+├── SKILL_SYSTEM_ONE_CLICK_TEST.md (NEW)
 ├── specs/
 └── docs/
 ```
@@ -344,45 +455,50 @@ GASPT/
 | Phase 10 | Combat UI & Damage Numbers | 3 | ~680 | ✅ 완료 |
 | Phase 11 | Buff/Debuff System | 9 | ~1,691 | ✅ 완료 |
 | 추가 | GameResourceManager | 3 | ~666 | ✅ 완료 |
-| **합계** | **11개 Phase + 추가** | **49개** | **~9,795줄** | **✅ 완료** |
+| Phase 12 | Skill System | 11 | ~2,489 | ✅ 완료 |
+| **합계** | **12개 Phase + 추가** | **60개** | **~12,284줄** | **✅ 완료** |
 
 ---
 
 ## 🚀 다음 작업 옵션
 
-### 옵션 1: PR 생성 및 머지 (Phase 10-11)
+### 옵션 1: PR 생성 및 머지 (Phase 12 - Skill System)
 
 **수행 단계**:
-1. PR 제목: "Combat UI, Buff/Debuff System, GameResourceManager 구현 (Phase 10-11)"
+1. PR 제목: "Skill System 구현 (Phase 12)"
 2. PR 본문:
 ```markdown
-## Phase 10: Combat UI & Damage Numbers
-- DamageNumber 애니메이션 (일반/크리티컬/회복/EXP)
-- DamageNumberPool 오브젝트 풀링 시스템
-- 공용 Canvas 성능 최적화
-- 카메라 빌보드 효과
+## Summary
+Phase 12: Skill System 구현 완료
+- 스킬 데이터, 실행 로직, UI, 테스트 도구 모두 구현
+- 마나 시스템 추가
+- 8개 싱글톤으로 확장
 
-## Phase 11: Buff/Debuff System
-- 16가지 상태 이상 효과 타입
-- StatusEffect 생명주기 관리
-- DoT/HoT 시스템 (Poison, Burn, Bleed, Regeneration)
-- 효과 중첩 시스템
-- PlayerStats/Enemy 통합
-- StatPanelUI 시각화 (버프: 초록, 디버프: 빨강)
+## 핵심 시스템
+- **SkillData**: ScriptableObject 스킬 정의
+- **Skill**: 쿨다운, 실행 로직 (async Awaitable)
+- **SkillSystem**: 슬롯 관리 싱글톤
+- **PlayerStats 마나 시스템**: TrySpendMana, RegenerateMana
 
-## GameResourceManager
-- Resources.Load() 래핑 및 캐싱
-- 타입별 로딩 메서드
-- 자동 리소스 로딩
-- DamageNumberPool 리팩토링
-
-## 버그 수정
-- StatusEffectManager 이벤트 구독 타이밍 (Awake → OnEnable)
-- 중첩 시 이벤트 미발생 문제
-- PlayerStats OnStatChanged 트리거
+## UI 시스템
+- **SkillSlotUI**: 아이콘, 쿨다운 애니메이션, 키보드 입력
+- **SkillUIPanel**: 4개 슬롯 관리, 이벤트 구독
+- **SkillUICreator**: 자동 UI 생성 에디터 도구
 
 ## 테스트
-- StatusEffectTest: 18개 시나리오
+- **SkillSystemTest**: 8개 Context Menu 테스트
+- **SkillSystemTestSetup**: 원클릭 테스트 환경 생성
+- 테스트 에셋 5개 (Fireball, Heal, AttackBuff 등)
+
+## Test plan
+- [ ] Unity에서 SkillSystemTest 씬 열기
+- [ ] Tools > GASPT > Create Skill UI Panel 실행
+- [ ] Play 모드에서 Context Menu로 스킬 등록
+- [ ] 키보드 1,2,3,4로 스킬 사용 테스트
+- [ ] 쿨다운 애니메이션 확인
+- [ ] 마나 부족 상태 확인
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
 3. GitHub에서 PR 생성
@@ -392,28 +508,12 @@ GASPT/
 ```bash
 git checkout master
 git pull origin master
-git branch -d 008-buff-debuff-system  # 로컬 브랜치 삭제
+git branch -d 009-skill-system  # 로컬 브랜치 삭제
 ```
 
 ---
 
-### 옵션 2: Phase 12 시작 (Skill System)
-
-**새 브랜치 생성**:
-```bash
-git checkout -b 009-skill-system
-```
-
-**Phase 12 예상 Task 목록**:
-- [ ] SkillData ScriptableObject
-- [ ] SkillSystem 싱글톤
-- [ ] Skill UI (버튼, 쿨다운)
-- [ ] 기본 스킬 4-5개 구현
-- [ ] 마나 시스템 (선택)
-
----
-
-### 옵션 3: BuffIconUI 구현 (Phase 11 확장)
+### 옵션 2: BuffIconUI 구현 (Phase 11 확장)
 
 **Phase 11 완성도 향상**:
 - [ ] BuffIconUI 프리팹
@@ -424,14 +524,24 @@ git checkout -b 009-skill-system
 
 ---
 
-### 옵션 4: Item Drop & Loot System
+### 옵션 3: Item Drop & Loot System
 
-**Phase 12 새 기능**:
+**Phase 13 새 기능**:
 - [ ] LootTable ScriptableObject
 - [ ] DropSystem 싱글톤
 - [ ] 아이템 드롭 로직 (확률 기반)
 - [ ] 드롭 아이템 UI
 - [ ] Enemy에 LootTable 연동
+
+---
+
+### 옵션 4: Mana Bar UI 구현
+
+**Skill System 확장**:
+- [ ] PlayerManaBar.cs (HealthBar와 유사한 구조)
+- [ ] PlayerManaBarCreator.cs (자동 생성 도구)
+- [ ] 마나 회복 애니메이션
+- [ ] 마나 부족 경고 효과
 
 ---
 
@@ -445,11 +555,30 @@ Tools > GASPT > Create Enemy UIs
 Tools > GASPT > Create Player HealthBar UI
 Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
+Tools > GASPT > Create Skill UI Panel (NEW)
+Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
 ```
 
 ### Context Menu로 빠른 테스트
 
-**StatusEffectTest** (NEW):
+**SkillSystemTest** (NEW):
+- 우클릭 → `Run All Tests` (전체 테스트 자동 실행)
+- 우클릭 → `01. Check Initial State` (초기 상태 확인)
+- 우클릭 → `02. Register Skills` (스킬 등록)
+- 우클릭 → `03. Check Mana` (마나 확인)
+- 우클릭 → `04. Test Damage Skill (Slot 0)` (Fireball)
+- 우클릭 → `05. Test Heal Skill (Slot 1)` (Heal)
+- 우클릭 → `06. Test Buff Skill (Slot 2)` (AttackBuff)
+- 우클릭 → `07. Test Cooldown` (쿨다운 테스트)
+- 우클릭 → `08. Test Out Of Mana` (마나 부족 테스트)
+- 우클릭 → `Print Player Stats` (플레이어 상태 출력)
+- 우클릭 → `Print Skill Slots` (스킬 슬롯 상태)
+
+**SkillUIPanel** (NEW):
+- 우클릭 → `Print Slot Status` (슬롯 UI 상태 확인)
+- 우클릭 → `Reload All Skills` (모든 스킬 재로드)
+
+**StatusEffectTest**:
 - 우클릭 → `Test/Player/Apply AttackUp` (버프 적용)
 - 우클릭 → `Test/Player/Apply AttackDown` (디버프 적용)
 - 우클릭 → `Test/Player/Apply Poison` (DoT 적용)
@@ -457,15 +586,18 @@ Tools > GASPT > Create DamageNumber Prefab
 - 우클릭 → `Test/Player/Remove All Effects` (효과 제거)
 - 우클릭 → `Test/Player/Print Active Effects` (활성 효과 확인)
 
-**DamageNumberPool** (NEW):
+**DamageNumberPool**:
 - DamageNumber는 자동으로 표시됨 (데미지/회복/EXP 시)
 
-**GameResourceManager** (NEW):
+**GameResourceManager**:
 - 우클릭 → `Print Cache Info` (캐시 상태 확인)
 
 **PlayerStats**:
 - 우클릭 → `Take 10 Damage (Test)` → DamageNumber 표시됨
 - 우클릭 → `Heal 20 HP (Test)` → 회복 텍스트 표시됨
+- 우클릭 → `Test Mana Spend (20)` (NEW)
+- 우클릭 → `Test Mana Regen (30)` (NEW)
+- 우클릭 → `Print Mana Info` (NEW)
 
 **Enemy**:
 - 우클릭 → `Instant Death (Test)` → EXP Number 표시됨
@@ -487,20 +619,21 @@ git branch
 
 ### 2. 현재 브랜치 확인
 ```bash
-# 현재 브랜치가 008-buff-debuff-system인지 확인
+# 현재 브랜치가 009-skill-system인지 확인
 git branch --show-current
 ```
 
-### 3. Resources 폴더 설정 (Unity)
-- `Assets/Resources/Prefabs/UI/` 폴더 생성
-- DamageNumber.prefab을 해당 위치로 이동
-- GameResourceManager가 자동으로 로드함
+### 3. Unity 테스트 (선택)
+- SkillSystemTest 씬 열기
+- Tools > GASPT > Create Skill UI Panel
+- Play 모드에서 Context Menu로 스킬 등록
+- 키보드 1,2,3,4로 스킬 사용 테스트
 
 ### 4. 다음 작업 선택
-- PR 생성 및 머지 → 옵션 1
-- Phase 12 (Skill System) → 옵션 2
-- BuffIconUI 구현 → 옵션 3
-- Item Drop System → 옵션 4
+- PR 생성 및 머지 (Phase 12) → 옵션 1
+- BuffIconUI 구현 → 옵션 2
+- Item Drop System → 옵션 3
+- Mana Bar UI → 옵션 4
 
 ---
 
@@ -518,7 +651,7 @@ git checkout master
 git pull origin master
 
 # 새 Phase 시작
-git checkout -b 009-skill-system
+git checkout -b 010-next-phase
 
 # 변경사항 커밋
 git add .
@@ -534,6 +667,8 @@ Tools > GASPT > Create Enemy UIs
 Tools > GASPT > Create Player HealthBar UI
 Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
+Tools > GASPT > Create Skill UI Panel (NEW)
+Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
 ```
 
 ### ScriptableObject 생성
@@ -541,6 +676,7 @@ Tools > GASPT > Create DamageNumber Prefab
 Create > GASPT > Items > Item
 Create > GASPT > Enemies > Enemy
 Create > GASPT > StatusEffects > StatusEffect
+Create > GASPT > Skills > Skill (NEW)
 ```
 
 ---
@@ -612,9 +748,9 @@ private void OnDisable()
 
 1. **이 파일(WORK_STATUS.md) 먼저 읽기** ✅
 2. **Git 상태 확인** (`git status`, `git log`)
-3. **Phase 10-11 PR 생성** (옵션 1)
+3. **Phase 12 PR 생성** (옵션 1) - 우선 추천
 4. **PR 머지**
-5. **Phase 12 기획 및 시작** (Skill System 또는 다른 옵션)
+5. **다음 Phase 기획 및 시작** (BuffIconUI, Item Drop, Mana Bar 등)
 
 ---
 
@@ -622,11 +758,12 @@ private void OnDisable()
 
 ### Claude Code와 다시 대화 시작할 때
 1. 이 파일(`WORK_STATUS.md`) 내용 공유
-2. 현재 브랜치 알려주기: `008-buff-debuff-system`
+2. 현재 브랜치 알려주기: `009-skill-system`
 3. 하고 싶은 작업 명시:
-   - "Phase 10-11 PR 생성하고 싶어"
-   - "Phase 12 (Skill System) 시작하고 싶어"
+   - "Phase 12 PR 생성하고 싶어"
    - "BuffIconUI 구현하고 싶어"
+   - "Mana Bar UI 구현하고 싶어"
+   - "Item Drop System 시작하고 싶어"
 
 ---
 
@@ -639,9 +776,9 @@ private void OnDisable()
 
 ---
 
-**작성일**: 2025-01-15
-**다음 예정 작업**: Phase 10-11 PR 생성 또는 Phase 12 시작
-**브랜치**: 008-buff-debuff-system
-**상태**: Phase 11 + GameResourceManager 완료, 푸시 완료, PR 생성 대기
+**작성일**: 2025-01-16
+**다음 예정 작업**: Phase 12 PR 생성 (우선) 또는 다음 Phase 시작
+**브랜치**: 009-skill-system
+**상태**: Phase 12 (Skill System) 완료, 푸시 완료, PR 생성 대기
 
-🚀 **수고하셨습니다! Phase 10-11 + GameResourceManager 완료!**
+🚀 **수고하셨습니다! Phase 12 (Skill System) 완료!**
