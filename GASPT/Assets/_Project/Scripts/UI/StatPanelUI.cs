@@ -117,7 +117,7 @@ namespace GASPT.UI
         {
             if (playerStats == null) return;
 
-            UpdateHPText(playerStats.HP);
+            UpdateHPText(playerStats.CurrentHP);
             UpdateAttackText(playerStats.Attack);
             UpdateDefenseText(playerStats.Defense);
 
