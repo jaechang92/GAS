@@ -242,14 +242,10 @@ namespace GASPT.Editor
             EnemyData enemy = ScriptableObject.CreateInstance<EnemyData>();
             enemy.enemyName = "TEST Enemy";
             enemy.enemyType = EnemyType.Normal;
-            enemy.maxHP = 100;
+            enemy.maxHp = 100;
             enemy.attack = 15;
-            enemy.defense = 5;
-            enemy.moveSpeed = 3f;
-            enemy.detectionRange = 10f;
-            enemy.attackRange = 2f;
-            enemy.goldDropMin = 10;
-            enemy.goldDropMax = 20;
+            enemy.minGoldDrop = 10;
+            enemy.maxGoldDrop = 20;
 
             AssetDatabase.CreateAsset(enemy, assetPath);
             Debug.Log($"✓ EnemyData 생성: {assetPath}");

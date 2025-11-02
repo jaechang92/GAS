@@ -211,7 +211,7 @@ namespace GASPT.Testing
             Enemy enemy = testEnemy.GetComponent<Enemy>();
             if (enemy != null)
             {
-                Debug.Log($"사용 전 적 HP: {enemy.CurrentHP}/{enemy.MaxHP}");
+                Debug.Log($"사용 전 적 HP: {enemy.CurrentHp}/{enemy.MaxHp}");
             }
 
             // 슬롯 0 스킬 사용 (Damage)
@@ -223,7 +223,7 @@ namespace GASPT.Testing
                 Debug.Log($"사용 후 마나: {playerStats.CurrentMana}/{playerStats.MaxMana}");
                 if (enemy != null)
                 {
-                    Debug.Log($"사용 후 적 HP: {enemy.CurrentHP}/{enemy.MaxHP}");
+                    Debug.Log($"사용 후 적 HP: {enemy.CurrentHp}/{enemy.MaxHp}");
                 }
             }
             else
