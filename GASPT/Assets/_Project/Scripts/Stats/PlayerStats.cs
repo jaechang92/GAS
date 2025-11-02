@@ -35,6 +35,9 @@ namespace GASPT.Stats
         [SerializeField] [Tooltip("기본 방어력")]
         private int baseDefense = 5;
 
+        [SerializeField] [Tooltip("기본 마나")]
+        private int baseMana = 100;
+
 
         // ====== 장비 슬롯 ======
 
@@ -49,6 +52,7 @@ namespace GASPT.Stats
         private int finalHP;
         private int finalAttack;
         private int finalDefense;
+        private int finalMana;
 
         /// <summary>
         /// Dirty flag: true면 재계산 필요
@@ -62,6 +66,11 @@ namespace GASPT.Stats
         /// 현재 HP (전투 중 변경됨)
         /// </summary>
         private int currentHP;
+
+        /// <summary>
+        /// 현재 마나
+        /// </summary>
+        private int currentMana;
 
         /// <summary>
         /// 사망 여부
@@ -137,6 +146,23 @@ namespace GASPT.Stats
         }
 
         /// <summary>
+        /// 최대 마나 (기본 + 장비 보너스)
+        /// </summary>
+        public int MaxMana
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return finalMana;
+            }
+        }
+
+        /// <summary>
+        /// 현재 마나
+        /// </summary>
+        public int CurrentMana => currentMana;
+
+        /// <summary>
         /// 사망 여부
         /// </summary>
         public bool IsDead => isDead;
@@ -167,6 +193,12 @@ namespace GASPT.Stats
         /// </summary>
         public event Action OnDeath;
 
+        /// <summary>
+        /// 마나 변경 시 발생하는 이벤트
+        /// 매개변수: (현재 마나, 최대 마나)
+        /// </summary>
+        public event Action<int, int> OnManaChanged;
+
 
         // ====== Unity 생명주기 ======
 
@@ -180,9 +212,10 @@ namespace GASPT.Stats
 
             // 현재 HP를 최대 HP로 초기화
             currentHP = MaxHP;
+            currentMana = MaxMana;
             isDead = false;
 
-            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, Attack: {Attack}, Defense: {Defense}");
+            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, MaxMana: {MaxMana}, CurrentMana: {CurrentMana}, Attack: {Attack}, Defense: {Defense}");
         }
 
         private void OnEnable()
@@ -221,11 +254,13 @@ namespace GASPT.Stats
             int oldHP = finalHP;
             int oldAttack = finalAttack;
             int oldDefense = finalDefense;
+            int oldMana = finalMana;
 
             // 기본 스탯으로 초기화
             finalHP = baseHP;
             finalAttack = baseAttack;
             finalDefense = baseDefense;
+            finalMana = baseMana;
 
             // 장비 보너스 합산
             foreach (var item in equippedItems.Values)
@@ -235,6 +270,7 @@ namespace GASPT.Stats
                     finalHP += item.hpBonus;
                     finalAttack += item.attackBonus;
                     finalDefense += item.defenseBonus;
+                    // Mana 보너스는 현재 Item에 없으므로 생략 (나중에 추가 가능)
                 }
             }
 
@@ -245,7 +281,13 @@ namespace GASPT.Stats
             NotifyStatChangedIfDifferent(StatType.Attack, oldAttack, finalAttack);
             NotifyStatChangedIfDifferent(StatType.Defense, oldDefense, finalDefense);
 
-            Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}");
+            // Mana 변경 이벤트 (StatType.Mana가 없으면 별도 처리)
+            if (oldMana != finalMana)
+            {
+                OnManaChanged?.Invoke(currentMana, finalMana);
+            }
+
+            Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}, Mana: {finalMana}");
         }
 
         /// <summary>
@@ -537,6 +579,68 @@ namespace GASPT.Stats
         }
 
 
+        // ====== Mana 관리 ======
+
+        /// <summary>
+        /// 마나를 소비합니다
+        /// </summary>
+        /// <param name="amount">소비할 마나량</param>
+        /// <returns>true: 소비 성공, false: 마나 부족</returns>
+        public bool TrySpendMana(int amount)
+        {
+            if (amount < 0)
+            {
+                Debug.LogWarning($"[PlayerStats] TrySpendMana(): 유효하지 않은 값입니다: {amount}");
+                return false;
+            }
+
+            if (amount == 0)
+            {
+                return true; // 0 마나는 항상 성공
+            }
+
+            if (currentMana < amount)
+            {
+                Debug.LogWarning($"[PlayerStats] TrySpendMana(): 마나 부족 (필요: {amount}, 현재: {currentMana})");
+                return false;
+            }
+
+            int previousMana = currentMana;
+            currentMana -= amount;
+
+            Debug.Log($"[PlayerStats] 마나 소비: {amount} (Mana {previousMana} → {currentMana})");
+
+            // 이벤트 발생
+            OnManaChanged?.Invoke(currentMana, MaxMana);
+
+            return true;
+        }
+
+        /// <summary>
+        /// 마나를 회복합니다
+        /// </summary>
+        /// <param name="amount">회복할 마나량</param>
+        public void RegenerateMana(int amount)
+        {
+            if (amount <= 0)
+            {
+                Debug.LogWarning($"[PlayerStats] RegenerateMana(): 유효하지 않은 회복량입니다: {amount}");
+                return;
+            }
+
+            int previousMana = currentMana;
+            currentMana += amount;
+            currentMana = Mathf.Min(currentMana, MaxMana);
+
+            int actualRegenerated = currentMana - previousMana;
+
+            Debug.Log($"[PlayerStats] 마나 회복: {actualRegenerated} (Mana {previousMana} → {currentMana})");
+
+            // 이벤트 발생
+            OnManaChanged?.Invoke(currentMana, MaxMana);
+        }
+
+
         // ====== Context Menu (테스트용) ======
 
         [ContextMenu("Take 10 Damage (Test)")]
@@ -573,6 +677,26 @@ namespace GASPT.Stats
         private void PrintStatsInfo()
         {
             DebugPrintStats();
+        }
+
+        [ContextMenu("Spend 20 Mana (Test)")]
+        private void TestSpendMana()
+        {
+            TrySpendMana(20);
+        }
+
+        [ContextMenu("Regenerate 30 Mana (Test)")]
+        private void TestRegenerateMana()
+        {
+            RegenerateMana(30);
+        }
+
+        [ContextMenu("Print Mana Info")]
+        private void PrintManaInfo()
+        {
+            Debug.Log("========== Mana Info ==========");
+            Debug.Log($"CurrentMana: {CurrentMana}/{MaxMana}");
+            Debug.Log($"===============================");
         }
 
 
