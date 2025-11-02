@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-02
-**현재 브랜치**: `006-save-load-system`
-**작업 세션**: Phase 6-9 완료, PR 생성 대기
+**최종 업데이트**: 2025-01-15
+**현재 브랜치**: `008-buff-debuff-system`
+**작업 세션**: Phase 10-11 완료 + GameResourceManager 구현
 
 ---
 
@@ -11,8 +11,9 @@
 ### 완료된 Phase
 
 #### ✅ Phase 1: Setup & Project Structure
-- Core Enums (StatType, EquipmentSlot, EnemyType)
+- Core Enums (StatType, EquipmentSlot, EnemyType, StatusEffectType)
 - Assembly Definition 문제 해결 (모두 제거, Assembly-CSharp로 통합)
+- SingletonManager<T> 패턴 확립
 
 #### ✅ Phase 2: GAS Core Implementation
 - IAbility, IAbilitySystem 인터페이스
@@ -25,7 +26,7 @@
 **완료 Task**: 8개
 - PlayerStats.cs (295줄) - Dirty Flag 최적화
 - Item.cs (85줄) - ScriptableObject
-- StatPanelUI.cs (190줄) - 실시간 UI
+- StatPanelUI.cs (270줄) - 실시간 UI + 버프/디버프 표시
 - StatPanelCreator.cs (242줄) - 에디터 도구
 - 아이템 3개 에셋: FireSword, LeatherArmor, IronRing
 
@@ -35,13 +36,13 @@
 - InventorySystem.cs (230줄) - 인벤토리 싱글톤
 - ShopSystem.cs (220줄) - 상점 로직
 - ShopUI.cs (320줄) - 상점 UI
-- ShopItemSlot.cs (71줄) - 독립 파일 (리팩토링)
+- ShopItemSlot.cs (71줄) - 독립 파일
 - ShopUICreator.cs (480줄) - 에디터 도구
 
 #### ✅ Phase 5: Enemy System (US3)
 **완료 Task**: 6개
 - EnemyData.cs (157줄) - 적 데이터 ScriptableObject
-- Enemy.cs (301줄) - 적 MonoBehaviour (namespace: GASPT.Enemies)
+- Enemy.cs (493줄) - 적 MonoBehaviour + StatusEffect 통합
 - EnemyNameTag.cs (122줄) - World Space UI
 - BossHealthBar.cs (201줄) - Screen Space UI
 - EnemyUICreator.cs (400줄) - 에디터 도구
@@ -61,7 +62,7 @@
 **완료 Task**: 5개
 - SaveData.cs (118줄) - 직렬화 데이터 구조
   - GameSaveData, PlayerStatsData, CurrencyData, InventoryData
-- SaveSystem.cs (198줄) - JSON 기반 저장/로드 싱글톤
+- SaveSystem.cs (SingletonManager 사용, 198줄) - JSON 기반 저장/로드 싱글톤
   - Save(), Load(), HasSaveFile(), DeleteSave()
 - PlayerStats.cs 수정 - GetSaveData(), LoadFromSaveData()
 - CurrencySystem.cs 수정 - Save/Load 통합
@@ -98,35 +99,156 @@
 - Enemy.cs 수정 - GiveExp() 메서드 추가
 - **네임스페이스 수정**: GASPT.Enemy → GASPT.Enemies (CS0118 에러 해결)
 
+#### ✅ Phase 10: Combat UI & Damage Numbers
+**완료 Task**: 5개
+- DamageNumber.cs (180줄) - 데미지 텍스트 애니메이션
+  - 일반 데미지 (빨간색), 크리티컬 (노란색), 회복 (초록색), EXP (파란색)
+  - 위로 떠오르는 애니메이션 + 페이드 아웃
+  - 자동 풀링 복귀
+- DamageNumberPool.cs (350줄) - 오브젝트 풀링 시스템
+  - 공용 Canvas 사용 (성능 최적화)
+  - 카메라 빌보드 효과
+  - 자동 리소스 로딩 (GameResourceManager 사용)
+- DamageNumberCreator.cs (150줄) - 프리팹 자동 생성 에디터 도구
+- PlayerStats.cs 수정 - DamageNumber 표시 통합
+- Enemy.cs 수정 - DamageNumber 표시 통합
+- SingletonPreloader.cs 수정 - DamageNumberPool 사전 로딩
+
+#### ✅ Phase 11: Buff/Debuff System (상태이상 시스템)
+**완료 Task**: 10개
+
+**핵심 시스템** (5개 파일):
+- StatusEffectType.cs (46줄) - 16가지 효과 타입 Enum
+  - 버프: AttackUp, DefenseUp, SpeedUp, CriticalRateUp
+  - 디버프: AttackDown, DefenseDown, SpeedDown, Stun, Slow
+  - DoT: Poison, Burn, Bleed
+  - 특수: Invincible, Regeneration, Shield, Root
+- StatusEffect.cs (259줄) - 효과 인스턴스 클래스
+  - 효과 생명주기 관리 (Apply → Update → Remove)
+  - 틱 기반 DoT 시스템
+  - 스택 시스템 (중첩 효과)
+  - 이벤트 시스템 (OnApplied, OnRemoved, OnTick)
+- StatusEffectData.cs (112줄) - ScriptableObject 데이터
+  - 디자이너 친화적 효과 정의
+  - CreateInstance() 팩토리 메서드
+- StatusEffectManager.cs (300줄) - 싱글톤 관리자
+  - Dictionary<GameObject, List<StatusEffect>> 구조
+  - Update 루프에서 모든 활성 효과 업데이트
+  - 효과 적용/제거/조회 API
+  - 이벤트 브로드캐스트
+- StatusEffectTest.cs (520줄) - 18개 테스트 케이스
+  - Context Menu 기반 테스트
+  - 버프/디버프/DoT/회복/중첩/제거 테스트
+
+**기존 시스템 통합** (3개 파일):
+- PlayerStats.cs 수정
+  - Attack/Defense 프로퍼티에 버프/디버프 적용
+  - BaseAttack/BaseDefense 프로퍼티 추가
+  - DoT 틱 처리 (Poison, Burn, Bleed) - 방어력 무시
+  - Regeneration 틱 처리 (회복)
+  - OnEnable에서 StatusEffectManager 이벤트 구독
+- Enemy.cs 수정
+  - Attack 프로퍼티에 버프/디버프 적용
+  - DoT/Regeneration 틱 처리
+  - OnEnable에서 StatusEffectManager 이벤트 구독
+- SingletonPreloader.cs 수정
+  - StatusEffectManager 사전 로딩 추가 (총 7개 싱글톤)
+
+**UI 시각화** (1개 파일):
+- StatPanelUI.cs 수정
+  - 버프/디버프 색상 표시 (초록/빨강)
+  - "기본값 → 현재값" 형식 표시
+  - StatusEffectManager 이벤트 구독
+
+**버그 수정** (3개 커밋):
+- StatusEffectManager 중첩 시 이벤트 발생
+- PlayerStats OnStatChanged 이벤트 트리거
+- 이벤트 구독 타이밍 문제 해결 (Awake → OnEnable)
+
+#### ✅ 추가 구현: GameResourceManager (리소스 관리 시스템)
+**완료 Task**: 6개
+
+**핵심 시스템** (2개 파일):
+- GameResourceManager.cs (251줄) - 싱글톤 리소스 관리자
+  - Resources.Load() 래핑 및 캐싱 시스템
+  - 타입별 로딩 메서드:
+    - LoadPrefab() - GameObject
+    - LoadScriptableObject<T>() - ScriptableObject
+    - LoadAudioClip() - AudioClip
+    - LoadSprite() - Sprite
+    - LoadTextAsset() - TextAsset
+  - 인스턴스화 메서드:
+    - Instantiate(path, parent)
+    - Instantiate(path, position, rotation, parent)
+  - 캐싱 관리:
+    - UnloadResource(path)
+    - UnloadAllResources()
+    - PrintCacheInfo() (디버그용)
+- ResourcePaths.cs (195줄) - 리소스 경로 상수 관리
+  - 카테고리별 구분 (Prefabs, Data, Audio, Sprites)
+  - IDE 자동완성 지원
+  - 타입 안전성 보장
+
+**리팩토링** (2개 파일):
+- DamageNumberPool.cs 수정
+  - damageNumberPrefab SerializeField 제거
+  - GameResourceManager를 통한 자동 로딩
+  - LoadDamageNumberPrefab() 메서드 추가
+- SingletonPreloader.cs 수정
+  - GameResourceManager 최우선 순위 사전 로딩
+  - 총 7개 싱글톤 관리
+
+**문서화**:
+- RESOURCES_GUIDE.md (220줄) - Resources 폴더 구조 가이드
+  - 폴더 구조 정의
+  - 사용 방법 및 예제
+  - 네이밍 규칙
+  - 주의사항 및 베스트 프랙티스
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 006-save-load-system
+브랜치: 008-buff-debuff-system
 원격 푸시: 완료
-최종 커밋: dd6e919 (기능: Level & EXP System 구현)
-Phase 6 커밋: ba5de83
-Phase 7 커밋: 6ab7663
-Phase 8 커밋: 99f2876
-Phase 9 커밋: dd6e919
+최종 커밋: 786baeb (기능: GameResourceManager 리소스 관리 시스템 구현)
+Phase 10 커밋: e90f14b
+Phase 11 커밋: 456d199 + 4개 버그 수정 커밋
+GameResourceManager 커밋: 786baeb
 ```
 
-### PR 생성 대기
-- **Phase 3-5 PR**: 이미 머지 완료 (#2)
-- **Phase 6 PR**: 이미 머지 완료 (#1)
-- **Phase 7-9 PR**: 생성 필요
-  - **Base 브랜치**: master
-  - **Compare 브랜치**: 006-save-load-system
-  - **포함 내용**: Save/Load System + HP Bar UI + Level & EXP System
+### 주요 커밋 목록
+```
+786baeb 기능: GameResourceManager 리소스 관리 시스템 구현
+fdf66d5 수정: StatusEffectManager 이벤트 구독 타이밍 문제 해결
+6217aa8 수정: StatusEffectManager 중첩 시 OnEffectApplied 이벤트 발생 추가
+39feee9 수정: PlayerStats에서 버프/디버프 적용 시 OnStatChanged 이벤트 발생
+51fddad 개선: StatPanelUI에 버프/디버프 시각적 표시 기능 추가
+456d199 기능: Buff/Debuff 상태이상 시스템 구현 (Phase 11)
+be3af16 리팩토링: SaveSystem을 SingletonManager 사용하도록 변경
+e90f14b 기능: Combat UI & Damage Numbers 구현 (Phase 10)
+```
 
-### 파일 통계 (Phase 7-9)
-- 총 변경 파일: 약 25개
-- 신규 C# 코드: 10개 파일
-- 수정 C# 코드: 6개 파일
-- Unity 에셋: 3개 EnemyData에 expReward 추가
-- 총 추가 코드: 약 2,500줄
+### 싱글톤 시스템 현황 (7개)
+1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
+2. **DamageNumberPool** - 데미지 텍스트 풀링
+3. **CurrencySystem** - 골드 관리
+4. **InventorySystem** - 인벤토리 관리
+5. **PlayerLevel** - 레벨/EXP 관리
+6. **SaveSystem** - 저장/로드
+7. **StatusEffectManager** - 상태이상 효과 관리
+
+### PR 생성 대기
+- **Phase 10-11 + GameResourceManager PR**: 생성 필요
+  - **Base 브랜치**: master
+  - **Compare 브랜치**: 008-buff-debuff-system
+  - **포함 내용**:
+    - Combat UI & Damage Numbers
+    - Buff/Debuff System
+    - GameResourceManager
+    - 버그 수정 4건
 
 ---
 
@@ -135,105 +257,132 @@ Phase 9 커밋: dd6e919
 ### 코드
 ```
 Assets/_Project/Scripts/
+├── Core/
+│   ├── SingletonManager.cs
+│   └── SingletonPreloader.cs (7개 싱글톤 관리)
+├── Core/Enums/
+│   ├── StatType.cs
+│   ├── EquipmentSlot.cs
+│   ├── EnemyType.cs
+│   └── StatusEffectType.cs (NEW)
 ├── Stats/
-│   └── PlayerStats.cs (Combat, Save/Load 통합)
+│   └── PlayerStats.cs (Combat, Save/Load, StatusEffect 통합)
 ├── Data/
 │   ├── Item.cs
-│   └── EnemyData.cs (expReward 추가)
+│   ├── EnemyData.cs
+│   └── StatusEffectData.cs (NEW)
 ├── Economy/
-│   └── CurrencySystem.cs (Save/Load 통합)
+│   └── CurrencySystem.cs
 ├── Inventory/
-│   └── InventorySystem.cs (Save/Load 통합)
+│   └── InventorySystem.cs
 ├── Shop/
 │   └── ShopSystem.cs
 ├── Enemies/
-│   └── Enemy.cs (EXP 지급, namespace 변경)
+│   └── Enemy.cs (StatusEffect 통합)
 ├── Combat/
 │   └── DamageCalculator.cs
 ├── Save/
 │   ├── SaveData.cs
-│   └── SaveSystem.cs
+│   └── SaveSystem.cs (SingletonManager 사용)
 ├── Level/
 │   └── PlayerLevel.cs
+├── StatusEffects/ (NEW)
+│   ├── StatusEffect.cs
+│   ├── StatusEffectManager.cs
+│   └── StatusEffectTest.cs
+├── Resources/ (NEW)
+│   ├── GameResourceManager.cs
+│   └── ResourcePaths.cs
 ├── UI/
-│   ├── StatPanelUI.cs
+│   ├── StatPanelUI.cs (버프/디버프 표시)
 │   ├── ShopUI.cs
 │   ├── ShopItemSlot.cs
 │   ├── EnemyNameTag.cs
 │   ├── BossHealthBar.cs
-│   ├── PlayerHealthBar.cs (NEW)
-│   └── PlayerExpBar.cs (NEW)
+│   ├── PlayerHealthBar.cs
+│   ├── PlayerExpBar.cs
+│   ├── DamageNumber.cs (NEW)
+│   └── DamageNumberPool.cs (NEW, 자동 로딩)
 ├── Editor/
 │   ├── StatPanelCreator.cs
 │   ├── ShopUICreator.cs
 │   ├── EnemyUICreator.cs
-│   ├── PlayerHealthBarCreator.cs (NEW)
-│   └── PlayerExpBarCreator.cs (NEW)
+│   ├── PlayerHealthBarCreator.cs
+│   ├── PlayerExpBarCreator.cs
+│   └── DamageNumberCreator.cs (NEW)
 └── Tests/
     ├── CombatTest.cs
     ├── SaveTest.cs
-    └── LevelTest.cs (NEW)
+    ├── LevelTest.cs
+    └── StatusEffectTest.cs (NEW)
 ```
 
-### 에셋
+### 문서
 ```
-Assets/_Project/Data/
-├── Items/
-│   ├── FireSword.asset
-│   ├── LeatherArmor.asset
-│   └── IronRing.asset
-└── Enemies/
-    ├── Normal Goblin.asset (expReward: 10)
-    ├── EliteOrc.asset (expReward: 50)
-    └── FireDragon.asset (expReward: 200)
+GASPT/
+├── WORK_STATUS.md (현재 파일)
+├── RESOURCES_GUIDE.md (NEW)
+├── specs/
+└── docs/
 ```
 
-### 프리팹
-```
-Assets/_Project/Prefabs/UI/
-├── StatPanel.prefab
-├── ShopPanel.prefab
-├── ItemSlotPrefab.prefab
-├── EnemyNameTag.prefab
-├── BossHealthBar.prefab
-├── PlayerHealthBar.prefab (NEW)
-└── PlayerExpBar.prefab (NEW)
-```
+---
+
+## 📊 Phase별 완료 통계
+
+| Phase | 설명 | 파일 수 | 코드 라인 | 상태 |
+|-------|------|---------|-----------|------|
+| Phase 1 | Setup & Project Structure | 3 | ~100 | ✅ 완료 |
+| Phase 2 | GAS Core | 5 | ~500 | ✅ 완료 |
+| Phase 3 | Stat System | 4 | ~812 | ✅ 완료 |
+| Phase 4 | Shop & Economy | 5 | ~1,486 | ✅ 완료 |
+| Phase 5 | Enemy System | 5 | ~1,118 | ✅ 완료 |
+| Phase 6 | Combat Integration | 2 | ~364 | ✅ 완료 |
+| Phase 7 | Save/Load System | 4 | ~536 | ✅ 완료 |
+| Phase 8 | Player HP Bar UI | 2 | ~631 | ✅ 완료 |
+| Phase 9 | Level & EXP System | 4 | ~1,211 | ✅ 완료 |
+| Phase 10 | Combat UI & Damage Numbers | 3 | ~680 | ✅ 완료 |
+| Phase 11 | Buff/Debuff System | 9 | ~1,691 | ✅ 완료 |
+| 추가 | GameResourceManager | 3 | ~666 | ✅ 완료 |
+| **합계** | **11개 Phase + 추가** | **49개** | **~9,795줄** | **✅ 완료** |
 
 ---
 
 ## 🚀 다음 작업 옵션
 
-### 옵션 1: PR 생성 및 머지 (Phase 7-9)
+### 옵션 1: PR 생성 및 머지 (Phase 10-11)
 
 **수행 단계**:
-1. PR 제목: "Save/Load, HP Bar UI, Level & EXP System 구현 (Phase 7-9)"
-2. PR 본문 예시:
+1. PR 제목: "Combat UI, Buff/Debuff System, GameResourceManager 구현 (Phase 10-11)"
+2. PR 본문:
 ```markdown
-## Phase 7: Save/Load System
-- JSON 기반 저장/로드 시스템
-- PlayerStats, Currency, Inventory 통합
+## Phase 10: Combat UI & Damage Numbers
+- DamageNumber 애니메이션 (일반/크리티컬/회복/EXP)
+- DamageNumberPool 오브젝트 풀링 시스템
+- 공용 Canvas 성능 최적화
+- 카메라 빌보드 효과
 
-## Phase 8: Player HP Bar UI
-- 실시간 HP 바 표시
-- 데미지/회복 시각 효과
-- 저체력 색상 변화
+## Phase 11: Buff/Debuff System
+- 16가지 상태 이상 효과 타입
+- StatusEffect 생명주기 관리
+- DoT/HoT 시스템 (Poison, Burn, Bleed, Regeneration)
+- 효과 중첩 시스템
+- PlayerStats/Enemy 통합
+- StatPanelUI 시각화 (버프: 초록, 디버프: 빨강)
 
-## Phase 9: Level & EXP System
-- 레벨/경험치 관리
-- Enemy 처치 시 EXP 획득
-- 레벨업 시 스탯 증가 및 HP 회복
-- EXP Bar UI 및 레벨업 애니메이션
+## GameResourceManager
+- Resources.Load() 래핑 및 캐싱
+- 타입별 로딩 메서드
+- 자동 리소스 로딩
+- DamageNumberPool 리팩토링
 
 ## 버그 수정
-- PlayerHealthBar 이벤트 구독 타이밍 이슈 해결
-- Fill Image 스프라이트 미할당 문제 해결
-- namespace 충돌 (GASPT.Enemy → GASPT.Enemies) 해결
+- StatusEffectManager 이벤트 구독 타이밍 (Awake → OnEnable)
+- 중첩 시 이벤트 미발생 문제
+- PlayerStats OnStatChanged 트리거
 
 ## 테스트
-- CombatTest: 6개 시나리오 통과
-- SaveTest: 6개 시나리오 통과
-- LevelTest: 6개 시나리오 통과
+- StatusEffectTest: 18개 시나리오
 ```
 
 3. GitHub에서 PR 생성
@@ -243,57 +392,46 @@ Assets/_Project/Prefabs/UI/
 ```bash
 git checkout master
 git pull origin master
-git branch -d 006-save-load-system  # 로컬 브랜치 삭제 (선택)
+git branch -d 008-buff-debuff-system  # 로컬 브랜치 삭제
 ```
 
 ---
 
-### 옵션 2: 통합 테스트 수행
+### 옵션 2: Phase 12 시작 (Skill System)
 
-**수행 단계**:
-1. Unity Editor 열기
-2. Bootstrap 씬 로드
-3. 다음 UI 생성 (에디터 도구 사용):
-   - `Tools > GASPT > Create Player HealthBar UI`
-   - `Tools > GASPT > Create Player ExpBar UI`
-   - `Tools > GASPT > Create StatPanel UI`
-   - `Tools > GASPT > Create ShopUI`
-   - `Tools > GASPT > Create Enemy UIs`
-
-4. Scene에 PlayerLevel 싱글톤 배치 (DontDestroyOnLoad)
-
-5. 통합 테스트 시나리오:
-   - **전투 테스트**: Player vs Enemy 데미지 계산
-   - **레벨업 테스트**: Enemy 처치 → EXP 획득 → 레벨업
-   - **HP 회복 테스트**: 레벨업 시 HP 완전 회복
-   - **저장/로드 테스트**: 게임 진행 → 저장 → 로드 → 상태 확인
-   - **UI 테스트**: HP 바, EXP 바 실시간 업데이트
-
-6. Context Menu 테스트:
-   - **LevelTest**: 6개 시나리오 실행
-   - **CombatTest**: 6개 시나리오 실행
-   - **SaveTest**: 6개 시나리오 실행
-
-**테스트 소요 시간**: 약 1-1.5시간
-
----
-
-### 옵션 3: Phase 10 시작 (Combat UI & Damage Numbers)
-
-**새 브랜치 생성** (master 머지 후 권장):
+**새 브랜치 생성**:
 ```bash
-git checkout master
-git pull origin master
-git checkout -b 007-combat-ui
+git checkout -b 009-skill-system
 ```
 
-**Phase 10 예상 Task 목록**:
-- [ ] Damage Number UI (World Space)
-- [ ] Floating Text Animation
-- [ ] Combat Log UI (Screen Space)
-- [ ] Attack Button UI
-- [ ] Target Selection UI
-- [ ] Combat State Machine
+**Phase 12 예상 Task 목록**:
+- [ ] SkillData ScriptableObject
+- [ ] SkillSystem 싱글톤
+- [ ] Skill UI (버튼, 쿨다운)
+- [ ] 기본 스킬 4-5개 구현
+- [ ] 마나 시스템 (선택)
+
+---
+
+### 옵션 3: BuffIconUI 구현 (Phase 11 확장)
+
+**Phase 11 완성도 향상**:
+- [ ] BuffIconUI 프리팹
+- [ ] BuffIconPool 오브젝트 풀링
+- [ ] 활성 버프/디버프 아이콘 표시
+- [ ] 지속시간 표시 (원형 타이머)
+- [ ] 스택 수 표시
+
+---
+
+### 옵션 4: Item Drop & Loot System
+
+**Phase 12 새 기능**:
+- [ ] LootTable ScriptableObject
+- [ ] DropSystem 싱글톤
+- [ ] 아이템 드롭 로직 (확률 기반)
+- [ ] 드롭 아이템 UI
+- [ ] Enemy에 LootTable 연동
 
 ---
 
@@ -304,45 +442,36 @@ git checkout -b 007-combat-ui
 Tools > GASPT > Create StatPanel UI
 Tools > GASPT > Create ShopUI
 Tools > GASPT > Create Enemy UIs
-Tools > GASPT > Create Player HealthBar UI  (NEW)
-Tools > GASPT > Create Player ExpBar UI     (NEW)
+Tools > GASPT > Create Player HealthBar UI
+Tools > GASPT > Create Player ExpBar UI
+Tools > GASPT > Create DamageNumber Prefab
 ```
-→ 모든 UI 프리팹이 자동 생성됨
 
 ### Context Menu로 빠른 테스트
 
+**StatusEffectTest** (NEW):
+- 우클릭 → `Test/Player/Apply AttackUp` (버프 적용)
+- 우클릭 → `Test/Player/Apply AttackDown` (디버프 적용)
+- 우클릭 → `Test/Player/Apply Poison` (DoT 적용)
+- 우클릭 → `Test/Player/Apply Regeneration` (회복)
+- 우클릭 → `Test/Player/Remove All Effects` (효과 제거)
+- 우클릭 → `Test/Player/Print Active Effects` (활성 효과 확인)
+
+**DamageNumberPool** (NEW):
+- DamageNumber는 자동으로 표시됨 (데미지/회복/EXP 시)
+
+**GameResourceManager** (NEW):
+- 우클릭 → `Print Cache Info` (캐시 상태 확인)
+
 **PlayerStats**:
-- 우클릭 → `Equip Test Item` (아이템 장착)
-- 우클릭 → `Print Stats Info` (스탯 확인)
-- 우클릭 → `Take 10 Damage (Test)` (데미지 받기)
-- 우클릭 → `Heal 20 HP (Test)` (회복)
-- 우클릭 → `Revive (Test)` (부활)
+- 우클릭 → `Take 10 Damage (Test)` → DamageNumber 표시됨
+- 우클릭 → `Heal 20 HP (Test)` → 회복 텍스트 표시됨
 
 **Enemy**:
-- 우클릭 → `Print Enemy Info` (적 정보)
-- 우클릭 → `Take 10 Damage (Test)` (데미지 받기)
-- 우클릭 → `Instant Death (Test)` (즉사 - EXP 지급됨)
+- 우클릭 → `Instant Death (Test)` → EXP Number 표시됨
 
-**PlayerLevel** (NEW):
-- 우클릭 → `Print Level Info` (레벨 정보)
-- 우클릭 → `Add 50 EXP (Test)` (EXP 추가)
-- 우클릭 → `Level Up (Test)` (강제 레벨업)
-
-**SaveSystem** (NEW):
-- 우클릭 → `Save Game (Test)` (게임 저장)
-- 우클릭 → `Load Game (Test)` (게임 로드)
-- 우클릭 → `Delete Save (Test)` (저장 파일 삭제)
-
-**ShopSystem**:
-- 우클릭 → `Print Shop Items` (상점 아이템 목록)
-
-**InventorySystem**:
-- 우클릭 → `Print Inventory` (인벤토리 확인)
-
-**CurrencySystem**:
-- 우클릭 → `Print Gold Info` (골드 확인)
-- 우클릭 → `Add 100 Gold (Test)` (골드 추가)
-- 우클릭 → `Spend 50 Gold (Test)` (골드 소비)
+**PlayerLevel**:
+- 우클릭 → `Add 50 EXP (Test)` → EXP Number 표시됨
 
 ---
 
@@ -358,26 +487,20 @@ git branch
 
 ### 2. 현재 브랜치 확인
 ```bash
-# 현재 브랜치가 006-save-load-system인지 확인
+# 현재 브랜치가 008-buff-debuff-system인지 확인
 git branch --show-current
 ```
 
-### 3. 최신 코드 확인
-```bash
-# 원격 저장소와 동기화
-git fetch origin
-git status
-```
+### 3. Resources 폴더 설정 (Unity)
+- `Assets/Resources/Prefabs/UI/` 폴더 생성
+- DamageNumber.prefab을 해당 위치로 이동
+- GameResourceManager가 자동으로 로드함
 
-### 4. PR 상태 확인
-- GitHub에서 Phase 7-9 PR이 생성되었는지 확인
-- 머지되었는지 확인
-- 리뷰 코멘트가 있는지 확인
-
-### 5. 다음 작업 선택
-- PR 생성 → 옵션 1
-- 통합 테스트 → 옵션 2
-- Phase 10 시작 → 옵션 3
+### 4. 다음 작업 선택
+- PR 생성 및 머지 → 옵션 1
+- Phase 12 (Skill System) → 옵션 2
+- BuffIconUI 구현 → 옵션 3
+- Item Drop System → 옵션 4
 
 ---
 
@@ -395,7 +518,7 @@ git checkout master
 git pull origin master
 
 # 새 Phase 시작
-git checkout -b 007-combat-ui
+git checkout -b 009-skill-system
 
 # 변경사항 커밋
 git add .
@@ -403,48 +526,71 @@ git commit -m "커밋 메시지"
 git push origin <브랜치명>
 ```
 
-### Unity 명령어
+### Unity 에디터 도구
 ```
-# 에디터 도구
 Tools > GASPT > Create StatPanel UI
 Tools > GASPT > Create ShopUI
 Tools > GASPT > Create Enemy UIs
 Tools > GASPT > Create Player HealthBar UI
 Tools > GASPT > Create Player ExpBar UI
-
-# ScriptableObject 생성
-Create > GASPT > Items > Item
-Create > GASPT > Enemies > Enemy
+Tools > GASPT > Create DamageNumber Prefab
 ```
 
----
-
-## 📚 참고 문서
-
-### 프로젝트 문서
-1. **specs/004-rpg-systems/spec.md** - 기능 명세
-2. **specs/004-rpg-systems/tasks.md** - Task 목록
-3. **specs/004-rpg-systems/plan.md** - 구현 계획
-4. **docs/portfolio/unity-assembly-definition-troubleshooting.md** - Assembly 문제 해결
+### ScriptableObject 생성
+```
+Create > GASPT > Items > Item
+Create > GASPT > Enemies > Enemy
+Create > GASPT > StatusEffects > StatusEffect
+```
 
 ---
 
 ## ⚠️ 알아두면 좋은 정보
 
-### 네임스페이스 변경
-- **변경 전**: `GASPT.Enemy` (CS0118 에러 발생)
-- **변경 후**: `GASPT.Enemies` (복수형)
-- **영향 받는 파일**: Enemy.cs, CombatTest.cs, LevelTest.cs, EnemyNameTag.cs, BossHealthBar.cs
+### GameResourceManager 사용
+```csharp
+// BEFORE (수동 할당)
+[SerializeField] private GameObject prefab;
 
-### 주요 버그 수정 (Phase 8)
-1. **Revive 시 HP Text 미업데이트**: OnHealed 이벤트 추가
-2. **HP 바 슬라이더 미표시**: Fill Image 스프라이트 할당
-3. **이벤트 구독 타이밍**: OnEnable → Start로 변경
+// AFTER (자동 로딩)
+GameObject prefab = GameResourceManager.Instance.LoadPrefab(ResourcePaths.Prefabs.UI.DamageNumber);
+```
 
-### UI 렌더링 순서 (Phase 9)
-- Unity UI는 Hierarchy 순서로 렌더링
-- 나중에 배치된 자식이 위에 그려짐
-- PlayerExpBar의 LevelText를 마지막에 생성하여 해결
+### StatusEffect 사용 예시
+```csharp
+// 버프 적용
+StatusEffectData attackUp = GameResourceManager.Instance.LoadScriptableObject<StatusEffectData>(
+    ResourcePaths.Data.StatusEffects.AttackUp
+);
+StatusEffectManager.Instance.ApplyEffect(player.gameObject, attackUp);
+
+// 효과 확인
+bool hasBuff = StatusEffectManager.Instance.HasEffect(player.gameObject, StatusEffectType.AttackUp);
+
+// 효과 제거
+StatusEffectManager.Instance.RemoveEffect(player.gameObject, StatusEffectType.AttackUp);
+```
+
+### 이벤트 구독 패턴 (중요!)
+```csharp
+// Awake가 아닌 OnEnable에서 구독
+private void OnEnable()
+{
+    StatusEffectManager manager = StatusEffectManager.Instance;  // HasInstance 사용 금지
+    if (manager != null)
+    {
+        manager.OnEffectApplied += OnEffectApplied;
+    }
+}
+
+private void OnDisable()
+{
+    if (StatusEffectManager.HasInstance)  // OnDisable에서만 HasInstance 사용
+    {
+        StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
+    }
+}
+```
 
 ### Unity 버전
 - Unity 6.0 이상
@@ -458,11 +604,6 @@ Create > GASPT > Enemies > Enemy
 - 500줄 넘으면 파일 분할
 - Coroutine 사용 금지 (Awaitable 사용)
 
-### 커밋 메시지
-- 한글로 작성
-- 형식: "타입: 간단한 설명"
-- 예: "기능: Level & EXP System 구현 (Phase 9)"
-
 ---
 
 ## 🎯 추천 작업 순서
@@ -471,10 +612,9 @@ Create > GASPT > Enemies > Enemy
 
 1. **이 파일(WORK_STATUS.md) 먼저 읽기** ✅
 2. **Git 상태 확인** (`git status`, `git log`)
-3. **Phase 7-9 PR 생성** (아직 안 했으면)
-4. **통합 테스트 수행** (선택사항)
-5. **PR 머지**
-6. **Phase 10 시작** 또는 **다음 기능 기획**
+3. **Phase 10-11 PR 생성** (옵션 1)
+4. **PR 머지**
+5. **Phase 12 기획 및 시작** (Skill System 또는 다른 옵션)
 
 ---
 
@@ -482,48 +622,26 @@ Create > GASPT > Enemies > Enemy
 
 ### Claude Code와 다시 대화 시작할 때
 1. 이 파일(`WORK_STATUS.md`) 내용 공유
-2. 현재 브랜치 알려주기: `006-save-load-system`
+2. 현재 브랜치 알려주기: `008-buff-debuff-system`
 3. 하고 싶은 작업 명시:
-   - "Phase 7-9 PR 생성하고 싶어"
-   - "통합 테스트 진행하고 싶어"
-   - "Phase 10 시작하고 싶어"
-
-### 통합 테스트 수행할 때
-1. Unity Editor 열기
-2. Bootstrap 씬 로드
-3. UI 생성 (에디터 도구 사용)
-4. Context Menu로 각 시스템 테스트
-5. 실제 게임플레이 시나리오 테스트
-
-### Phase 10 시작할 때
-1. master 브랜치로 이동 및 최신화
-2. 새 브랜치 생성: `007-combat-ui`
-3. "Phase 10 구현 시작해줘" 요청
-4. TodoWrite로 Task 목록 생성
-5. 순서대로 구현
+   - "Phase 10-11 PR 생성하고 싶어"
+   - "Phase 12 (Skill System) 시작하고 싶어"
+   - "BuffIconUI 구현하고 싶어"
 
 ---
 
-## 📊 Phase별 완료 통계
+## 📚 참고 문서
 
-| Phase | 설명 | 파일 수 | 코드 라인 | 상태 |
-|-------|------|---------|-----------|------|
-| Phase 1 | Setup & Project Structure | 3 | ~100 | ✅ 완료 |
-| Phase 2 | GAS Core | 5 | ~500 | ✅ 완료 |
-| Phase 3 | Stat System | 4 | ~812 | ✅ 완료 |
-| Phase 4 | Shop & Economy | 5 | ~1,486 | ✅ 완료 |
-| Phase 5 | Enemy System | 5 | ~1,118 | ✅ 완료 |
-| Phase 6 | Combat Integration | 2 | ~364 | ✅ 완료 |
-| Phase 7 | Save/Load System | 4 | ~536 | ✅ 완료 |
-| Phase 8 | Player HP Bar UI | 2 | ~631 | ✅ 완료 |
-| Phase 9 | Level & EXP System | 4 | ~1,211 | ✅ 완료 |
-| **합계** | **9개 Phase** | **34개** | **~6,758줄** | **✅ 완료** |
+### 프로젝트 문서
+1. **WORK_STATUS.md** (현재 파일) - 전체 작업 현황
+2. **RESOURCES_GUIDE.md** - Resources 폴더 구조 및 사용법
+3. **specs/004-rpg-systems/** - 기능 명세 및 Task 목록
 
 ---
 
-**작성일**: 2025-11-02
-**다음 예정 작업**: Phase 7-9 PR 생성 또는 통합 테스트
-**브랜치**: 006-save-load-system
-**상태**: Phase 9까지 커밋 완료, 푸시 완료, PR 생성 대기
+**작성일**: 2025-01-15
+**다음 예정 작업**: Phase 10-11 PR 생성 또는 Phase 12 시작
+**브랜치**: 008-buff-debuff-system
+**상태**: Phase 11 + GameResourceManager 완료, 푸시 완료, PR 생성 대기
 
-🚀 **수고하셨습니다! Phase 6-9 완료!**
+🚀 **수고하셨습니다! Phase 10-11 + GameResourceManager 완료!**
