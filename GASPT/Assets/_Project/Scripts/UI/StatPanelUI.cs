@@ -77,12 +77,23 @@ namespace GASPT.UI
             }
 
             // StatusEffectManager 이벤트 구독
-            if (StatusEffectManager.HasInstance)
+            StatusEffectManager manager = StatusEffectManager.Instance;
+
+            if (manager != null)
             {
-                StatusEffectManager.Instance.OnEffectApplied += OnEffectChanged;
-                StatusEffectManager.Instance.OnEffectRemoved += OnEffectChanged;
+                // 중복 구독 방지를 위해 먼저 구독 해제
+                manager.OnEffectApplied -= OnEffectChanged;
+                manager.OnEffectRemoved -= OnEffectChanged;
+
+                // 구독
+                manager.OnEffectApplied += OnEffectChanged;
+                manager.OnEffectRemoved += OnEffectChanged;
 
                 Debug.Log("[StatPanelUI] StatusEffectManager 이벤트 구독 완료");
+            }
+            else
+            {
+                Debug.LogError("[StatPanelUI] StatusEffectManager를 찾을 수 없습니다.");
             }
         }
 

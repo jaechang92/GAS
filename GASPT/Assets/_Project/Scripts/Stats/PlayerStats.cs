@@ -182,15 +182,18 @@ namespace GASPT.Stats
             currentHP = MaxHP;
             isDead = false;
 
-            // StatusEffect 이벤트 구독
-            SubscribeToStatusEffectEvents();
-
             Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, Attack: {Attack}, Defense: {Defense}");
         }
 
-        private void OnDestroy()
+        private void OnEnable()
         {
-            // 이벤트 구독 해제
+            // StatusEffect 이벤트 구독 (OnEnable에서 구독해야 StatusEffectManager 초기화 후 구독 가능)
+            SubscribeToStatusEffectEvents();
+        }
+
+        private void OnDisable()
+        {
+            // StatusEffect 이벤트 구독 해제
             UnsubscribeFromStatusEffectEvents();
         }
 
@@ -580,10 +583,24 @@ namespace GASPT.Stats
         /// </summary>
         private void SubscribeToStatusEffectEvents()
         {
-            if (StatusEffectManager.HasInstance)
+            // Instance 호출로 StatusEffectManager가 없으면 자동 생성
+            StatusEffectManager manager = StatusEffectManager.Instance;
+
+            if (manager != null)
             {
-                StatusEffectManager.Instance.OnEffectApplied += OnEffectApplied;
-                StatusEffectManager.Instance.OnEffectRemoved += OnEffectRemoved;
+                // 중복 구독 방지를 위해 먼저 구독 해제
+                manager.OnEffectApplied -= OnEffectApplied;
+                manager.OnEffectRemoved -= OnEffectRemoved;
+
+                // 구독
+                manager.OnEffectApplied += OnEffectApplied;
+                manager.OnEffectRemoved += OnEffectRemoved;
+
+                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 완료");
+            }
+            else
+            {
+                Debug.LogError("[PlayerStats] StatusEffectManager를 찾을 수 없습니다.");
             }
         }
 
@@ -596,6 +613,8 @@ namespace GASPT.Stats
             {
                 StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
                 StatusEffectManager.Instance.OnEffectRemoved -= OnEffectRemoved;
+
+                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 해제");
             }
         }
 
