@@ -4,6 +4,7 @@ using GASPT.Economy;
 using GASPT.Inventory;
 using GASPT.Level;
 using GASPT.Save;
+using GASPT.StatusEffects;
 
 namespace GASPT.Core
 {
@@ -52,6 +53,9 @@ namespace GASPT.Core
 
             // 4. Save System
             PreloadSaveSystem();
+
+            // 5. StatusEffect System
+            PreloadStatusEffectManager();
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
         }
@@ -151,6 +155,25 @@ namespace GASPT.Core
             }
         }
 
+        /// <summary>
+        /// StatusEffectManager 사전 로딩
+        /// </summary>
+        private void PreloadStatusEffectManager()
+        {
+            LogMessage("StatusEffectManager 초기화 중...");
+
+            var instance = StatusEffectManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ StatusEffectManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ StatusEffectManager 초기화 실패");
+            }
+        }
+
 
         // ====== 유틸리티 ======
 
@@ -166,6 +189,7 @@ namespace GASPT.Core
             if (InventorySystem.HasInstance) count++;
             if (PlayerLevel.HasInstance) count++;
             if (SaveSystem.HasInstance) count++;
+            if (StatusEffectManager.HasInstance) count++;
 
             return count;
         }
@@ -204,7 +228,8 @@ namespace GASPT.Core
             Debug.Log($"InventorySystem: {(InventorySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PlayerLevel: {(PlayerLevel.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SaveSystem: {(SaveSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/5개 싱글톤 생성됨");
+            Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"총 {GetPreloadedCount()}/6개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 
