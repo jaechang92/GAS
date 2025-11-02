@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Core.Enums;
 using GASPT.Data;
+using GASPT.Combat;
 using UnityEngine;
 
 namespace GASPT.Stats
@@ -50,12 +51,25 @@ namespace GASPT.Stats
         private bool isDirty = true;
 
 
+        // ====== 현재 상태 (Combat) ======
+
+        /// <summary>
+        /// 현재 HP (전투 중 변경됨)
+        /// </summary>
+        private int currentHP;
+
+        /// <summary>
+        /// 사망 여부
+        /// </summary>
+        private bool isDead = false;
+
+
         // ====== 프로퍼티 (외부 접근) ======
 
         /// <summary>
-        /// 최종 HP (기본 + 장비 보너스)
+        /// 최대 HP (기본 + 장비 보너스)
         /// </summary>
-        public int HP
+        public int MaxHP
         {
             get
             {
@@ -63,6 +77,11 @@ namespace GASPT.Stats
                 return finalHP;
             }
         }
+
+        /// <summary>
+        /// 현재 HP (전투 중 변경되는 체력)
+        /// </summary>
+        public int CurrentHP => currentHP;
 
         /// <summary>
         /// 최종 공격력 (기본 + 장비 보너스)
@@ -88,6 +107,11 @@ namespace GASPT.Stats
             }
         }
 
+        /// <summary>
+        /// 사망 여부
+        /// </summary>
+        public bool IsDead => isDead;
+
 
         // ====== 이벤트 ======
 
@@ -96,6 +120,23 @@ namespace GASPT.Stats
         /// 매개변수: (StatType, 이전 값, 새 값)
         /// </summary>
         public event Action<StatType, int, int> OnStatChanged;
+
+        /// <summary>
+        /// 데미지를 받았을 때 발생하는 이벤트
+        /// 매개변수: (데미지량, 현재 HP, 최대 HP)
+        /// </summary>
+        public event Action<int, int, int> OnDamaged;
+
+        /// <summary>
+        /// 체력을 회복했을 때 발생하는 이벤트
+        /// 매개변수: (회복량, 현재 HP, 최대 HP)
+        /// </summary>
+        public event Action<int, int, int> OnHealed;
+
+        /// <summary>
+        /// 사망했을 때 발생하는 이벤트
+        /// </summary>
+        public event Action OnDeath;
 
 
         // ====== Unity 생명주기 ======
@@ -108,7 +149,11 @@ namespace GASPT.Stats
             // 초기 스탯 계산
             RecalculateStats();
 
-            Debug.Log($"[PlayerStats] 초기화 완료 - HP: {HP}, Attack: {Attack}, Defense: {Defense}");
+            // 현재 HP를 최대 HP로 초기화
+            currentHP = MaxHP;
+            isDead = false;
+
+            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, Attack: {Attack}, Defense: {Defense}");
         }
 
 
@@ -285,7 +330,8 @@ namespace GASPT.Stats
         {
             Debug.Log("========== PlayerStats ==========");
             Debug.Log($"기본 스탯: HP {baseHP}, Attack {baseAttack}, Defense {baseDefense}");
-            Debug.Log($"최종 스탯: HP {HP}, Attack {Attack}, Defense {Defense}");
+            Debug.Log($"최종 스탯: MaxHP {MaxHP}, Attack {Attack}, Defense {Defense}");
+            Debug.Log($"현재 상태: CurrentHP {CurrentHP}/{MaxHP}, IsDead {IsDead}");
             Debug.Log($"장착 아이템 수: {equippedItems.Count}");
 
             foreach (var kvp in equippedItems)
@@ -294,6 +340,179 @@ namespace GASPT.Stats
             }
 
             Debug.Log("=================================");
+        }
+
+
+        // ====== Combat 메서드 ======
+
+        /// <summary>
+        /// 데미지를 받습니다 (방어력 적용)
+        /// </summary>
+        /// <param name="incomingDamage">들어오는 데미지</param>
+        public void TakeDamage(int incomingDamage)
+        {
+            if (isDead)
+            {
+                Debug.LogWarning("[PlayerStats] TakeDamage(): 이미 사망한 상태입니다.");
+                return;
+            }
+
+            if (incomingDamage <= 0)
+            {
+                Debug.LogWarning($"[PlayerStats] TakeDamage(): 유효하지 않은 데미지입니다: {incomingDamage}");
+                return;
+            }
+
+            // DamageCalculator를 사용하여 방어력 적용
+            int actualDamage = DamageCalculator.CalculateDamageReceived(incomingDamage, Defense);
+
+            // HP 감소
+            int previousHP = currentHP;
+            currentHP -= actualDamage;
+            currentHP = Mathf.Max(currentHP, 0);
+
+            Debug.Log($"[PlayerStats] 데미지 받음: {incomingDamage} → 방어력 {Defense} 적용 → 실제 데미지 {actualDamage} → HP {previousHP} → {currentHP}");
+
+            // 이벤트 발생
+            OnDamaged?.Invoke(actualDamage, currentHP, MaxHP);
+
+            // 사망 체크
+            if (currentHP <= 0)
+            {
+                Die();
+            }
+        }
+
+        /// <summary>
+        /// 체력을 회복합니다
+        /// </summary>
+        /// <param name="healAmount">회복량</param>
+        public void Heal(int healAmount)
+        {
+            if (isDead)
+            {
+                Debug.LogWarning("[PlayerStats] Heal(): 사망한 상태에서는 회복할 수 없습니다.");
+                return;
+            }
+
+            if (healAmount <= 0)
+            {
+                Debug.LogWarning($"[PlayerStats] Heal(): 유효하지 않은 회복량입니다: {healAmount}");
+                return;
+            }
+
+            int previousHP = currentHP;
+            currentHP += healAmount;
+            currentHP = Mathf.Min(currentHP, MaxHP);
+
+            int actualHealed = currentHP - previousHP;
+
+            Debug.Log($"[PlayerStats] 체력 회복: {actualHealed} (HP {previousHP} → {currentHP})");
+
+            // 이벤트 발생
+            OnHealed?.Invoke(actualHealed, currentHP, MaxHP);
+        }
+
+        /// <summary>
+        /// 적에게 데미지를 입힙니다
+        /// </summary>
+        /// <param name="target">공격할 적</param>
+        public void DealDamageTo(GASPT.Enemy.Enemy target)
+        {
+            if (target == null)
+            {
+                Debug.LogWarning("[PlayerStats] DealDamageTo(): target이 null입니다.");
+                return;
+            }
+
+            if (isDead)
+            {
+                Debug.LogWarning("[PlayerStats] DealDamageTo(): 사망한 상태에서는 공격할 수 없습니다.");
+                return;
+            }
+
+            if (target.IsDead)
+            {
+                Debug.LogWarning($"[PlayerStats] DealDamageTo(): {target.name}은(는) 이미 사망했습니다.");
+                return;
+            }
+
+            // DamageCalculator를 사용하여 데미지 계산
+            int damage = DamageCalculator.CalculateDamageDealt(Attack);
+
+            Debug.Log($"[PlayerStats] {target.name}을(를) 공격! 공격력 {Attack} → 데미지 {damage}");
+
+            // 적에게 데미지 적용
+            target.TakeDamage(damage);
+        }
+
+        /// <summary>
+        /// 플레이어 사망 처리
+        /// </summary>
+        private void Die()
+        {
+            if (isDead)
+            {
+                return;
+            }
+
+            isDead = true;
+            currentHP = 0;
+
+            Debug.Log("[PlayerStats] 플레이어 사망!");
+
+            // 이벤트 발생
+            OnDeath?.Invoke();
+        }
+
+        /// <summary>
+        /// 플레이어를 부활시킵니다 (테스트용)
+        /// </summary>
+        public void Revive()
+        {
+            isDead = false;
+            currentHP = MaxHP;
+
+            Debug.Log($"[PlayerStats] 부활! HP {currentHP}/{MaxHP}");
+        }
+
+
+        // ====== Context Menu (테스트용) ======
+
+        [ContextMenu("Take 10 Damage (Test)")]
+        private void TestTakeDamage()
+        {
+            TakeDamage(10);
+        }
+
+        [ContextMenu("Heal 20 HP (Test)")]
+        private void TestHeal()
+        {
+            Heal(20);
+        }
+
+        [ContextMenu("Revive (Test)")]
+        private void TestRevive()
+        {
+            Revive();
+        }
+
+        [ContextMenu("Print Combat Info")]
+        private void PrintCombatInfo()
+        {
+            Debug.Log("========== Combat Info ==========");
+            Debug.Log($"CurrentHP: {CurrentHP}/{MaxHP}");
+            Debug.Log($"Attack: {Attack}");
+            Debug.Log($"Defense: {Defense}");
+            Debug.Log($"IsDead: {IsDead}");
+            Debug.Log($"\n{DamageCalculator.GetFormulaInfo()}");
+            Debug.Log("=================================");
+        }
+
+        [ContextMenu("Print Stats Info")]
+        private void PrintStatsInfo()
+        {
+            DebugPrintStats();
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using GASPT.Data;
 using GASPT.Economy;
+using GASPT.Combat;
 using Core.Enums;
 
 namespace GASPT.Enemy
@@ -171,6 +172,42 @@ namespace GASPT.Enemy
 
             // GameObject 파괴 (1초 후 - 사망 애니메이션용)
             Destroy(gameObject, 1f);
+        }
+
+
+        // ====== 공격 ======
+
+        /// <summary>
+        /// 플레이어를 공격합니다
+        /// </summary>
+        /// <param name="target">공격할 플레이어</param>
+        public void DealDamageTo(GASPT.Stats.PlayerStats target)
+        {
+            if (target == null)
+            {
+                Debug.LogWarning($"[Enemy] {enemyData.enemyName}: target이 null입니다.");
+                return;
+            }
+
+            if (isDead)
+            {
+                Debug.LogWarning($"[Enemy] {enemyData.enemyName}: 사망한 상태에서는 공격할 수 없습니다.");
+                return;
+            }
+
+            if (target.IsDead)
+            {
+                Debug.LogWarning($"[Enemy] {enemyData.enemyName}: 플레이어가 이미 사망했습니다.");
+                return;
+            }
+
+            // DamageCalculator를 사용하여 데미지 계산
+            int damage = DamageCalculator.CalculateDamageDealt(Attack);
+
+            Debug.Log($"[Enemy] {enemyData.enemyName}이(가) 플레이어를 공격! 공격력 {Attack} → 데미지 {damage}");
+
+            // 플레이어에게 데미지 적용
+            target.TakeDamage(damage);
         }
 
 

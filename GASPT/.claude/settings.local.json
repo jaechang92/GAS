@@ -34,7 +34,9 @@
       "SlashCommand(/speckit.tasks)",
       "Bash(bash:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
