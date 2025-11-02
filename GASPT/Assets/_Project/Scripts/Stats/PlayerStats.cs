@@ -4,6 +4,7 @@ using Core.Enums;
 using GASPT.Data;
 using GASPT.Combat;
 using GASPT.Save;
+using GASPT.UI;
 using UnityEngine;
 using GASPT.Enemies;
 
@@ -375,6 +376,13 @@ namespace GASPT.Stats
 
             Debug.Log($"[PlayerStats] 데미지 받음: {incomingDamage} → 방어력 {Defense} 적용 → 실제 데미지 {actualDamage} → HP {previousHP} → {currentHP}");
 
+            // DamageNumber 표시
+            if (DamageNumberPool.Instance != null)
+            {
+                Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowDamage(actualDamage, damagePosition, false);
+            }
+
             // 이벤트 발생
             OnDamaged?.Invoke(actualDamage, currentHP, MaxHP);
 
@@ -410,6 +418,13 @@ namespace GASPT.Stats
             int actualHealed = currentHP - previousHP;
 
             Debug.Log($"[PlayerStats] 체력 회복: {actualHealed} (HP {previousHP} → {currentHP})");
+
+            // DamageNumber 표시 (회복)
+            if (DamageNumberPool.Instance != null && actualHealed > 0)
+            {
+                Vector3 healPosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowHeal(actualHealed, healPosition);
+            }
 
             // 이벤트 발생
             OnHealed?.Invoke(actualHealed, currentHP, MaxHP);

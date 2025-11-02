@@ -4,6 +4,7 @@ using GASPT.Data;
 using GASPT.Economy;
 using GASPT.Combat;
 using GASPT.Level;
+using GASPT.UI;
 using Core.Enums;
 
 namespace GASPT.Enemies
@@ -137,6 +138,13 @@ namespace GASPT.Enemies
 
             Debug.Log($"[Enemy] {enemyData.enemyName}: {damage} 데미지 받음 ({previousHp} → {currentHp})");
 
+            // DamageNumber 표시
+            if (DamageNumberPool.Instance != null)
+            {
+                Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowDamage(damage, damagePosition, false);
+            }
+
             // 이벤트 발생
             OnHpChanged?.Invoke(currentHp, enemyData.maxHp);
 
@@ -258,6 +266,13 @@ namespace GASPT.Enemies
             {
                 playerLevel.AddExp(enemyData.expReward);
                 Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {enemyData.expReward} EXP");
+
+                // EXP Number 표시
+                if (DamageNumberPool.Instance != null)
+                {
+                    Vector3 expPosition = transform.position + Vector3.up * 2f;
+                    DamageNumberPool.Instance.ShowExp(enemyData.expReward, expPosition);
+                }
             }
             else
             {
