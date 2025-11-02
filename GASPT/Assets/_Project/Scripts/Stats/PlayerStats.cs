@@ -613,6 +613,9 @@ namespace GASPT.Stats
             }
 
             Debug.Log($"[PlayerStats] StatusEffect 적용: {effect.DisplayName}");
+
+            // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
+            TriggerStatChangedForEffect(effect);
         }
 
         /// <summary>
@@ -629,6 +632,30 @@ namespace GASPT.Stats
             }
 
             Debug.Log($"[PlayerStats] StatusEffect 제거: {effect.DisplayName}");
+
+            // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
+            TriggerStatChangedForEffect(effect);
+        }
+
+        /// <summary>
+        /// StatusEffect에 따라 OnStatChanged 이벤트 발생
+        /// </summary>
+        private void TriggerStatChangedForEffect(StatusEffect effect)
+        {
+            if (effect.EffectType == StatusEffectType.AttackUp ||
+                effect.EffectType == StatusEffectType.AttackDown)
+            {
+                // 공격력 변경 이벤트 발생
+                int currentAttack = Attack;
+                OnStatChanged?.Invoke(StatType.Attack, currentAttack, currentAttack);
+            }
+            else if (effect.EffectType == StatusEffectType.DefenseUp ||
+                     effect.EffectType == StatusEffectType.DefenseDown)
+            {
+                // 방어력 변경 이벤트 발생
+                int currentDefense = Defense;
+                OnStatChanged?.Invoke(StatType.Defense, currentDefense, currentDefense);
+            }
         }
 
         /// <summary>
