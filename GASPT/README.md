@@ -5,7 +5,7 @@
 
 [![Unity Version](https://img.shields.io/badge/Unity-2023.3%2B-blue)](https://unity.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Project Progress](https://img.shields.io/badge/Progress-84%25-brightgreen)](docs/development/CurrentStatus.md)
+[![Project Progress](https://img.shields.io/badge/Progress-90%25-brightgreen)](docs/development/CurrentStatus.md)
 
 ---
 
@@ -25,6 +25,12 @@ Skul 스타일의 정밀한 플랫포머 물리 (Transform 기반, 3가지 점�
 
 ### 🖥️ **HUD System**
 자동 생성 가능한 인게임 UI (체력바, 리소스, 아이템 슬롯)
+
+### 💫 **StatusEffect System**
+16종 버프/디버프 시스템 (공격력/방어력 버프, 독, 화상, DoT, 회복 등)
+
+### 🎨 **Combat UI**
+DamageNumber, 최적화된 오브젝트 풀링, 공용 Canvas 시스템
 
 ---
 
@@ -89,23 +95,25 @@ Skul 스타일의 정밀한 플랫포머 물리 (Transform 기반, 3가지 점�
 
 ## 🎯 현재 상태
 
-### 전체 진행률: **84%**
+### 전체 진행률: **90%**
 
 | Phase | 시스템 | 진행률 | 상태 |
 |-------|-------|--------|------|
-| **Phase 1** | Core 시스템 (GAS + FSM) | 100% | ✅ 완료 |
-| **Phase 2.1** | CharacterPhysics | 85% | 🔄 진행 중 |
-| **Phase 2.2** | Combat System | 70% | 🔄 진행 중 |
-| **Phase 3** | 콘텐츠 확장 | 0% | ⏳ 대기 |
-| **Phase 4** | UI/UX | 40% | 🔄 진행 중 |
-| **Phase 5** | 최적화 및 배포 | 0% | ⏳ 대기 |
+| **Phase 1-9** | Core 시스템 (GAS + FSM) | 100% | ✅ 완료 |
+| **Phase 10** | Combat UI & Damage Numbers | 100% | ✅ 완료 |
+| **Phase 11** | Buff/Debuff System | 100% | ✅ 완료 |
+| **Phase 12** | Skill/Item/AI System | 0% | ⏳ 준비 중 |
+| **Phase 13+** | 콘텐츠 확장 & 최적화 | 0% | ⏳ 대기 |
 
-### 최근 업데이트 (2025-10-04) 🆕
-- ✅ 콤보 체인 시스템 구현 (1→2→3 연계)
-- ✅ CharacterPhysics 점프 안정성 강화 (3가지 안전장치)
-- ✅ ResourceManager → GameResourceManager 리팩토링
-- ✅ DictionaryInspectorHelper 확장
-- ✅ 8개 커밋으로 작업 정리
+### 최근 업데이트 (2025-01-15) 🆕
+- ✅ **Phase 10**: Combat UI & Damage Numbers
+  - DamageNumber, DamageNumberPool, DamageNumberCreator 구현
+  - 공용 Canvas 최적화 시스템
+- ✅ **Phase 11**: Buff/Debuff System
+  - StatusEffect 16종 구현 (공격력/방어력 버프, 독, 화상, DoT 등)
+  - 이벤트 구독 타이밍 버그 수정
+- ✅ **GameResourceManager**: Resources.Load() 래퍼 및 캐싱 시스템
+- 📊 **프로젝트 규모**: 49개 파일, 약 9,795줄
 
 **상세 정보**: [현재 진행 상황](docs/development/CurrentStatus.md)
 
@@ -243,7 +251,7 @@ stateMachine.RequestTransition("Attack");
 - **Unity 버전**: 2023.3+
 - **라이선스**: MIT License
 - **시작일**: 2025-09
-- **최근 업데이트**: 2025-10-04
+- **최근 업데이트**: 2025-01-15
 
 ---
 
