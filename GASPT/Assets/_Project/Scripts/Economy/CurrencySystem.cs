@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using GASPT.Save;
 
 namespace GASPT.Economy
 {
@@ -157,6 +158,42 @@ namespace GASPT.Economy
         private void DebugSpendGold()
         {
             TrySpendGold(50);
+        }
+
+
+        // ====== Save/Load ======
+
+        /// <summary>
+        /// 현재 화폐 데이터를 저장용 구조로 반환합니다
+        /// </summary>
+        public CurrencyData GetSaveData()
+        {
+            CurrencyData data = new CurrencyData();
+            data.gold = currentGold;
+
+            Debug.Log($"[CurrencySystem] GetSaveData(): Gold={data.gold}");
+
+            return data;
+        }
+
+        /// <summary>
+        /// 저장된 데이터로부터 화폐 시스템을 복원합니다
+        /// </summary>
+        public void LoadFromSaveData(CurrencyData data)
+        {
+            if (data == null)
+            {
+                Debug.LogError("[CurrencySystem] LoadFromSaveData(): data가 null입니다.");
+                return;
+            }
+
+            int oldGold = currentGold;
+            currentGold = Mathf.Max(0, data.gold);
+
+            // 이벤트 발생
+            OnGoldChanged?.Invoke(oldGold, currentGold);
+
+            Debug.Log($"[CurrencySystem] LoadFromSaveData(): Gold={oldGold} → {currentGold}");
         }
     }
 }

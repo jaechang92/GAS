@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Data;
 using GASPT.Stats;
+using GASPT.Save;
 using Core.Enums;
 
 namespace GASPT.Inventory
@@ -251,6 +252,83 @@ namespace GASPT.Inventory
         {
             items.Clear();
             Debug.Log("[InventorySystem] 인벤토리 비우기 완료");
+        }
+
+
+        // ====== Save/Load ======
+
+        /// <summary>
+        /// 현재 인벤토리 데이터를 저장용 구조로 반환합니다
+        /// </summary>
+        public InventoryData GetSaveData()
+        {
+            InventoryData data = new InventoryData();
+            data.itemPaths = new List<string>();
+
+            foreach (Item item in items)
+            {
+                if (item != null)
+                {
+                    // ScriptableObject의 에셋 경로 저장
+#if UNITY_EDITOR
+                    string assetPath = UnityEditor.AssetDatabase.GetAssetPath(item);
+                    data.itemPaths.Add(assetPath);
+#else
+                    Debug.LogWarning($"[InventorySystem] GetSaveData(): 빌드 환경에서는 아이템 저장이 지원되지 않습니다. 아이템: {item.itemName}");
+#endif
+                }
+            }
+
+            Debug.Log($"[InventorySystem] GetSaveData(): Items={data.itemPaths.Count}");
+
+            return data;
+        }
+
+        /// <summary>
+        /// 저장된 데이터로부터 인벤토리를 복원합니다
+        /// </summary>
+        public void LoadFromSaveData(InventoryData data)
+        {
+            if (data == null)
+            {
+                Debug.LogError("[InventorySystem] LoadFromSaveData(): data가 null입니다.");
+                return;
+            }
+
+            // 인벤토리 비우기
+            items.Clear();
+
+            // 아이템 복원
+            if (data.itemPaths != null)
+            {
+                foreach (string itemPath in data.itemPaths)
+                {
+                    if (string.IsNullOrEmpty(itemPath))
+                    {
+                        Debug.LogWarning("[InventorySystem] LoadFromSaveData(): 빈 아이템 경로입니다.");
+                        continue;
+                    }
+
+#if UNITY_EDITOR
+                    // 에셋 경로로부터 아이템 로드
+                    Item item = UnityEditor.AssetDatabase.LoadAssetAtPath<Item>(itemPath);
+
+                    if (item != null)
+                    {
+                        items.Add(item);
+                        Debug.Log($"[InventorySystem] LoadFromSaveData(): 아이템 복원 - {item.itemName}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[InventorySystem] LoadFromSaveData(): 아이템을 찾을 수 없습니다. 경로: {itemPath}");
+                    }
+#else
+                    Debug.LogWarning($"[InventorySystem] LoadFromSaveData(): 빌드 환경에서는 아이템 불러오기가 지원되지 않습니다. 경로: {itemPath}");
+#endif
+                }
+            }
+
+            Debug.Log($"[InventorySystem] LoadFromSaveData() 완료: 아이템 {items.Count}개 복원");
         }
     }
 }
