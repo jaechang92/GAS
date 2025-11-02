@@ -6,6 +6,7 @@ using GASPT.Level;
 using GASPT.Save;
 using GASPT.StatusEffects;
 using GASPT.ResourceManagement;
+using GASPT.Skills;
 
 namespace GASPT.Core
 {
@@ -60,6 +61,9 @@ namespace GASPT.Core
 
             // 5. StatusEffect System
             PreloadStatusEffectManager();
+
+            // 6. Skill System
+            PreloadSkillSystem();
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
         }
@@ -197,6 +201,25 @@ namespace GASPT.Core
             }
         }
 
+        /// <summary>
+        /// SkillSystem 사전 로딩
+        /// </summary>
+        private void PreloadSkillSystem()
+        {
+            LogMessage("SkillSystem 초기화 중...");
+
+            var instance = SkillSystem.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ SkillSystem 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ SkillSystem 초기화 실패");
+            }
+        }
+
 
         // ====== 유틸리티 ======
 
@@ -214,6 +237,7 @@ namespace GASPT.Core
             if (PlayerLevel.HasInstance) count++;
             if (SaveSystem.HasInstance) count++;
             if (StatusEffectManager.HasInstance) count++;
+            if (SkillSystem.HasInstance) count++;
 
             return count;
         }
@@ -254,7 +278,8 @@ namespace GASPT.Core
             Debug.Log($"PlayerLevel: {(PlayerLevel.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SaveSystem: {(SaveSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/7개 싱글톤 생성됨");
+            Debug.Log($"SkillSystem: {(SkillSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"총 {GetPreloadedCount()}/8개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 
