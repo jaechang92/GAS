@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GASPT.ResourceManagement;
 
 namespace GASPT.UI
 {
@@ -12,7 +13,7 @@ namespace GASPT.UI
         // ====== 풀 설정 ======
 
         [Header("Pool Settings")]
-        [SerializeField] [Tooltip("DamageNumber 프리팹")]
+        [Tooltip("DamageNumber 프리팹 (자동 로딩)")]
         private DamageNumber damageNumberPrefab;
 
         [SerializeField] [Tooltip("초기 풀 크기")]
@@ -44,6 +45,7 @@ namespace GASPT.UI
         protected override void OnAwake()
         {
             mainCamera = Camera.main;
+            LoadDamageNumberPrefab();
             ValidateReferences();
             InitializeSharedCanvas();
             InitializePool();
@@ -63,13 +65,39 @@ namespace GASPT.UI
         // ====== 초기화 ======
 
         /// <summary>
+        /// DamageNumber 프리팹 자동 로드
+        /// </summary>
+        private void LoadDamageNumberPrefab()
+        {
+            GameObject prefabObj = GameResourceManager.Instance.LoadPrefab(ResourcePaths.Prefabs.UI.DamageNumber);
+
+            if (prefabObj != null)
+            {
+                damageNumberPrefab = prefabObj.GetComponent<DamageNumber>();
+
+                if (damageNumberPrefab != null)
+                {
+                    Debug.Log("[DamageNumberPool] DamageNumber 프리팹 자동 로드 완료");
+                }
+                else
+                {
+                    Debug.LogError("[DamageNumberPool] 로드된 프리팹에 DamageNumber 컴포넌트가 없습니다.");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[DamageNumberPool] DamageNumber 프리팹 로드 실패: {ResourcePaths.Prefabs.UI.DamageNumber}");
+            }
+        }
+
+        /// <summary>
         /// 참조 유효성 검증
         /// </summary>
         private void ValidateReferences()
         {
             if (damageNumberPrefab == null)
             {
-                Debug.LogError("[DamageNumberPool] damageNumberPrefab이 설정되지 않았습니다. Inspector에서 설정하세요.");
+                Debug.LogError("[DamageNumberPool] damageNumberPrefab 로드 실패. Resources 폴더 구조를 확인하세요.");
             }
 
             if (mainCamera == null)

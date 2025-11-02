@@ -5,6 +5,7 @@ using GASPT.Inventory;
 using GASPT.Level;
 using GASPT.Save;
 using GASPT.StatusEffects;
+using GASPT.ResourceManagement;
 
 namespace GASPT.Core
 {
@@ -41,6 +42,9 @@ namespace GASPT.Core
         /// </summary>
         private void PreloadAllSingletons()
         {
+            // 0. Resource Management (최우선 - 다른 시스템들이 의존)
+            PreloadGameResourceManager();
+
             // 1. UI Systems (게임플레이 중 자주 사용)
             PreloadDamageNumberPool();
 
@@ -58,6 +62,25 @@ namespace GASPT.Core
             PreloadStatusEffectManager();
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
+        }
+
+        /// <summary>
+        /// GameResourceManager 사전 로딩
+        /// </summary>
+        private void PreloadGameResourceManager()
+        {
+            LogMessage("GameResourceManager 초기화 중...");
+
+            var instance = GameResourceManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ GameResourceManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ GameResourceManager 초기화 실패");
+            }
         }
 
         /// <summary>
@@ -184,6 +207,7 @@ namespace GASPT.Core
         {
             int count = 0;
 
+            if (GameResourceManager.HasInstance) count++;
             if (DamageNumberPool.HasInstance) count++;
             if (CurrencySystem.HasInstance) count++;
             if (InventorySystem.HasInstance) count++;
@@ -223,13 +247,14 @@ namespace GASPT.Core
         private void CheckSingletonStatus()
         {
             Debug.Log("========== 싱글톤 상태 확인 ==========");
+            Debug.Log($"GameResourceManager: {(GameResourceManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"DamageNumberPool: {(DamageNumberPool.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"CurrencySystem: {(CurrencySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"InventorySystem: {(InventorySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PlayerLevel: {(PlayerLevel.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SaveSystem: {(SaveSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/6개 싱글톤 생성됨");
+            Debug.Log($"총 {GetPreloadedCount()}/7개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 
