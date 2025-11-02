@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using Core.Enums;
 using GASPT.Stats;
+using GASPT.StatusEffects;
 
 namespace GASPT.UI
 {
@@ -29,6 +30,19 @@ namespace GASPT.UI
         [Header("참조")]
         [SerializeField] [Tooltip("플레이어 스탯 컴포넌트")]
         private PlayerStats playerStats;
+
+
+        // ====== 색상 설정 ======
+
+        [Header("색상 설정")]
+        [SerializeField] [Tooltip("버프 적용 시 텍스트 색상")]
+        private Color buffColor = new Color(0.2f, 1f, 0.2f); // 밝은 초록색
+
+        [SerializeField] [Tooltip("디버프 적용 시 텍스트 색상")]
+        private Color debuffColor = new Color(1f, 0.2f, 0.2f); // 밝은 빨간색
+
+        [SerializeField] [Tooltip("기본 텍스트 색상")]
+        private Color normalColor = Color.white;
 
 
         // ====== Unity 생명주기 ======
@@ -61,6 +75,15 @@ namespace GASPT.UI
 
                 Debug.Log("[StatPanelUI] PlayerStats 이벤트 구독 완료");
             }
+
+            // StatusEffectManager 이벤트 구독
+            if (StatusEffectManager.HasInstance)
+            {
+                StatusEffectManager.Instance.OnEffectApplied += OnEffectChanged;
+                StatusEffectManager.Instance.OnEffectRemoved += OnEffectChanged;
+
+                Debug.Log("[StatPanelUI] StatusEffectManager 이벤트 구독 완료");
+            }
         }
 
         private void OnDisable()
@@ -71,6 +94,15 @@ namespace GASPT.UI
                 playerStats.OnStatChanged -= OnStatChanged;
 
                 Debug.Log("[StatPanelUI] PlayerStats 이벤트 구독 해제");
+            }
+
+            // StatusEffectManager 이벤트 구독 해제
+            if (StatusEffectManager.HasInstance)
+            {
+                StatusEffectManager.Instance.OnEffectApplied -= OnEffectChanged;
+                StatusEffectManager.Instance.OnEffectRemoved -= OnEffectChanged;
+
+                Debug.Log("[StatPanelUI] StatusEffectManager 이벤트 구독 해제");
             }
         }
 
@@ -92,11 +124,11 @@ namespace GASPT.UI
                     break;
 
                 case StatType.Attack:
-                    UpdateAttackText(newValue);
+                    UpdateAttackText();
                     break;
 
                 case StatType.Defense:
-                    UpdateDefenseText(newValue);
+                    UpdateDefenseText();
                     break;
 
                 default:
@@ -105,6 +137,32 @@ namespace GASPT.UI
             }
 
             Debug.Log($"[StatPanelUI] UI 업데이트: {statType} = {newValue}");
+        }
+
+        /// <summary>
+        /// StatusEffect 변경 시 이벤트 핸들러
+        /// </summary>
+        /// <param name="target">대상 GameObject</param>
+        /// <param name="effect">변경된 효과</param>
+        private void OnEffectChanged(GameObject target, StatusEffect effect)
+        {
+            // 플레이어가 아니면 무시
+            if (playerStats == null || target != playerStats.gameObject)
+            {
+                return;
+            }
+
+            // 공격력/방어력 관련 효과만 처리
+            if (effect.EffectType == StatusEffectType.AttackUp ||
+                effect.EffectType == StatusEffectType.AttackDown)
+            {
+                UpdateAttackText();
+            }
+            else if (effect.EffectType == StatusEffectType.DefenseUp ||
+                     effect.EffectType == StatusEffectType.DefenseDown)
+            {
+                UpdateDefenseText();
+            }
         }
 
 
@@ -118,8 +176,8 @@ namespace GASPT.UI
             if (playerStats == null) return;
 
             UpdateHPText(playerStats.CurrentHP);
-            UpdateAttackText(playerStats.Attack);
-            UpdateDefenseText(playerStats.Defense);
+            UpdateAttackText();
+            UpdateDefenseText();
 
             Debug.Log("[StatPanelUI] 모든 스탯 UI 업데이트 완료");
         }
@@ -136,24 +194,78 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// 공격력 텍스트 업데이트
+        /// 공격력 텍스트 업데이트 (버프/디버프 상태 반영)
         /// </summary>
-        private void UpdateAttackText(int value)
+        private void UpdateAttackText()
         {
-            if (attackText != null)
+            if (attackText == null || playerStats == null) return;
+
+            int currentAttack = playerStats.Attack;
+
+            // StatusEffect 확인
+            bool hasBuff = false;
+            bool hasDebuff = false;
+            int baseAttack = playerStats.BaseAttack; // 기본 공격력 (버프/디버프 없이)
+
+            if (StatusEffectManager.HasInstance)
             {
-                attackText.text = $"Attack: {value}";
+                hasBuff = StatusEffectManager.Instance.HasEffect(playerStats.gameObject, StatusEffectType.AttackUp);
+                hasDebuff = StatusEffectManager.Instance.HasEffect(playerStats.gameObject, StatusEffectType.AttackDown);
+            }
+
+            // 텍스트 설정
+            if (hasBuff)
+            {
+                attackText.text = $"Attack: {baseAttack} → {currentAttack}";
+                attackText.color = buffColor;
+            }
+            else if (hasDebuff)
+            {
+                attackText.text = $"Attack: {baseAttack} → {currentAttack}";
+                attackText.color = debuffColor;
+            }
+            else
+            {
+                attackText.text = $"Attack: {currentAttack}";
+                attackText.color = normalColor;
             }
         }
 
         /// <summary>
-        /// 방어력 텍스트 업데이트
+        /// 방어력 텍스트 업데이트 (버프/디버프 상태 반영)
         /// </summary>
-        private void UpdateDefenseText(int value)
+        private void UpdateDefenseText()
         {
-            if (defenseText != null)
+            if (defenseText == null || playerStats == null) return;
+
+            int currentDefense = playerStats.Defense;
+
+            // StatusEffect 확인
+            bool hasBuff = false;
+            bool hasDebuff = false;
+            int baseDefense = playerStats.BaseDefense; // 기본 방어력 (버프/디버프 없이)
+
+            if (StatusEffectManager.HasInstance)
             {
-                defenseText.text = $"Defense: {value}";
+                hasBuff = StatusEffectManager.Instance.HasEffect(playerStats.gameObject, StatusEffectType.DefenseUp);
+                hasDebuff = StatusEffectManager.Instance.HasEffect(playerStats.gameObject, StatusEffectType.DefenseDown);
+            }
+
+            // 텍스트 설정
+            if (hasBuff)
+            {
+                defenseText.text = $"Defense: {baseDefense} → {currentDefense}";
+                defenseText.color = buffColor;
+            }
+            else if (hasDebuff)
+            {
+                defenseText.text = $"Defense: {baseDefense} → {currentDefense}";
+                defenseText.color = debuffColor;
+            }
+            else
+            {
+                defenseText.text = $"Defense: {currentDefense}";
+                defenseText.color = normalColor;
             }
         }
 

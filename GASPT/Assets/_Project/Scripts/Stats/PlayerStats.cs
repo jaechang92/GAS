@@ -101,6 +101,18 @@ namespace GASPT.Stats
         }
 
         /// <summary>
+        /// 기본 공격력 (기본 + 장비 보너스, 버프/디버프 제외)
+        /// </summary>
+        public int BaseAttack
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return finalAttack;
+            }
+        }
+
+        /// <summary>
         /// 최종 방어력 (기본 + 장비 보너스 + 버프/디버프)
         /// </summary>
         public int Defense
@@ -109,6 +121,18 @@ namespace GASPT.Stats
             {
                 RecalculateIfDirty();
                 return ApplyStatusEffects(finalDefense, StatusEffectType.DefenseUp, StatusEffectType.DefenseDown);
+            }
+        }
+
+        /// <summary>
+        /// 기본 방어력 (기본 + 장비 보너스, 버프/디버프 제외)
+        /// </summary>
+        public int BaseDefense
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return finalDefense;
             }
         }
 
