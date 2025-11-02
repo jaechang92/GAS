@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 244b73df0d89e004d8f5dcec9ecf78b9, type: 3}
   m_Name: FireDragon
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Data.EnemyData
-  enemyType: 0
-  enemyName: 
+  enemyType: 2
+  enemyName: FireDragon
   icon: {fileID: 0}
-  maxHp: 30
-  attack: 5
-  minGoldDrop: 15
-  maxGoldDrop: 25
+  maxHp: 150
+  attack: 15
+  minGoldDrop: 100
+  maxGoldDrop: 150
   showNameTag: 0
-  showBossHealthBar: 0
+  showBossHealthBar: 1
