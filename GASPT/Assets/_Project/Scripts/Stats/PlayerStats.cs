@@ -5,6 +5,7 @@ using GASPT.Data;
 using GASPT.Combat;
 using GASPT.Save;
 using UnityEngine;
+using GASPT.Enemies;
 
 namespace GASPT.Stats
 {
@@ -418,7 +419,7 @@ namespace GASPT.Stats
         /// 적에게 데미지를 입힙니다
         /// </summary>
         /// <param name="target">공격할 적</param>
-        public void DealDamageTo(GASPT.Enemy.Enemy target)
+        public void DealDamageTo(Enemy target)
         {
             if (target == null)
             {

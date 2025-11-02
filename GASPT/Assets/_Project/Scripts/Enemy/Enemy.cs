@@ -3,9 +3,10 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Economy;
 using GASPT.Combat;
+using GASPT.Level;
 using Core.Enums;
 
-namespace GASPT.Enemy
+namespace GASPT.Enemies
 {
     /// <summary>
     /// 적 MonoBehaviour
@@ -167,6 +168,9 @@ namespace GASPT.Enemy
             // 골드 드롭
             DropGold();
 
+            // 경험치 지급
+            GiveExp();
+
             // 사망 이벤트 발생
             OnDeath?.Invoke(this);
 
@@ -234,6 +238,30 @@ namespace GASPT.Enemy
             else
             {
                 Debug.LogError($"[Enemy] CurrencySystem을 찾을 수 없습니다. 골드 드롭 실패: {goldDrop}");
+            }
+        }
+
+
+        // ====== 경험치 지급 ======
+
+        /// <summary>
+        /// 경험치 지급 처리
+        /// </summary>
+        private void GiveExp()
+        {
+            if (enemyData == null) return;
+
+            // PlayerLevel에 경험치 추가
+            PlayerLevel playerLevel = PlayerLevel.Instance;
+
+            if (playerLevel != null)
+            {
+                playerLevel.AddExp(enemyData.expReward);
+                Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {enemyData.expReward} EXP");
+            }
+            else
+            {
+                Debug.LogError($"[Enemy] PlayerLevel을 찾을 수 없습니다. EXP 지급 실패: {enemyData.expReward}");
             }
         }
 
