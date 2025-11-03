@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-02
-**현재 브랜치**: `009-skill-system`
-**작업 세션**: Phase 12 (Skill System) 구현 완료
+**최종 업데이트**: 2025-11-04
+**현재 브랜치**: `011-awaitable-refactor`
+**작업 세션**: Mana Bar UI 구현 + Awaitable 리팩토링 완료
 
 ---
 
@@ -301,31 +301,99 @@
   - 네이밍 규칙
   - 주의사항 및 베스트 프랙티스
 
+#### ✅ Mana Bar UI 구현 (Phase 12 확장)
+**완료 Task**: 2개
+**완료 날짜**: 2025-11-04
+
+**핵심 파일** (2개):
+- PlayerManaBar.cs (350줄) - 마나바 UI 스크립트
+  - 마나 슬라이더 및 텍스트 표시 (50/100 형식)
+  - **Awaitable 기반 플래시 애니메이션** (Coroutine 대신)
+  - CancellationTokenSource로 플래시 중단 관리
+  - 마나 소모 시: 빨간색 플래시
+  - 마나 회복 시: 밝은 파란색 플래시
+  - 저마나 경고 (20% 이하 주황색)
+  - PlayerStats.OnManaChanged 이벤트 구독
+  - lastMana 필드로 이전 마나 추적
+  - Context Menu 테스트 3개
+
+- PlayerManaBarCreator.cs (280줄) - 에디터 도구
+  - Menu: `Tools > GASPT > Create Player ManaBar UI`
+  - Canvas 자동 생성/찾기
+  - HealthBar 아래 배치 (Y: -100, 크기: 400x40)
+  - SerializedObject로 private 필드 자동 연결
+  - Delete 유틸리티 추가
+
+**PR 정보**:
+- PR #4: https://github.com/jaechang92/GAS/pull/4
+- 브랜치: 010-mana-bar-ui
+- 커밋 2개:
+  - b017f13 수정: OnManaChanged 이벤트 매개변수 수정
+  - 5039719 기능: PlayerManaBar UI 구현 (Awaitable 사용)
+
+**주요 이슈 해결**:
+- OnManaChanged 이벤트 매개변수 불일치 문제 해결
+  - 초기: (int oldMana, int newMana, int maxMana) - 3개 매개변수 ❌
+  - 수정: (int currentMana, int maxMana) - 2개 매개변수 ✅
+  - lastMana 필드 추가로 이전 값 추적
+
+#### ✅ HealthBar/ExpBar Awaitable 리팩토링
+**완료 Task**: 3개
+**완료 날짜**: 2025-11-04
+
+**리팩토링된 파일** (3개):
+- PlayerHealthBar.cs
+  - Coroutine → Awaitable 변환
+  - CancellationTokenSource 사용
+  - OperationCanceledException 처리
+
+- PlayerExpBar.cs
+  - Coroutine → Awaitable 변환
+  - 2개 CancellationTokenSource (flash, levelUp)
+  - OperationCanceledException 처리
+
+- PlayerManaBar.cs
+  - OperationCanceledException 처리 추가 (일관성)
+
+**PR 정보**:
+- PR #5: https://github.com/jaechang92/GAS/pull/5
+- 브랜치: 011-awaitable-refactor
+- 커밋 2개:
+  - da1b389 수정: OperationCanceledException 처리 추가
+  - 18232fd 리팩토링: HealthBar/ExpBar Coroutine → Awaitable 변경
+
+**주요 이슈 해결**:
+- OperationCanceledException 발생 문제 해결
+  - 문제: CancellationToken 취소 시 Awaitable.NextFrameAsync가 예외 던짐
+  - 해결: try-catch 블록으로 예외 조용히 처리
+  - 취소는 정상적인 동작 (새 애니메이션 시작 시 이전 중단)
+
+**프로젝트 규칙 완전 준수**:
+- ✅ 모든 UI가 Awaitable 패턴 사용 (Coroutine 제거)
+- ✅ PlayerHealthBar: Awaitable
+- ✅ PlayerExpBar: Awaitable
+- ✅ PlayerManaBar: Awaitable
+- ✅ SkillSlotUI: Awaitable
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 009-skill-system
+브랜치: 011-awaitable-refactor (로컬)
 원격 푸시: 완료
-최종 커밋: fa7c6cb (에셋: 테스트 에셋 및 Unity 생성 파일 추가)
-Phase 12 커밋: eff2bbe ~ fa7c6cb (총 6개 커밋)
+최종 커밋: da1b389 (수정: OperationCanceledException 처리 추가)
 ```
 
-### 주요 커밋 목록 (Phase 12)
-```
-fa7c6cb 에셋: 테스트 에셋 및 Unity 생성 파일 추가
-44f5632 기능: Skill UI 시스템 구현 (SkillSlotUI, SkillUIPanel, SkillUICreator)
-38113eb 도구: SkillSystem 원클릭 테스트 환경 자동 생성 툴
-5dd9ac0 테스트: SkillSystem 테스트 스크립트 및 가이드 작성
-658687a 기능: Skill 클래스 및 SkillSystem 싱글톤 구현
-eff2bbe 기능: SkillData ScriptableObject 및 PlayerStats 마나 시스템 추가
-```
+**오늘 작업 브랜치 (2025-11-04)**:
+1. 009-skill-system (Phase 12) → PR #3 생성 완료
+2. 010-mana-bar-ui (Mana Bar UI) → PR #4 생성 완료
+3. 011-awaitable-refactor (Awaitable 리팩토링) → PR #5 생성 완료
 
 ### 싱글톤 시스템 현황 (8개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
-2. **SkillSystem** - 스킬 슬롯 관리 및 실행 (NEW)
+2. **SkillSystem** - 스킬 슬롯 관리 및 실행
 3. **DamageNumberPool** - 데미지 텍스트 풀링
 4. **CurrencySystem** - 골드 관리
 5. **InventorySystem** - 인벤토리 관리
@@ -333,21 +401,21 @@ eff2bbe 기능: SkillData ScriptableObject 및 PlayerStats 마나 시스템 추�
 7. **SaveSystem** - 저장/로드
 8. **StatusEffectManager** - 상태이상 효과 관리
 
-### PR 생성 대기
-- **Phase 12 (Skill System) PR**: 생성 필요
-  - **Base 브랜치**: master
-  - **Compare 브랜치**: 009-skill-system
-  - **포함 내용**:
-    - SkillData ScriptableObject
-    - Skill 실행 로직 (async Awaitable 쿨다운)
-    - SkillSystem 싱글톤
-    - PlayerStats 마나 시스템
-    - SkillSlotUI (키보드 입력, 쿨다운 애니메이션)
-    - SkillUIPanel (이벤트 구독)
-    - SkillUICreator (자동 UI 생성 도구)
-    - SkillSystemTest (8개 테스트)
-    - SkillSystemTestSetup (원클릭 테스트 환경)
-    - 테스트 에셋 5개
+### 생성된 PR (머지 대기)
+- **PR #3**: Phase 12 (Skill System)
+  - 링크: https://github.com/jaechang92/GAS/pull/3
+  - 브랜치: 009-skill-system
+  - 상태: 리뷰 대기
+
+- **PR #4**: Mana Bar UI 구현
+  - 링크: https://github.com/jaechang92/GAS/pull/4
+  - 브랜치: 010-mana-bar-ui
+  - 상태: 리뷰 대기
+
+- **PR #5**: HealthBar/ExpBar Awaitable 리팩토링
+  - 링크: https://github.com/jaechang92/GAS/pull/5
+  - 브랜치: 011-awaitable-refactor
+  - 상태: 리뷰 대기
 
 ---
 
@@ -403,21 +471,23 @@ Assets/_Project/Scripts/
 │   ├── ShopItemSlot.cs
 │   ├── EnemyNameTag.cs
 │   ├── BossHealthBar.cs
-│   ├── PlayerHealthBar.cs
-│   ├── PlayerExpBar.cs
+│   ├── PlayerHealthBar.cs (Awaitable)
+│   ├── PlayerExpBar.cs (Awaitable)
+│   ├── PlayerManaBar.cs (Awaitable) (NEW)
 │   ├── DamageNumber.cs
 │   ├── DamageNumberPool.cs (자동 로딩)
-│   ├── SkillSlotUI.cs (NEW)
-│   └── SkillUIPanel.cs (NEW)
+│   ├── SkillSlotUI.cs (Awaitable)
+│   └── SkillUIPanel.cs
 ├── Editor/
 │   ├── StatPanelCreator.cs
 │   ├── ShopUICreator.cs
 │   ├── EnemyUICreator.cs
 │   ├── PlayerHealthBarCreator.cs
 │   ├── PlayerExpBarCreator.cs
+│   ├── PlayerManaBarCreator.cs (NEW)
 │   ├── DamageNumberCreator.cs
-│   ├── SkillUICreator.cs (NEW)
-│   └── SkillSystemTestSetup.cs (NEW)
+│   ├── SkillUICreator.cs
+│   └── SkillSystemTestSetup.cs
 └── Testing/ (Tests에서 이름 변경)
     ├── CombatTest.cs
     ├── SaveTest.cs
@@ -456,7 +526,9 @@ GASPT/
 | Phase 11 | Buff/Debuff System | 9 | ~1,691 | ✅ 완료 |
 | 추가 | GameResourceManager | 3 | ~666 | ✅ 완료 |
 | Phase 12 | Skill System | 11 | ~2,489 | ✅ 완료 |
-| **합계** | **12개 Phase + 추가** | **60개** | **~12,284줄** | **✅ 완료** |
+| Phase 12+ | Mana Bar UI | 2 | ~630 | ✅ 완료 |
+| 리팩토링 | Awaitable 패턴 전환 | 3 | (기존 파일) | ✅ 완료 |
+| **합계** | **12개 Phase + 추가 + 확장** | **65개** | **~13,544줄** | **✅ 완료** |
 
 ---
 
@@ -776,9 +848,9 @@ private void OnDisable()
 
 ---
 
-**작성일**: 2025-11-02
-**다음 예정 작업**: Phase 12 PR 생성 (우선) 또는 다음 Phase 시작
-**브랜치**: 009-skill-system
-**상태**: Phase 12 (Skill System) 완료, 푸시 완료, PR 생성 대기
+**작성일**: 2025-11-04
+**다음 예정 작업**: PR #3, #4, #5 리뷰 및 머지 / BuffIconUI 구현 / Item Drop System
+**브랜치**: 011-awaitable-refactor
+**상태**: Phase 12 완료, Mana Bar UI 완료, Awaitable 리팩토링 완료, PR 3개 생성 완료
 
-🚀 **수고하셨습니다! Phase 12 (Skill System) 완료!**
+🚀 **수고하셨습니다! Mana Bar UI 및 Awaitable 리팩토링 완료!**
