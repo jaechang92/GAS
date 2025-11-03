@@ -55,6 +55,7 @@ namespace GASPT.UI
 
         private Color currentNormalColor;
         private CancellationTokenSource flashCts;
+        private int lastMana; // 이전 마나 값 (플래시 효과 판단용)
 
 
         // ====== Unity 생명주기 ======
@@ -128,6 +129,7 @@ namespace GASPT.UI
         {
             if (playerStats != null)
             {
+                lastMana = playerStats.CurrentMana;
                 UpdateManaBar(playerStats.CurrentMana, playerStats.MaxMana);
             }
 
@@ -170,22 +172,25 @@ namespace GASPT.UI
         /// <summary>
         /// 플레이어 마나가 변경되었을 때
         /// </summary>
-        private void OnPlayerManaChanged(int oldMana, int newMana, int maxMana)
+        private void OnPlayerManaChanged(int currentMana, int maxMana)
         {
-            Debug.Log($"[PlayerManaBar] OnManaChanged 호출: {oldMana} → {newMana}/{maxMana}");
-            UpdateManaBar(newMana, maxMana);
+            Debug.Log($"[PlayerManaBar] OnManaChanged 호출: {lastMana} → {currentMana}/{maxMana}");
+            UpdateManaBar(currentMana, maxMana);
 
             // 마나 소모 또는 회복 플래시
-            if (newMana < oldMana)
+            if (currentMana < lastMana)
             {
                 // 마나 소모
                 FlashColor(spendColor);
             }
-            else if (newMana > oldMana)
+            else if (currentMana > lastMana)
             {
                 // 마나 회복
                 FlashColor(regenColor);
             }
+
+            // 현재 마나를 lastMana에 저장
+            lastMana = currentMana;
         }
 
 
@@ -306,6 +311,7 @@ namespace GASPT.UI
             // UI 업데이트
             if (playerStats != null)
             {
+                lastMana = playerStats.CurrentMana;
                 UpdateManaBar(playerStats.CurrentMana, playerStats.MaxMana);
             }
         }
