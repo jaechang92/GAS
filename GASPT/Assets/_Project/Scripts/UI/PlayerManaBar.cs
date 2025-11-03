@@ -262,7 +262,14 @@ namespace GASPT.UI
             flashCts?.Cancel();
             flashCts = new CancellationTokenSource();
 
-            await FlashColorAsync(flashColor, flashCts.Token);
+            try
+            {
+                await FlashColorAsync(flashColor, flashCts.Token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // 취소됨 - 정상적인 동작
+            }
         }
 
         /// <summary>
