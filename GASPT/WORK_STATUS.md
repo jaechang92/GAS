@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-04
-**현재 브랜치**: `011-awaitable-refactor`
-**작업 세션**: Mana Bar UI 구현 + Awaitable 리팩토링 완료
+**최종 업데이트**: 2025-11-09
+**현재 브랜치**: `012-buff-icon-ui`
+**작업 세션**: BuffIcon UI 구현 (버프/디버프 시각화) 완료
 
 ---
 
@@ -164,6 +164,73 @@
 - StatusEffectManager 중첩 시 이벤트 발생
 - PlayerStats OnStatChanged 이벤트 트리거
 - 이벤트 구독 타이밍 문제 해결 (Awake → OnEnable)
+
+#### ✅ BuffIcon UI 구현 (Phase 11 확장)
+**완료 Task**: 7개
+**완료 날짜**: 2025-11-09
+
+**핵심 파일** (3개):
+- BuffIcon.cs (192줄) - 단일 버프 아이콘 UI
+  - 아이콘 이미지, 원형 타이머, 스택 수, 남은 시간 표시
+  - **Awaitable 기반 타이머 업데이트** (Coroutine 대신)
+  - CancellationTokenSource로 업데이트 중단 관리
+  - 버프(초록)/디버프(빨강) 테두리 색상 구분
+  - Show(), Hide(), UpdateStack() 메서드
+
+- BuffIconPanel.cs (246줄) - 아이콘 컨테이너 및 풀링
+  - 최대 10개 BuffIcon 오브젝트 풀링
+  - StatusEffectManager 이벤트 구독
+  - OnEffectApplied → ShowIcon()
+  - OnEffectRemoved → HideIcon()
+  - OnEffectStacked → UpdateStack()
+  - SetTarget() - 타겟 오브젝트 동적 변경
+  - Context Menu 테스트 3개
+
+- BuffIconCreator.cs (271줄) - 에디터 자동 생성 도구
+  - Menu: `Tools > GASPT > UI > Create Buff Icon UI`
+  - BuffIconPanel 자동 생성 (캔버스 왼쪽 상단, 400x80px)
+  - BuffIcon 프리팹 자동 생성 (Resources/Prefabs/UI/)
+  - 6개 자식 UI 요소 자동 생성 (Background, IconImage, TimerFillImage, BorderImage, StackText, TimeText)
+  - SerializedObject로 모든 참조 자동 연결
+  - Delete Buff Icon Panel 유틸리티
+
+**기존 시스템 수정** (3개 파일):
+- StatusEffect.cs 수정
+  - Icon 프로퍼티 추가 (Sprite)
+  - IsBuff 프로퍼티 추가 (bool)
+  - 생성자에 icon, isBuff 매개변수 추가
+
+- StatusEffectData.cs 수정
+  - CreateInstance()에서 icon, isBuff 전달
+
+- StatusEffectManager.cs 수정
+  - OnEffectStacked 이벤트 추가 (중첩 시 발생)
+  - ApplyEffect()에서 중첩 시 OnEffectStacked 호출
+
+**문서화**:
+- ERROR_SOLUTIONS_PORTFOLIO.md (+841줄)
+  - Section 3: Awaitable과 CancellationToken 완전 가이드
+  - Section 4: BuffIcon ContinueWith 에러 해결
+
+**PR 정보**:
+- PR #6: https://github.com/jaechang92/GAS/pull/6
+- 브랜치: 012-buff-icon-ui
+- 커밋 5개:
+  - 7b1f861 기능: BuffIcon UI 구현 (버프/디버프 시각화)
+  - 8e85598 수정: StatusEffectManager에 OnEffectStacked 이벤트 추가
+  - ee20a27 수정: BuffIcon ContinueWith 에러 수정 (CS1061)
+  - 92fb48e 문서: Awaitable과 CancellationToken 포트폴리오 문서 추가
+  - 0ac9e69 테스트: BuffIcon UI 프리팹 및 테스트 씬 추가
+
+**테스트 완료**:
+✅ 아이콘 표시/숨김 동작 확인
+✅ 원형 타이머 실시간 업데이트 확인
+✅ 남은 시간 텍스트 업데이트 확인 (10초 이상: 정수, 10초 미만: 소수점 1자리)
+✅ 스택 수 표시 확인 (2개 이상일 때만 표시)
+✅ 버프(초록)/디버프(빨강) 색상 구분 확인
+✅ 지속시간 종료 시 자동 제거 확인
+✅ 여러 효과 동시 표시 확인
+✅ 오브젝트 풀링 정상 동작 확인
 
 #### ✅ Phase 12: Skill System (스킬 시스템)
 **완료 Task**: 12개
@@ -381,15 +448,13 @@
 
 ### Git 상태
 ```bash
-브랜치: 011-awaitable-refactor (로컬)
+브랜치: 012-buff-icon-ui (로컬)
 원격 푸시: 완료
-최종 커밋: da1b389 (수정: OperationCanceledException 처리 추가)
+최종 커밋: 0ac9e69 (테스트: BuffIcon UI 프리팹 및 테스트 씬 추가)
 ```
 
-**오늘 작업 브랜치 (2025-11-04)**:
-1. 009-skill-system (Phase 12) → PR #3 생성 완료
-2. 010-mana-bar-ui (Mana Bar UI) → PR #4 생성 완료
-3. 011-awaitable-refactor (Awaitable 리팩토링) → PR #5 생성 완료
+**오늘 작업 브랜치 (2025-11-09)**:
+1. 012-buff-icon-ui (BuffIcon UI) → PR #6 생성 완료 (테스트 완료)
 
 ### 싱글톤 시스템 현황 (8개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
@@ -405,17 +470,22 @@
 - **PR #3**: Phase 12 (Skill System)
   - 링크: https://github.com/jaechang92/GAS/pull/3
   - 브랜치: 009-skill-system
-  - 상태: 리뷰 대기
+  - 상태: 머지 완료 ✅
 
 - **PR #4**: Mana Bar UI 구현
   - 링크: https://github.com/jaechang92/GAS/pull/4
   - 브랜치: 010-mana-bar-ui
-  - 상태: 리뷰 대기
+  - 상태: 머지 완료 ✅
 
 - **PR #5**: HealthBar/ExpBar Awaitable 리팩토링
   - 링크: https://github.com/jaechang92/GAS/pull/5
   - 브랜치: 011-awaitable-refactor
-  - 상태: 리뷰 대기
+  - 상태: 머지 완료 ✅
+
+- **PR #6**: BuffIcon UI 구현 (버프/디버프 시각화)
+  - 링크: https://github.com/jaechang92/GAS/pull/6
+  - 브랜치: 012-buff-icon-ui
+  - 상태: 리뷰 대기 (테스트 완료)
 
 ---
 
@@ -473,7 +543,9 @@ Assets/_Project/Scripts/
 │   ├── BossHealthBar.cs
 │   ├── PlayerHealthBar.cs (Awaitable)
 │   ├── PlayerExpBar.cs (Awaitable)
-│   ├── PlayerManaBar.cs (Awaitable) (NEW)
+│   ├── PlayerManaBar.cs (Awaitable)
+│   ├── BuffIcon.cs (Awaitable) (NEW)
+│   ├── BuffIconPanel.cs (NEW)
 │   ├── DamageNumber.cs
 │   ├── DamageNumberPool.cs (자동 로딩)
 │   ├── SkillSlotUI.cs (Awaitable)
@@ -484,7 +556,8 @@ Assets/_Project/Scripts/
 │   ├── EnemyUICreator.cs
 │   ├── PlayerHealthBarCreator.cs
 │   ├── PlayerExpBarCreator.cs
-│   ├── PlayerManaBarCreator.cs (NEW)
+│   ├── PlayerManaBarCreator.cs
+│   ├── BuffIconCreator.cs (NEW)
 │   ├── DamageNumberCreator.cs
 │   ├── SkillUICreator.cs
 │   └── SkillSystemTestSetup.cs
@@ -524,11 +597,13 @@ GASPT/
 | Phase 9 | Level & EXP System | 4 | ~1,211 | ✅ 완료 |
 | Phase 10 | Combat UI & Damage Numbers | 3 | ~680 | ✅ 완료 |
 | Phase 11 | Buff/Debuff System | 9 | ~1,691 | ✅ 완료 |
+| Phase 11+ | BuffIcon UI | 3 | ~709 | ✅ 완료 |
 | 추가 | GameResourceManager | 3 | ~666 | ✅ 완료 |
 | Phase 12 | Skill System | 11 | ~2,489 | ✅ 완료 |
 | Phase 12+ | Mana Bar UI | 2 | ~630 | ✅ 완료 |
 | 리팩토링 | Awaitable 패턴 전환 | 3 | (기존 파일) | ✅ 완료 |
-| **합계** | **12개 Phase + 추가 + 확장** | **65개** | **~13,544줄** | **✅ 완료** |
+| 문서 | Awaitable 가이드 | 1 | +841 | ✅ 완료 |
+| **합계** | **12개 Phase + 추가 + 확장** | **71개** | **~16,094줄** | **✅ 완료** |
 
 ---
 
