@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
 **최종 업데이트**: 2025-11-09
-**현재 브랜치**: `012-buff-icon-ui`
-**작업 세션**: BuffIcon UI 구현 (버프/디버프 시각화) 완료
+**현재 브랜치**: `013-item-drop-loot`
+**작업 세션**: Item Drop & Loot System 구현 완료
 
 ---
 
@@ -232,6 +232,100 @@
 ✅ 여러 효과 동시 표시 확인
 ✅ 오브젝트 풀링 정상 동작 확인
 
+#### ✅ Phase 13: Item Drop & Loot System
+**완료 Task**: 8개
+**완료 날짜**: 2025-11-09
+
+**핵심 시스템** (4개 파일):
+- LootEntry.cs (100줄) - 드롭 항목 정의
+  - Item, dropChance (0~1), minQuantity, maxQuantity
+  - Validate() 검증 메서드
+
+- LootTable.cs (239줄) - ScriptableObject 확률 테이블
+  - 누적 확률 알고리즘 (Cumulative Probability)
+  - GetRandomDrop() - 확률 기반 아이템 선택
+  - OnValidate() - 자동 수량 보정 (FixLootEntries)
+  - ValidateTable() - 확률 합계 검증
+  - 디버그 도구: PrintInfo(), TestSimulate100Drops()
+
+- LootSystem.cs (230줄) - 싱글톤 드롭 관리자
+  - DropLoot(LootTable, position) - 테이블 기반 드롭
+  - DropItem(Item, position) - 직접 드롭
+  - PickUpItem(Item) - 아이템 획득 (InventorySystem 연동)
+  - 이벤트: OnItemDropped, OnItemPickedUp
+
+- DroppedItem.cs (200줄) - 월드 아이템 MonoBehaviour
+  - **Awaitable 기반 부유 애니메이션** (FloatAnimationAsync)
+  - **Awaitable 기반 30초 자동 소멸** (LifetimeTimerAsync)
+  - CancellationToken 정리 (OnDestroy)
+  - OnTriggerEnter2D - 플레이어 충돌 시 자동 획득
+
+**UI 시스템** (3개 파일):
+- ItemPickupUI.cs (186줄) - 획득 알림 UI 관리
+  - 최대 5개 슬롯 오브젝트 풀링
+  - LootSystem.OnItemPickedUp 이벤트 구독
+  - ShowPickupNotification() - 알림 표시
+
+- ItemPickupSlot.cs (126줄) - 개별 알림 슬롯
+  - **Awaitable 기반 페이드 인/아웃 애니메이션**
+  - 아이콘, 아이템명 표시 ("{아이템명} 획득!")
+  - CancellationToken으로 애니메이션 중단 관리
+
+- ItemPickupUICreator.cs (220줄) - 에디터 자동 생성 도구
+  - Menu: `Tools > GASPT > UI > Create Item Pickup UI`
+  - ItemPickupUIPanel 자동 생성 (캔버스 상단 배치)
+  - ItemPickupSlot 프리팹 자동 생성 (Resources/Prefabs/UI/)
+  - SerializedObject로 모든 참조 자동 연결
+
+**테스트 도구** (1개 파일):
+- LootSystemTest.cs (220줄) - 6개 Context Menu 테스트
+  - Test01: 시스템 초기화 확인
+  - Test02: 단일 아이템 100% 드롭
+  - Test03: LootTable 확률 드롭
+  - Test04: 10회 연속 드롭 (확률 검증)
+  - Test05: LootTable 검증
+  - Test06: DroppedItem 생명주기 (30초 소멸)
+
+**기존 시스템 통합** (4개 파일):
+- EnemyData.cs 수정 - lootTable 필드 추가
+- Enemy.cs 수정 - DropLoot() 메서드 추가 (Die()에서 호출)
+- SingletonPreloader.cs 수정 - LootSystem 사전 로딩 (총 9개 싱글톤)
+- ResourcePaths.cs 수정 - DroppedItem 경로 추가
+
+**문서화**:
+- ERROR_SOLUTIONS_PORTFOLIO.md (+553줄)
+  - Section 5: Unity ScriptableObject Serialization 완전 가이드
+  - YAML 직렬화 시스템 설명
+  - 필드 초기화 vs 생성자 vs 역직렬화
+  - LootEntry 수량 검증 문제 사례 연구
+  - 4가지 해결 방법 비교 (OnValidate, Factory, ISerializationCallbackReceiver, PropertyDrawer)
+  - 베스트 프랙티스 및 디버깅 팁
+
+**PR 정보**:
+- PR #7: https://github.com/jaechang92/GAS/pull/7
+- 브랜치: 013-item-drop-loot
+- 커밋 6개:
+  - c3351e9 기능: Item Drop & Loot System 구현
+  - 49b84cc 수정: ItemPickupSlot 클래스를 별도 파일로 분리
+  - f4076a1 기능: SingletonPreloader 자동 초기화 추가
+  - 01db56d 수정: LootEntry 수량 자동 보정 추가
+  - ab3e49e 문서: ScriptableObject Serialization 완전 가이드 추가
+  - b247827 테스트: Loot System 테스트 에셋 추가
+
+**주요 이슈 해결**:
+1. **ItemPickupSlot Missing Script**
+   - 문제: ItemPickupUI.cs 내부에 중첩 클래스로 정의
+   - 해결: 별도 파일(ItemPickupSlot.cs)로 분리 (Unity MonoBehaviour 요구사항)
+
+2. **SingletonPreloader 미초기화**
+   - 문제: 테스트 씬에 SingletonPreloader가 없어 LootSystem null
+   - 해결: RuntimeInitializeOnLoadMethod로 자동 초기화 추가
+
+3. **LootEntry 수량 검증 실패**
+   - 문제: 필드 초기화(= 1)가 Inspector Element 생성 시 무시됨 (YAML에 0 저장)
+   - 원인: Unity Serialization이 역직렬화 시 C# 생성자 호출 안함
+   - 해결: OnValidate()에서 FixLootEntries() 추가 (자동 보정)
+
 #### ✅ Phase 12: Skill System (스킬 시스템)
 **완료 Task**: 12개
 
@@ -448,15 +542,16 @@
 
 ### Git 상태
 ```bash
-브랜치: 012-buff-icon-ui (로컬)
+브랜치: 013-item-drop-loot (로컬)
 원격 푸시: 완료
-최종 커밋: 0ac9e69 (테스트: BuffIcon UI 프리팹 및 테스트 씬 추가)
+최종 커밋: b247827 (테스트: Loot System 테스트 에셋 추가)
 ```
 
 **오늘 작업 브랜치 (2025-11-09)**:
 1. 012-buff-icon-ui (BuffIcon UI) → PR #6 생성 완료 (테스트 완료)
+2. 013-item-drop-loot (Loot System) → PR #7 생성 완료
 
-### 싱글톤 시스템 현황 (8개)
+### 싱글톤 시스템 현황 (9개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
 2. **SkillSystem** - 스킬 슬롯 관리 및 실행
 3. **DamageNumberPool** - 데미지 텍스트 풀링
@@ -465,6 +560,7 @@
 6. **PlayerLevel** - 레벨/EXP 관리
 7. **SaveSystem** - 저장/로드
 8. **StatusEffectManager** - 상태이상 효과 관리
+9. **LootSystem** - 아이템 드롭 및 획득 관리
 
 ### 생성된 PR (머지 대기)
 - **PR #3**: Phase 12 (Skill System)
@@ -486,6 +582,11 @@
   - 링크: https://github.com/jaechang92/GAS/pull/6
   - 브랜치: 012-buff-icon-ui
   - 상태: 리뷰 대기 (테스트 완료)
+
+- **PR #7**: Item Drop & Loot System 구현
+  - 링크: https://github.com/jaechang92/GAS/pull/7
+  - 브랜치: 013-item-drop-loot
+  - 상태: 리뷰 대기 (구현 완료)
 
 ---
 
@@ -528,6 +629,11 @@ Assets/_Project/Scripts/
 │   ├── SkillData.cs
 │   ├── Skill.cs
 │   └── SkillSystem.cs
+├── Loot/ (NEW)
+│   ├── LootEntry.cs
+│   ├── LootTable.cs
+│   ├── LootSystem.cs
+│   └── DroppedItem.cs
 ├── StatusEffects/
 │   ├── StatusEffect.cs
 │   ├── StatusEffectManager.cs
@@ -549,7 +655,9 @@ Assets/_Project/Scripts/
 │   ├── DamageNumber.cs
 │   ├── DamageNumberPool.cs (자동 로딩)
 │   ├── SkillSlotUI.cs (Awaitable)
-│   └── SkillUIPanel.cs
+│   ├── SkillUIPanel.cs
+│   ├── ItemPickupUI.cs (NEW)
+│   └── ItemPickupSlot.cs (NEW)
 ├── Editor/
 │   ├── StatPanelCreator.cs
 │   ├── ShopUICreator.cs
@@ -560,13 +668,15 @@ Assets/_Project/Scripts/
 │   ├── BuffIconCreator.cs (NEW)
 │   ├── DamageNumberCreator.cs
 │   ├── SkillUICreator.cs
-│   └── SkillSystemTestSetup.cs
+│   ├── SkillSystemTestSetup.cs
+│   └── ItemPickupUICreator.cs (NEW)
 └── Testing/ (Tests에서 이름 변경)
     ├── CombatTest.cs
     ├── SaveTest.cs
     ├── LevelTest.cs
     ├── StatusEffectTest.cs
-    └── SkillSystemTest.cs (NEW)
+    ├── SkillSystemTest.cs (NEW)
+    └── LootSystemTest.cs (NEW)
 ```
 
 ### 문서
@@ -603,92 +713,56 @@ GASPT/
 | Phase 12+ | Mana Bar UI | 2 | ~630 | ✅ 완료 |
 | 리팩토링 | Awaitable 패턴 전환 | 3 | (기존 파일) | ✅ 완료 |
 | 문서 | Awaitable 가이드 | 1 | +841 | ✅ 완료 |
-| **합계** | **12개 Phase + 추가 + 확장** | **71개** | **~16,094줄** | **✅ 완료** |
+| Phase 13 | Item Drop & Loot System | 8 | ~1,291 | ✅ 완료 |
+| 문서 | Serialization 가이드 | 1 | +553 | ✅ 완료 |
+| **합계** | **13개 Phase + 추가 + 확장** | **80개** | **~18,779줄** | **✅ 완료** |
 
 ---
 
 ## 🚀 다음 작업 옵션
 
-### 옵션 1: PR 생성 및 머지 (Phase 12 - Skill System)
+### 옵션 1: Quest System 구현 (Phase 14)
 
-**수행 단계**:
-1. PR 제목: "Skill System 구현 (Phase 12)"
-2. PR 본문:
-```markdown
-## Summary
-Phase 12: Skill System 구현 완료
-- 스킬 데이터, 실행 로직, UI, 테스트 도구 모두 구현
-- 마나 시스템 추가
-- 8개 싱글톤으로 확장
-
-## 핵심 시스템
-- **SkillData**: ScriptableObject 스킬 정의
-- **Skill**: 쿨다운, 실행 로직 (async Awaitable)
-- **SkillSystem**: 슬롯 관리 싱글톤
-- **PlayerStats 마나 시스템**: TrySpendMana, RegenerateMana
-
-## UI 시스템
-- **SkillSlotUI**: 아이콘, 쿨다운 애니메이션, 키보드 입력
-- **SkillUIPanel**: 4개 슬롯 관리, 이벤트 구독
-- **SkillUICreator**: 자동 UI 생성 에디터 도구
-
-## 테스트
-- **SkillSystemTest**: 8개 Context Menu 테스트
-- **SkillSystemTestSetup**: 원클릭 테스트 환경 생성
-- 테스트 에셋 5개 (Fireball, Heal, AttackBuff 등)
-
-## Test plan
-- [ ] Unity에서 SkillSystemTest 씬 열기
-- [ ] Tools > GASPT > Create Skill UI Panel 실행
-- [ ] Play 모드에서 Context Menu로 스킬 등록
-- [ ] 키보드 1,2,3,4로 스킬 사용 테스트
-- [ ] 쿨다운 애니메이션 확인
-- [ ] 마나 부족 상태 확인
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
-
-3. GitHub에서 PR 생성
-4. 리뷰 후 머지
-
-**머지 후**:
-```bash
-git checkout master
-git pull origin master
-git branch -d 009-skill-system  # 로컬 브랜치 삭제
-```
+**퀘스트 및 미션 시스템**:
+- [ ] QuestData ScriptableObject
+- [ ] QuestSystem 싱글톤
+- [ ] QuestUI 및 QuestTracker
+- [ ] 퀘스트 목표 타입 (Kill, Collect, Talk, Explore)
+- [ ] 퀘스트 보상 (경험치, 골드, 아이템)
+- [ ] 퀘스트 진행도 추적
 
 ---
 
-### 옵션 2: BuffIconUI 구현 (Phase 11 확장)
+### 옵션 2: Ability Effects 구현
 
-**Phase 11 완성도 향상**:
-- [ ] BuffIconUI 프리팹
-- [ ] BuffIconPool 오브젝트 풀링
-- [ ] 활성 버프/디버프 아이콘 표시
-- [ ] 지속시간 표시 (원형 타이머)
-- [ ] 스택 수 표시
-
----
-
-### 옵션 3: Item Drop & Loot System
-
-**Phase 13 새 기능**:
-- [ ] LootTable ScriptableObject
-- [ ] DropSystem 싱글톤
-- [ ] 아이템 드롭 로직 (확률 기반)
-- [ ] 드롭 아이템 UI
-- [ ] Enemy에 LootTable 연동
+**스킬 이펙트 및 데미지 계산**:
+- [ ] Projectile 시스템 (투사체)
+- [ ] AOE Effect (범위 공격)
+- [ ] Buff/Debuff 적용 스킬
+- [ ] 파티클 이펙트 통합
+- [ ] 사운드 이펙트 통합
 
 ---
 
-### 옵션 4: Mana Bar UI 구현
+### 옵션 3: Player Controller 개선
 
-**Skill System 확장**:
-- [ ] PlayerManaBar.cs (HealthBar와 유사한 구조)
-- [ ] PlayerManaBarCreator.cs (자동 생성 도구)
-- [ ] 마나 회복 애니메이션
-- [ ] 마나 부족 경고 효과
+**캐릭터 컨트롤 및 애니메이션**:
+- [ ] 이동 시스템 개선
+- [ ] 점프 및 대시 기능
+- [ ] 애니메이션 상태머신 연동
+- [ ] 입력 시스템 개선 (New Input System)
+- [ ] 카메라 컨트롤
+
+---
+
+### 옵션 4: AI & FSM 통합
+
+**적 AI 및 상태머신**:
+- [ ] Enemy AI 기본 행동 (Idle, Chase, Attack, Retreat)
+- [ ] FSM과 GAS 통합
+- [ ] NavMesh 기반 이동
+- [ ] 패턴 공격 시스템
+- [ ] 보스 AI 구현
 
 ---
 
@@ -702,8 +776,10 @@ Tools > GASPT > Create Enemy UIs
 Tools > GASPT > Create Player HealthBar UI
 Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
-Tools > GASPT > Create Skill UI Panel (NEW)
-Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
+Tools > GASPT > Create Skill UI Panel
+Tools > GASPT > Create Buff Icon UI
+Tools > GASPT > Create Item Pickup UI (NEW)
+Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest)
 ```
 
 ### Context Menu로 빠른 테스트
@@ -752,6 +828,18 @@ Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
 **PlayerLevel**:
 - 우클릭 → `Add 50 EXP (Test)` → EXP Number 표시됨
 
+**LootSystemTest** (NEW):
+- 우클릭 → `Test01: Check System Init` (시스템 초기화 확인)
+- 우클릭 → `Test02: Drop Item 100%` (단일 아이템 100% 드롭)
+- 우클릭 → `Test03: Drop From LootTable` (LootTable 확률 드롭)
+- 우클릭 → `Test04: Drop From LootTable 10 Times` (10회 연속 드롭)
+- 우클릭 → `Test05: Validate LootTable` (LootTable 검증)
+- 우클릭 → `Test06: Test DroppedItem Lifetime` (30초 소멸 테스트)
+
+**LootTable**:
+- 우클릭 → `Print Loot Table Info` (드롭 테이블 정보 출력)
+- 우클릭 → `Test: Simulate 100 Drops` (100회 드롭 시뮬레이션)
+
 ---
 
 ## 📝 작업 재개 시 체크리스트
@@ -766,21 +854,21 @@ git branch
 
 ### 2. 현재 브랜치 확인
 ```bash
-# 현재 브랜치가 009-skill-system인지 확인
+# 현재 브랜치가 013-item-drop-loot인지 확인
 git branch --show-current
 ```
 
 ### 3. Unity 테스트 (선택)
-- SkillSystemTest 씬 열기
-- Tools > GASPT > Create Skill UI Panel
-- Play 모드에서 Context Menu로 스킬 등록
-- 키보드 1,2,3,4로 스킬 사용 테스트
+- LootSystemTest 컴포넌트 생성
+- TEST_LootTable 설정 (아이템 추가)
+- Tools > GASPT > Create Item Pickup UI
+- Play 모드에서 Context Menu로 드롭 테스트
 
 ### 4. 다음 작업 선택
-- PR 생성 및 머지 (Phase 12) → 옵션 1
-- BuffIconUI 구현 → 옵션 2
-- Item Drop System → 옵션 3
-- Mana Bar UI → 옵션 4
+- Quest System 구현 → 옵션 1
+- Ability Effects 구현 → 옵션 2
+- Player Controller 개선 → 옵션 3
+- AI & FSM 통합 → 옵션 4
 
 ---
 
@@ -814,8 +902,10 @@ Tools > GASPT > Create Enemy UIs
 Tools > GASPT > Create Player HealthBar UI
 Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
-Tools > GASPT > Create Skill UI Panel (NEW)
-Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
+Tools > GASPT > Create Skill UI Panel
+Tools > GASPT > Create Buff Icon UI
+Tools > GASPT > Create Item Pickup UI (NEW)
+Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest)
 ```
 
 ### ScriptableObject 생성
@@ -823,7 +913,8 @@ Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest) (NEW)
 Create > GASPT > Items > Item
 Create > GASPT > Enemies > Enemy
 Create > GASPT > StatusEffects > StatusEffect
-Create > GASPT > Skills > Skill (NEW)
+Create > GASPT > Skills > Skill
+Create > GASPT > Loot > LootTable (NEW)
 ```
 
 ---
@@ -895,9 +986,8 @@ private void OnDisable()
 
 1. **이 파일(WORK_STATUS.md) 먼저 읽기** ✅
 2. **Git 상태 확인** (`git status`, `git log`)
-3. **Phase 12 PR 생성** (옵션 1) - 우선 추천
-4. **PR 머지**
-5. **다음 Phase 기획 및 시작** (BuffIconUI, Item Drop, Mana Bar 등)
+3. **PR #6, #7 리뷰 및 머지** (BuffIcon UI, Loot System)
+4. **다음 Phase 기획 및 시작** (Quest System, Ability Effects, Player Controller, AI 등)
 
 ---
 
@@ -905,12 +995,12 @@ private void OnDisable()
 
 ### Claude Code와 다시 대화 시작할 때
 1. 이 파일(`WORK_STATUS.md`) 내용 공유
-2. 현재 브랜치 알려주기: `009-skill-system`
+2. 현재 브랜치 알려주기: `013-item-drop-loot`
 3. 하고 싶은 작업 명시:
-   - "Phase 12 PR 생성하고 싶어"
-   - "BuffIconUI 구현하고 싶어"
-   - "Mana Bar UI 구현하고 싶어"
-   - "Item Drop System 시작하고 싶어"
+   - "PR #6, #7 머지하고 싶어"
+   - "Quest System 시작하고 싶어"
+   - "Ability Effects 구현하고 싶어"
+   - "Player Controller 개선하고 싶어"
 
 ---
 
@@ -923,9 +1013,9 @@ private void OnDisable()
 
 ---
 
-**작성일**: 2025-11-04
-**다음 예정 작업**: PR #3, #4, #5 리뷰 및 머지 / BuffIconUI 구현 / Item Drop System
-**브랜치**: 011-awaitable-refactor
-**상태**: Phase 12 완료, Mana Bar UI 완료, Awaitable 리팩토링 완료, PR 3개 생성 완료
+**작성일**: 2025-11-09
+**다음 예정 작업**: PR #6, #7 리뷰 및 머지 / Quest System / Ability Effects / Player Controller 개선
+**브랜치**: 013-item-drop-loot
+**상태**: Phase 13 완료 (Loot System), PR #6, #7 생성 완료, 총 9개 싱글톤 시스템
 
-🚀 **수고하셨습니다! Mana Bar UI 및 Awaitable 리팩토링 완료!**
+🚀 **수고하셨습니다! Item Drop & Loot System 구현 완료!**
