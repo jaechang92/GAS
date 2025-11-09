@@ -27,6 +27,16 @@ namespace GASPT.StatusEffects
         /// </summary>
         public string Description { get; private set; }
 
+        /// <summary>
+        /// 효과 아이콘 (UI 표시용)
+        /// </summary>
+        public Sprite Icon { get; private set; }
+
+        /// <summary>
+        /// 버프 여부 (true: 버프, false: 디버프)
+        /// </summary>
+        public bool IsBuff { get; private set; }
+
 
         // ====== 효과 수치 ======
 
@@ -116,7 +126,9 @@ namespace GASPT.StatusEffects
             float value,
             float duration,
             float tickInterval = 0f,
-            int maxStack = 1)
+            int maxStack = 1,
+            Sprite icon = null,
+            bool isBuff = true)
         {
             EffectType = effectType;
             DisplayName = displayName;
@@ -125,6 +137,8 @@ namespace GASPT.StatusEffects
             Duration = duration;
             TickInterval = tickInterval;
             MaxStack = maxStack;
+            Icon = icon;
+            IsBuff = isBuff;
 
             IsActive = false;
             RemainingTime = 0f;
