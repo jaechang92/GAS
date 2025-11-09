@@ -118,7 +118,15 @@ namespace GASPT.UI
             StopUpdating();
 
             updateCts = new CancellationTokenSource();
-            UpdateTimerAsync(updateCts.Token).ContinueWith(() => { });
+            StartUpdateTimerAsync(updateCts.Token);
+        }
+
+        /// <summary>
+        /// 비동기 타이머 시작 (fire-and-forget)
+        /// </summary>
+        private async void StartUpdateTimerAsync(CancellationToken ct)
+        {
+            await UpdateTimerAsync(ct);
         }
 
         private void StopUpdating()
