@@ -133,8 +133,44 @@ namespace GASPT.Loot
 
         private void OnValidate()
         {
-            // Inspector에서 값 변경 시 자동 검증
+            // Inspector에서 값 변경 시 자동 보정
+            FixLootEntries();
+
+            // 자동 검증
             ValidateTable();
+        }
+
+        /// <summary>
+        /// LootEntry 수량 자동 보정
+        /// </summary>
+        private void FixLootEntries()
+        {
+            if (lootEntries == null)
+                return;
+
+            foreach (var entry in lootEntries)
+            {
+                if (entry == null)
+                    continue;
+
+                // minQuantity가 0이면 1로 보정
+                if (entry.minQuantity < 1)
+                {
+                    entry.minQuantity = 1;
+                }
+
+                // maxQuantity가 0이면 1로 보정
+                if (entry.maxQuantity < 1)
+                {
+                    entry.maxQuantity = 1;
+                }
+
+                // maxQuantity가 minQuantity보다 작으면 보정
+                if (entry.maxQuantity < entry.minQuantity)
+                {
+                    entry.maxQuantity = entry.minQuantity;
+                }
+            }
         }
 
 
