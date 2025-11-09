@@ -199,6 +199,9 @@ namespace GASPT.Enemies
             // 경험치 지급
             GiveExp();
 
+            // 아이템 드롭
+            DropLoot();
+
             // 사망 이벤트 발생
             OnDeath?.Invoke(this);
 
@@ -297,6 +300,32 @@ namespace GASPT.Enemies
             else
             {
                 Debug.LogError($"[Enemy] PlayerLevel을 찾을 수 없습니다. EXP 지급 실패: {enemyData.expReward}");
+            }
+        }
+
+
+        // ====== 아이템 드롭 ======
+
+        /// <summary>
+        /// 아이템 드롭 처리
+        /// </summary>
+        private void DropLoot()
+        {
+            if (enemyData == null || enemyData.lootTable == null)
+            {
+                // LootTable이 없으면 아이템 드롭 없음
+                return;
+            }
+
+            // LootSystem에 드롭 요청
+            if (GASPT.Loot.LootSystem.HasInstance)
+            {
+                GASPT.Loot.LootSystem.Instance.DropLoot(enemyData.lootTable, transform.position);
+                Debug.Log($"[Enemy] {enemyData.enemyName} 아이템 드롭 시도");
+            }
+            else
+            {
+                Debug.LogError("[Enemy] LootSystem을 찾을 수 없습니다. 아이템 드롭 실패");
             }
         }
 
