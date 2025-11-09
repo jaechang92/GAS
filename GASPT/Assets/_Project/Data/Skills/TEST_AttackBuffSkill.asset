@@ -14,19 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Skills.SkillData
   skillType: 2
   targetType: 0
-  skillName: TEST Attack Buff
-  description: "\uD14C\uC2A4\uD2B8\uC6A9 \uACF5\uACA9\uB825 \uBC84\uD504 \uC2A4\uD0AC"
+  skillName: Power Buff
+  description: "\uC77C\uC815 \uC2DC\uAC04 \uB3D9\uC548 \uACF5\uACA9\uB825\uC744 \uC99D\uAC00\uC2DC\uD0B5\uB2C8\uB2E4."
   icon: {fileID: 0}
-  manaCost: 10
-  cooldown: 10
+  manaCost: 35
+  cooldown: 15
   castTime: 0
   damageAmount: 0
   healAmount: 0
   statusEffect: {fileID: 11400000, guid: a18cc26b25520244e8d9f559665e4c2a, type: 2}
-  skillRange: 10
+  skillRange: 0
   areaRadius: 0
-  maxTargets: 5
-  animationTrigger: 
+  maxTargets: 1
+  animationTrigger: Buff
   particleEffect: {fileID: 0}
   soundClip: {fileID: 0}
-  effectColor: {r: 0, g: 1, b: 1, a: 1}
+  effectColor: {r: 1, g: 0.8, b: 0, a: 1}
