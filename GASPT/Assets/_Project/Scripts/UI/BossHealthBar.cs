@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using GASPT.Enemy;
+using GASPT.Enemies;
 
 namespace GASPT.UI
 {
@@ -39,7 +39,7 @@ namespace GASPT.UI
 
         // ====== Enemy 참조 ======
 
-        private Enemy.Enemy targetEnemy;
+        private Enemy targetEnemy;
         private float targetFillAmount = 1f;
 
 
@@ -69,7 +69,7 @@ namespace GASPT.UI
         /// 보스 체력바 초기화
         /// </summary>
         /// <param name="enemy">대상 보스</param>
-        public void Initialize(Enemy.Enemy enemy)
+        public void Initialize(Enemy enemy)
         {
             if (enemy == null)
             {
@@ -114,7 +114,7 @@ namespace GASPT.UI
         /// <summary>
         /// 보스 사망 시 체력바 제거
         /// </summary>
-        private void OnBossDeath(Enemy.Enemy enemy)
+        private void OnBossDeath(Enemy enemy)
         {
             Debug.Log($"[BossHealthBar] {enemy.Data?.enemyName} 사망으로 체력바 제거");
 

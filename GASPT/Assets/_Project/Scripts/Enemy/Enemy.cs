@@ -3,9 +3,12 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Economy;
 using GASPT.Combat;
+using GASPT.Level;
+using GASPT.UI;
+using GASPT.StatusEffects;
 using Core.Enums;
 
-namespace GASPT.Enemy
+namespace GASPT.Enemies
 {
     /// <summary>
     /// 적 MonoBehaviour
@@ -62,9 +65,16 @@ namespace GASPT.Enemy
         public int MaxHp => enemyData != null ? enemyData.maxHp : 0;
 
         /// <summary>
-        /// 공격력 읽기 전용 프로퍼티
+        /// 공격력 읽기 전용 프로퍼티 (버프/디버프 적용)
         /// </summary>
-        public int Attack => enemyData != null ? enemyData.attack : 0;
+        public int Attack
+        {
+            get
+            {
+                int baseAttack = enemyData != null ? enemyData.attack : 0;
+                return ApplyStatusEffects(baseAttack, StatusEffectType.AttackUp, StatusEffectType.AttackDown);
+            }
+        }
 
         /// <summary>
         /// 사망 여부
@@ -83,6 +93,18 @@ namespace GASPT.Enemy
         {
             ValidateEnemyData();
             Initialize();
+        }
+
+        private void OnEnable()
+        {
+            // StatusEffect 이벤트 구독 (OnEnable에서 구독해야 StatusEffectManager 초기화 후 구독 가능)
+            SubscribeToStatusEffectEvents();
+        }
+
+        private void OnDisable()
+        {
+            // StatusEffect 이벤트 구독 해제
+            UnsubscribeFromStatusEffectEvents();
         }
 
 
@@ -136,6 +158,13 @@ namespace GASPT.Enemy
 
             Debug.Log($"[Enemy] {enemyData.enemyName}: {damage} 데미지 받음 ({previousHp} → {currentHp})");
 
+            // DamageNumber 표시
+            if (DamageNumberPool.Instance != null)
+            {
+                Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowDamage(damage, damagePosition, false);
+            }
+
             // 이벤트 발생
             OnHpChanged?.Invoke(currentHp, enemyData.maxHp);
 
@@ -166,6 +195,9 @@ namespace GASPT.Enemy
 
             // 골드 드롭
             DropGold();
+
+            // 경험치 지급
+            GiveExp();
 
             // 사망 이벤트 발생
             OnDeath?.Invoke(this);
@@ -238,6 +270,37 @@ namespace GASPT.Enemy
         }
 
 
+        // ====== 경험치 지급 ======
+
+        /// <summary>
+        /// 경험치 지급 처리
+        /// </summary>
+        private void GiveExp()
+        {
+            if (enemyData == null) return;
+
+            // PlayerLevel에 경험치 추가
+            PlayerLevel playerLevel = PlayerLevel.Instance;
+
+            if (playerLevel != null)
+            {
+                playerLevel.AddExp(enemyData.expReward);
+                Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {enemyData.expReward} EXP");
+
+                // EXP Number 표시
+                if (DamageNumberPool.Instance != null)
+                {
+                    Vector3 expPosition = transform.position + Vector3.up * 2f;
+                    DamageNumberPool.Instance.ShowExp(enemyData.expReward, expPosition);
+                }
+            }
+            else
+            {
+                Debug.LogError($"[Enemy] PlayerLevel을 찾을 수 없습니다. EXP 지급 실패: {enemyData.expReward}");
+            }
+        }
+
+
         // ====== 유효성 검증 ======
 
         /// <summary>
@@ -249,6 +312,162 @@ namespace GASPT.Enemy
             {
                 Debug.LogError($"[Enemy] {gameObject.name}: enemyData가 null입니다. Inspector에서 EnemyData를 설정하세요.");
             }
+        }
+
+
+        // ====== StatusEffect 통합 ======
+
+        /// <summary>
+        /// StatusEffect 이벤트 구독
+        /// </summary>
+        private void SubscribeToStatusEffectEvents()
+        {
+            // Instance 호출로 StatusEffectManager가 없으면 자동 생성
+            StatusEffectManager manager = StatusEffectManager.Instance;
+
+            if (manager != null)
+            {
+                // 중복 구독 방지를 위해 먼저 구독 해제
+                manager.OnEffectApplied -= OnEffectApplied;
+                manager.OnEffectRemoved -= OnEffectRemoved;
+
+                // 구독
+                manager.OnEffectApplied += OnEffectApplied;
+                manager.OnEffectRemoved += OnEffectRemoved;
+
+                Debug.Log($"[Enemy] {enemyData?.enemyName} StatusEffectManager 이벤트 구독 완료");
+            }
+            else
+            {
+                Debug.LogError("[Enemy] StatusEffectManager를 찾을 수 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// StatusEffect 이벤트 구독 해제
+        /// </summary>
+        private void UnsubscribeFromStatusEffectEvents()
+        {
+            if (StatusEffectManager.HasInstance)
+            {
+                StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
+                StatusEffectManager.Instance.OnEffectRemoved -= OnEffectRemoved;
+
+                Debug.Log($"[Enemy] {enemyData?.enemyName} StatusEffectManager 이벤트 구독 해제");
+            }
+        }
+
+        /// <summary>
+        /// 효과 적용 시 호출
+        /// </summary>
+        private void OnEffectApplied(GameObject target, StatusEffect effect)
+        {
+            if (target != gameObject) return;
+
+            // DoT 효과 처리
+            if (effect.TickInterval > 0f)
+            {
+                effect.OnTick += OnStatusEffectTick;
+            }
+
+            Debug.Log($"[Enemy] {enemyData.enemyName} StatusEffect 적용: {effect.DisplayName}");
+        }
+
+        /// <summary>
+        /// 효과 제거 시 호출
+        /// </summary>
+        private void OnEffectRemoved(GameObject target, StatusEffect effect)
+        {
+            if (target != gameObject) return;
+
+            // DoT 이벤트 구독 해제
+            if (effect.TickInterval > 0f)
+            {
+                effect.OnTick -= OnStatusEffectTick;
+            }
+
+            Debug.Log($"[Enemy] {enemyData.enemyName} StatusEffect 제거: {effect.DisplayName}");
+        }
+
+        /// <summary>
+        /// StatusEffect 틱 발생 시 호출 (DoT/Regeneration)
+        /// </summary>
+        private void OnStatusEffectTick(StatusEffect effect, float tickValue)
+        {
+            if (effect.Target != gameObject) return;
+
+            // Regeneration (회복)
+            if (effect.EffectType == StatusEffectType.Regeneration)
+            {
+                int healAmount = Mathf.RoundToInt(tickValue);
+                int previousHp = currentHp;
+                currentHp += healAmount;
+                currentHp = Mathf.Min(currentHp, MaxHp);
+
+                int actualHealed = currentHp - previousHp;
+
+                Debug.Log($"[Enemy] {enemyData.enemyName} 회복: {actualHealed} (HP {previousHp} → {currentHp})");
+
+                OnHpChanged?.Invoke(currentHp, MaxHp);
+            }
+            // Poison, Burn, Bleed (지속 데미지)
+            else if (effect.EffectType == StatusEffectType.Poison ||
+                     effect.EffectType == StatusEffectType.Burn ||
+                     effect.EffectType == StatusEffectType.Bleed)
+            {
+                int damage = Mathf.RoundToInt(Mathf.Abs(tickValue));
+                int previousHp = currentHp;
+                currentHp -= damage;
+                currentHp = Mathf.Max(0, currentHp);
+
+                Debug.Log($"[Enemy] {enemyData.enemyName} {effect.DisplayName} 틱 데미지: {damage} (HP {previousHp} → {currentHp})");
+
+                // DamageNumber 표시
+                if (DamageNumberPool.Instance != null)
+                {
+                    Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                    DamageNumberPool.Instance.ShowDamage(damage, damagePosition, false);
+                }
+
+                // 이벤트 발생
+                OnHpChanged?.Invoke(currentHp, MaxHp);
+
+                // 사망 체크
+                if (currentHp <= 0)
+                {
+                    Die();
+                }
+            }
+        }
+
+        /// <summary>
+        /// StatusEffect 버프/디버프 적용
+        /// </summary>
+        private int ApplyStatusEffects(int baseStat, StatusEffectType buffType, StatusEffectType debuffType)
+        {
+            if (!StatusEffectManager.HasInstance)
+            {
+                return baseStat;
+            }
+
+            float modifier = 0f;
+
+            // 버프 합산
+            StatusEffect buffEffect = StatusEffectManager.Instance.GetEffect(gameObject, buffType);
+            if (buffEffect != null && buffEffect.IsActive)
+            {
+                modifier += buffEffect.Value * buffEffect.StackCount;
+            }
+
+            // 디버프 합산
+            StatusEffect debuffEffect = StatusEffectManager.Instance.GetEffect(gameObject, debuffType);
+            if (debuffEffect != null && debuffEffect.IsActive)
+            {
+                modifier -= debuffEffect.Value * debuffEffect.StackCount;
+            }
+
+            int finalValue = baseStat + Mathf.RoundToInt(modifier);
+            return Mathf.Max(finalValue, 1); // 최소 1 보장
         }
 
 

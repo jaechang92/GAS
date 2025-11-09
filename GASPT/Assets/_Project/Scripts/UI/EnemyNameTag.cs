@@ -1,6 +1,6 @@
 using UnityEngine;
 using TMPro;
-using GASPT.Enemy;
+using GASPT.Enemies;
 
 namespace GASPT.UI
 {
@@ -32,7 +32,7 @@ namespace GASPT.UI
 
         // ====== Enemy 참조 ======
 
-        private Enemy.Enemy targetEnemy;
+        private Enemy targetEnemy;
         private Camera mainCamera;
 
 
@@ -74,7 +74,7 @@ namespace GASPT.UI
         /// 이름표 초기화
         /// </summary>
         /// <param name="enemy">대상 적</param>
-        public void Initialize(Enemy.Enemy enemy)
+        public void Initialize(Enemy enemy)
         {
             if (enemy == null)
             {
@@ -102,7 +102,7 @@ namespace GASPT.UI
         /// <summary>
         /// 적 사망 시 이름표 제거
         /// </summary>
-        private void OnEnemyDeath(Enemy.Enemy enemy)
+        private void OnEnemyDeath(Enemy enemy)
         {
             Debug.Log($"[EnemyNameTag] {enemy.Data?.enemyName} 사망으로 이름표 제거");
             Destroy(gameObject);

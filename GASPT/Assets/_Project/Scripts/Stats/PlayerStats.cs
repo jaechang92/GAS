@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Core.Enums;
 using GASPT.Data;
 using GASPT.Combat;
 using GASPT.Save;
+using GASPT.UI;
+using GASPT.StatusEffects;
 using UnityEngine;
+using GASPT.Enemies;
 
 namespace GASPT.Stats
 {
@@ -31,6 +35,9 @@ namespace GASPT.Stats
         [SerializeField] [Tooltip("기본 방어력")]
         private int baseDefense = 5;
 
+        [SerializeField] [Tooltip("기본 마나")]
+        private int baseMana = 100;
+
 
         // ====== 장비 슬롯 ======
 
@@ -45,6 +52,7 @@ namespace GASPT.Stats
         private int finalHP;
         private int finalAttack;
         private int finalDefense;
+        private int finalMana;
 
         /// <summary>
         /// Dirty flag: true면 재계산 필요
@@ -58,6 +66,11 @@ namespace GASPT.Stats
         /// 현재 HP (전투 중 변경됨)
         /// </summary>
         private int currentHP;
+
+        /// <summary>
+        /// 현재 마나
+        /// </summary>
+        private int currentMana;
 
         /// <summary>
         /// 사망 여부
@@ -85,9 +98,21 @@ namespace GASPT.Stats
         public int CurrentHP => currentHP;
 
         /// <summary>
-        /// 최종 공격력 (기본 + 장비 보너스)
+        /// 최종 공격력 (기본 + 장비 보너스 + 버프/디버프)
         /// </summary>
         public int Attack
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return ApplyStatusEffects(finalAttack, StatusEffectType.AttackUp, StatusEffectType.AttackDown);
+            }
+        }
+
+        /// <summary>
+        /// 기본 공격력 (기본 + 장비 보너스, 버프/디버프 제외)
+        /// </summary>
+        public int BaseAttack
         {
             get
             {
@@ -97,9 +122,21 @@ namespace GASPT.Stats
         }
 
         /// <summary>
-        /// 최종 방어력 (기본 + 장비 보너스)
+        /// 최종 방어력 (기본 + 장비 보너스 + 버프/디버프)
         /// </summary>
         public int Defense
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return ApplyStatusEffects(finalDefense, StatusEffectType.DefenseUp, StatusEffectType.DefenseDown);
+            }
+        }
+
+        /// <summary>
+        /// 기본 방어력 (기본 + 장비 보너스, 버프/디버프 제외)
+        /// </summary>
+        public int BaseDefense
         {
             get
             {
@@ -107,6 +144,23 @@ namespace GASPT.Stats
                 return finalDefense;
             }
         }
+
+        /// <summary>
+        /// 최대 마나 (기본 + 장비 보너스)
+        /// </summary>
+        public int MaxMana
+        {
+            get
+            {
+                RecalculateIfDirty();
+                return finalMana;
+            }
+        }
+
+        /// <summary>
+        /// 현재 마나
+        /// </summary>
+        public int CurrentMana => currentMana;
 
         /// <summary>
         /// 사망 여부
@@ -139,6 +193,12 @@ namespace GASPT.Stats
         /// </summary>
         public event Action OnDeath;
 
+        /// <summary>
+        /// 마나 변경 시 발생하는 이벤트
+        /// 매개변수: (현재 마나, 최대 마나)
+        /// </summary>
+        public event Action<int, int> OnManaChanged;
+
 
         // ====== Unity 생명주기 ======
 
@@ -152,9 +212,22 @@ namespace GASPT.Stats
 
             // 현재 HP를 최대 HP로 초기화
             currentHP = MaxHP;
+            currentMana = MaxMana;
             isDead = false;
 
-            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, Attack: {Attack}, Defense: {Defense}");
+            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, MaxMana: {MaxMana}, CurrentMana: {CurrentMana}, Attack: {Attack}, Defense: {Defense}");
+        }
+
+        private void OnEnable()
+        {
+            // StatusEffect 이벤트 구독 (OnEnable에서 구독해야 StatusEffectManager 초기화 후 구독 가능)
+            SubscribeToStatusEffectEvents();
+        }
+
+        private void OnDisable()
+        {
+            // StatusEffect 이벤트 구독 해제
+            UnsubscribeFromStatusEffectEvents();
         }
 
 
@@ -181,11 +254,13 @@ namespace GASPT.Stats
             int oldHP = finalHP;
             int oldAttack = finalAttack;
             int oldDefense = finalDefense;
+            int oldMana = finalMana;
 
             // 기본 스탯으로 초기화
             finalHP = baseHP;
             finalAttack = baseAttack;
             finalDefense = baseDefense;
+            finalMana = baseMana;
 
             // 장비 보너스 합산
             foreach (var item in equippedItems.Values)
@@ -195,6 +270,7 @@ namespace GASPT.Stats
                     finalHP += item.hpBonus;
                     finalAttack += item.attackBonus;
                     finalDefense += item.defenseBonus;
+                    // Mana 보너스는 현재 Item에 없으므로 생략 (나중에 추가 가능)
                 }
             }
 
@@ -205,7 +281,13 @@ namespace GASPT.Stats
             NotifyStatChangedIfDifferent(StatType.Attack, oldAttack, finalAttack);
             NotifyStatChangedIfDifferent(StatType.Defense, oldDefense, finalDefense);
 
-            Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}");
+            // Mana 변경 이벤트 (StatType.Mana가 없으면 별도 처리)
+            if (oldMana != finalMana)
+            {
+                OnManaChanged?.Invoke(currentMana, finalMana);
+            }
+
+            Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}, Mana: {finalMana}");
         }
 
         /// <summary>
@@ -374,6 +456,13 @@ namespace GASPT.Stats
 
             Debug.Log($"[PlayerStats] 데미지 받음: {incomingDamage} → 방어력 {Defense} 적용 → 실제 데미지 {actualDamage} → HP {previousHP} → {currentHP}");
 
+            // DamageNumber 표시
+            if (DamageNumberPool.Instance != null)
+            {
+                Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowDamage(actualDamage, damagePosition, false);
+            }
+
             // 이벤트 발생
             OnDamaged?.Invoke(actualDamage, currentHP, MaxHP);
 
@@ -410,6 +499,13 @@ namespace GASPT.Stats
 
             Debug.Log($"[PlayerStats] 체력 회복: {actualHealed} (HP {previousHP} → {currentHP})");
 
+            // DamageNumber 표시 (회복)
+            if (DamageNumberPool.Instance != null && actualHealed > 0)
+            {
+                Vector3 healPosition = transform.position + Vector3.up * 1.5f;
+                DamageNumberPool.Instance.ShowHeal(actualHealed, healPosition);
+            }
+
             // 이벤트 발생
             OnHealed?.Invoke(actualHealed, currentHP, MaxHP);
         }
@@ -418,7 +514,7 @@ namespace GASPT.Stats
         /// 적에게 데미지를 입힙니다
         /// </summary>
         /// <param name="target">공격할 적</param>
-        public void DealDamageTo(GASPT.Enemy.Enemy target)
+        public void DealDamageTo(Enemy target)
         {
             if (target == null)
             {
@@ -472,9 +568,76 @@ namespace GASPT.Stats
         public void Revive()
         {
             isDead = false;
+            int oldHP = currentHP;
             currentHP = MaxHP;
 
             Debug.Log($"[PlayerStats] 부활! HP {currentHP}/{MaxHP}");
+
+            // 회복 이벤트 발생 (UI 업데이트용)
+            int healAmount = currentHP - oldHP;
+            OnHealed?.Invoke(healAmount, currentHP, MaxHP);
+        }
+
+
+        // ====== Mana 관리 ======
+
+        /// <summary>
+        /// 마나를 소비합니다
+        /// </summary>
+        /// <param name="amount">소비할 마나량</param>
+        /// <returns>true: 소비 성공, false: 마나 부족</returns>
+        public bool TrySpendMana(int amount)
+        {
+            if (amount < 0)
+            {
+                Debug.LogWarning($"[PlayerStats] TrySpendMana(): 유효하지 않은 값입니다: {amount}");
+                return false;
+            }
+
+            if (amount == 0)
+            {
+                return true; // 0 마나는 항상 성공
+            }
+
+            if (currentMana < amount)
+            {
+                Debug.LogWarning($"[PlayerStats] TrySpendMana(): 마나 부족 (필요: {amount}, 현재: {currentMana})");
+                return false;
+            }
+
+            int previousMana = currentMana;
+            currentMana -= amount;
+
+            Debug.Log($"[PlayerStats] 마나 소비: {amount} (Mana {previousMana} → {currentMana})");
+
+            // 이벤트 발생
+            OnManaChanged?.Invoke(currentMana, MaxMana);
+
+            return true;
+        }
+
+        /// <summary>
+        /// 마나를 회복합니다
+        /// </summary>
+        /// <param name="amount">회복할 마나량</param>
+        public void RegenerateMana(int amount)
+        {
+            if (amount <= 0)
+            {
+                Debug.LogWarning($"[PlayerStats] RegenerateMana(): 유효하지 않은 회복량입니다: {amount}");
+                return;
+            }
+
+            int previousMana = currentMana;
+            currentMana += amount;
+            currentMana = Mathf.Min(currentMana, MaxMana);
+
+            int actualRegenerated = currentMana - previousMana;
+
+            Debug.Log($"[PlayerStats] 마나 회복: {actualRegenerated} (Mana {previousMana} → {currentMana})");
+
+            // 이벤트 발생
+            OnManaChanged?.Invoke(currentMana, MaxMana);
         }
 
 
@@ -514,6 +677,205 @@ namespace GASPT.Stats
         private void PrintStatsInfo()
         {
             DebugPrintStats();
+        }
+
+        [ContextMenu("Spend 20 Mana (Test)")]
+        private void TestSpendMana()
+        {
+            TrySpendMana(20);
+        }
+
+        [ContextMenu("Regenerate 30 Mana (Test)")]
+        private void TestRegenerateMana()
+        {
+            RegenerateMana(30);
+        }
+
+        [ContextMenu("Print Mana Info")]
+        private void PrintManaInfo()
+        {
+            Debug.Log("========== Mana Info ==========");
+            Debug.Log($"CurrentMana: {CurrentMana}/{MaxMana}");
+            Debug.Log($"===============================");
+        }
+
+
+        // ====== StatusEffect 통합 ======
+
+        /// <summary>
+        /// StatusEffect 이벤트 구독
+        /// </summary>
+        private void SubscribeToStatusEffectEvents()
+        {
+            // Instance 호출로 StatusEffectManager가 없으면 자동 생성
+            StatusEffectManager manager = StatusEffectManager.Instance;
+
+            if (manager != null)
+            {
+                // 중복 구독 방지를 위해 먼저 구독 해제
+                manager.OnEffectApplied -= OnEffectApplied;
+                manager.OnEffectRemoved -= OnEffectRemoved;
+
+                // 구독
+                manager.OnEffectApplied += OnEffectApplied;
+                manager.OnEffectRemoved += OnEffectRemoved;
+
+                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 완료");
+            }
+            else
+            {
+                Debug.LogError("[PlayerStats] StatusEffectManager를 찾을 수 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// StatusEffect 이벤트 구독 해제
+        /// </summary>
+        private void UnsubscribeFromStatusEffectEvents()
+        {
+            if (StatusEffectManager.HasInstance)
+            {
+                StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
+                StatusEffectManager.Instance.OnEffectRemoved -= OnEffectRemoved;
+
+                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 해제");
+            }
+        }
+
+        /// <summary>
+        /// 효과 적용 시 호출
+        /// </summary>
+        private void OnEffectApplied(GameObject target, StatusEffect effect)
+        {
+            if (target != gameObject) return;
+
+            // DoT 효과 처리
+            if (effect.TickInterval > 0f)
+            {
+                effect.OnTick += OnStatusEffectTick;
+            }
+
+            Debug.Log($"[PlayerStats] StatusEffect 적용: {effect.DisplayName}");
+
+            // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
+            TriggerStatChangedForEffect(effect);
+        }
+
+        /// <summary>
+        /// 효과 제거 시 호출
+        /// </summary>
+        private void OnEffectRemoved(GameObject target, StatusEffect effect)
+        {
+            if (target != gameObject) return;
+
+            // DoT 이벤트 구독 해제
+            if (effect.TickInterval > 0f)
+            {
+                effect.OnTick -= OnStatusEffectTick;
+            }
+
+            Debug.Log($"[PlayerStats] StatusEffect 제거: {effect.DisplayName}");
+
+            // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
+            TriggerStatChangedForEffect(effect);
+        }
+
+        /// <summary>
+        /// StatusEffect에 따라 OnStatChanged 이벤트 발생
+        /// </summary>
+        private void TriggerStatChangedForEffect(StatusEffect effect)
+        {
+            if (effect.EffectType == StatusEffectType.AttackUp ||
+                effect.EffectType == StatusEffectType.AttackDown)
+            {
+                // 공격력 변경 이벤트 발생
+                int currentAttack = Attack;
+                OnStatChanged?.Invoke(StatType.Attack, currentAttack, currentAttack);
+            }
+            else if (effect.EffectType == StatusEffectType.DefenseUp ||
+                     effect.EffectType == StatusEffectType.DefenseDown)
+            {
+                // 방어력 변경 이벤트 발생
+                int currentDefense = Defense;
+                OnStatChanged?.Invoke(StatType.Defense, currentDefense, currentDefense);
+            }
+        }
+
+        /// <summary>
+        /// StatusEffect 틱 발생 시 호출 (DoT/Regeneration)
+        /// </summary>
+        private void OnStatusEffectTick(StatusEffect effect, float tickValue)
+        {
+            if (effect.Target != gameObject) return;
+
+            // Regeneration (회복)
+            if (effect.EffectType == StatusEffectType.Regeneration)
+            {
+                Heal(Mathf.RoundToInt(tickValue));
+            }
+            // Poison, Burn, Bleed (지속 데미지)
+            else if (effect.EffectType == StatusEffectType.Poison ||
+                     effect.EffectType == StatusEffectType.Burn ||
+                     effect.EffectType == StatusEffectType.Bleed)
+            {
+                // DoT는 방어력 무시
+                int damage = Mathf.RoundToInt(Mathf.Abs(tickValue));
+                int previousHP = currentHP;
+                currentHP -= damage;
+                currentHP = Mathf.Max(currentHP, 0);
+
+                Debug.Log($"[PlayerStats] {effect.DisplayName} 틱 데미지: {damage} (HP {previousHP} → {currentHP})");
+
+                // DamageNumber 표시
+                if (DamageNumberPool.Instance != null)
+                {
+                    Vector3 damagePosition = transform.position + Vector3.up * 1.5f;
+                    DamageNumberPool.Instance.ShowDamage(damage, damagePosition, false);
+                }
+
+                // 이벤트 발생
+                OnDamaged?.Invoke(damage, currentHP, MaxHP);
+
+                // 사망 체크
+                if (currentHP <= 0)
+                {
+                    Die();
+                }
+            }
+        }
+
+        /// <summary>
+        /// StatusEffect 버프/디버프 적용
+        /// </summary>
+        /// <param name="baseStat">기본 스탯 값</param>
+        /// <param name="buffType">버프 타입</param>
+        /// <param name="debuffType">디버프 타입</param>
+        /// <returns>버프/디버프 적용된 최종 값</returns>
+        private int ApplyStatusEffects(int baseStat, StatusEffectType buffType, StatusEffectType debuffType)
+        {
+            if (!StatusEffectManager.HasInstance)
+            {
+                return baseStat;
+            }
+
+            float modifier = 0f;
+
+            // 버프 합산
+            StatusEffect buffEffect = StatusEffectManager.Instance.GetEffect(gameObject, buffType);
+            if (buffEffect != null && buffEffect.IsActive)
+            {
+                modifier += buffEffect.Value * buffEffect.StackCount;
+            }
+
+            // 디버프 합산
+            StatusEffect debuffEffect = StatusEffectManager.Instance.GetEffect(gameObject, debuffType);
+            if (debuffEffect != null && debuffEffect.IsActive)
+            {
+                modifier -= debuffEffect.Value * debuffEffect.StackCount;
+            }
+
+            int finalValue = baseStat + Mathf.RoundToInt(modifier);
+            return Mathf.Max(finalValue, 1); // 최소 1 보장
         }
 
 

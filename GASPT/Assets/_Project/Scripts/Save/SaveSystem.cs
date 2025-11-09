@@ -11,25 +11,8 @@ namespace GASPT.Save
     /// 게임 저장/불러오기 시스템 (싱글톤)
     /// JSON 기반 로컬 파일 저장
     /// </summary>
-    public class SaveSystem : MonoBehaviour
+    public class SaveSystem : SingletonManager<SaveSystem>
     {
-        // ====== 싱글톤 ======
-
-        private static SaveSystem instance;
-
-        public static SaveSystem Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    GameObject go = new GameObject("SaveSystem");
-                    instance = go.AddComponent<SaveSystem>();
-                    DontDestroyOnLoad(go);
-                }
-                return instance;
-            }
-        }
 
 
         // ====== 설정 ======
@@ -74,17 +57,8 @@ namespace GASPT.Save
 
         // ====== Unity 생명주기 ======
 
-        private void Awake()
+        protected override void OnAwake()
         {
-            if (instance != null && instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            instance = this;
-            DontDestroyOnLoad(gameObject);
-
             Debug.Log($"[SaveSystem] 초기화 완료. 저장 경로: {SaveFilePath}");
         }
 

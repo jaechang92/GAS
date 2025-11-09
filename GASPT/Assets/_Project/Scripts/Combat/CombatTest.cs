@@ -1,6 +1,6 @@
 using UnityEngine;
 using GASPT.Stats;
-using GASPT.Enemy;
+using GASPT.Enemies;
 
 namespace GASPT.Combat
 {
@@ -17,7 +17,7 @@ namespace GASPT.Combat
         private PlayerStats player;
 
         [SerializeField] [Tooltip("적")]
-        private Enemy.Enemy enemy;
+        private Enemy enemy;
 
 
         // ====== Unity 생명주기 ======
@@ -107,7 +107,7 @@ namespace GASPT.Combat
             Debug.Log($"[CombatTest] 적 HP 변경: {currentHP}/{maxHP}");
         }
 
-        private void OnEnemyDeath(Enemy.Enemy deadEnemy)
+        private void OnEnemyDeath(Enemy deadEnemy)
         {
             Debug.Log($"[CombatTest] 적 사망: {deadEnemy.name}");
         }

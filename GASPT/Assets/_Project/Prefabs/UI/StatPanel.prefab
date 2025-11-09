@@ -539,3 +539,6 @@ MonoBehaviour:
   attackText: {fileID: 6096607457393370014}
   defenseText: {fileID: 4171212118539843535}
   playerStats: {fileID: 0}
+  buffColor: {r: 0.2, g: 1, b: 0.2, a: 1}
+  debuffColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}

@@ -50,6 +50,10 @@ namespace GASPT.Data
         [Range(0, 1000)]
         public int maxGoldDrop = 25;
 
+        [Tooltip("경험치 보상")]
+        [Range(0, 1000)]
+        public int expReward = 10;
+
 
         // ====== UI ======
 
