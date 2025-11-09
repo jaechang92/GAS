@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -56,7 +56,8 @@ namespace GASPT.UI
 
         // ====== 내부 상태 ======
 
-        private Coroutine flashCoroutine;
+        private CancellationTokenSource flashCts;
+        private CancellationTokenSource levelUpCts;
 
 
         // ====== Unity 생명주기 ======
@@ -76,6 +77,8 @@ namespace GASPT.UI
         private void OnDestroy()
         {
             UnsubscribeFromEvents();
+            flashCts?.Cancel(); // 플래시 중단
+            levelUpCts?.Cancel(); // 레벨업 애니메이션 중단
         }
 
 
@@ -253,28 +256,33 @@ namespace GASPT.UI
         }
 
 
-        // ====== 시각 효과 ======
+        // ====== 시각 효과 (Awaitable 사용) ======
 
         /// <summary>
         /// 색상 플래시 효과
         /// </summary>
-        private void FlashColor(Color flashColor)
+        private async void FlashColor(Color flashColor)
         {
             if (fillImage == null) return;
 
             // 이전 플래시 중단
-            if (flashCoroutine != null)
-            {
-                StopCoroutine(flashCoroutine);
-            }
+            flashCts?.Cancel();
+            flashCts = new CancellationTokenSource();
 
-            flashCoroutine = StartCoroutine(FlashColorCoroutine(flashColor));
+            try
+            {
+                await FlashColorAsync(flashColor, flashCts.Token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // 취소됨 - 정상적인 동작
+            }
         }
 
         /// <summary>
-        /// 색상 플래시 코루틴
+        /// 색상 플래시 Awaitable
         /// </summary>
-        private IEnumerator FlashColorCoroutine(Color flashColor)
+        private async Awaitable FlashColorAsync(Color flashColor, CancellationToken ct)
         {
             float elapsed = 0f;
 
@@ -284,34 +292,44 @@ namespace GASPT.UI
             // 점진적으로 원래 색상으로 복귀
             while (elapsed < flashDuration)
             {
+                if (ct.IsCancellationRequested) return;
+
                 elapsed += Time.deltaTime;
                 float t = elapsed / flashDuration;
 
                 fillImage.color = Color.Lerp(flashColor, normalColor, t);
 
-                yield return null;
+                await Awaitable.NextFrameAsync(ct);
             }
 
             // 최종 색상 설정
             fillImage.color = normalColor;
-
-            flashCoroutine = null;
         }
 
         /// <summary>
         /// 레벨업 애니메이션
         /// </summary>
-        private void PlayLevelUpAnimation()
+        private async void PlayLevelUpAnimation()
         {
-            StartCoroutine(LevelUpAnimationCoroutine());
+            levelUpCts?.Cancel();
+            levelUpCts = new CancellationTokenSource();
+
+            try
+            {
+                await LevelUpAnimationAsync(levelUpCts.Token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // 취소됨 - 정상적인 동작
+            }
         }
 
         /// <summary>
-        /// 레벨업 애니메이션 코루틴
+        /// 레벨업 애니메이션 Awaitable
         /// </summary>
-        private IEnumerator LevelUpAnimationCoroutine()
+        private async Awaitable LevelUpAnimationAsync(CancellationToken ct)
         {
-            if (fillImage == null || levelText == null) yield break;
+            if (fillImage == null || levelText == null) return;
 
             // 원래 스케일 저장
             Vector3 originalScale = levelText.transform.localScale;
@@ -320,6 +338,8 @@ namespace GASPT.UI
 
             while (elapsed < levelUpAnimationDuration)
             {
+                if (ct.IsCancellationRequested) return;
+
                 elapsed += Time.deltaTime;
                 float t = elapsed / levelUpAnimationDuration;
 
@@ -330,7 +350,7 @@ namespace GASPT.UI
                 // Fill 색상 애니메이션 (노란색 → 파란색)
                 fillImage.color = Color.Lerp(levelUpColor, normalColor, t);
 
-                yield return null;
+                await Awaitable.NextFrameAsync(ct);
             }
 
             // 최종 상태 설정

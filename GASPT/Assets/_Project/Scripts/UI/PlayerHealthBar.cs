@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -58,7 +58,7 @@ namespace GASPT.UI
         // ====== 내부 상태 ======
 
         private Color currentNormalColor;
-        private Coroutine flashCoroutine;
+        private CancellationTokenSource flashCts;
 
 
         // ====== Unity 생명주기 ======
@@ -78,6 +78,7 @@ namespace GASPT.UI
         private void OnDestroy()
         {
             UnsubscribeFromEvents();
+            flashCts?.Cancel(); // 플래시 중단
         }
 
 
@@ -290,28 +291,33 @@ namespace GASPT.UI
         }
 
 
-        // ====== 시각 효과 ======
+        // ====== 시각 효과 (Awaitable 사용) ======
 
         /// <summary>
         /// 색상 플래시 효과
         /// </summary>
-        private void FlashColor(Color flashColor)
+        private async void FlashColor(Color flashColor)
         {
             if (fillImage == null) return;
 
             // 이전 플래시 중단
-            if (flashCoroutine != null)
-            {
-                StopCoroutine(flashCoroutine);
-            }
+            flashCts?.Cancel();
+            flashCts = new CancellationTokenSource();
 
-            flashCoroutine = StartCoroutine(FlashColorCoroutine(flashColor));
+            try
+            {
+                await FlashColorAsync(flashColor, flashCts.Token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // 취소됨 - 정상적인 동작
+            }
         }
 
         /// <summary>
-        /// 색상 플래시 코루틴
+        /// 색상 플래시 Awaitable
         /// </summary>
-        private IEnumerator FlashColorCoroutine(Color flashColor)
+        private async Awaitable FlashColorAsync(Color flashColor, CancellationToken ct)
         {
             float elapsed = 0f;
 
@@ -321,18 +327,18 @@ namespace GASPT.UI
             // 점진적으로 원래 색상으로 복귀
             while (elapsed < flashDuration)
             {
+                if (ct.IsCancellationRequested) return;
+
                 elapsed += Time.deltaTime;
                 float t = elapsed / flashDuration;
 
                 fillImage.color = Color.Lerp(flashColor, currentNormalColor, t);
 
-                yield return null;
+                await Awaitable.NextFrameAsync(ct);
             }
 
             // 최종 색상 설정
             fillImage.color = currentNormalColor;
-
-            flashCoroutine = null;
         }
 
 
