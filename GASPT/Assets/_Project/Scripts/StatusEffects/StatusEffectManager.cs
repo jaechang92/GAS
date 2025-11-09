@@ -36,6 +36,12 @@ namespace GASPT.StatusEffects
         /// </summary>
         public event Action<GameObject, StatusEffect> OnEffectRemoved;
 
+        /// <summary>
+        /// 효과 중첩 시 이벤트
+        /// 매개변수: (대상, StatusEffect, 새로운 스택 수)
+        /// </summary>
+        public event Action<GameObject, StatusEffect, int> OnEffectStacked;
+
 
         // ====== Unity 생명주기 ======
 
@@ -81,10 +87,11 @@ namespace GASPT.StatusEffects
             {
                 // 중첩 처리
                 existingEffect.Stack();
-                Debug.Log($"[StatusEffectManager] {effectData.displayName} 효과 중첩 - 대상: {target.name}");
+                int newStackCount = existingEffect.StackCount;
+                Debug.Log($"[StatusEffectManager] {effectData.displayName} 효과 중첩 - 대상: {target.name}, 스택: {newStackCount}");
 
-                // 중첩 시에도 이벤트 발생 (UI 업데이트를 위해)
-                OnEffectApplied?.Invoke(target, existingEffect);
+                // 중첩 이벤트 발생
+                OnEffectStacked?.Invoke(target, existingEffect, newStackCount);
 
                 return existingEffect;
             }
