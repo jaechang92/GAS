@@ -13,6 +13,7 @@ namespace GASPT.Form
 
         [Header("Abilities")]
         protected IAbility[] abilities = new IAbility[4];  // 0: 기본공격, 1-3: 스킬
+        protected IAbility jumpAbility;  // 점프 (별도 관리)
 
         [Header("Debug")]
         [SerializeField] protected bool showDebugLogs = true;
@@ -80,6 +81,25 @@ namespace GASPT.Form
             }
 
             return abilities[slotIndex];
+        }
+
+        /// <summary>
+        /// 점프 어빌리티 가져오기
+        /// </summary>
+        public IAbility GetJumpAbility()
+        {
+            return jumpAbility;
+        }
+
+        /// <summary>
+        /// 점프 어빌리티 설정
+        /// </summary>
+        public void SetJumpAbility(IAbility ability)
+        {
+            jumpAbility = ability;
+
+            if (showDebugLogs)
+                Debug.Log($"[BaseForm] {FormName} - 점프 어빌리티: {ability?.AbilityName ?? "null"}");
         }
 
         /// <summary>

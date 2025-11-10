@@ -8,7 +8,8 @@
       "Bash(gh pr list:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

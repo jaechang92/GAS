@@ -1,12 +1,15 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using GASPT.Core.Pooling;
+using GASPT.Gameplay.Projectiles;
 
 namespace GASPT.Form
 {
     /// <summary>
     /// 마법 미사일 - 마법사의 기본 공격
     /// 마우스 방향으로 빠른 마법 투사체 발사
+    /// 오브젝트 풀링 적용
     /// </summary>
     public class MagicMissileAbility : IAbility
     {
@@ -14,8 +17,6 @@ namespace GASPT.Form
         public float Cooldown => 0.5f;  // 0.5초 쿨다운
 
         private float lastUsedTime;
-        private const float MissileDamage = 10f;
-        private const float MissileSpeed = 15f;
 
         public async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
@@ -26,55 +27,43 @@ namespace GASPT.Form
                 return;
             }
 
+            // 쿨다운 즉시 시작 (중복 실행 방지)
+            lastUsedTime = Time.time;
+
             // 마우스 방향 계산
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             mousePos.z = 0;
             Vector2 direction = (mousePos - caster.transform.position).normalized;
 
-            // 마법 미사일 발사
-            FireMissile(caster.transform.position, direction);
-
-            // 쿨다운 시작
-            lastUsedTime = Time.time;
-
             Debug.Log($"[MagicMissile] 발사! 방향: {direction}");
 
-            // 비동기 대기 (애니메이션 등)
-            await Awaitable.NextFrameAsync(token);
+            // 풀에서 마법 미사일 가져오기
+            LaunchMissile(caster.transform.position, direction);
+
+            // 비동기 작업 없음 (Projectile이 자체적으로 움직임)
+            await Task.CompletedTask;
         }
 
         /// <summary>
-        /// 마법 미사일 발사
-        /// TODO: 실제 투사체 프리팹 생성 (현재는 즉시 Raycast)
+        /// 마법 미사일 발사 (풀 사용)
         /// </summary>
-        private void FireMissile(Vector3 startPos, Vector2 direction)
+        private void LaunchMissile(Vector3 startPos, Vector2 direction)
         {
-            // 임시 구현: 즉시 Raycast로 타격
-            // 나중에 실제 투사체로 교체 예정
-            float missileRange = 10f;
+            // 풀에서 MagicMissileProjectile 가져오기
+            var missile = PoolManager.Instance.Spawn<MagicMissileProjectile>(
+                startPos,
+                Quaternion.identity
+            );
 
-            RaycastHit2D hit = Physics2D.Raycast(startPos, direction, missileRange);
-
-            // 디버그 시각화
-            Debug.DrawRay(startPos, direction * (hit.collider != null ? hit.distance : missileRange),
-                         hit.collider != null ? Color.green : Color.cyan, 1f);
-
-            if (hit.collider != null)
+            if (missile != null)
             {
-                // Enemy에 데미지 적용
-                GASPT.Enemies.Enemy enemy = hit.collider.GetComponent<GASPT.Enemies.Enemy>();
-                if (enemy != null && !enemy.IsDead)
-                {
-                    enemy.TakeDamage((int)MissileDamage);
-                    Debug.Log($"[MagicMissile] {enemy.Data.enemyName}에 {MissileDamage} 데미지!");
-                }
-                else
-                {
-                    Debug.Log($"[MagicMissile] 충돌: {hit.collider.name} (Enemy 아님)");
-                }
+                // Launch 호출 (Projectile이 자체적으로 움직임)
+                missile.Launch(direction);
             }
-
-            Debug.Log($"[MagicMissile] 투사체 발사 - 데미지: {MissileDamage}, 속도: {MissileSpeed}, 범위: {missileRange}m");
+            else
+            {
+                Debug.LogError("[MagicMissileAbility] 풀에서 MagicMissileProjectile을 가져올 수 없습니다!");
+            }
         }
     }
 }

@@ -20,7 +20,9 @@ namespace GASPT.Gameplay.Level
         [Tooltip("수동 할당 (autoFindRooms가 false일 때)")]
         [SerializeField] private Room[] manualRooms;
 
-        private List<Room> rooms = new List<Room>();
+        [Header("디버그 (읽기 전용)")]
+        [Tooltip("현재 등록된 방 목록 (자동 업데이트)")]
+        [SerializeField] private List<Room> rooms = new List<Room>();
 
 
         // ====== 현재 상태 ======
@@ -47,6 +49,12 @@ namespace GASPT.Gameplay.Level
         protected override void Awake()
         {
             base.Awake();
+            // Awake에서는 초기화하지 않음 (Scene 로드 전이므로)
+        }
+
+        private void Start()
+        {
+            // Start에서 초기화 (Scene 로드 완료 후)
             InitializeRooms();
         }
 
@@ -59,9 +67,10 @@ namespace GASPT.Gameplay.Level
 
             if (autoFindRooms)
             {
-                Room[] foundRooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+                // FindObjectsInactive.Include로 비활성 GameObject도 찾음
+                Room[] foundRooms = FindObjectsByType<Room>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 rooms.AddRange(foundRooms);
-                Debug.Log($"[RoomManager] {foundRooms.Length}개의 방 자동 탐색");
+                Debug.Log($"[RoomManager] {foundRooms.Length}개의 방 자동 탐색 (비활성 포함)");
             }
             else
             {
@@ -80,6 +89,15 @@ namespace GASPT.Gameplay.Level
             }
 
             Debug.Log($"[RoomManager] 총 {rooms.Count}개의 방 초기화 완료");
+        }
+
+        /// <summary>
+        /// 방 목록 새로고침 (Scene 로드 후 수동 호출용)
+        /// </summary>
+        public void RefreshRooms()
+        {
+            Debug.Log("[RoomManager] 방 목록 새로고침 시작...");
+            InitializeRooms();
         }
 
 
@@ -235,6 +253,12 @@ namespace GASPT.Gameplay.Level
             }
 
             Debug.Log("====================");
+        }
+
+        [ContextMenu("Refresh Rooms")]
+        private void DebugRefreshRooms()
+        {
+            RefreshRooms();
         }
 
         [ContextMenu("Start Dungeon (Test)")]

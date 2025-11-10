@@ -25,6 +25,9 @@ namespace GASPT.Form
         /// </summary>
         private void InitializeDefaultAbilities()
         {
+            // 점프 (기본 동작) - PlayerController의 지면 체크 사용
+            SetJumpAbility(new JumpAbility(jumpForce: JumpPower));
+
             // 기본 공격: 마법 미사일
             SetAbility(0, new MagicMissileAbility());
 
@@ -35,7 +38,7 @@ namespace GASPT.Form
             SetAbility(2, new FireballAbility());
 
             if (showDebugLogs)
-                Debug.Log("[MageForm] 기본 스킬 초기화 완료");
+                Debug.Log("[MageForm] 기본 스킬 초기화 완료 (Jump 포함)");
         }
 
         protected override void OnFormActivated()

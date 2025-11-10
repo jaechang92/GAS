@@ -6,6 +6,7 @@ using GASPT.Combat;
 using GASPT.Level;
 using GASPT.UI;
 using GASPT.StatusEffects;
+using GASPT.Core.Pooling;
 using Core.Enums;
 
 namespace GASPT.Enemies
@@ -13,8 +14,10 @@ namespace GASPT.Enemies
     /// <summary>
     /// 적 MonoBehaviour
     /// EnemyData를 기반으로 적의 스탯과 행동을 관리
+    /// 오브젝트 풀링 지원
     /// </summary>
-    public class Enemy : MonoBehaviour
+    [RequireComponent(typeof(PooledObject))]
+    public class Enemy : MonoBehaviour, IPoolable
     {
         // ====== EnemyData 참조 ======
 
@@ -91,8 +94,17 @@ namespace GASPT.Enemies
 
         private void Awake()
         {
-            ValidateEnemyData();
-            Initialize();
+            // Initialize는 외부에서 InitializeWithData() 호출 시 실행
+            // Awake에서 호출하면 AddComponent 시 enemyData가 아직 설정되지 않아 에러 발생
+        }
+
+        private void Start()
+        {
+            // Inspector에서 직접 설정한 경우 Start에서 초기화
+            if (enemyData != null && currentHp == 0)
+            {
+                Initialize();
+            }
         }
 
         private void OnEnable()
@@ -111,10 +123,31 @@ namespace GASPT.Enemies
         // ====== 초기화 ======
 
         /// <summary>
+        /// 외부에서 EnemyData 설정 및 초기화
+        /// EnemySpawnPoint 등에서 AddComponent 후 호출
+        /// </summary>
+        public void InitializeWithData(EnemyData data)
+        {
+            if (data == null)
+            {
+                Debug.LogError($"[Enemy] {gameObject.name}: InitializeWithData에 null이 전달되었습니다!");
+                return;
+            }
+
+            enemyData = data;
+            Initialize();
+
+            Debug.Log($"[Enemy] {enemyData.enemyName} 외부 초기화 완료");
+        }
+
+        /// <summary>
         /// 적 초기화 (EnemyData 기반)
         /// </summary>
         private void Initialize()
         {
+            // EnemyData 유효성 검증
+            ValidateEnemyData();
+
             if (enemyData == null)
             {
                 Debug.LogError($"[Enemy] {gameObject.name}: enemyData가 null입니다. Inspector에서 설정하세요.");
@@ -205,8 +238,8 @@ namespace GASPT.Enemies
             // 사망 이벤트 발생
             OnDeath?.Invoke(this);
 
-            // GameObject 파괴 (1초 후 - 사망 애니메이션용)
-            Destroy(gameObject, 1f);
+            // 풀로 반환 (1초 후 - 사망 애니메이션용)
+            ReturnToPoolDelayed(1f);
         }
 
 
@@ -340,6 +373,71 @@ namespace GASPT.Enemies
             if (enemyData == null)
             {
                 Debug.LogError($"[Enemy] {gameObject.name}: enemyData가 null입니다. Inspector에서 EnemyData를 설정하세요.");
+            }
+        }
+
+
+        // ====== IPoolable 구현 ======
+
+        /// <summary>
+        /// 풀에서 스폰될 때 호출
+        /// </summary>
+        public void OnSpawn()
+        {
+            // 상태 초기화
+            isDead = false;
+
+            // HP 복원 (enemyData가 설정되어 있으면)
+            if (enemyData != null)
+            {
+                currentHp = enemyData.maxHp;
+                OnHpChanged?.Invoke(currentHp, enemyData.maxHp);
+            }
+
+            Debug.Log($"[Enemy] {enemyData?.enemyName} 풀에서 스폰");
+        }
+
+        /// <summary>
+        /// 풀로 반환될 때 호출
+        /// </summary>
+        public void OnDespawn()
+        {
+            // StatusEffect 정리
+            UnsubscribeFromStatusEffectEvents();
+
+            // 이벤트 구독자 정리
+            OnHpChanged = null;
+            OnDeath = null;
+
+            Debug.Log($"[Enemy] {enemyData?.enemyName} 풀로 반환");
+        }
+
+        /// <summary>
+        /// 지연 후 풀로 반환
+        /// </summary>
+        private async void ReturnToPoolDelayed(float delay)
+        {
+            // 지연 대기
+            await Awaitable.WaitForSecondsAsync(delay);
+
+            // PoolManager를 통해 풀로 반환
+            if (PoolManager.Instance != null)
+            {
+                // Enemy 타입에 맞게 Despawn (BasicMeleeEnemy 등)
+                if (this is GASPT.Gameplay.Enemy.BasicMeleeEnemy basicMelee)
+                {
+                    PoolManager.Instance.Despawn(basicMelee);
+                }
+                else
+                {
+                    Debug.LogWarning($"[Enemy] {enemyData?.enemyName} 알 수 없는 Enemy 타입. GameObject를 파괴합니다.");
+                    Destroy(gameObject);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[Enemy] {enemyData?.enemyName} PoolManager가 없어 GameObject를 파괴합니다.");
+                Destroy(gameObject);
             }
         }
 

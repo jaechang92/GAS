@@ -1,11 +1,14 @@
 using UnityEngine;
 using GASPT.Data;
+using GASPT.Core.Pooling;
+using GASPT.Gameplay.Enemy;
 
 namespace GASPT.Gameplay.Level
 {
     /// <summary>
     /// 적 스폰 포인트
     /// 방 안에서 적이 생성될 위치를 표시
+    /// 오브젝트 풀링 지원
     /// </summary>
     public class EnemySpawnPoint : MonoBehaviour
     {
@@ -82,54 +85,39 @@ namespace GASPT.Gameplay.Level
         }
 
 
-        // ====== Enemy 생성 ======
+        // ====== Enemy 생성 (풀 사용) ======
 
         /// <summary>
-        /// EnemyData로부터 Enemy GameObject 생성
-        /// TODO: Resources에서 프리팹 로드 또는 동적 생성
+        /// EnemyData로부터 Enemy GameObject 생성 (풀 사용)
         /// </summary>
         private GameObject CreateEnemyFromData(EnemyData data)
         {
-            // 임시 구현: 빈 GameObject 생성
-            // 나중에 Resources.Load()로 프리팹 로드
-            GameObject enemyObj = new GameObject($"{data.enemyName}");
-            enemyObj.transform.position = transform.position;
-            enemyObj.transform.rotation = Quaternion.identity;
+            // 풀에서 BasicMeleeEnemy 가져오기
+            var enemy = PoolManager.Instance.Spawn<BasicMeleeEnemy>(
+                transform.position,
+                Quaternion.identity
+            );
 
-            // BasicMeleeEnemy 컴포넌트 추가
-            var enemy = enemyObj.AddComponent<GASPT.Gameplay.Enemy.BasicMeleeEnemy>();
-
-            // Rigidbody2D 추가
-            var rb = enemyObj.AddComponent<Rigidbody2D>();
-            rb.gravityScale = 2f;
-            rb.freezeRotation = true;
-            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-
-            // BoxCollider2D 추가
-            var col = enemyObj.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(1f, 1f);
-
-            // EnemyData 할당 (Reflection으로 private 필드 설정)
-            var enemyDataField = typeof(GASPT.Enemies.Enemy).GetField("enemyData",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (enemyDataField != null)
+            if (enemy == null)
             {
-                enemyDataField.SetValue(enemy, data);
+                Debug.LogError($"[EnemySpawnPoint] {name}: 풀에서 BasicMeleeEnemy를 가져올 수 없습니다!");
+                return null;
             }
 
-            // SpriteRenderer 추가 (선택사항)
-            var sr = enemyObj.AddComponent<SpriteRenderer>();
+            // EnemyData 설정 및 초기화
+            enemy.InitializeWithData(data);
+
+            // Sprite 업데이트 (icon이 있으면 교체)
             if (data.icon != null)
             {
-                sr.sprite = data.icon;
-            }
-            else
-            {
-                // 임시 색상 (적색)
-                sr.color = Color.red;
+                var sr = enemy.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.sprite = data.icon;
+                }
             }
 
-            return enemyObj;
+            return enemy.gameObject;
         }
 
 
