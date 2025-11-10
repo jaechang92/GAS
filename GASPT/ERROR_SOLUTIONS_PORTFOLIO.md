@@ -1401,6 +1401,558 @@ private async void StartOperationAsync()
 
 ---
 
+## 섹션 5: ScriptableObject Serialization과 기본값 문제
+
+### 📌 발생 상황
+
+**날짜**: 2025-11-09
+**브랜치**: 013-item-drop-loot
+**파일**: LootEntry.cs, LootTable.cs
+
+**증상**:
+```csharp
+// LootEntry.cs
+[Serializable]
+public class LootEntry
+{
+    public int minQuantity = 1;  // 기본값 1
+    public int maxQuantity = 1;  // 기본값 1
+}
+
+// LootTable.cs - ValidateTable()
+if (entry.minQuantity < 1 || entry.maxQuantity < minQuantity)
+{
+    // 여기서 경고 발생!
+    Debug.LogWarning($"수량 범위가 올바르지 않습니다 (min: {minQuantity}, max: {maxQuantity})");
+    // 출력: min: 0, max: 0  ← 기본값 1이 아닌 0!
+}
+```
+
+**Inspector 표시**:
+- Min Quantity: 슬라이더가 1로 보임
+- Max Quantity: 슬라이더가 1로 보임
+
+**실제 저장된 값**:
+- minQuantity: 0
+- maxQuantity: 0
+
+**❓ 의문점**: 코드에서 기본값을 1로 설정했는데 왜 0인가?
+
+---
+
+### 🔍 근본 원인: Unity Serialization 시스템
+
+#### 1. Unity Serialization이란?
+
+Unity는 게임 오브젝트, 컴포넌트, ScriptableObject의 데이터를 **YAML 형식**으로 저장합니다.
+
+**Serialization**: C# 객체 → YAML 파일
+**Deserialization**: YAML 파일 → C# 객체
+
+```yaml
+# LootTable.asset 파일 내용
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: ...}
+  m_Name: TEST_LootTable
+  lootEntries:
+  - item: {fileID: ...}
+    dropChance: 0.3
+    minQuantity: 0      # ← 여기에 0으로 저장됨!
+    maxQuantity: 0      # ← 여기에 0으로 저장됨!
+```
+
+#### 2. 기본값이 적용되는 시점
+
+```csharp
+public class LootEntry
+{
+    public int minQuantity = 1;  // ← 이 값은 언제 적용될까?
+}
+```
+
+**기본값이 적용되는 경우**:
+1. ✅ **new LootEntry()** 생성자 호출 시
+2. ✅ **C# 코드에서 직접 생성** 시
+   ```csharp
+   LootEntry entry = new LootEntry();
+   Debug.Log(entry.minQuantity);  // 1 출력 ✅
+   ```
+
+**기본값이 적용되지 않는 경우**:
+1. ❌ **Unity Serialization을 통한 Deserialization** 시
+2. ❌ **Inspector에서 값 변경** 후
+3. ❌ **이미 저장된 ScriptableObject** 로드 시
+
+#### 3. Unity Serialization 프로세스
+
+```
+[Inspector에서 Element 추가]
+         ↓
+[Unity가 새 LootEntry 슬롯 생성]
+         ↓
+[YAML에 기본값(0) 저장]  ← C# 기본값 무시!
+         ↓
+[파일에 저장됨]
+         ↓
+[다음 로드 시]
+         ↓
+[YAML에서 값 읽어옴]
+         ↓
+minQuantity = 0 (YAML 값)
+maxQuantity = 0 (YAML 값)
+```
+
+**핵심**: Unity는 **YAML에 저장된 값**을 우선시하며, **C# 기본값은 무시**합니다!
+
+---
+
+### 📖 Unity Serialization 상세 분석
+
+#### 1. Serialization의 4가지 규칙
+
+**규칙 1**: **이미 Serialize된 필드는 기본값을 무시**
+```csharp
+// 처음 생성 시
+public int value = 10;  // YAML에 value: 5 저장됨
+
+// 나중에 코드 수정
+public int value = 100;  // ← 기존 에셋에는 적용 안됨! 여전히 5
+
+// 기존 에셋: value = 5 (YAML 값)
+// 새 에셋: value = 100 (기본값)
+```
+
+**규칙 2**: **Serialize되지 않은 필드는 항상 기본값**
+```csharp
+[NonSerialized] public int temp = 100;
+// 항상 100 (저장 안됨)
+```
+
+**규칙 3**: **생성자는 Deserialization 시 호출되지 않음**
+```csharp
+[Serializable]
+public class Data
+{
+    public int value;
+
+    public Data()
+    {
+        value = 100;  // ← Deserialization 시 실행 안됨!
+    }
+}
+```
+
+**규칙 4**: **필드 기본값만 가능, 프로퍼티 기본값은 불가능**
+```csharp
+public int value = 10;  // ✅ 가능 (필드 초기화)
+public int Value { get; set; } = 10;  // ❌ Serialize 안됨
+```
+
+#### 2. ScriptableObject의 Serialization 타이밍
+
+```
+[ScriptableObject 생성]
+         ↓
+CreateInstance<T>() 호출
+         ↓
+기본값 적용 (필드 초기화)
+         ↓
+OnEnable() 호출
+         ↓
+첫 저장 시점
+         ↓
+[YAML 파일 생성] ← 이 시점의 값이 저장됨!
+         ↓
+[이후 로드]
+         ↓
+YAML 값으로 필드 덮어씀 (기본값 무시)
+         ↓
+OnEnable() 호출
+         ↓
+OnValidate() 호출 (Editor only)
+```
+
+---
+
+### 🐛 실제 프로젝트 사례 분석
+
+#### 사례: LootEntry 수량 문제
+
+**1단계: 초기 코드 작성**
+```csharp
+[Serializable]
+public class LootEntry
+{
+    [Range(1, 99)] public int minQuantity = 1;
+    [Range(1, 99)] public int maxQuantity = 1;
+}
+```
+
+**2단계: LootTable 생성**
+```csharp
+// Unity Editor
+// Create > GASPT > Loot > LootTable
+```
+
+**3단계: Inspector에서 Element 추가**
+```
+Loot Entries:
+  Size: 1
+  Element 0:
+    ├─ Item: (드래그 & 드롭)
+    ├─ Drop Chance: 0.3
+    ├─ Min Quantity: [슬라이더 1]  ← 보기에는 1
+    └─ Max Quantity: [슬라이더 1]  ← 보기에는 1
+```
+
+**4단계: YAML 파일 확인**
+```yaml
+# TEST_LootTable.asset
+lootEntries:
+- item: {fileID: ...}
+  dropChance: 0.3
+  minQuantity: 0  # ← 실제 저장값은 0!
+  maxQuantity: 0  # ← 실제 저장값은 0!
+```
+
+**❓ 왜 0인가?**
+
+Unity가 새 Element를 생성할 때:
+1. C# 생성자를 호출하지 않음
+2. 필드 초기화 구문을 실행하지 않음
+3. **모든 int 필드를 0으로 초기화** (C# 기본 동작)
+4. YAML에 0을 저장
+
+**5단계: 검증 코드 실행**
+```csharp
+// LootTable.ValidateTable()
+if (entry.minQuantity < 1 || entry.maxQuantity < minQuantity)
+{
+    Debug.LogWarning($"수량 범위가 올바르지 않습니다 (min: {entry.minQuantity}, max: {entry.maxQuantity})");
+    // 출력: min: 0, max: 0 ← 경고 발생!
+}
+```
+
+---
+
+### ✅ 해결 방법 4가지
+
+#### 방법 1: OnValidate()에서 자동 보정 (권장)
+
+```csharp
+// LootTable.cs
+private void OnValidate()
+{
+    FixLootEntries();  // 자동 보정
+    ValidateTable();   // 검증
+}
+
+private void FixLootEntries()
+{
+    foreach (var entry in lootEntries)
+    {
+        if (entry.minQuantity < 1)
+            entry.minQuantity = 1;  // 0이면 1로 수정
+
+        if (entry.maxQuantity < 1)
+            entry.maxQuantity = 1;  // 0이면 1로 수정
+    }
+}
+```
+
+**장점**:
+- ✅ Inspector에서 값 변경 시 자동 보정
+- ✅ 기존 에셋도 자동 수정됨
+- ✅ 사용자가 신경 쓸 필요 없음
+
+**실행 시점**:
+- Inspector에서 값 변경 시
+- ScriptableObject Reimport 시
+- Unity 재시작 시
+
+#### 방법 2: 생성자 대신 팩토리 메서드
+
+```csharp
+[Serializable]
+public class LootEntry
+{
+    public int minQuantity;
+    public int maxQuantity;
+
+    // 기본 생성자 (Serialization용)
+    public LootEntry() { }
+
+    // 팩토리 메서드
+    public static LootEntry Create(Item item, float dropChance)
+    {
+        return new LootEntry
+        {
+            item = item,
+            dropChance = dropChance,
+            minQuantity = 1,  // 명시적 설정
+            maxQuantity = 1   // 명시적 설정
+        };
+    }
+}
+```
+
+**사용**:
+```csharp
+// ❌ 직접 생성 금지
+var entry = new LootEntry();  // minQuantity = 0
+
+// ✅ 팩토리 메서드 사용
+var entry = LootEntry.Create(item, 0.3f);  // minQuantity = 1
+```
+
+#### 방법 3: ISerializationCallbackReceiver
+
+```csharp
+[Serializable]
+public class LootEntry : ISerializationCallbackReceiver
+{
+    public int minQuantity = 1;
+    public int maxQuantity = 1;
+
+    // Deserialization 후 호출됨
+    public void OnAfterDeserialize()
+    {
+        if (minQuantity < 1) minQuantity = 1;
+        if (maxQuantity < 1) maxQuantity = 1;
+    }
+
+    public void OnBeforeSerialize() { }
+}
+```
+
+**장점**:
+- ✅ Deserialization 직후 자동 보정
+- ✅ LootEntry 자체에서 해결
+
+**단점**:
+- ❌ 클래스가 복잡해짐
+- ❌ Inspector에서 즉시 반영 안됨 (재로드 필요)
+
+#### 방법 4: Custom PropertyDrawer (고급)
+
+```csharp
+#if UNITY_EDITOR
+[CustomPropertyDrawer(typeof(LootEntry))]
+public class LootEntryDrawer : PropertyDrawer
+{
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        var minProp = property.FindPropertyRelative("minQuantity");
+        var maxProp = property.FindPropertyRelative("maxQuantity");
+
+        // 값이 0이면 자동으로 1로 수정
+        if (minProp.intValue < 1)
+            minProp.intValue = 1;
+        if (maxProp.intValue < 1)
+            maxProp.intValue = 1;
+
+        // GUI 그리기
+        EditorGUI.PropertyField(position, property, label, true);
+    }
+}
+#endif
+```
+
+**장점**:
+- ✅ Inspector 렌더링 시 자동 보정
+- ✅ 실시간 반영
+
+**단점**:
+- ❌ 코드 복잡도 증가
+- ❌ Editor 전용
+
+---
+
+### 📊 방법 비교
+
+| 방법 | 난이도 | 효과 | 추천도 |
+|------|--------|------|--------|
+| OnValidate() | ⭐ 쉬움 | ⭐⭐⭐ 높음 | ✅ 권장 |
+| 팩토리 메서드 | ⭐⭐ 보통 | ⭐⭐ 보통 | 🔶 경우에 따라 |
+| ISerializationCallbackReceiver | ⭐⭐⭐ 어려움 | ⭐⭐ 보통 | ⚠️ 필요시만 |
+| Custom PropertyDrawer | ⭐⭐⭐⭐ 매우 어려움 | ⭐⭐⭐ 높음 | ⚠️ 고급 사용자 |
+
+---
+
+### 🎯 베스트 프랙티스
+
+#### 1. ScriptableObject 설계 시
+
+**DO ✅**:
+```csharp
+// OnValidate()로 자동 보정
+private void OnValidate()
+{
+    // 유효하지 않은 값 자동 수정
+    if (health < 0) health = 0;
+    if (maxHealth < 1) maxHealth = 100;
+    if (health > maxHealth) health = maxHealth;
+}
+```
+
+**DON'T ❌**:
+```csharp
+// 생성자에 의존 (작동 안함!)
+public MyData()
+{
+    health = 100;  // ← Deserialization 시 무시됨!
+}
+```
+
+#### 2. [Serializable] 클래스 설계 시
+
+**DO ✅**:
+```csharp
+// 명시적 초기화 + OnValidate() 보정
+[Serializable]
+public class Entry
+{
+    public int value = 10;  // 기본값
+}
+
+// 상위 클래스에서
+private void OnValidate()
+{
+    foreach (var entry in entries)
+        if (entry.value < 1)
+            entry.value = 10;  // 보정
+}
+```
+
+**DON'T ❌**:
+```csharp
+// 기본값만 믿고 검증 안함
+[Serializable]
+public class Entry
+{
+    public int value = 10;  // 실제로는 0일 수 있음!
+}
+```
+
+#### 3. Inspector Range 사용 시
+
+**주의**: Range는 **표시 범위**일 뿐, **저장값을 제한하지 않음**!
+
+```csharp
+[Range(1, 99)]
+public int quantity = 1;
+
+// Inspector: 슬라이더가 1~99 범위로 보임
+// 실제 저장값: 0일 수 있음! (기존 에셋)
+// 새 값 입력 시: 1~99로 제한됨
+```
+
+**올바른 사용**:
+```csharp
+[Range(1, 99)]
+public int quantity = 1;
+
+private void OnValidate()
+{
+    // Range를 믿지 말고 검증!
+    quantity = Mathf.Clamp(quantity, 1, 99);
+}
+```
+
+---
+
+### 🔬 디버깅 팁
+
+#### 1. YAML 파일 직접 확인
+
+```bash
+# .asset 파일은 텍스트 에디터로 열기 가능
+# Assets/Resources/Data/TEST_LootTable.asset
+
+%YAML 1.1
+lootEntries:
+- item: {fileID: ...}
+  minQuantity: 0  # ← 실제 저장값 확인!
+```
+
+#### 2. Serialization 로그 찍기
+
+```csharp
+[Serializable]
+public class LootEntry : ISerializationCallbackReceiver
+{
+    public void OnAfterDeserialize()
+    {
+        Debug.Log($"Deserialized: min={minQuantity}, max={maxQuantity}");
+    }
+
+    public void OnBeforeSerialize()
+    {
+        Debug.Log($"Serializing: min={minQuantity}, max={maxQuantity}");
+    }
+}
+```
+
+#### 3. OnValidate() 로그
+
+```csharp
+private void OnValidate()
+{
+    Debug.Log("OnValidate() 호출됨");
+
+    foreach (var entry in lootEntries)
+    {
+        Debug.Log($"Entry: min={entry.minQuantity}, max={entry.maxQuantity}");
+    }
+}
+```
+
+---
+
+### 📚 학습 체크리스트
+
+- [ ] Unity Serialization이 무엇인지 이해함
+- [ ] 기본값이 적용되는 시점과 되지 않는 시점을 구분할 수 있음
+- [ ] YAML 파일의 구조를 이해함
+- [ ] OnValidate()의 역할과 실행 시점을 알고 있음
+- [ ] ISerializationCallbackReceiver의 용도를 이해함
+- [ ] ScriptableObject 설계 시 주의사항을 숙지함
+- [ ] Inspector Range와 실제 저장값의 차이를 이해함
+
+---
+
+### 🔗 관련 Unity 문서
+
+- [Script Serialization](https://docs.unity3d.com/Manual/script-Serialization.html)
+- [ScriptableObject](https://docs.unity3d.com/Manual/class-ScriptableObject.html)
+- [ISerializationCallbackReceiver](https://docs.unity3d.com/ScriptReference/ISerializationCallbackReceiver.html)
+- [SerializeField](https://docs.unity3d.com/ScriptReference/SerializeField.html)
+
+---
+
+### 💡 핵심 요약
+
+1. **Unity는 YAML에 저장된 값을 우선시함**
+   - C# 기본값은 최초 생성 시에만 사용됨
+   - 이미 저장된 값은 기본값 변경해도 적용 안됨
+
+2. **생성자는 Deserialization 시 호출 안됨**
+   - 필드 초기화 구문도 실행 안됨
+   - 모든 값은 YAML에서 복원됨
+
+3. **OnValidate()로 자동 보정이 최선**
+   - Inspector 변경 시 자동 실행
+   - 기존 에셋도 자동 수정 가능
+
+4. **Range는 표시용일 뿐, 검증은 별도로 필요**
+   - 슬라이더 범위 ≠ 저장값 범위
+   - OnValidate()에서 Clamp 필수
+
+---
+
 **문서 작성자**: Jae Chang
 **프로젝트 GitHub**: https://github.com/jaechang92/GAS
 **마지막 업데이트**: 2025-11-09

@@ -27,6 +27,12 @@ namespace GASPT.ResourceManagement
                 /// Resources/Prefabs/UI/HPBar.prefab
                 /// </summary>
                 public const string HPBar = "Prefabs/UI/HPBar";
+
+                /// <summary>
+                /// DroppedItem Prefab 경로
+                /// Resources/Prefabs/UI/DroppedItem.prefab
+                /// </summary>
+                public const string DroppedItem = "Prefabs/UI/DroppedItem";
             }
 
             // Enemy Prefabs

@@ -156,5 +156,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ead86b5b9c0d5294e85fb5f64dda6726, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Enemies.Enemy
-  enemyData: {fileID: 0}
+  enemyData: {fileID: 11400000, guid: 8e5f7147918e4b04bbde4c30007ed7ef, type: 2}
   currentHp: 0

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Core.Enums;
+using GASPT.Loot;
 
 namespace GASPT.Data
 {
@@ -53,6 +54,9 @@ namespace GASPT.Data
         [Tooltip("경험치 보상")]
         [Range(0, 1000)]
         public int expReward = 10;
+
+        [Tooltip("아이템 드롭 테이블 (선택사항)")]
+        public LootTable lootTable;
 
 
         // ====== UI ======
