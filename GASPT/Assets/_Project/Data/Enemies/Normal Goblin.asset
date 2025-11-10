@@ -19,5 +19,7 @@ MonoBehaviour:
   attack: 5
   minGoldDrop: 15
   maxGoldDrop: 25
+  expReward: 10
+  lootTable: {fileID: 11400000, guid: 439afe89fe33bc44e973392a3fac75c4, type: 2}
   showNameTag: 0
   showBossHealthBar: 0
