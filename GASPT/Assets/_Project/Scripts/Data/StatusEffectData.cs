@@ -81,7 +81,9 @@ namespace GASPT.Data
                 value,
                 duration,
                 tickInterval,
-                maxStack
+                maxStack,
+                icon,
+                isBuff
             );
         }
 
