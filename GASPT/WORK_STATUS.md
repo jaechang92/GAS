@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-09
-**현재 브랜치**: `013-item-drop-loot`
-**작업 세션**: Item Drop & Loot System 구현 완료
+**최종 업데이트**: 2025-11-10
+**현재 브랜치**: `014-skull-platformer-phase-a`
+**작업 세션**: Phase A-1 MageForm 시스템 구현 완료
 
 ---
 
@@ -536,20 +536,105 @@
 - ✅ PlayerManaBar: Awaitable
 - ✅ SkillSlotUI: Awaitable
 
+#### ✅ Phase A-1: Form System (Platformer Implementation)
+**완료 Task**: 7개
+**완료 날짜**: 2025-11-10
+
+**중요 변경사항**:
+- 프로젝트 방향 전환: RPG 시스템 → **플랫포머 로그라이크** 게임 구현
+- 게임 컨셉: "Skul" 오마주 2D 플랫포머 로그라이크
+- **용어 변경**: "Skull" → "Form" (저작권 문제 회피)
+- 기존 시스템(GAS, FSM, Combat) 활용한 실제 게임플레이 구현 시작
+
+**핵심 시스템** (7개 파일, 607줄):
+
+1. **IFormController.cs** (54줄) - Form 인터페이스 정의
+   - FormType Enum (Mage, Warrior, Assassin, Tank)
+   - IAbility 인터페이스 (스킬 계약)
+   - Activate/Deactivate 생명주기
+   - 스탯 프로퍼티 (MaxHealth, MoveSpeed, JumpPower)
+   - SetAbility/GetAbility 슬롯 관리
+
+2. **FormData.cs** (67줄) - ScriptableObject 데이터 구조
+   - 디자이너 친화적 Form 설정
+   - 기본 스탯 (HP, 이동속도, 점프력)
+   - 비주얼 데이터 (아이콘, 스프라이트, 색상)
+   - 기본 스킬 이름 배열
+
+3. **BaseForm.cs** (165줄) - Form 추상 베이스 클래스
+   - MonoBehaviour + IFormController 구현
+   - 4개 Ability 슬롯 관리 (0: 기본공격, 1~3: 스킬)
+   - Activate/Deactivate 생명주기 관리
+   - OnFormActivated/OnFormDeactivated 가상 메서드
+   - Context Menu 디버그 도구 (Print Form Info)
+
+4. **MageForm.cs** (131줄) - 마법사 Form 구현
+   - 첫 번째 플레이어블 Form
+   - Awake에서 기본 스킬 초기화
+     - 슬롯 0: MagicMissileAbility (기본 공격)
+     - 슬롯 1: TeleportAbility (스킬 1)
+     - 슬롯 2: FireballAbility (스킬 2)
+   - 마법 오라 이펙트 재생/중지
+   - Context Menu 스킬 테스트 (Test Magic Missile, Test Teleport, Test Fireball)
+
+5. **MagicMissileAbility.cs** (58줄) - 기본 공격 스킬
+   - 0.5초 쿨다운
+   - 마우스 방향 계산 (Camera.main.ScreenToWorldPoint)
+   - **async/await 패턴** (Awaitable.NextFrameAsync)
+   - 데미지: 10, 속도: 15
+   - TODO: 실제 투사체 프리팹 생성
+
+6. **TeleportAbility.cs** (63줄) - 순간이동 스킬
+   - 3초 쿨다운
+   - 마우스 방향으로 5m 텔레포트
+   - **async/await 패턴** (Awaitable.WaitForSecondsAsync)
+   - TODO: 장애물 체크, 무적 프레임
+
+7. **FireballAbility.cs** (69줄) - 화염구 AOE 스킬
+   - 5초 쿨다운
+   - 직격 데미지: 50, 폭발 반경: 3m
+   - **async Task LaunchFireball()** - 투사체 비행 시뮬레이션
+   - Explode() - 범위 데미지 (TODO: Physics2D.OverlapCircleAll)
+   - TODO: 실제 투사체, 폭발 이펙트
+
+**설계 특징**:
+- ✅ **Awaitable 패턴**: 모든 비동기 로직에 Awaitable 사용 (Coroutine 금지)
+- ✅ **CancellationToken**: 모든 async 메서드에 CancellationToken 매개변수
+- ✅ **Interface 기반**: IFormController, IAbility로 확장성 보장
+- ✅ **ScriptableObject**: 디자이너 친화적 데이터 설정
+- ✅ **마우스 방향 계산**: 모든 스킬이 마우스 위치로 방향 결정
+- ✅ **쿨다운 시스템**: Time.time 기반 쿨다운 체크
+- ✅ **Context Menu**: 에디터 테스트 메서드 제공
+
+**브랜치 정보**:
+- 브랜치: 014-skull-platformer-phase-a
+- 커밋 4개:
+  - 86dbf45 기능: Phase A-1 MageForm 시스템 구현
+  - ba23e13 리팩토링: Skull → Form 용어 변경 (폴더/문서)
+  - 7c2e9a5 기능: Phase A 폴더 구조 생성
+  - d8f9b21 문서: Form Platformer 구현 계획 작성
+
+**다음 Phase A 작업**:
+- [ ] Phase A-2: Enemy AI + Combat 통합
+- [ ] Phase A-3: Room System (절차적 던전)
+- [ ] Phase A-4: Item-Skill System (아이템으로 스킬 변경)
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 013-item-drop-loot (로컬)
+브랜치: 014-skull-platformer-phase-a (로컬)
 원격 푸시: 완료
-최종 커밋: b247827 (테스트: Loot System 테스트 에셋 추가)
+최종 커밋: 86dbf45 (기능: Phase A-1 MageForm 시스템 구현)
 ```
 
-**오늘 작업 브랜치 (2025-11-09)**:
-1. 012-buff-icon-ui (BuffIcon UI) → PR #6 생성 완료 (테스트 완료)
-2. 013-item-drop-loot (Loot System) → PR #7 생성 완료
+**오늘 작업 브랜치 (2025-11-10)**:
+1. 014-skull-platformer-phase-a (Phase A-1: Form System) → 구현 완료 ✅
+   - PR #6, #7 병합 완료 (master 최신화)
+   - "Skull" → "Form" 용어 변경
+   - MageForm 시스템 7개 파일 생성 (607줄)
 
 ### 싱글톤 시스템 현황 (9개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
@@ -638,6 +723,22 @@ Assets/_Project/Scripts/
 │   ├── StatusEffect.cs
 │   ├── StatusEffectManager.cs
 │   └── StatusEffectTest.cs
+├── Gameplay/ (NEW - Phase A-1)
+│   ├── Form/
+│   │   ├── Core/
+│   │   │   ├── IFormController.cs (인터페이스)
+│   │   │   ├── FormData.cs (ScriptableObject)
+│   │   │   └── BaseForm.cs (추상 클래스)
+│   │   ├── Implementations/
+│   │   │   └── MageForm.cs (마법사 Form)
+│   │   └── Abilities/
+│   │       ├── MagicMissileAbility.cs (기본 공격)
+│   │       ├── TeleportAbility.cs (스킬 1)
+│   │       └── FireballAbility.cs (스킬 2)
+│   ├── Level/
+│   │   ├── Room/
+│   │   └── Manager/
+│   └── Item/
 ├── Resources/
 │   ├── GameResourceManager.cs
 │   └── ResourcePaths.cs
@@ -715,54 +816,57 @@ GASPT/
 | 문서 | Awaitable 가이드 | 1 | +841 | ✅ 완료 |
 | Phase 13 | Item Drop & Loot System | 8 | ~1,291 | ✅ 완료 |
 | 문서 | Serialization 가이드 | 1 | +553 | ✅ 완료 |
-| **합계** | **13개 Phase + 추가 + 확장** | **80개** | **~18,779줄** | **✅ 완료** |
+| **Phase A-1** | **Form System (Platformer)** | **7** | **~607** | **✅ 완료** |
+| **합계** | **13개 Phase + Phase A-1 + 추가** | **87개** | **~19,386줄** | **✅ 완료** |
 
 ---
 
-## 🚀 다음 작업 옵션
+## 🚀 다음 작업 옵션 (Phase A 계속)
 
-### 옵션 1: Quest System 구현 (Phase 14)
+### 옵션 1: Phase A-2 - Enemy AI + Combat 통합 ⚔️
 
-**퀘스트 및 미션 시스템**:
-- [ ] QuestData ScriptableObject
-- [ ] QuestSystem 싱글톤
-- [ ] QuestUI 및 QuestTracker
-- [ ] 퀘스트 목표 타입 (Kill, Collect, Talk, Explore)
-- [ ] 퀘스트 보상 (경험치, 골드, 아이템)
-- [ ] 퀘스트 진행도 추적
-
----
-
-### 옵션 2: Ability Effects 구현
-
-**스킬 이펙트 및 데미지 계산**:
-- [ ] Projectile 시스템 (투사체)
-- [ ] AOE Effect (범위 공격)
-- [ ] Buff/Debuff 적용 스킬
-- [ ] 파티클 이펙트 통합
-- [ ] 사운드 이펙트 통합
+**적 AI 및 전투 시스템**:
+- [ ] BasicMeleeEnemy 구현 (근접 공격 적)
+- [ ] Enemy FSM 상태 (Idle, Patrol, Chase, Attack, Die)
+- [ ] MageForm 스킬과 Enemy HP 연동
+- [ ] 데미지 계산 및 DamageNumber 표시
+- [ ] 적 처치 시 EXP/아이템 드롭
+- [ ] 간단한 적 스폰 시스템
 
 ---
 
-### 옵션 3: Player Controller 개선
+### 옵션 2: Phase A-3 - Room System (절차적 던전) 🏰
 
-**캐릭터 컨트롤 및 애니메이션**:
-- [ ] 이동 시스템 개선
-- [ ] 점프 및 대시 기능
-- [ ] 애니메이션 상태머신 연동
-- [ ] 입력 시스템 개선 (New Input System)
-- [ ] 카메라 컨트롤
+**방 단위 레벨 시스템**:
+- [ ] RoomData ScriptableObject
+- [ ] RoomManager 싱글톤
+- [ ] 방 생성/전환 로직
+- [ ] 적 스폰 포인트
+- [ ] 방 클리어 조건
+- [ ] 다음 방으로 이동 포탈
 
 ---
 
-### 옵션 4: AI & FSM 통합
+### 옵션 3: Phase A-4 - Item-Skill System (아이템 획득) 🎁
 
-**적 AI 및 상태머신**:
-- [ ] Enemy AI 기본 행동 (Idle, Chase, Attack, Retreat)
-- [ ] FSM과 GAS 통합
-- [ ] NavMesh 기반 이동
-- [ ] 패턴 공격 시스템
-- [ ] 보스 AI 구현
+**아이템으로 스킬 변경**:
+- [ ] SkillItemData ScriptableObject
+- [ ] 아이템 획득 시 스킬 교체 로직
+- [ ] 스킬 UI 업데이트 (아이콘, 쿨다운)
+- [ ] 2~3개 추가 스킬 아이템 구현
+- [ ] 기존 LootSystem 통합
+
+---
+
+### 옵션 4: 테스트 씬 및 프리팹 작업 🧪
+
+**플레이 가능한 프로토타입 완성**:
+- [ ] MageForm 프리팹 생성
+- [ ] MageForm 테스트 씬 구성
+- [ ] 투사체 프리팹 생성 (Magic Missile, Fireball)
+- [ ] 이펙트 프리팹 추가 (폭발, 텔레포트)
+- [ ] 플레이어 입력 처리 (마우스 클릭, 키보드)
+- [ ] 카메라 따라가기
 
 ---
 
@@ -914,7 +1018,8 @@ Create > GASPT > Items > Item
 Create > GASPT > Enemies > Enemy
 Create > GASPT > StatusEffects > StatusEffect
 Create > GASPT > Skills > Skill
-Create > GASPT > Loot > LootTable (NEW)
+Create > GASPT > Loot > LootTable
+Create > GASPT > Form > Form Data (NEW - Phase A-1)
 ```
 
 ---
@@ -986,8 +1091,12 @@ private void OnDisable()
 
 1. **이 파일(WORK_STATUS.md) 먼저 읽기** ✅
 2. **Git 상태 확인** (`git status`, `git log`)
-3. **PR #6, #7 리뷰 및 머지** (BuffIcon UI, Loot System)
-4. **다음 Phase 기획 및 시작** (Quest System, Ability Effects, Player Controller, AI 등)
+3. **Phase A-1 완료 상태 확인** (MageForm 시스템 7개 파일)
+4. **다음 Phase A 작업 선택**:
+   - Phase A-2: Enemy AI + Combat 통합
+   - Phase A-3: Room System (절차적 던전)
+   - Phase A-4: Item-Skill System
+   - 또는 테스트 씬/프리팹 작업
 
 ---
 
@@ -995,12 +1104,12 @@ private void OnDisable()
 
 ### Claude Code와 다시 대화 시작할 때
 1. 이 파일(`WORK_STATUS.md`) 내용 공유
-2. 현재 브랜치 알려주기: `013-item-drop-loot`
+2. 현재 브랜치 알려주기: `014-skull-platformer-phase-a`
 3. 하고 싶은 작업 명시:
-   - "PR #6, #7 머지하고 싶어"
-   - "Quest System 시작하고 싶어"
-   - "Ability Effects 구현하고 싶어"
-   - "Player Controller 개선하고 싶어"
+   - "Phase A-2 Enemy AI 작업 시작하고 싶어"
+   - "Phase A-3 Room System 작업하고 싶어"
+   - "Phase A-4 Item-Skill System 하고 싶어"
+   - "테스트 씬 만들어서 플레이 가능하게 만들고 싶어"
 
 ---
 
@@ -1009,13 +1118,15 @@ private void OnDisable()
 ### 프로젝트 문서
 1. **WORK_STATUS.md** (현재 파일) - 전체 작업 현황
 2. **RESOURCES_GUIDE.md** - Resources 폴더 구조 및 사용법
-3. **specs/004-rpg-systems/** - 기능 명세 및 Task 목록
+3. **docs/development/FORM_PLATFORMER_IMPLEMENTATION_PLAN.md** - Phase A 구현 계획 (NEW)
+4. **specs/004-rpg-systems/** - 기능 명세 및 Task 목록 (RPG 시스템)
 
 ---
 
-**작성일**: 2025-11-09
-**다음 예정 작업**: PR #6, #7 리뷰 및 머지 / Quest System / Ability Effects / Player Controller 개선
-**브랜치**: 013-item-drop-loot
-**상태**: Phase 13 완료 (Loot System), PR #6, #7 생성 완료, 총 9개 싱글톤 시스템
+**작성일**: 2025-11-10
+**다음 예정 작업**: Phase A-2 (Enemy AI) / Phase A-3 (Room System) / Phase A-4 (Item-Skill) / 테스트 씬
+**브랜치**: 014-skull-platformer-phase-a
+**상태**: Phase A-1 완료 (Form System), 총 87개 파일, 19,386줄, 9개 싱글톤 시스템
 
-🚀 **수고하셨습니다! Item Drop & Loot System 구현 완료!**
+🚀 **수고하셨습니다! Phase A-1 MageForm 시스템 구현 완료!**
+🎮 **프로젝트 방향 전환: RPG 시스템 → 플랫포머 로그라이크 게임 구현 시작!**
