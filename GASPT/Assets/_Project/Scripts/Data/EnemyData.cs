@@ -59,6 +59,34 @@ namespace GASPT.Data
         public LootTable lootTable;
 
 
+        // ====== 플랫포머 설정 ======
+
+        [Header("플랫포머 설정")]
+        [Tooltip("기본 이동 속도")]
+        [Range(0.5f, 10f)]
+        public float moveSpeed = 2f;
+
+        [Tooltip("플레이어 감지 거리")]
+        [Range(1f, 20f)]
+        public float detectionRange = 5f;
+
+        [Tooltip("공격 범위 (근접 공격)")]
+        [Range(0.5f, 5f)]
+        public float attackRange = 1.5f;
+
+        [Tooltip("순찰 거리 (좌우)")]
+        [Range(1f, 10f)]
+        public float patrolDistance = 3f;
+
+        [Tooltip("추격 속도 (감지 후)")]
+        [Range(1f, 15f)]
+        public float chaseSpeed = 3f;
+
+        [Tooltip("공격 쿨다운 (초)")]
+        [Range(0.5f, 5f)]
+        public float attackCooldown = 1.5f;
+
+
         // ====== UI ======
 
         [Header("UI")]

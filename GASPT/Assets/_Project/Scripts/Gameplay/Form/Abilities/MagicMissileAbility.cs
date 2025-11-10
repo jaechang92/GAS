@@ -45,19 +45,36 @@ namespace GASPT.Form
 
         /// <summary>
         /// 마법 미사일 발사
-        /// TODO: 실제 투사체 프리팹 생성 및 물리 처리
+        /// TODO: 실제 투사체 프리팹 생성 (현재는 즉시 Raycast)
         /// </summary>
         private void FireMissile(Vector3 startPos, Vector2 direction)
         {
-            // 임시 구현 - 나중에 실제 투사체로 교체
-            Debug.DrawRay(startPos, direction * 10f, Color.cyan, 1f);
+            // 임시 구현: 즉시 Raycast로 타격
+            // 나중에 실제 투사체로 교체 예정
+            float missileRange = 10f;
 
-            // TODO: 투사체 생성
-            // GameObject missile = Object.Instantiate(missilePrefab, startPos, Quaternion.identity);
-            // Rigidbody2D rb = missile.GetComponent<Rigidbody2D>();
-            // rb.linearVelocity = direction * MissileSpeed;
+            RaycastHit2D hit = Physics2D.Raycast(startPos, direction, missileRange);
 
-            Debug.Log($"[MagicMissile] 투사체 발사 (임시) - 데미지: {MissileDamage}, 속도: {MissileSpeed}");
+            // 디버그 시각화
+            Debug.DrawRay(startPos, direction * (hit.collider != null ? hit.distance : missileRange),
+                         hit.collider != null ? Color.green : Color.cyan, 1f);
+
+            if (hit.collider != null)
+            {
+                // Enemy에 데미지 적용
+                GASPT.Enemies.Enemy enemy = hit.collider.GetComponent<GASPT.Enemies.Enemy>();
+                if (enemy != null && !enemy.IsDead)
+                {
+                    enemy.TakeDamage((int)MissileDamage);
+                    Debug.Log($"[MagicMissile] {enemy.Data.enemyName}에 {MissileDamage} 데미지!");
+                }
+                else
+                {
+                    Debug.Log($"[MagicMissile] 충돌: {hit.collider.name} (Enemy 아님)");
+                }
+            }
+
+            Debug.Log($"[MagicMissile] 투사체 발사 - 데미지: {MissileDamage}, 속도: {MissileSpeed}, 범위: {missileRange}m");
         }
     }
 }

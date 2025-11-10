@@ -6,7 +6,9 @@
       "Bash(gh pr create:*)",
       "Bash(dir:*)",
       "Bash(gh pr list:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

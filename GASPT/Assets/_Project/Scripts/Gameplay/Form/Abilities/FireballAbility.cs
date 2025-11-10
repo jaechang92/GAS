@@ -72,15 +72,24 @@ namespace GASPT.Form
         {
             Debug.Log($"[Fireball] 폭발! 위치: {explosionPos}, 반경: {ExplosionRadius}m");
 
-            // TODO: 범위 내 적들에게 데미지
-            // Collider2D[] hits = Physics2D.OverlapCircleAll(explosionPos, ExplosionRadius);
-            // foreach (var hit in hits)
-            // {
-            //     if (hit.CompareTag("Enemy"))
-            //     {
-            //         hit.GetComponent<HealthSystem>().TakeDamage(FireballDamage, null);
-            //     }
-            // }
+            // 범위 내 모든 Collider 검색
+            Collider2D[] hits = Physics2D.OverlapCircleAll(explosionPos, ExplosionRadius);
+
+            int enemiesHit = 0;
+
+            foreach (var hit in hits)
+            {
+                // Enemy 컴포넌트 확인
+                GASPT.Enemies.Enemy enemy = hit.GetComponent<GASPT.Enemies.Enemy>();
+                if (enemy != null && !enemy.IsDead)
+                {
+                    enemy.TakeDamage((int)FireballDamage);
+                    enemiesHit++;
+                    Debug.Log($"[Fireball] {enemy.Data.enemyName}에 {FireballDamage} 폭발 데미지!");
+                }
+            }
+
+            Debug.Log($"[Fireball] 폭발 완료 - {enemiesHit}명의 적에게 데미지 적용");
 
             // TODO: 폭발 이펙트 재생
             // ParticleSystem explosion = Object.Instantiate(explosionEffectPrefab, explosionPos, Quaternion.identity);
@@ -91,8 +100,6 @@ namespace GASPT.Form
             Debug.DrawRay(explosionPos, Vector3.down * ExplosionRadius, Color.yellow, 2f);
             Debug.DrawRay(explosionPos, Vector3.left * ExplosionRadius, Color.yellow, 2f);
             Debug.DrawRay(explosionPos, Vector3.right * ExplosionRadius, Color.yellow, 2f);
-
-            Debug.Log($"[Fireball] 데미지: {FireballDamage}, 범위 데미지 적용 완료 (임시)");
         }
     }
 }
