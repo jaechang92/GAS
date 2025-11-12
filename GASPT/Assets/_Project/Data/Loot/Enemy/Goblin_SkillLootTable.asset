@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: Goblin_SkillLootTable
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Loot.LootTable
   lootEntries:
-  - item: {fileID: 11400000, guid: 00a6ab7eca6221a4688043624941cd11, type: 2}
-    dropChance: 0.3
+  - item: {fileID: 11400000, guid: 3fc64baee3be5564aa6bbeaf49b654dc, type: 2}
+    dropChance: 0.15
     minQuantity: 1
     maxQuantity: 3
-  - item: {fileID: 11400000, guid: 77e69231d27298249aa34b1979ffc20b, type: 2}
-    dropChance: 0.2
+  - item: {fileID: 11400000, guid: aea183cfa07e76847a1c09757e3c98a7, type: 2}
+    dropChance: 0.1
     minQuantity: 1
     maxQuantity: 2
-  - item: {fileID: 11400000, guid: e34edf26a5940e9468da5c02f5dba78e, type: 2}
-    dropChance: 0.1
+  - item: {fileID: 0}
+    dropChance: 0.75
     minQuantity: 1
     maxQuantity: 2
   allowNoDrop: 1

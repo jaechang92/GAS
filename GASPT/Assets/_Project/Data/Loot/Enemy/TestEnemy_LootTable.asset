@@ -13,16 +13,16 @@ MonoBehaviour:
   m_Name: TestEnemy_LootTable
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Loot.LootTable
   lootEntries:
-  - item: {fileID: 11400000, guid: 00a6ab7eca6221a4688043624941cd11, type: 2}
-    dropChance: 0.3
-    minQuantity: 1
-    maxQuantity: 3
-  - item: {fileID: 11400000, guid: 77e69231d27298249aa34b1979ffc20b, type: 2}
+  - item: {fileID: 11400000, guid: 866cb2ec765e8da42bde1e91ac75c8d8, type: 2}
     dropChance: 0.2
     minQuantity: 1
+    maxQuantity: 3
+  - item: {fileID: 11400000, guid: 712c51d40e6167a4b851c8a4704571d4, type: 2}
+    dropChance: 0.3
+    minQuantity: 1
     maxQuantity: 2
-  - item: {fileID: 11400000, guid: e34edf26a5940e9468da5c02f5dba78e, type: 2}
-    dropChance: 0.1
+  - item: {fileID: 0}
+    dropChance: 0.5
     minQuantity: 1
     maxQuantity: 2
   allowNoDrop: 1

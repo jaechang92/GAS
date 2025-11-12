@@ -140,12 +140,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void SpawnEnemies()
         {
-            if (roomData == null)
-            {
-                Debug.LogError($"[Room] {name}: RoomData가 null입니다!");
-                return;
-            }
-
             if (spawnPoints == null || spawnPoints.Length == 0)
             {
                 Debug.LogWarning($"[Room] {name}: 스폰 포인트가 없습니다!");
@@ -155,15 +149,20 @@ namespace GASPT.Gameplay.Level
             spawnedEnemies.Clear();
             aliveEnemyCount = 0;
 
-            // RoomData의 enemySpawns 사용
-            if (roomData.enemySpawns != null && roomData.enemySpawns.Length > 0)
+            // RoomData의 enemySpawns 사용 (RoomData가 있고 enemySpawns가 설정된 경우)
+            if (roomData != null && roomData.enemySpawns != null && roomData.enemySpawns.Length > 0)
             {
                 SpawnFromRoomData();
             }
             else
             {
-                // 스폰 포인트의 기본 EnemyData 사용
+                // 스폰 포인트의 기본 EnemyData 사용 (RoomData가 없거나 enemySpawns가 비어있는 경우)
                 SpawnFromSpawnPoints();
+
+                if (roomData == null)
+                {
+                    Debug.Log($"[Room] {name}: RoomData가 없으므로 스폰 포인트 기본 설정 사용");
+                }
             }
 
             OnEnemyCountChanged?.Invoke(this, aliveEnemyCount);

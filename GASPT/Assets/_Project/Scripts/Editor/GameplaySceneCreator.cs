@@ -361,7 +361,23 @@ namespace GASPT.Editor
         /// </summary>
         private void CreateEnemySpawnPoints()
         {
-            GameObject spawnPointsParent = new GameObject("=== ENEMY SPAWN POINTS ===");
+            // TestGoblin EnemyData 로드
+            GASPT.Data.EnemyData testGoblinData = AssetDatabase.LoadAssetAtPath<GASPT.Data.EnemyData>("Assets/_Project/Data/Enemies/TestGoblin.asset");
+
+            if (testGoblinData == null)
+            {
+                Debug.LogWarning("[GameplaySceneCreator] TestGoblin EnemyData를 찾을 수 없습니다! 스폰 포인트에 EnemyData가 할당되지 않습니다.");
+            }
+
+            // === ROOMS === GameObject 찾기
+            GameObject roomsParent = GameObject.Find("=== ROOMS ===");
+            if (roomsParent == null)
+            {
+                Debug.LogError("[GameplaySceneCreator] === ROOMS === 부모 오브젝트를 찾을 수 없습니다!");
+                return;
+            }
+
+            int totalSpawnPoints = 0;
 
             // 각 방마다 2~4개 스폰 포인트 생성
             for (int roomIndex = 0; roomIndex < roomCount; roomIndex++)
@@ -369,28 +385,50 @@ namespace GASPT.Editor
                 // 첫 번째 방(시작 방)은 스폰 포인트 없음
                 if (roomIndex == 0) continue;
 
+                // 해당 Room GameObject 찾기
+                string roomName = roomIndex == roomCount - 1 ? "BossRoom" : $"Room_{roomIndex}";
+                Transform roomTransform = roomsParent.transform.Find(roomName);
+
+                if (roomTransform == null)
+                {
+                    Debug.LogWarning($"[GameplaySceneCreator] {roomName}을 찾을 수 없습니다!");
+                    continue;
+                }
+
                 int spawnCount = roomIndex == roomCount - 1 ? 1 : Random.Range(2, 5); // 보스방은 1개
 
                 for (int i = 0; i < spawnCount; i++)
                 {
-                    GameObject spawnPoint = new GameObject($"EnemySpawnPoint_Room{roomIndex}_{i}");
-                    spawnPoint.transform.SetParent(spawnPointsParent.transform);
+                    GameObject spawnPoint = new GameObject($"EnemySpawnPoint_{i}");
+                    // Room의 자식으로 설정
+                    spawnPoint.transform.SetParent(roomTransform);
 
-                    float xPos = roomIndex * roomWidth + Random.Range(-15f, 15f);
+                    float xOffset = Random.Range(-15f, 15f);
                     float yPos = 2f;
-                    spawnPoint.transform.position = new Vector3(xPos, yPos, 0f);
+                    spawnPoint.transform.localPosition = new Vector3(xOffset, yPos, 0f);
 
                     // EnemySpawnPoint 컴포넌트 추가
                     var spawnPointComponent = spawnPoint.AddComponent<EnemySpawnPoint>();
+
+                    // EnemyData 자동 할당
+                    if (testGoblinData != null)
+                    {
+                        SerializedObject so = new SerializedObject(spawnPointComponent);
+                        SerializedProperty enemyDataProp = so.FindProperty("enemyData");
+                        enemyDataProp.objectReferenceValue = testGoblinData;
+                        so.ApplyModifiedProperties();
+                    }
 
                     // Gizmo 표시용 아이콘
                     #if UNITY_EDITOR
                     UnityEditor.EditorGUIUtility.SetIconForObject(spawnPoint, UnityEditor.EditorGUIUtility.IconContent("sv_icon_dot3_pix16_gizmo").image as Texture2D);
                     #endif
+
+                    totalSpawnPoints++;
                 }
             }
 
-            Debug.Log("[GameplaySceneCreator] 적 스폰 포인트 생성 완료");
+            Debug.Log($"[GameplaySceneCreator] 적 스폰 포인트 생성 완료 (총 {totalSpawnPoints}개, EnemyData: {(testGoblinData != null ? testGoblinData.enemyName : "None")})");
         }
 
         /// <summary>

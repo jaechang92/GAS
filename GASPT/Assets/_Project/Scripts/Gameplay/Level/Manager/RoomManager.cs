@@ -20,6 +20,10 @@ namespace GASPT.Gameplay.Level
         [Tooltip("수동 할당 (autoFindRooms가 false일 때)")]
         [SerializeField] private Room[] manualRooms;
 
+        [Header("자동 시작")]
+        [Tooltip("게임 시작 시 자동으로 첫 번째 방 진입")]
+        [SerializeField] private bool autoStartFirstRoom = true;
+
         [Header("디버그 (읽기 전용)")]
         [Tooltip("현재 등록된 방 목록 (자동 업데이트)")]
         [SerializeField] private List<Room> rooms = new List<Room>();
@@ -56,6 +60,12 @@ namespace GASPT.Gameplay.Level
         {
             // Start에서 초기화 (Scene 로드 완료 후)
             InitializeRooms();
+
+            // 자동 시작 옵션이 켜져 있으면 첫 방으로 자동 진입
+            if (autoStartFirstRoom && rooms.Count > 0)
+            {
+                StartDungeonAsync().Forget();
+            }
         }
 
         /// <summary>

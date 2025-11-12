@@ -267,6 +267,20 @@ namespace GASPT.Editor
             so.FindProperty("damage").floatValue = 10f;
             so.FindProperty("collisionRadius").floatValue = 0.3f;
             so.FindProperty("projectileRenderer").objectReferenceValue = sr;
+
+            // targetLayers 설정 (Enemy Layer 포함)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다! Project Settings > Tags and Layers에서 Layer 6을 'Enemy'로 추가하세요.");
+                // 기본적으로 모든 레이어 대상
+                so.FindProperty("targetLayers").intValue = ~0;
+            }
+            else
+            {
+                so.FindProperty("targetLayers").intValue = 1 << enemyLayer;
+            }
+
             so.ApplyModifiedProperties();
 
             // 프리팹 저장
@@ -310,6 +324,20 @@ namespace GASPT.Editor
             so.FindProperty("collisionRadius").floatValue = 0.5f;
             so.FindProperty("explosionRadius").floatValue = 3f;
             so.FindProperty("projectileRenderer").objectReferenceValue = sr;
+
+            // targetLayers 설정 (Enemy Layer 포함)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다! Project Settings > Tags and Layers에서 Layer 6을 'Enemy'로 추가하세요.");
+                // 기본적으로 모든 레이어 대상
+                so.FindProperty("targetLayers").intValue = ~0;
+            }
+            else
+            {
+                so.FindProperty("targetLayers").intValue = 1 << enemyLayer;
+            }
+
             so.ApplyModifiedProperties();
 
             // 프리팹 저장
@@ -370,6 +398,18 @@ namespace GASPT.Editor
             SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
             sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.3f, 0.3f, 1f)); // 빨간색 (Enemy)
             sr.color = Color.white; // 스프라이트 색상 유지
+
+            // Layer 설정 (Enemy)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다! Project Settings > Tags and Layers에서 Layer 6을 'Enemy'로 추가하세요.");
+                enemyObj.layer = 0; // Default layer
+            }
+            else
+            {
+                enemyObj.layer = enemyLayer;
+            }
 
             PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
             Enemy enemy = enemyObj.AddComponent<Enemy>();
