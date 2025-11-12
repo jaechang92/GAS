@@ -15,6 +15,7 @@ namespace GASPT.Editor
     {
         private const string ScenePath = "Assets/_Project/Scenes/GameplayScene.unity";
         private const string PrefabsPath = "Prefabs";
+        private const string TexturesPath = "Assets/Resources/Textures/Placeholders";
 
         private Vector2 scrollPosition;
         private bool createPlayer = true;
@@ -466,12 +467,31 @@ namespace GASPT.Editor
         }
 
         /// <summary>
-        /// Placeholder 스프라이트 생성 (단색 정사각형)
+        /// Placeholder 스프라이트 생성 및 에셋으로 저장
         /// </summary>
         private Sprite CreatePlaceholderSprite(Color color)
         {
-            // 32x32 텍스처 생성 (더 큰 크기로 변경)
-            Texture2D texture = new Texture2D(32, 32);
+            // Textures 폴더 생성
+            CreateFolderIfNotExists(TexturesPath);
+
+            // 색상 기반 파일명 생성
+            string colorName = GetColorName(color);
+            string texturePath = $"{TexturesPath}/Placeholder_{colorName}.png";
+            string textureAssetPath = texturePath;
+
+            // 이미 존재하면 로드
+            Texture2D existingTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(textureAssetPath);
+            if (existingTexture != null)
+            {
+                Sprite existingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(textureAssetPath);
+                if (existingSprite != null)
+                {
+                    return existingSprite;
+                }
+            }
+
+            // 새 텍스처 생성
+            Texture2D texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[32 * 32];
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -480,12 +500,65 @@ namespace GASPT.Editor
             texture.SetPixels(pixels);
             texture.Apply();
 
-            return Sprite.Create(
-                texture,
-                new Rect(0, 0, 32, 32),
-                new Vector2(0.5f, 0.5f),
-                32f // Pixels Per Unit (중요!)
-            );
+            // PNG로 인코딩 및 저장
+            byte[] pngData = texture.EncodeToPNG();
+            System.IO.File.WriteAllBytes(texturePath, pngData);
+
+            AssetDatabase.ImportAsset(textureAssetPath);
+
+            // TextureImporter 설정 (Sprite로 변환)
+            TextureImporter importer = AssetImporter.GetAtPath(textureAssetPath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 32f;
+                importer.filterMode = FilterMode.Point;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+
+            // 생성된 Sprite 로드
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(textureAssetPath);
+
+            if (sprite == null)
+            {
+                Debug.LogError($"[GameplaySceneCreator] Sprite 생성 실패: {textureAssetPath}");
+            }
+
+            return sprite;
+        }
+
+        /// <summary>
+        /// 색상에 따른 이름 생성
+        /// </summary>
+        private string GetColorName(Color color)
+        {
+            // RGB 값을 16진수로 변환
+            int r = Mathf.RoundToInt(color.r * 255f);
+            int g = Mathf.RoundToInt(color.g * 255f);
+            int b = Mathf.RoundToInt(color.b * 255f);
+            return $"{r:X2}{g:X2}{b:X2}";
+        }
+
+        /// <summary>
+        /// 폴더가 없으면 생성
+        /// </summary>
+        private void CreateFolderIfNotExists(string path)
+        {
+            if (!AssetDatabase.IsValidFolder(path))
+            {
+                string parentPath = System.IO.Path.GetDirectoryName(path);
+                string folderName = System.IO.Path.GetFileName(path);
+
+                // 부모 폴더가 없으면 재귀적으로 생성
+                if (!AssetDatabase.IsValidFolder(parentPath))
+                {
+                    CreateFolderIfNotExists(parentPath);
+                }
+
+                AssetDatabase.CreateFolder(parentPath, folderName);
+            }
         }
     }
 }

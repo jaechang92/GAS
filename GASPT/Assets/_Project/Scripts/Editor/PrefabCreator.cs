@@ -22,6 +22,7 @@ namespace GASPT.Editor
         private const string ProjectilesPrefabsPath = "Assets/Resources/Prefabs/Projectiles";
         private const string EffectsPrefabsPath = "Assets/Resources/Prefabs/Effects";
         private const string EnemiesPrefabsPath = "Assets/Resources/Prefabs/Enemies";
+        private const string TexturesPath = "Assets/Resources/Textures/Placeholders";
 
         private Vector2 scrollPosition;
         private bool createMageForm = true;
@@ -177,6 +178,7 @@ namespace GASPT.Editor
             CreateFolderIfNotExists(ProjectilesPrefabsPath);
             CreateFolderIfNotExists(EffectsPrefabsPath);
             CreateFolderIfNotExists(EnemiesPrefabsPath);
+            CreateFolderIfNotExists(TexturesPath);
 
             AssetDatabase.Refresh();
             Debug.Log("[PrefabCreator] 프리팹 폴더 생성 완료");
@@ -381,12 +383,34 @@ namespace GASPT.Editor
         }
 
         /// <summary>
-        /// Placeholder 스프라이트 생성 (정사각형)
+        /// Placeholder 스프라이트 생성 및 에셋으로 저장
         /// </summary>
         private Sprite CreatePlaceholderSprite(Color color)
         {
-            // 32x32 텍스처 생성 (충분히 큰 크기)
-            Texture2D texture = new Texture2D(32, 32);
+            // 색상 기반 파일명 생성
+            string colorName = GetColorName(color);
+            string texturePath = $"{TexturesPath}/Placeholder_{colorName}.png";
+            string textureAssetPath = texturePath;
+
+            // 이미 존재하면 로드
+            Texture2D existingTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(textureAssetPath);
+            if (existingTexture != null)
+            {
+                // 기존 텍스처에서 스프라이트 로드
+                string[] assetPaths = AssetDatabase.FindAssets($"Placeholder_{colorName} t:Sprite", new[] { TexturesPath });
+                if (assetPaths.Length > 0)
+                {
+                    string spritePath = AssetDatabase.GUIDToAssetPath(assetPaths[0]);
+                    Sprite existingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+                    if (existingSprite != null)
+                    {
+                        return existingSprite;
+                    }
+                }
+            }
+
+            // 새 텍스처 생성
+            Texture2D texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[32 * 32];
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -395,12 +419,49 @@ namespace GASPT.Editor
             texture.SetPixels(pixels);
             texture.Apply();
 
-            return Sprite.Create(
-                texture,
-                new Rect(0, 0, 32, 32),
-                new Vector2(0.5f, 0.5f),
-                32f // Pixels Per Unit (중요!)
-            );
+            // PNG로 인코딩 및 저장
+            byte[] pngData = texture.EncodeToPNG();
+            System.IO.File.WriteAllBytes(texturePath, pngData);
+
+            AssetDatabase.ImportAsset(textureAssetPath);
+
+            // TextureImporter 설정 (Sprite로 변환)
+            TextureImporter importer = AssetImporter.GetAtPath(textureAssetPath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 32f;
+                importer.filterMode = FilterMode.Point;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+
+            // 생성된 Sprite 로드
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(textureAssetPath);
+
+            if (sprite == null)
+            {
+                Debug.LogError($"[PrefabCreator] Sprite 생성 실패: {textureAssetPath}");
+            }
+            else
+            {
+                Debug.Log($"[PrefabCreator] Sprite 생성 완료: {textureAssetPath}");
+            }
+
+            return sprite;
+        }
+
+        /// <summary>
+        /// 색상에 따른 이름 생성
+        /// </summary>
+        private string GetColorName(Color color)
+        {
+            // RGB 값을 16진수로 변환
+            int r = Mathf.RoundToInt(color.r * 255f);
+            int g = Mathf.RoundToInt(color.g * 255f);
+            int b = Mathf.RoundToInt(color.b * 255f);
+            return $"{r:X2}{g:X2}{b:X2}";
         }
 
         /// <summary>
