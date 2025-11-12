@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
 **최종 업데이트**: 2025-11-12
-**현재 브랜치**: `014-skull-platformer-phase-a`
-**작업 세션**: Phase A-4 Item-Skill System 구현 완료
+**현재 브랜치**: `015-playable-prototype-phase-b1`
+**작업 세션**: Phase B-2 적 스폰 및 전투 시스템 완료
 
 ---
 
@@ -909,22 +909,137 @@
 - 파일 변경: 총 ~15개 파일 (8개 신규, 7개 ScriptableObject)
 - 코드 라인: ~1,185줄
 
+#### ✅ Phase B-1: Playable Prototype Editor Tools
+**완료 Task**: 2개
+**완료 날짜**: 2025-11-12
+
+**핵심 시스템** (2개 파일, 1,035줄):
+- PrefabCreator.cs (470줄) - 자동 프리팹 생성 도구
+  - MageForm 프리팹 (Player)
+  - MagicMissileProjectile, FireballProjectile
+  - VisualEffect (범용 효과)
+  - BasicMeleeEnemy (적)
+  - 32x32 Placeholder 스프라이트 자동 생성 (PNG 저장)
+  - TextureImporter 설정 (Sprite, PPU 32, Point filter)
+
+- GameplaySceneCreator.cs (565줄) - 자동 씬 생성 도구
+  - Main Camera + CameraFollow
+  - SingletonPreloader (11개 싱글톤)
+  - RoomManager + 3개 Room
+  - Ground + Jump 플랫폼 (2D BoxCollider2D)
+  - Player (MageForm)
+  - EnemySpawnPoints
+  - UI Canvas + EventSystem
+
+**주요 버그 수정** (2개):
+1. **3D Collider 문제**: GameObject.CreatePrimitive(Cube) → 수동 BoxCollider2D 추가
+2. **Sprite 참조 손실**: 메모리 텍스처 → PNG 파일 저장 (TextureImporter 설정)
+
+**테스트 문서**:
+- PHASE_B1_TEST_GUIDE.md (409줄) - 체크리스트 및 문제 해결 가이드
+
+**브랜치 정보**:
+- 브랜치: 015-playable-prototype-phase-b1
+- 커밋 3개:
+  - e104efe 수정: 2D Collider 및 32x32 스프라이트 적용
+  - 6c47442 수정: Placeholder 스프라이트 PNG 저장 및 참조 복구
+  - a44670b 문서: Phase B-1 테스트 가이드 작성
+
+#### ✅ Phase B-2: Enemy Spawn & Combat System
+**완료 Task**: 4개
+**완료 날짜**: 2025-11-12
+
+**핵심 구현** (4개 파일 수정):
+
+1. **GameplaySceneCreator.cs** (+50줄)
+   - EnemySpawnPoint 자동 설정 추가
+   - TestGoblin EnemyData 자동 로드 및 할당
+   - 스폰 포인트를 Room GameObject의 자식으로 배치
+   - Room.GetComponentsInChildren<EnemySpawnPoint>() 호환
+
+2. **PrefabCreator.cs** (+40줄)
+   - Enemy Layer 자동 설정 (BasicMeleeEnemy)
+   - Projectile targetLayers 자동 설정 (MagicMissile, Fireball)
+   - Layer 6 "Enemy" 체크 및 경고 메시지
+
+3. **RoomManager.cs** (+10줄)
+   - autoStartFirstRoom 필드 추가 (기본값: true)
+   - Start()에서 첫 번째 방 자동 진입 로직 추가
+   - StartDungeonAsync().Forget() 자동 호출
+
+4. **Room.cs** (+17/-17줄)
+   - roomData null 체크 완화
+   - roomData 없을 때 스폰 포인트 기본 EnemyData 사용
+   - SpawnFromSpawnPoints() 로직 개선
+
+**시스템 통합 흐름**:
+```
+[게임 시작] → [RoomManager.Start()]
+    ↓
+[autoStartFirstRoom = true] → [StartDungeonAsync()]
+    ↓
+[StartRoom 진입] → [Room.EnterRoomAsync()]
+    ↓
+[Room_1 진입] → [SpawnEnemies()]
+    ↓
+[EnemySpawnPoint] → [PoolManager.Spawn<BasicMeleeEnemy>()]
+    ↓
+[Enemy 초기화] → [InitializeWithData(TestGoblin)]
+    ↓
+[플레이어 공격] → [Projectile 발사]
+    ↓
+[Physics2D.OverlapCircleAll] → [Enemy Layer 감지]
+    ↓
+[Enemy.TakeDamage()] → [HP 감소]
+    ↓
+[HP = 0] → [Enemy.Die()] → [DropGold(), GiveExp(), DropLoot()]
+    ↓
+[풀로 반환] → [PoolManager.Despawn()]
+```
+
+**생성된 에셋**:
+- 7개 Placeholder 텍스처 (PNG)
+- 4개 프리팹 (MageForm, 2개 Projectile, BasicMeleeEnemy, VisualEffect)
+- GameplayScene.unity (플레이 가능한 씬)
+
+**테스트 요구사항** (필수):
+1. Unity 에디터에서 "Enemy" Layer 추가 (Layer 6)
+2. 프리팹 재생성 (Tools > GASPT > Prefab Creator)
+3. GameplayScene 재생성 (Tools > GASPT > Gameplay Scene Creator)
+
+**테스트 문서**:
+- PHASE_B2_TEST_GUIDE.md - 상세 테스트 케이스 및 체크리스트
+
+**브랜치 정보**:
+- 브랜치: 015-playable-prototype-phase-b1
+- 커밋: 447d184 - 기능: Phase B-2 적 스폰 및 전투 시스템 완료
+- 파일 변경: 43개 파일 (+4,926줄, -32줄)
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 014-skull-platformer-phase-a (로컬)
-원격 푸시: 완료
-최종 커밋: 4b9982b (최적화: 오브젝트 풀링 시스템 구축 및 적용)
+브랜치: 015-playable-prototype-phase-b1 (로컬)
+원격 푸시: 대기 중
+최종 커밋: 447d184 (기능: Phase B-2 적 스폰 및 전투 시스템 완료)
 ```
 
-**오늘 작업 브랜치 (2025-11-10)**:
-1. 014-skull-platformer-phase-a (Phase A-1, A-2, A-3, Phase 14) → 구현 완료 ✅
+**오늘 작업 브랜치 (2025-11-12)**:
+1. 015-playable-prototype-phase-b1 (Phase B-1, B-2) → 구현 완료 ✅
+   - **Phase B-1: Playable Prototype Editor Tools** (2개 파일, 1,035줄)
+   - **Phase B-2: Enemy Spawn & Combat System** (4개 파일 수정, +107줄)
+   - 자동화 도구: PrefabCreator, GameplaySceneCreator
+   - Layer 시스템 추가: Enemy Layer + targetLayers
+   - 자동 던전 시작: autoStartFirstRoom 옵션
+   - 43개 프리팹/텍스처/씬 파일 생성
+
+2. 014-skull-platformer-phase-a (Phase A-1, A-2, A-3, A-4, Phase 14) → 머지 완료 ✅
    - Phase A-1: MageForm 시스템 7개 파일 생성 (607줄)
    - Phase A-2: Enemy AI + Combat 통합
    - Phase A-3: Room System (절차적 던전)
+   - Phase A-4: Item-Skill System (스킬 아이템 장착)
    - **Phase 14: Object Pooling System** (56개 파일, 7,814줄 추가)
    - 2개 치명적 버그 수정 (Despawn 미호출, 런타임 타입 불일치)
    - 성능 개선: 메모리 96%↓, GC 90%↓, FPS 33%↑
@@ -1142,56 +1257,68 @@ GASPT/
 | **Phase 14** | **Object Pooling System** | **20** | **~2,500** | **✅ 완료** |
 | 문서 | Object Pooling 가이드 | 1 | +800 | ✅ 완료 |
 | **Phase A-4** | **Item-Skill System** | **8** | **~1,185** | **✅ 완료** |
-| **합계** | **17개 Phase + 추가** | **153개** | **~27,722줄** | **✅ 완료** |
+| **Phase B-1** | **Playable Prototype Editor Tools** | **2** | **~1,035** | **✅ 완료** |
+| **Phase B-2** | **Enemy Spawn & Combat System** | **4** | **+107** | **✅ 완료** |
+| **합계** | **19개 Phase + 추가** | **167개** | **~28,864줄** | **✅ 완료** |
 
 ---
 
-## 🚀 다음 작업 옵션 (Phase A 계속)
+## 🚀 다음 작업 옵션 (Phase B 계속)
 
-### 옵션 1: Phase A-2 - Enemy AI + Combat 통합 ⚔️
-
-**적 AI 및 전투 시스템**:
-- [ ] BasicMeleeEnemy 구현 (근접 공격 적)
-- [ ] Enemy FSM 상태 (Idle, Patrol, Chase, Attack, Die)
-- [ ] MageForm 스킬과 Enemy HP 연동
-- [ ] 데미지 계산 및 DamageNumber 표시
-- [ ] 적 처치 시 EXP/아이템 드롭
-- [ ] 간단한 적 스폰 시스템
+### ⚠️ 다음 세션 시작 전 필수 작업
+**Unity 에디터에서 "Enemy" Layer 추가 필수!**
+1. `Edit > Project Settings > Tags and Layers`
+2. `Layer 6`을 `"Enemy"`로 설정
+3. 프리팹 재생성: `Tools > GASPT > Prefab Creator`
+4. 씬 재생성: `Tools > GASPT > Gameplay Scene Creator`
+5. 테스트 가이드 참고: `PHASE_B2_TEST_GUIDE.md`
 
 ---
 
-### 옵션 2: Phase A-3 - Room System (절차적 던전) 🏰
+### 옵션 1: Phase B-2 테스트 및 검증 🧪
 
-**방 단위 레벨 시스템**:
-- [ ] RoomData ScriptableObject
-- [ ] RoomManager 싱글톤
-- [ ] 방 생성/전환 로직
-- [ ] 적 스폰 포인트
-- [ ] 방 클리어 조건
-- [ ] 다음 방으로 이동 포탈
-
----
-
-### 옵션 3: Phase A-4 - Item-Skill System (아이템 획득) 🎁
-
-**아이템으로 스킬 변경**:
-- [ ] SkillItemData ScriptableObject
-- [ ] 아이템 획득 시 스킬 교체 로직
-- [ ] 스킬 UI 업데이트 (아이콘, 쿨다운)
-- [ ] 2~3개 추가 스킬 아이템 구현
-- [ ] 기존 LootSystem 통합
+**Phase B-2 플레이 테스트**:
+- [ ] Unity에서 "Enemy" Layer 추가 (Layer 6)
+- [ ] 프리팹 재생성 확인
+- [ ] GameplayScene 재생성 확인
+- [ ] Play 모드 전투 테스트
+- [ ] 투사체-적 충돌 테스트
+- [ ] EXP/골드 드롭 테스트
+- [ ] 방 클리어 조건 테스트
+- [ ] 버그 수정 및 개선
 
 ---
 
-### 옵션 4: 테스트 씬 및 프리팹 작업 🧪
+### 옵션 2: Phase B-3 - UI 시스템 통합 🎨
 
-**플레이 가능한 프로토타입 완성**:
-- [ ] MageForm 프리팹 생성
-- [ ] MageForm 테스트 씬 구성
-- [ ] 투사체 프리팹 생성 (Magic Missile, Fireball)
-- [ ] 이펙트 프리팹 추가 (폭발, 텔레포트)
-- [ ] 플레이어 입력 처리 (마우스 클릭, 키보드)
-- [ ] 카메라 따라가기
+**게임플레이 UI 추가**:
+- [ ] PlayerHealthBar 배치
+- [ ] PlayerExpBar 배치
+- [ ] BuffIconPanel 배치
+- [ ] ItemPickupUI 배치
+- [ ] 미니맵 UI 추가
+- [ ] 방 정보 UI (클리어 조건, 남은 적)
+
+---
+
+### 옵션 3: Phase B-4 - 다양한 적 추가 👹
+
+**새로운 적 타입 구현**:
+- [ ] RangedEnemy (원거리 공격 적)
+- [ ] FlyingEnemy (비행 적)
+- [ ] EliteEnemy (정예 몬스터)
+- [ ] BossEnemy (보스 몬스터)
+- [ ] Enemy AI 다양화 (패턴 공격)
+
+---
+
+### 옵션 4: Phase B-5 - 추가 Form 구현 🦸
+
+**새로운 플레이어블 Form**:
+- [ ] WarriorForm (전사 - 근접 전투)
+- [ ] AssassinForm (암살자 - 빠른 이동)
+- [ ] TankForm (탱커 - 높은 방어력)
+- [ ] Form 전환 시스템 구현
 
 ---
 
@@ -1207,8 +1334,10 @@ Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
 Tools > GASPT > Create Skill UI Panel
 Tools > GASPT > Create Buff Icon UI
-Tools > GASPT > Create Item Pickup UI (NEW)
+Tools > GASPT > Create Item Pickup UI
 Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest)
+Tools > GASPT > 🎮 Gameplay Scene Creator (NEW - Phase B-1)
+Tools > GASPT > Prefab Creator (NEW - Phase B-1)
 ```
 
 ### Context Menu로 빠른 테스트
@@ -1449,12 +1578,13 @@ private void OnDisable()
 ---
 
 **작성일**: 2025-11-12
-**다음 예정 작업**: Phase A 완료 커밋 및 PR 생성
-**브랜치**: 014-skull-platformer-phase-a
-**상태**: Phase A-1, A-2, A-3, A-4, Phase 14 완료, 총 153개 파일, ~27,722줄, 11개 싱글톤 시스템
+**다음 예정 작업**: Phase B-2 테스트 및 검증 OR Phase B-3 UI 시스템 통합
+**브랜치**: 015-playable-prototype-phase-b1
+**상태**: Phase B-1, B-2 완료, 총 167개 파일, ~28,864줄, 11개 싱글톤 시스템
 
-🚀 **수고하셨습니다! Phase A-4 Item-Skill System 구현 완료!**
-🎯 **스킬 아이템 시스템**: 적 처치 시 스킬 아이템 드롭 → 자동 장착
-🔥 **신규 스킬 3개**: IceBlast, LightningBolt, Shield
-📦 **ScriptableObject 정리**: 폴더 구조 체계화 및 문서화
-✅ **테스트 완료**: 모든 SkillItemTest 통과
+🚀 **수고하셨습니다! Phase B-2 적 스폰 및 전투 시스템 구현 완료!**
+🎯 **자동화 도구**: PrefabCreator, GameplaySceneCreator (원클릭 프로토타입 생성)
+⚔️ **전투 시스템**: 투사체 발사 → 적 충돌 → 데미지 → 사망 → 드롭
+🏰 **던전 시스템**: 자동 방 진입 → 적 스폰 → 전투 → 클리어
+⚠️ **다음 세션 필수**: Unity에서 "Enemy" Layer 추가 (Layer 6)
+📖 **테스트 가이드**: PHASE_B2_TEST_GUIDE.md 참고
