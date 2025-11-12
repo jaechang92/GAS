@@ -7,6 +7,7 @@ using GASPT.Gameplay.Projectiles;
 using GASPT.Gameplay.Effects;
 using GASPT.Enemies;
 using GASPT.Core.Pooling;
+using GASPT.Gameplay.Enemy;
 
 namespace GASPT.Editor
 {
@@ -203,8 +204,8 @@ namespace GASPT.Editor
             collider.offset = new Vector2(0f, 1f);
 
             SpriteRenderer sr = mageFormObj.AddComponent<SpriteRenderer>();
-            sr.color = new Color(0.5f, 0.5f, 1f, 1f); // 파란색 (Mage)
-            sr.sprite = CreatePlaceholderSprite(Color.cyan);
+            sr.sprite = CreatePlaceholderSprite(new Color(0.5f, 0.5f, 1f, 1f)); // 파란색 (Mage)
+            sr.color = Color.white; // 스프라이트 색상 유지
 
             PlayerController playerController = mageFormObj.AddComponent<PlayerController>();
             FormInputHandler formInputHandler = mageFormObj.AddComponent<FormInputHandler>();
@@ -243,7 +244,7 @@ namespace GASPT.Editor
             // SpriteRenderer 추가 (작은 파란 구체)
             SpriteRenderer sr = projectileObj.AddComponent<SpriteRenderer>();
             sr.sprite = CreatePlaceholderSprite(Color.cyan);
-            sr.color = Color.cyan;
+            sr.color = Color.white; // 스프라이트 색상 유지
             projectileObj.transform.localScale = new Vector3(0.3f, 0.3f, 1f);
 
             // Collider2D 추가
@@ -284,8 +285,8 @@ namespace GASPT.Editor
 
             // SpriteRenderer 추가 (큰 빨간 구체)
             SpriteRenderer sr = projectileObj.AddComponent<SpriteRenderer>();
-            sr.sprite = CreatePlaceholderSprite(Color.red);
-            sr.color = new Color(1f, 0.5f, 0f, 1f); // 주황색
+            sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.5f, 0f, 1f)); // 주황색
+            sr.color = Color.white; // 스프라이트 색상 유지
             projectileObj.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
 
             // Collider2D 추가
@@ -365,8 +366,8 @@ namespace GASPT.Editor
             collider.offset = new Vector2(0f, 0.75f);
 
             SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
-            sr.color = new Color(1f, 0.3f, 0.3f, 1f); // 빨간색 (Enemy)
-            sr.sprite = CreatePlaceholderSprite(Color.red);
+            sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.3f, 0.3f, 1f)); // 빨간색 (Enemy)
+            sr.color = Color.white; // 스프라이트 색상 유지
 
             PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
             Enemy enemy = enemyObj.AddComponent<Enemy>();
@@ -384,15 +385,21 @@ namespace GASPT.Editor
         /// </summary>
         private Sprite CreatePlaceholderSprite(Color color)
         {
-            Texture2D texture = new Texture2D(1, 1);
-            texture.SetPixel(0, 0, color);
+            // 32x32 텍스처 생성 (충분히 큰 크기)
+            Texture2D texture = new Texture2D(32, 32);
+            Color[] pixels = new Color[32 * 32];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+            texture.SetPixels(pixels);
             texture.Apply();
 
             return Sprite.Create(
                 texture,
-                new Rect(0, 0, 1, 1),
+                new Rect(0, 0, 32, 32),
                 new Vector2(0.5f, 0.5f),
-                1f
+                32f // Pixels Per Unit (중요!)
             );
         }
 

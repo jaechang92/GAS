@@ -284,15 +284,22 @@ namespace GASPT.Editor
         /// </summary>
         private void CreateGroundPlatform(int roomIndex, Transform parent)
         {
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ground.name = $"Ground_Room{roomIndex}";
+            GameObject ground = new GameObject($"Ground_Room{roomIndex}");
             ground.transform.SetParent(parent);
 
             float xPos = roomIndex * roomWidth;
             ground.transform.position = new Vector3(xPos, -2f, 0f);
-            ground.transform.localScale = new Vector3(roomWidth, 1f, 1f);
 
-            ground.GetComponent<Renderer>().material.color = new Color(0.3f, 0.3f, 0.3f); // 회색
+            // SpriteRenderer 추가 (2D)
+            SpriteRenderer sr = ground.AddComponent<SpriteRenderer>();
+            sr.sprite = CreatePlaceholderSprite(new Color(0.3f, 0.3f, 0.3f)); // 회색
+            sr.drawMode = SpriteDrawMode.Tiled;
+            sr.size = new Vector2(roomWidth, 1f);
+
+            // BoxCollider2D 추가 (2D 충돌)
+            BoxCollider2D collider = ground.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(roomWidth, 1f);
+
             ground.layer = LayerMask.NameToLayer("Default");
         }
 
@@ -306,16 +313,22 @@ namespace GASPT.Editor
 
             for (int i = 0; i < platformCount; i++)
             {
-                GameObject platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                platform.name = $"Platform_Room{roomIndex}_{i}";
+                GameObject platform = new GameObject($"Platform_Room{roomIndex}_{i}");
                 platform.transform.SetParent(parent);
 
                 float xPos = roomIndex * roomWidth + Random.Range(-15f, 15f);
                 float yPos = Random.Range(2f, 10f);
                 platform.transform.position = new Vector3(xPos, yPos, 0f);
-                platform.transform.localScale = new Vector3(8f, 0.5f, 1f);
 
-                platform.GetComponent<Renderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
+                // SpriteRenderer 추가 (2D)
+                SpriteRenderer sr = platform.AddComponent<SpriteRenderer>();
+                sr.sprite = CreatePlaceholderSprite(new Color(0.5f, 0.5f, 0.5f)); // 회색
+                sr.drawMode = SpriteDrawMode.Tiled;
+                sr.size = new Vector2(8f, 0.5f);
+
+                // BoxCollider2D 추가 (2D 충돌)
+                BoxCollider2D collider = platform.AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(8f, 0.5f);
             }
         }
 
@@ -450,6 +463,29 @@ namespace GASPT.Editor
                 Debug.LogWarning($"[GameplaySceneCreator] GameplayScene을 찾을 수 없습니다: {ScenePath}");
                 EditorUtility.DisplayDialog("경고", "GameplayScene이 아직 생성되지 않았습니다!\n\nGameplay Scene Creator를 먼저 실행하세요.", "확인");
             }
+        }
+
+        /// <summary>
+        /// Placeholder 스프라이트 생성 (단색 정사각형)
+        /// </summary>
+        private Sprite CreatePlaceholderSprite(Color color)
+        {
+            // 32x32 텍스처 생성 (더 큰 크기로 변경)
+            Texture2D texture = new Texture2D(32, 32);
+            Color[] pixels = new Color[32 * 32];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            return Sprite.Create(
+                texture,
+                new Rect(0, 0, 32, 32),
+                new Vector2(0.5f, 0.5f),
+                32f // Pixels Per Unit (중요!)
+            );
         }
     }
 }
