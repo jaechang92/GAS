@@ -13,6 +13,7 @@ using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
 using GASPT.Gameplay.Enemy;
 using GASPT.Gameplay.Effects;
+using GASPT.Gameplay.Item;
 
 namespace GASPT.Core
 {
@@ -114,13 +115,16 @@ namespace GASPT.Core
             // 7. Loot System
             PreloadLootSystem();
 
-            // 8. Projectile Pools (PoolManager 의존)
+            // 8. Skill Item System (LootSystem 의존)
+            PreloadSkillItemManager();
+
+            // 9. Projectile Pools (PoolManager 의존)
             InitializeProjectilePools();
 
-            // 9. Enemy Pools (PoolManager 의존)
+            // 10. Enemy Pools (PoolManager 의존)
             InitializeEnemyPools();
 
-            // 10. Effect Pools (PoolManager 의존)
+            // 11. Effect Pools (PoolManager 의존)
             InitializeEffectPools();
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
@@ -317,6 +321,25 @@ namespace GASPT.Core
         }
 
         /// <summary>
+        /// SkillItemManager 사전 로딩
+        /// </summary>
+        private void PreloadSkillItemManager()
+        {
+            LogMessage("SkillItemManager 초기화 중...");
+
+            var instance = SkillItemManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ SkillItemManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ SkillItemManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
         /// PoolManager 사전 로딩
         /// </summary>
         private void PreloadPoolManager()
@@ -410,6 +433,7 @@ namespace GASPT.Core
             if (StatusEffectManager.HasInstance) count++;
             if (SkillSystem.HasInstance) count++;
             if (LootSystem.HasInstance) count++;
+            if (SkillItemManager.HasInstance) count++;
 
             return count;
         }
@@ -454,7 +478,8 @@ namespace GASPT.Core
             Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SkillSystem: {(SkillSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"LootSystem: {(LootSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/10개 싱글톤 생성됨");
+            Debug.Log($"SkillItemManager: {(SkillItemManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"총 {GetPreloadedCount()}/11개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 
