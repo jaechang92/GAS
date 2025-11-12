@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: TestGoblin
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Data.EnemyData
   enemyType: 0
-  enemyName: 
+  enemyName: TestGoblin
   icon: {fileID: 0}
   maxHp: 30
   attack: 5
