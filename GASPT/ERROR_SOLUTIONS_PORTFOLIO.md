@@ -13,6 +13,7 @@
 4. [BuffIcon ContinueWith 컴파일 에러](#4-bufficon-continuewith-컴파일-에러)
 5. [ScriptableObject Serialization과 기본값 문제](#섹션-5-scriptableobject-serialization과-기본값-문제)
 6. [오브젝트 풀링 시스템 구축 및 최적화](#6-오브젝트-풀링-시스템-구축-및-최적화)
+7. [Unity EditorWindow GUI 레이아웃 오류](#7-unity-editorwindow-gui-레이아웃-오류)
 
 ---
 
@@ -2749,6 +2750,360 @@ private void OnDrawGizmos()
 
 ---
 
+## 7. Unity EditorWindow GUI 레이아웃 오류
+
+### 📋 오류 개요
+- **발생 날짜**: 2025-11-13
+- **작업 컨텍스트**: Phase B-3 UI 시스템 통합 후 GameplaySceneCreator 실행
+- **관련 브랜치**: `015-playable-prototype-phase-b1`
+- **관련 커밋**: `e67dceb` - EditorWindow GUI 레이아웃 오류 해결
+
+### 🔴 오류 내용
+
+#### 오류 메시지
+```
+EndLayoutGroup: BeginLayoutGroup must be called first.
+0x000002332c2416b3 (Mono JIT Code) GASPT.Editor.GameplaySceneCreator:OnGUI ()
+(at D:/JaeChang/UintyDev/GASPT/GASPT/Assets/_Project/Scripts/Editor/GameplaySceneCreator.cs:129)
+```
+
+#### 발생 상황
+`Tools > GASPT > 🎮 Gameplay Scene Creator` 메뉴에서 "🚀 GameplayScene 생성" 버튼을 클릭하면 Console에 빨간색 오류 메시지가 출력되었습니다. 씬은 정상적으로 생성되었지만, 에디터 윈도우가 오작동했습니다.
+
+#### 문제가 된 코드
+```csharp
+// GameplaySceneCreator.cs - OnGUI() 메서드
+
+private void OnGUI()
+{
+    scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition); // ← BeginScrollView 시작
+
+    // ... GUI 요소들 ...
+
+    // 씬 생성 버튼
+    if (GUILayout.Button("🚀 GameplayScene 생성", GUILayout.Height(50)))
+    {
+        CreateGameplayScene(); // ❌ 즉시 실행! (무거운 작업)
+        // → 씬에 많은 오브젝트 생성
+        // → SerializedObject 수정
+        // → Unity가 GUI 재렌더링 시도
+        // → 레이아웃 스택 충돌! 💥
+    }
+
+    // ... 더 많은 GUI 요소들 ...
+
+    EditorGUILayout.EndScrollView(); // ← Line 129: 여기서 에러 발생!
+    // EndScrollView()를 호출할 때 BeginScrollView()와 짝이 맞지 않음!
+}
+```
+
+#### 재현 방법
+1. `Tools > GASPT > 🎮 Gameplay Scene Creator` 실행
+2. "🚀 GameplayScene 생성" 버튼 클릭
+3. Console에 `EndLayoutGroup: BeginLayoutGroup must be called first.` 오류 출력
+
+---
+
+### 🔍 문제 분석
+
+#### Unity IMGUI 시스템 이해
+
+Unity의 EditorWindow는 **즉시 모드 GUI (IMGUI)** 시스템을 사용합니다:
+
+```csharp
+// IMGUI의 프레임 구조
+Frame 1: OnGUI() 전체 실행 → GUI 렌더링
+Frame 2: OnGUI() 전체 실행 → GUI 렌더링
+Frame 3: OnGUI() 전체 실행 → GUI 렌더링
+...
+```
+
+**IMGUI 레이아웃 규칙**:
+- `Begin*()` 호출 → GUI 요소들 → `End*()` 호출 (순서 엄격)
+- 하나의 `OnGUI()` 프레임 내에서 레이아웃 스택이 완전히 일치해야 함
+
+#### 근본 원인
+
+```
+OnGUI() 실행 흐름:
+┌─────────────────────────────────────────────┐
+│ 1. BeginScrollView() 호출                    │ ← 레이아웃 스택 +1
+├─────────────────────────────────────────────┤
+│ 2. GUI 요소들 (버튼, 슬라이더 등)            │
+├─────────────────────────────────────────────┤
+│ 3. 버튼 클릭 → CreateAllUI() 즉시 실행 ❌    │
+│    ├─ Canvas 생성                            │
+│    ├─ 6개 UI 오브젝트 생성                   │ ← 씬 변경!
+│    ├─ SerializedObject.ApplyModified()      │
+│    └─ Unity가 씬 변경 감지                   │
+│                                               │
+│    Unity가 Editor를 재렌더링하려고 시도...   │ 💥
+│    하지만 아직 OnGUI() 진행 중!              │
+│    → GUI 레이아웃 스택 충돌!                 │
+├─────────────────────────────────────────────┤
+│ 4. EndScrollView() 호출                      │ ← 레이아웃 스택 -1 (예상)
+│    → 하지만 스택이 이미 깨짐!                │ ← 에러 발생!
+└─────────────────────────────────────────────┘
+```
+
+**문제점**:
+1. **즉시 실행**: 버튼 클릭 → `CreateAllUI()` 즉시 실행
+2. **무거운 작업**: 메서드 내부에서 많은 GameObject 생성 + SerializedObject 수정
+3. **Unity 재렌더링**: Unity가 씬 변경을 감지하고 Editor GUI 재렌더링 시도
+4. **레이아웃 충돌**: 아직 `OnGUI()`가 진행 중인데 GUI가 재렌더링되면서 레이아웃 스택 깨짐
+5. **짝 불일치**: `EndScrollView()`를 호출할 때 `BeginScrollView()`와 짝이 맞지 않음
+
+#### 영향 범위
+- **GameplaySceneCreator.cs**: 5개 버튼 (씬 생성, 플레이어, 방 시스템, UI, 카메라)
+- **PrefabCreator.cs**: 6개 버튼 (전체 생성, 개별 프리팹 생성들)
+
+---
+
+### ✅ 해결 방법
+
+#### 핵심 아이디어: 작업 지연 실행
+
+Unity가 제공하는 `EditorApplication.delayCall`을 사용하여 무거운 작업을 **현재 GUI 프레임 완료 후** 실행하도록 변경합니다.
+
+#### 수정된 코드
+
+```csharp
+// BEFORE (문제 코드) ❌
+if (GUILayout.Button("🚀 GameplayScene 생성", GUILayout.Height(50)))
+{
+    CreateGameplayScene(); // 즉시 실행 → 레이아웃 충돌!
+}
+
+// AFTER (수정된 코드) ✅
+if (GUILayout.Button("🚀 GameplayScene 생성", GUILayout.Height(50)))
+{
+    EditorApplication.delayCall += CreateGameplayScene; // 지연 실행!
+}
+```
+
+#### 동작 원리
+
+```
+수정 후 실행 흐름:
+┌─────────────────────────────────────────────┐
+│ Frame N: OnGUI() 실행                        │
+│ 1. BeginScrollView()                         │ ← 레이아웃 스택 +1
+│ 2. GUI 요소들                                │
+│ 3. 버튼 클릭 → delayCall에 등록만 함 ✅      │ ← 즉시 실행 안함!
+│ 4. EndScrollView()                           │ ← 레이아웃 스택 -1 ✅
+│ → OnGUI() 정상 완료!                         │
+└─────────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────────┐
+│ Frame N+1: delayCall 실행                    │
+│ → CreateGameplayScene() 실행                 │ ✅ 안전하게 실행!
+│   ├─ Canvas 생성                             │
+│   ├─ UI 오브젝트 생성                        │
+│   └─ SerializedObject 수정                   │
+│ → 레이아웃 충돌 없음!                        │
+└─────────────────────────────────────────────┘
+```
+
+**장점**:
+- ✅ **레이아웃 스택 보호**: OnGUI() 완전히 끝난 후 실행
+- ✅ **Unity 재렌더링 안전**: 다음 프레임에서 실행되므로 충돌 없음
+- ✅ **코드 변경 최소**: 한 줄만 수정 (`+=` 사용)
+
+---
+
+### 🛠️ 구체적인 수정 사항
+
+#### 1. GameplaySceneCreator.cs (5개 버튼)
+
+```csharp
+// 1. 전체 씬 생성
+if (GUILayout.Button("🚀 GameplayScene 생성", GUILayout.Height(50)))
+{
+    EditorApplication.delayCall += CreateGameplayScene; // ✅
+}
+
+// 2. 플레이어만 생성
+if (GUILayout.Button("플레이어만 생성"))
+{
+    EditorApplication.delayCall += CreatePlayer; // ✅
+}
+
+// 3. 방 시스템만 생성
+if (GUILayout.Button("방 시스템만 생성"))
+{
+    EditorApplication.delayCall += CreateRoomSystem; // ✅
+}
+
+// 4. UI만 생성
+if (GUILayout.Button("UI만 생성"))
+{
+    EditorApplication.delayCall += CreateAllUI; // ✅ (주요 원인)
+}
+
+// 5. 카메라만 생성
+if (GUILayout.Button("카메라만 생성"))
+{
+    EditorApplication.delayCall += CreateCameraSystem; // ✅
+}
+```
+
+#### 2. PrefabCreator.cs (6개 버튼, 예방 차원)
+
+```csharp
+// 1. 전체 프리팹 생성
+if (GUILayout.Button("🚀 모든 프리팹 생성", GUILayout.Height(40)))
+{
+    EditorApplication.delayCall += CreateAllPrefabs; // ✅
+}
+
+// 2. MageForm 프리팹
+if (GUILayout.Button("MageForm 프리팹 생성"))
+{
+    EditorApplication.delayCall += CreateMageFormPrefab; // ✅
+}
+
+// 3. Projectile 프리팹
+if (GUILayout.Button("Projectile 프리팹 생성"))
+{
+    EditorApplication.delayCall += CreateProjectilePrefabs; // ✅
+}
+
+// 4. VisualEffect 프리팹
+if (GUILayout.Button("VisualEffect 프리팹 생성"))
+{
+    EditorApplication.delayCall += CreateVisualEffectPrefab; // ✅
+}
+
+// 5. BasicMeleeEnemy 프리팹
+if (GUILayout.Button("BasicMeleeEnemy 프리팹 생성"))
+{
+    EditorApplication.delayCall += CreateBasicMeleeEnemyPrefab; // ✅
+}
+
+// 6. 폴더 생성
+if (GUILayout.Button("프리팹 폴더 생성"))
+{
+    EditorApplication.delayCall += CreatePrefabFolders; // ✅
+}
+```
+
+---
+
+### 🧪 테스트 및 검증
+
+#### 테스트 방법
+1. Unity 에디터 재시작
+2. `Tools > GASPT > 🎮 Gameplay Scene Creator` 실행
+3. "🚀 GameplayScene 생성" 버튼 클릭
+4. Console 확인
+
+#### 검증 결과
+- ✅ **오류 없음**: `EndLayoutGroup` 오류 미발생
+- ✅ **씬 정상 생성**: Canvas + 6개 UI 요소 생성 확인
+- ✅ **에디터 윈도우 정상 작동**: 버튼 클릭 후에도 GUI 정상 표시
+
+---
+
+### 📚 배운 점 (Best Practices)
+
+#### Unity EditorWindow 개발 규칙
+
+1. **무거운 작업은 지연 실행**
+   ```csharp
+   // ❌ 나쁜 예
+   if (GUILayout.Button("Create"))
+   {
+       CreateManyObjects(); // 즉시 실행
+   }
+
+   // ✅ 좋은 예
+   if (GUILayout.Button("Create"))
+   {
+       EditorApplication.delayCall += CreateManyObjects; // 지연 실행
+   }
+   ```
+
+2. **OnGUI() 내에서 금지할 작업**
+   - ❌ 씬에 많은 오브젝트 생성
+   - ❌ SerializedObject 대량 수정
+   - ❌ 에셋 생성/삭제
+   - ❌ Resources.Load() 등 무거운 I/O
+
+3. **지연 실행 방법 2가지**
+   ```csharp
+   // 방법 1: delayCall (단발성 작업)
+   EditorApplication.delayCall += MyMethod;
+
+   // 방법 2: update (반복 작업)
+   EditorApplication.update += MyUpdateMethod;
+   // ... 작업 후
+   EditorApplication.update -= MyUpdateMethod;
+   ```
+
+4. **레이아웃 디버깅 팁**
+   ```csharp
+   // Begin/End 짝 확인
+   try
+   {
+       EditorGUILayout.BeginScrollView(...);
+       // GUI 요소들
+   }
+   finally
+   {
+       EditorGUILayout.EndScrollView(); // 반드시 호출!
+   }
+   ```
+
+---
+
+### 🔗 관련 커밋 및 PR
+
+#### 커밋 정보
+```
+e67dceb - 수정: EditorWindow GUI 레이아웃 오류 해결
+└─ GameplaySceneCreator.cs: 5개 버튼 delayCall 적용
+└─ PrefabCreator.cs: 6개 버튼 delayCall 적용
+```
+
+#### 변경 파일
+- `Assets/_Project/Scripts/Editor/GameplaySceneCreator.cs`
+- `Assets/_Project/Scripts/Editor/PrefabCreator.cs`
+
+---
+
+### 💬 회고
+
+#### 잘한 점
+1. **신속한 문제 파악**: 오류 메시지에서 라인 번호 확인 → `EndScrollView()` 위치 파악
+2. **근본 원인 분석**: IMGUI 레이아웃 스택 개념 이해
+3. **최소 변경 원칙**: 기존 코드 구조 유지하면서 `+=` 연산자로 간단하게 해결
+4. **예방 조치**: PrefabCreator도 함께 수정하여 동일 문제 예방
+
+#### 개선할 점
+1. **초기 설계**: EditorWindow 작성 시 무거운 작업은 처음부터 지연 실행 고려
+2. **문서화**: Unity IMGUI 베스트 프랙티스 문서 작성 필요
+3. **코드 리뷰**: 에디터 도구 코드에 대한 체크리스트 작성
+
+#### 향후 적용
+1. **모든 에디터 도구**: 무거운 작업은 `delayCall` 사용
+2. **진행 표시**: 긴 작업은 `EditorUtility.DisplayProgressBar` 추가
+3. **에러 핸들링**: try-catch로 레이아웃 스택 보호
+
+---
+
+### 📖 참고 자료
+
+#### Unity 공식 문서
+- [EditorApplication.delayCall](https://docs.unity3d.com/ScriptReference/EditorApplication-delayCall.html)
+- [IMGUI Layout Modes](https://docs.unity3d.com/Manual/gui-Layout.html)
+- [Editor Window Best Practices](https://docs.unity3d.com/Manual/editor-CustomEditors.html)
+
+#### 관련 포럼
+- Unity Forum: "EndLayoutGroup error in EditorWindow"
+- Stack Overflow: "Unity IMGUI Layout Issues"
+
+---
+
 **문서 작성자**: Jae Chang
 **프로젝트 GitHub**: https://github.com/jaechang92/GAS
-**마지막 업데이트**: 2025-11-10
+**마지막 업데이트**: 2025-11-13
