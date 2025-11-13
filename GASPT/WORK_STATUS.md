@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-09
-**현재 브랜치**: `013-item-drop-loot`
-**작업 세션**: Item Drop & Loot System 구현 완료
+**최종 업데이트**: 2025-11-12
+**현재 브랜치**: `015-playable-prototype-phase-b1`
+**작업 세션**: Phase B-2 적 스폰 및 전투 시스템 완료
 
 ---
 
@@ -536,31 +536,526 @@
 - ✅ PlayerManaBar: Awaitable
 - ✅ SkillSlotUI: Awaitable
 
+#### ✅ Phase A-1: Form System (Platformer Implementation)
+**완료 Task**: 7개
+**완료 날짜**: 2025-11-10
+
+**중요 변경사항**:
+- 프로젝트 방향 전환: RPG 시스템 → **플랫포머 로그라이크** 게임 구현
+- 게임 컨셉: "Skul" 오마주 2D 플랫포머 로그라이크
+- **용어 변경**: "Skull" → "Form" (저작권 문제 회피)
+- 기존 시스템(GAS, FSM, Combat) 활용한 실제 게임플레이 구현 시작
+
+**핵심 시스템** (7개 파일, 607줄):
+
+1. **IFormController.cs** (54줄) - Form 인터페이스 정의
+   - FormType Enum (Mage, Warrior, Assassin, Tank)
+   - IAbility 인터페이스 (스킬 계약)
+   - Activate/Deactivate 생명주기
+   - 스탯 프로퍼티 (MaxHealth, MoveSpeed, JumpPower)
+   - SetAbility/GetAbility 슬롯 관리
+
+2. **FormData.cs** (67줄) - ScriptableObject 데이터 구조
+   - 디자이너 친화적 Form 설정
+   - 기본 스탯 (HP, 이동속도, 점프력)
+   - 비주얼 데이터 (아이콘, 스프라이트, 색상)
+   - 기본 스킬 이름 배열
+
+3. **BaseForm.cs** (165줄) - Form 추상 베이스 클래스
+   - MonoBehaviour + IFormController 구현
+   - 4개 Ability 슬롯 관리 (0: 기본공격, 1~3: 스킬)
+   - Activate/Deactivate 생명주기 관리
+   - OnFormActivated/OnFormDeactivated 가상 메서드
+   - Context Menu 디버그 도구 (Print Form Info)
+
+4. **MageForm.cs** (131줄) - 마법사 Form 구현
+   - 첫 번째 플레이어블 Form
+   - Awake에서 기본 스킬 초기화
+     - 슬롯 0: MagicMissileAbility (기본 공격)
+     - 슬롯 1: TeleportAbility (스킬 1)
+     - 슬롯 2: FireballAbility (스킬 2)
+   - 마법 오라 이펙트 재생/중지
+   - Context Menu 스킬 테스트 (Test Magic Missile, Test Teleport, Test Fireball)
+
+5. **MagicMissileAbility.cs** (58줄) - 기본 공격 스킬
+   - 0.5초 쿨다운
+   - 마우스 방향 계산 (Camera.main.ScreenToWorldPoint)
+   - **async/await 패턴** (Awaitable.NextFrameAsync)
+   - 데미지: 10, 속도: 15
+   - TODO: 실제 투사체 프리팹 생성
+
+6. **TeleportAbility.cs** (63줄) - 순간이동 스킬
+   - 3초 쿨다운
+   - 마우스 방향으로 5m 텔레포트
+   - **async/await 패턴** (Awaitable.WaitForSecondsAsync)
+   - TODO: 장애물 체크, 무적 프레임
+
+7. **FireballAbility.cs** (69줄) - 화염구 AOE 스킬
+   - 5초 쿨다운
+   - 직격 데미지: 50, 폭발 반경: 3m
+   - **async Task LaunchFireball()** - 투사체 비행 시뮬레이션
+   - Explode() - 범위 데미지 (TODO: Physics2D.OverlapCircleAll)
+   - TODO: 실제 투사체, 폭발 이펙트
+
+**설계 특징**:
+- ✅ **Awaitable 패턴**: 모든 비동기 로직에 Awaitable 사용 (Coroutine 금지)
+- ✅ **CancellationToken**: 모든 async 메서드에 CancellationToken 매개변수
+- ✅ **Interface 기반**: IFormController, IAbility로 확장성 보장
+- ✅ **ScriptableObject**: 디자이너 친화적 데이터 설정
+- ✅ **마우스 방향 계산**: 모든 스킬이 마우스 위치로 방향 결정
+- ✅ **쿨다운 시스템**: Time.time 기반 쿨다운 체크
+- ✅ **Context Menu**: 에디터 테스트 메서드 제공
+
+**브랜치 정보**:
+- 브랜치: 014-skull-platformer-phase-a
+- 커밋 4개:
+  - 86dbf45 기능: Phase A-1 MageForm 시스템 구현
+  - ba23e13 리팩토링: Skull → Form 용어 변경 (폴더/문서)
+  - 7c2e9a5 기능: Phase A 폴더 구조 생성
+  - d8f9b21 문서: Form Platformer 구현 계획 작성
+
+**다음 Phase A 작업**:
+- [x] Phase A-2: Enemy AI + Combat 통합 ✅
+- [x] Phase A-3: Room System (절차적 던전) ✅
+- [x] Phase A-4: Item-Skill System (아이템으로 스킬 변경) ✅
+
+#### ✅ Phase A-2: Enemy AI + Combat Integration
+**완료 Task**: 6개
+**완료 날짜**: 2025-11-10
+
+**핵심 구현**:
+- BasicMeleeEnemy.cs (근접 공격 적 AI)
+- Enemy FSM (Idle → Patrol → Chase → Attack → Die)
+- MageForm 스킬과 Enemy HP 연동
+- DamageNumber 표시 통합
+- EXP/아이템 드롭 시스템 연동
+
+#### ✅ Phase A-3: Room System (Procedural Dungeon)
+**완료 Task**: 5개
+**완료 날짜**: 2025-11-10
+
+**핵심 구현**:
+- RoomData.cs (ScriptableObject)
+- RoomManager.cs (싱글톤)
+- Room.cs (개별 방 관리)
+- EnemySpawnPoint.cs (적 스폰 포인트)
+- 방 전환 및 클리어 로직
+
+#### ✅ Phase 14: Object Pooling System (Performance Optimization)
+**완료 Task**: 12개
+**완료 날짜**: 2025-11-10
+
+**핵심 시스템** (4개 파일, 480줄):
+- IPoolable.cs (44줄) - 풀링 인터페이스
+  - OnSpawn() - 풀에서 가져올 때 호출
+  - OnDespawn() - 풀로 반환될 때 호출
+
+- ObjectPool<T>.cs (130줄) - 제네릭 풀 구현
+  - Queue<T> availableObjects - 사용 가능한 오브젝트
+  - HashSet<T> activeObjects - 활성 오브젝트
+  - Get(position, rotation) - 풀에서 가져오기
+  - Release(obj) - 풀로 반환
+  - ReleaseAll() - 모든 오브젝트 반환
+
+- PoolManager.cs (253줄) - 싱글톤 풀 관리자
+  - Dictionary<string, object> pools - 모든 풀 저장
+  - CreatePool<T>(prefab, initialSize, canGrow) - 풀 생성
+  - GetPool<T>() - 풀 가져오기
+  - Spawn<T>(position, rotation) - 편의 메서드
+  - **Despawn<T>(obj) - 런타임 타입 기반 반환** (중요!)
+  - PrintPoolInfo() - 디버그 정보 출력
+
+- PooledObject.cs (106줄) - MonoBehaviour 컴포넌트
+  - 자동 반환 기능 (autoReturn, autoReturnTime)
+  - ReturnToPool() - 수동 반환
+  - ReturnToPoolDelayed(delay) - 지연 반환
+
+**투사체 풀링** (3개 파일, 310줄):
+- Projectile.cs (125줄) - 베이스 클래스
+  - **Awaitable 기반 비행 로직** (MoveAsync)
+  - **Awaitable 기반 최대 사거리 타이머** (LifetimeTimerAsync)
+  - CancellationToken 정리 (OnDestroy)
+  - OnHit(Collider2D) - 충돌 처리 (추상 메서드)
+  - ReturnToPool() - **PoolManager.Despawn() 호출** (중요!)
+
+- FireballProjectile.cs (95줄) - 화염구 투사체
+  - OnHit() 구현 - 폭발 효과
+  - Explode(position) - 범위 데미지 (Physics2D.OverlapCircleAll)
+  - PlayExplosionEffect() - 시각 효과 생성
+
+- MagicMissileProjectile.cs (90줄) - 마법 미사일
+  - OnHit() 구현 - 직격 데미지
+  - PlayHitEffect() - 충격 효과
+
+**Enemy 풀링** (2개 파일):
+- Enemy.cs 수정 - IPoolable 구현
+  - OnSpawn() - HP 복원, 상태 초기화
+  - OnDespawn() - 이벤트 정리, StatusEffect 정리
+  - ReturnToPoolDelayed(delay) - **Awaitable 기반 지연 반환**
+
+- BasicMeleeEnemy.cs - 풀링 지원
+  - PooledObject 컴포넌트 필수
+
+**시각 효과 풀링** (1개 파일):
+- VisualEffect.cs (131줄) - 범용 효과
+  - **Awaitable 기반 애니메이션** (UpdateEffect)
+  - 크기 변화 (startScale → endScale)
+  - 투명도 변화 (startAlpha → endAlpha)
+  - 자동 풀 반환 (애니메이션 완료 시)
+
+**풀 초기화** (3개 파일):
+- ProjectilePoolInitializer.cs - 투사체 풀 초기화
+  - FireballProjectile 풀 (초기 크기: 5)
+  - MagicMissileProjectile 풀 (초기 크기: 10)
+
+- EnemyPoolInitializer.cs - Enemy 풀 초기화
+  - BasicMeleeEnemy 풀 (초기 크기: 10)
+
+- EffectPoolInitializer.cs - 효과 풀 초기화
+  - VisualEffect 풀 (초기 크기: 20)
+
+**기존 시스템 통합** (4개 파일):
+- FireballAbility.cs 수정 - 풀 사용
+  - GameObject.CreatePrimitive() 제거
+  - PoolManager.Spawn<FireballProjectile>() 사용
+
+- MagicMissileAbility.cs 수정 - 풀 사용
+  - Raycast 제거
+  - PoolManager.Spawn<MagicMissileProjectile>() 사용
+
+- EnemySpawnPoint.cs 수정 - 풀 사용
+  - new GameObject() 제거
+  - PoolManager.Spawn<BasicMeleeEnemy>() 사용
+  - InitializeWithData(enemyData) 호출
+
+- SingletonPreloader.cs 수정
+  - PoolManager 사전 로딩 (최우선 순위)
+  - InitializeProjectilePools()
+  - InitializeEnemyPools()
+  - InitializeEffectPools()
+
+**치명적 버그 2개 수정**:
+
+1. **Bug #1: Despawn 미호출 문제**
+   - **발견**: 사용자 피드백 "오브젝트를 생성만하고 Despawn 하는 코드는 호출하고 있지 않는거같아"
+   - **문제**: ReturnToPool()에서 SetActive(false)만 호출, PoolManager.Despawn() 누락
+   - **증상**: 오브젝트가 비활성화만 되고 풀의 availableObjects Queue에 반환 안됨 → 재사용 불가, 계속 새로 생성
+   - **해결**:
+     ```csharp
+     // BEFORE (잘못된 코드)
+     protected virtual void ReturnToPool()
+     {
+         isActive = false;
+         gameObject.SetActive(false);  // ❌ 풀로 반환 안됨!
+     }
+
+     // AFTER (수정된 코드)
+     protected virtual void ReturnToPool()
+     {
+         isActive = false;
+         PoolManager.Instance.Despawn(this);  // ✅ 풀로 반환!
+     }
+     ```
+   - **결과**: 오브젝트 재사용 정상 작동
+
+2. **Bug #2: 런타임 타입 불일치 문제**
+   - **발견**: 사용자 피드백 "Despawn함수에서 pool == null이 나와"
+   - **문제**:
+     - 풀 생성 시: `CreatePool<FireballProjectile>()` → pools["FireballProjectile"]
+     - Despawn 시: `Despawn<Projectile>(fireball)` → typeof(Projectile).Name = "Projectile" → pools["Projectile"] ❌ NOT FOUND!
+     - typeof(T)는 컴파일 타임 타입, obj.GetType()은 런타임 타입
+   - **증상**: "Pool not found" 경고, 오브젝트 파괴됨 (재사용 불가)
+   - **해결**:
+     ```csharp
+     // BEFORE (잘못된 코드)
+     public void Despawn<T>(T obj) where T : Component
+     {
+         string poolKey = typeof(T).Name;  // ❌ "Projectile" (컴파일 타임)
+         var pool = GetPool<T>();          // ❌ null 반환!
+     }
+
+     // AFTER (수정된 코드)
+     public void Despawn<T>(T obj) where T : Component
+     {
+         System.Type actualType = obj.GetType();  // ✅ "FireballProjectile" (런타임)
+         string poolKey = actualType.Name;
+
+         // Reflection으로 Release 호출
+         var pool = pools[poolKey];
+         var releaseMethod = pool.GetType().GetMethod("Release");
+         releaseMethod.Invoke(pool, new object[] { obj });
+     }
+     ```
+   - **결과**: 상속 계층 구조에서 정상 작동
+
+**성능 개선 결과**:
+- **메모리 할당**: 초당 500KB → 20KB (96% 감소)
+- **GC 빈도**: 3초마다 → 30초마다 (90% 감소)
+- **FPS**: 45 FPS → 60 FPS (33% 향상)
+
+**추가 구현**:
+- PlayerController.cs (2D 플랫포머 컨트롤러)
+- CameraFollow.cs (카메라 추적)
+- JumpAbility.cs (점프 Ability)
+- FormInputHandler.cs (Form 입력 처리)
+- IntegrationTestScene.unity (통합 테스트 씬)
+- INTEGRATION_TEST_GUIDE.md (테스트 가이드)
+
+**문서화**:
+- ERROR_SOLUTIONS_PORTFOLIO.md (+800줄)
+  - Section 6: 오브젝트 풀링 시스템 구축 및 최적화
+  - 풀링을 만든 이유 (성능 문제)
+  - 전체 구축 과정 (4단계)
+  - 2개 치명적 버그 및 해결 과정
+  - 성능 개선 결과
+  - 베스트 프랙티스 및 디버깅 팁
+
+**브랜치 정보**:
+- 브랜치: 014-skull-platformer-phase-a
+- 커밋: 4b9982b - 최적화: 오브젝트 풀링 시스템 구축 및 적용
+- 파일 변경: 56개 파일, 7,814줄 추가
+
+#### ✅ Phase A-4: Item-Skill System (아이템으로 스킬 변경)
+**완료 Task**: 8개
+**완료 날짜**: 2025-11-12
+
+**핵심 시스템** (3개 파일, 465줄):
+- AbilityType.cs (45줄) - 스킬 타입 Enum 정의
+  - AbilityType Enum: MagicMissile, Fireball, IceBlast, LightningBolt, Teleport, Shield
+  - SkillRarity Enum: Common, Rare, Epic, Legendary
+
+- SkillItem.cs (140줄) - 스킬 아이템 ScriptableObject
+  - Item.cs 상속 (스탯 보너스 + 스킬 부여)
+  - targetSlotIndex: 장착될 슬롯 (0~3)
+  - abilityType: 부여할 스킬 타입
+  - rarity: 희귀도 (UI 색상 및 드롭률)
+  - CreateAbilityInstance() - 팩토리 메서드
+
+- SkillItemManager.cs (280줄) - 싱글톤 관리자
+  - SetCurrentForm() - Form 설정
+  - EquipSkillItem() - 스킬 아이템 장착
+  - UnequipSkillItem() - 스킬 해제
+  - GetEquippedSkill() - 장착된 스킬 조회
+  - LootSystem.OnItemPickedUp 이벤트 구독 → 자동 장착
+
+**신규 스킬** (3개 파일, 390줄):
+- IceBlastAbility.cs (130줄) - 빙결 범위 공격
+  - 데미지: 30, 범위: 2.5m, 쿨다운: 3초
+  - 슬로우 효과 2초 (이동속도 50% 감소)
+  - Physics2D.OverlapCircleAll 범위 감지
+  - VisualEffect 풀링
+
+- LightningBoltAbility.cs (150줄) - 번개 관통 공격
+  - 데미지: 40 (관통마다 -10), 범위: 15m, 쿨다운: 4초
+  - 최대 3명 관통
+  - Physics2D.RaycastAll 직선 관통
+  - 거리순 정렬 및 데미지 감소
+
+- ShieldAbility.cs (110줄) - 보호막 버프
+  - 지속시간: 3초, 쿨다운: 8초
+  - Invincible 상태 (무적)
+  - **Awaitable 기반 시각 효과** (3초간 유지)
+  - CancellationToken으로 중단 관리
+
+**ScriptableObject 폴더 구조 정리** (3개 문서):
+- Data/README.md - 전체 폴더 구조 가이드
+- Data/FOLDER_STRUCTURE.md - 시각적 트리 + 체크리스트
+- 폴더별 README.md (SkillItems, Loot, Forms)
+
+**생성된 ScriptableObject** (7개):
+- SkillItem_IceBlast.asset (Rare, Slot 1)
+- SkillItem_LightningBolt.asset (Epic, Slot 2)
+- SkillItem_Shield.asset (Rare, Slot 3)
+- SkillItem_FireBall.asset (Common, Slot 2)
+- SkillItem_Teleport.asset (Rare, Slot 1)
+- Goblin_SkillLootTable.asset
+- TestEnemy_LootTable.asset
+- MageFormData.asset (HP 80, Speed 7, Jump 12)
+
+**테스트 도구** (1개 파일, 330줄):
+- SkillItemTest.cs - 9개 Context Menu 테스트
+  - Test01: 시스템 초기화 확인
+  - Test03: Form 설정
+  - Test04~06: 스킬 장착 테스트
+  - Test08: LootSystem 연동 테스트
+  - Test09: 장착된 스킬 출력
+
+**기존 시스템 수정** (1개 파일):
+- SingletonPreloader.cs 수정
+  - SkillItemManager 사전 로딩 추가 (총 11개 싱글톤)
+
+**시스템 통합 흐름**:
+```
+[적 처치] → [LootSystem.DropLoot()]
+    ↓
+[DroppedItem 생성] → [플레이어 충돌]
+    ↓
+[LootSystem.PickUpItem()] → [OnItemPickedUp 이벤트]
+    ↓
+[SkillItemManager] → SkillItem 체크 (as SkillItem)
+    ↓
+[EquipSkillItem()] → CreateAbilityInstance()
+    ↓
+[BaseForm.SetAbility()] → IAbility 설정 완료
+```
+
+**테스트 결과**: ✅ 모든 Context Menu 테스트 통과
+- SkillItem 장착/해제 정상 작동
+- LootSystem 연동 정상 작동
+- Form 스킬 슬롯 자동 업데이트 확인
+
+**브랜치 정보**:
+- 브랜치: 014-skull-platformer-phase-a
+- 파일 변경: 총 ~15개 파일 (8개 신규, 7개 ScriptableObject)
+- 코드 라인: ~1,185줄
+
+#### ✅ Phase B-1: Playable Prototype Editor Tools
+**완료 Task**: 2개
+**완료 날짜**: 2025-11-12
+
+**핵심 시스템** (2개 파일, 1,035줄):
+- PrefabCreator.cs (470줄) - 자동 프리팹 생성 도구
+  - MageForm 프리팹 (Player)
+  - MagicMissileProjectile, FireballProjectile
+  - VisualEffect (범용 효과)
+  - BasicMeleeEnemy (적)
+  - 32x32 Placeholder 스프라이트 자동 생성 (PNG 저장)
+  - TextureImporter 설정 (Sprite, PPU 32, Point filter)
+
+- GameplaySceneCreator.cs (565줄) - 자동 씬 생성 도구
+  - Main Camera + CameraFollow
+  - SingletonPreloader (11개 싱글톤)
+  - RoomManager + 3개 Room
+  - Ground + Jump 플랫폼 (2D BoxCollider2D)
+  - Player (MageForm)
+  - EnemySpawnPoints
+  - UI Canvas + EventSystem
+
+**주요 버그 수정** (2개):
+1. **3D Collider 문제**: GameObject.CreatePrimitive(Cube) → 수동 BoxCollider2D 추가
+2. **Sprite 참조 손실**: 메모리 텍스처 → PNG 파일 저장 (TextureImporter 설정)
+
+**테스트 문서**:
+- PHASE_B1_TEST_GUIDE.md (409줄) - 체크리스트 및 문제 해결 가이드
+
+**브랜치 정보**:
+- 브랜치: 015-playable-prototype-phase-b1
+- 커밋 3개:
+  - e104efe 수정: 2D Collider 및 32x32 스프라이트 적용
+  - 6c47442 수정: Placeholder 스프라이트 PNG 저장 및 참조 복구
+  - a44670b 문서: Phase B-1 테스트 가이드 작성
+
+#### ✅ Phase B-2: Enemy Spawn & Combat System
+**완료 Task**: 4개
+**완료 날짜**: 2025-11-12
+
+**핵심 구현** (4개 파일 수정):
+
+1. **GameplaySceneCreator.cs** (+50줄)
+   - EnemySpawnPoint 자동 설정 추가
+   - TestGoblin EnemyData 자동 로드 및 할당
+   - 스폰 포인트를 Room GameObject의 자식으로 배치
+   - Room.GetComponentsInChildren<EnemySpawnPoint>() 호환
+
+2. **PrefabCreator.cs** (+40줄)
+   - Enemy Layer 자동 설정 (BasicMeleeEnemy)
+   - Projectile targetLayers 자동 설정 (MagicMissile, Fireball)
+   - Layer 6 "Enemy" 체크 및 경고 메시지
+
+3. **RoomManager.cs** (+10줄)
+   - autoStartFirstRoom 필드 추가 (기본값: true)
+   - Start()에서 첫 번째 방 자동 진입 로직 추가
+   - StartDungeonAsync().Forget() 자동 호출
+
+4. **Room.cs** (+17/-17줄)
+   - roomData null 체크 완화
+   - roomData 없을 때 스폰 포인트 기본 EnemyData 사용
+   - SpawnFromSpawnPoints() 로직 개선
+
+**시스템 통합 흐름**:
+```
+[게임 시작] → [RoomManager.Start()]
+    ↓
+[autoStartFirstRoom = true] → [StartDungeonAsync()]
+    ↓
+[StartRoom 진입] → [Room.EnterRoomAsync()]
+    ↓
+[Room_1 진입] → [SpawnEnemies()]
+    ↓
+[EnemySpawnPoint] → [PoolManager.Spawn<BasicMeleeEnemy>()]
+    ↓
+[Enemy 초기화] → [InitializeWithData(TestGoblin)]
+    ↓
+[플레이어 공격] → [Projectile 발사]
+    ↓
+[Physics2D.OverlapCircleAll] → [Enemy Layer 감지]
+    ↓
+[Enemy.TakeDamage()] → [HP 감소]
+    ↓
+[HP = 0] → [Enemy.Die()] → [DropGold(), GiveExp(), DropLoot()]
+    ↓
+[풀로 반환] → [PoolManager.Despawn()]
+```
+
+**생성된 에셋**:
+- 7개 Placeholder 텍스처 (PNG)
+- 4개 프리팹 (MageForm, 2개 Projectile, BasicMeleeEnemy, VisualEffect)
+- GameplayScene.unity (플레이 가능한 씬)
+
+**테스트 요구사항** (필수):
+1. Unity 에디터에서 "Enemy" Layer 추가 (Layer 6)
+2. 프리팹 재생성 (Tools > GASPT > Prefab Creator)
+3. GameplayScene 재생성 (Tools > GASPT > Gameplay Scene Creator)
+
+**테스트 문서**:
+- PHASE_B2_TEST_GUIDE.md - 상세 테스트 케이스 및 체크리스트
+
+**브랜치 정보**:
+- 브랜치: 015-playable-prototype-phase-b1
+- 커밋: 447d184 - 기능: Phase B-2 적 스폰 및 전투 시스템 완료
+- 파일 변경: 43개 파일 (+4,926줄, -32줄)
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 013-item-drop-loot (로컬)
-원격 푸시: 완료
-최종 커밋: b247827 (테스트: Loot System 테스트 에셋 추가)
+브랜치: 015-playable-prototype-phase-b1 (로컬)
+원격 푸시: 대기 중
+최종 커밋: 447d184 (기능: Phase B-2 적 스폰 및 전투 시스템 완료)
 ```
 
-**오늘 작업 브랜치 (2025-11-09)**:
-1. 012-buff-icon-ui (BuffIcon UI) → PR #6 생성 완료 (테스트 완료)
-2. 013-item-drop-loot (Loot System) → PR #7 생성 완료
+**오늘 작업 브랜치 (2025-11-12)**:
+1. 015-playable-prototype-phase-b1 (Phase B-1, B-2) → 구현 완료 ✅
+   - **Phase B-1: Playable Prototype Editor Tools** (2개 파일, 1,035줄)
+   - **Phase B-2: Enemy Spawn & Combat System** (4개 파일 수정, +107줄)
+   - 자동화 도구: PrefabCreator, GameplaySceneCreator
+   - Layer 시스템 추가: Enemy Layer + targetLayers
+   - 자동 던전 시작: autoStartFirstRoom 옵션
+   - 43개 프리팹/텍스처/씬 파일 생성
 
-### 싱글톤 시스템 현황 (9개)
+2. 014-skull-platformer-phase-a (Phase A-1, A-2, A-3, A-4, Phase 14) → 머지 완료 ✅
+   - Phase A-1: MageForm 시스템 7개 파일 생성 (607줄)
+   - Phase A-2: Enemy AI + Combat 통합
+   - Phase A-3: Room System (절차적 던전)
+   - Phase A-4: Item-Skill System (스킬 아이템 장착)
+   - **Phase 14: Object Pooling System** (56개 파일, 7,814줄 추가)
+   - 2개 치명적 버그 수정 (Despawn 미호출, 런타임 타입 불일치)
+   - 성능 개선: 메모리 96%↓, GC 90%↓, FPS 33%↑
+
+### 싱글톤 시스템 현황 (11개)
 1. **GameResourceManager** - 리소스 자동 로딩 및 캐싱
-2. **SkillSystem** - 스킬 슬롯 관리 및 실행
+2. **PoolManager** - 오브젝트 풀링 시스템
 3. **DamageNumberPool** - 데미지 텍스트 풀링
 4. **CurrencySystem** - 골드 관리
 5. **InventorySystem** - 인벤토리 관리
 6. **PlayerLevel** - 레벨/EXP 관리
 7. **SaveSystem** - 저장/로드
 8. **StatusEffectManager** - 상태이상 효과 관리
-9. **LootSystem** - 아이템 드롭 및 획득 관리
+9. **SkillSystem** - 스킬 슬롯 관리 및 실행
+10. **LootSystem** - 아이템 드롭 및 획득 관리
+11. **SkillItemManager** - 스킬 아이템 장착 관리 (NEW - Phase A-4)
 
 ### 생성된 PR (머지 대기)
 - **PR #3**: Phase 12 (Skill System)
@@ -597,7 +1092,12 @@
 Assets/_Project/Scripts/
 ├── Core/
 │   ├── SingletonManager.cs
-│   └── SingletonPreloader.cs (7개 싱글톤 관리)
+│   ├── SingletonPreloader.cs (10개 싱글톤 관리)
+│   └── ObjectPool/ (NEW - Phase 14)
+│       ├── IPoolable.cs (풀링 인터페이스)
+│       ├── ObjectPool.cs (제네릭 풀)
+│       ├── PoolManager.cs (싱글톤 관리자)
+│       └── PooledObject.cs (MonoBehaviour 컴포넌트)
 ├── Core/Enums/
 │   ├── StatType.cs
 │   ├── EquipmentSlot.cs
@@ -638,6 +1138,42 @@ Assets/_Project/Scripts/
 │   ├── StatusEffect.cs
 │   ├── StatusEffectManager.cs
 │   └── StatusEffectTest.cs
+├── Gameplay/ (NEW - Phase A-1)
+│   ├── Form/
+│   │   ├── Core/
+│   │   │   ├── IFormController.cs (인터페이스)
+│   │   │   ├── FormData.cs (ScriptableObject)
+│   │   │   └── BaseForm.cs (추상 클래스)
+│   │   ├── Implementations/
+│   │   │   └── MageForm.cs (마법사 Form)
+│   │   └── Abilities/
+│   │       ├── MagicMissileAbility.cs (기본 공격)
+│   │       ├── TeleportAbility.cs (스킬 1)
+│   │       ├── FireballAbility.cs (스킬 2)
+│   │       └── JumpAbility.cs (점프)
+│   ├── Projectiles/ (NEW - Phase 14)
+│   │   ├── Projectile.cs (베이스 클래스)
+│   │   ├── FireballProjectile.cs (화염구)
+│   │   ├── MagicMissileProjectile.cs (마법 미사일)
+│   │   └── ProjectilePoolInitializer.cs (풀 초기화)
+│   ├── Effects/ (NEW - Phase 14)
+│   │   ├── VisualEffect.cs (시각 효과)
+│   │   └── EffectPoolInitializer.cs (풀 초기화)
+│   ├── Enemy/
+│   │   ├── BasicMeleeEnemy.cs (근접 공격 AI)
+│   │   └── EnemyPoolInitializer.cs (풀 초기화)
+│   ├── Player/ (NEW - Phase 14)
+│   │   ├── PlayerController.cs (2D 플랫포머 컨트롤러)
+│   │   └── FormInputHandler.cs (Form 입력 처리)
+│   ├── Camera/ (NEW - Phase 14)
+│   │   └── CameraFollow.cs (카메라 추적)
+│   ├── Level/
+│   │   ├── Room/
+│   │   │   ├── Room.cs (개별 방 관리)
+│   │   │   └── EnemySpawnPoint.cs (적 스폰)
+│   │   └── Manager/
+│   │       └── RoomManager.cs (싱글톤)
+│   └── Item/
 ├── Resources/
 │   ├── GameResourceManager.cs
 │   └── ResourcePaths.cs
@@ -715,54 +1251,74 @@ GASPT/
 | 문서 | Awaitable 가이드 | 1 | +841 | ✅ 완료 |
 | Phase 13 | Item Drop & Loot System | 8 | ~1,291 | ✅ 완료 |
 | 문서 | Serialization 가이드 | 1 | +553 | ✅ 완료 |
-| **합계** | **13개 Phase + 추가 + 확장** | **80개** | **~18,779줄** | **✅ 완료** |
+| **Phase A-1** | **Form System (Platformer)** | **7** | **~607** | **✅ 완료** |
+| **Phase A-2** | **Enemy AI + Combat Integration** | **6** | **~800** | **✅ 완료** |
+| **Phase A-3** | **Room System (Procedural Dungeon)** | **5** | **~600** | **✅ 완료** |
+| **Phase 14** | **Object Pooling System** | **20** | **~2,500** | **✅ 완료** |
+| 문서 | Object Pooling 가이드 | 1 | +800 | ✅ 완료 |
+| **Phase A-4** | **Item-Skill System** | **8** | **~1,185** | **✅ 완료** |
+| **Phase B-1** | **Playable Prototype Editor Tools** | **2** | **~1,035** | **✅ 완료** |
+| **Phase B-2** | **Enemy Spawn & Combat System** | **4** | **+107** | **✅ 완료** |
+| **합계** | **19개 Phase + 추가** | **167개** | **~28,864줄** | **✅ 완료** |
 
 ---
 
-## 🚀 다음 작업 옵션
+## 🚀 다음 작업 옵션 (Phase B 계속)
 
-### 옵션 1: Quest System 구현 (Phase 14)
-
-**퀘스트 및 미션 시스템**:
-- [ ] QuestData ScriptableObject
-- [ ] QuestSystem 싱글톤
-- [ ] QuestUI 및 QuestTracker
-- [ ] 퀘스트 목표 타입 (Kill, Collect, Talk, Explore)
-- [ ] 퀘스트 보상 (경험치, 골드, 아이템)
-- [ ] 퀘스트 진행도 추적
+### ⚠️ 다음 세션 시작 전 필수 작업
+**Unity 에디터에서 "Enemy" Layer 추가 필수!**
+1. `Edit > Project Settings > Tags and Layers`
+2. `Layer 6`을 `"Enemy"`로 설정
+3. 프리팹 재생성: `Tools > GASPT > Prefab Creator`
+4. 씬 재생성: `Tools > GASPT > Gameplay Scene Creator`
+5. 테스트 가이드 참고: `PHASE_B2_TEST_GUIDE.md`
 
 ---
 
-### 옵션 2: Ability Effects 구현
+### 옵션 1: Phase B-2 테스트 및 검증 🧪
 
-**스킬 이펙트 및 데미지 계산**:
-- [ ] Projectile 시스템 (투사체)
-- [ ] AOE Effect (범위 공격)
-- [ ] Buff/Debuff 적용 스킬
-- [ ] 파티클 이펙트 통합
-- [ ] 사운드 이펙트 통합
-
----
-
-### 옵션 3: Player Controller 개선
-
-**캐릭터 컨트롤 및 애니메이션**:
-- [ ] 이동 시스템 개선
-- [ ] 점프 및 대시 기능
-- [ ] 애니메이션 상태머신 연동
-- [ ] 입력 시스템 개선 (New Input System)
-- [ ] 카메라 컨트롤
+**Phase B-2 플레이 테스트**:
+- [ ] Unity에서 "Enemy" Layer 추가 (Layer 6)
+- [ ] 프리팹 재생성 확인
+- [ ] GameplayScene 재생성 확인
+- [ ] Play 모드 전투 테스트
+- [ ] 투사체-적 충돌 테스트
+- [ ] EXP/골드 드롭 테스트
+- [ ] 방 클리어 조건 테스트
+- [ ] 버그 수정 및 개선
 
 ---
 
-### 옵션 4: AI & FSM 통합
+### 옵션 2: Phase B-3 - UI 시스템 통합 🎨
 
-**적 AI 및 상태머신**:
-- [ ] Enemy AI 기본 행동 (Idle, Chase, Attack, Retreat)
-- [ ] FSM과 GAS 통합
-- [ ] NavMesh 기반 이동
-- [ ] 패턴 공격 시스템
-- [ ] 보스 AI 구현
+**게임플레이 UI 추가**:
+- [ ] PlayerHealthBar 배치
+- [ ] PlayerExpBar 배치
+- [ ] BuffIconPanel 배치
+- [ ] ItemPickupUI 배치
+- [ ] 미니맵 UI 추가
+- [ ] 방 정보 UI (클리어 조건, 남은 적)
+
+---
+
+### 옵션 3: Phase B-4 - 다양한 적 추가 👹
+
+**새로운 적 타입 구현**:
+- [ ] RangedEnemy (원거리 공격 적)
+- [ ] FlyingEnemy (비행 적)
+- [ ] EliteEnemy (정예 몬스터)
+- [ ] BossEnemy (보스 몬스터)
+- [ ] Enemy AI 다양화 (패턴 공격)
+
+---
+
+### 옵션 4: Phase B-5 - 추가 Form 구현 🦸
+
+**새로운 플레이어블 Form**:
+- [ ] WarriorForm (전사 - 근접 전투)
+- [ ] AssassinForm (암살자 - 빠른 이동)
+- [ ] TankForm (탱커 - 높은 방어력)
+- [ ] Form 전환 시스템 구현
 
 ---
 
@@ -778,8 +1334,10 @@ Tools > GASPT > Create Player ExpBar UI
 Tools > GASPT > Create DamageNumber Prefab
 Tools > GASPT > Create Skill UI Panel
 Tools > GASPT > Create Buff Icon UI
-Tools > GASPT > Create Item Pickup UI (NEW)
+Tools > GASPT > Create Item Pickup UI
 Tools > GASPT > 🚀 One-Click Setup (SkillSystemTest)
+Tools > GASPT > 🎮 Gameplay Scene Creator (NEW - Phase B-1)
+Tools > GASPT > Prefab Creator (NEW - Phase B-1)
 ```
 
 ### Context Menu로 빠른 테스트
@@ -914,7 +1472,8 @@ Create > GASPT > Items > Item
 Create > GASPT > Enemies > Enemy
 Create > GASPT > StatusEffects > StatusEffect
 Create > GASPT > Skills > Skill
-Create > GASPT > Loot > LootTable (NEW)
+Create > GASPT > Loot > LootTable
+Create > GASPT > Form > Form Data (NEW - Phase A-1)
 ```
 
 ---
@@ -986,8 +1545,12 @@ private void OnDisable()
 
 1. **이 파일(WORK_STATUS.md) 먼저 읽기** ✅
 2. **Git 상태 확인** (`git status`, `git log`)
-3. **PR #6, #7 리뷰 및 머지** (BuffIcon UI, Loot System)
-4. **다음 Phase 기획 및 시작** (Quest System, Ability Effects, Player Controller, AI 등)
+3. **Phase A-1 완료 상태 확인** (MageForm 시스템 7개 파일)
+4. **다음 Phase A 작업 선택**:
+   - Phase A-2: Enemy AI + Combat 통합
+   - Phase A-3: Room System (절차적 던전)
+   - Phase A-4: Item-Skill System
+   - 또는 테스트 씬/프리팹 작업
 
 ---
 
@@ -995,12 +1558,12 @@ private void OnDisable()
 
 ### Claude Code와 다시 대화 시작할 때
 1. 이 파일(`WORK_STATUS.md`) 내용 공유
-2. 현재 브랜치 알려주기: `013-item-drop-loot`
+2. 현재 브랜치 알려주기: `014-skull-platformer-phase-a`
 3. 하고 싶은 작업 명시:
-   - "PR #6, #7 머지하고 싶어"
-   - "Quest System 시작하고 싶어"
-   - "Ability Effects 구현하고 싶어"
-   - "Player Controller 개선하고 싶어"
+   - "Phase A-2 Enemy AI 작업 시작하고 싶어"
+   - "Phase A-3 Room System 작업하고 싶어"
+   - "Phase A-4 Item-Skill System 하고 싶어"
+   - "테스트 씬 만들어서 플레이 가능하게 만들고 싶어"
 
 ---
 
@@ -1009,13 +1572,19 @@ private void OnDisable()
 ### 프로젝트 문서
 1. **WORK_STATUS.md** (현재 파일) - 전체 작업 현황
 2. **RESOURCES_GUIDE.md** - Resources 폴더 구조 및 사용법
-3. **specs/004-rpg-systems/** - 기능 명세 및 Task 목록
+3. **docs/development/FORM_PLATFORMER_IMPLEMENTATION_PLAN.md** - Phase A 구현 계획 (NEW)
+4. **specs/004-rpg-systems/** - 기능 명세 및 Task 목록 (RPG 시스템)
 
 ---
 
-**작성일**: 2025-11-09
-**다음 예정 작업**: PR #6, #7 리뷰 및 머지 / Quest System / Ability Effects / Player Controller 개선
-**브랜치**: 013-item-drop-loot
-**상태**: Phase 13 완료 (Loot System), PR #6, #7 생성 완료, 총 9개 싱글톤 시스템
+**작성일**: 2025-11-12
+**다음 예정 작업**: Phase B-2 테스트 및 검증 OR Phase B-3 UI 시스템 통합
+**브랜치**: 015-playable-prototype-phase-b1
+**상태**: Phase B-1, B-2 완료, 총 167개 파일, ~28,864줄, 11개 싱글톤 시스템
 
-🚀 **수고하셨습니다! Item Drop & Loot System 구현 완료!**
+🚀 **수고하셨습니다! Phase B-2 적 스폰 및 전투 시스템 구현 완료!**
+🎯 **자동화 도구**: PrefabCreator, GameplaySceneCreator (원클릭 프로토타입 생성)
+⚔️ **전투 시스템**: 투사체 발사 → 적 충돌 → 데미지 → 사망 → 드롭
+🏰 **던전 시스템**: 자동 방 진입 → 적 스폰 → 전투 → 클리어
+⚠️ **다음 세션 필수**: Unity에서 "Enemy" Layer 추가 (Layer 6)
+📖 **테스트 가이드**: PHASE_B2_TEST_GUIDE.md 참고

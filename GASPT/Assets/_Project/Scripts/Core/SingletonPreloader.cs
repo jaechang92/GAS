@@ -3,11 +3,17 @@ using GASPT.UI;
 using GASPT.Economy;
 using GASPT.Inventory;
 using GASPT.Level;
+using GASPT.Gameplay.Level;
 using GASPT.Save;
 using GASPT.StatusEffects;
 using GASPT.ResourceManagement;
 using GASPT.Skills;
 using GASPT.Loot;
+using GASPT.Core.Pooling;
+using GASPT.Gameplay.Projectiles;
+using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Effects;
+using GASPT.Gameplay.Item;
 
 namespace GASPT.Core
 {
@@ -82,6 +88,9 @@ namespace GASPT.Core
             // 0. Resource Management (최우선 - 다른 시스템들이 의존)
             PreloadGameResourceManager();
 
+            // 0-1. Object Pooling (게임플레이 최적화)
+            PreloadPoolManager();
+
             // 1. UI Systems (게임플레이 중 자주 사용)
             PreloadDamageNumberPool();
 
@@ -91,6 +100,8 @@ namespace GASPT.Core
 
             // 3. Level System
             PreloadPlayerLevel();
+            // RoomManager는 Scene별로 관리 (DontDestroyOnLoad 불필요)
+            // PreloadRoomManager();
 
             // 4. Save System
             PreloadSaveSystem();
@@ -103,6 +114,18 @@ namespace GASPT.Core
 
             // 7. Loot System
             PreloadLootSystem();
+
+            // 8. Skill Item System (LootSystem 의존)
+            PreloadSkillItemManager();
+
+            // 9. Projectile Pools (PoolManager 의존)
+            InitializeProjectilePools();
+
+            // 10. Enemy Pools (PoolManager 의존)
+            InitializeEnemyPools();
+
+            // 11. Effect Pools (PoolManager 의존)
+            InitializeEffectPools();
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
         }
@@ -203,6 +226,25 @@ namespace GASPT.Core
         }
 
         /// <summary>
+        /// RoomManager 사전 로딩
+        /// </summary>
+        private void PreloadRoomManager()
+        {
+            LogMessage("RoomManager 초기화 중...");
+
+            var instance = RoomManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ RoomManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ RoomManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
         /// SaveSystem 사전 로딩
         /// </summary>
         private void PreloadSaveSystem()
@@ -278,6 +320,98 @@ namespace GASPT.Core
             }
         }
 
+        /// <summary>
+        /// SkillItemManager 사전 로딩
+        /// </summary>
+        private void PreloadSkillItemManager()
+        {
+            LogMessage("SkillItemManager 초기화 중...");
+
+            var instance = SkillItemManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ SkillItemManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ SkillItemManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// PoolManager 사전 로딩
+        /// </summary>
+        private void PreloadPoolManager()
+        {
+            LogMessage("PoolManager 초기화 중...");
+
+            var instance = PoolManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ PoolManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ PoolManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// 투사체 풀 초기화
+        /// </summary>
+        private void InitializeProjectilePools()
+        {
+            LogMessage("투사체 풀 초기화 중...");
+
+            try
+            {
+                ProjectilePoolInitializer.InitializeAllPools();
+                LogMessage("✓ 투사체 풀 초기화 완료");
+            }
+            catch (System.Exception e)
+            {
+                LogError($"✗ 투사체 풀 초기화 실패: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Enemy 풀 초기화
+        /// </summary>
+        private void InitializeEnemyPools()
+        {
+            LogMessage("Enemy 풀 초기화 중...");
+
+            try
+            {
+                EnemyPoolInitializer.InitializeAllPools();
+                LogMessage("✓ Enemy 풀 초기화 완료");
+            }
+            catch (System.Exception e)
+            {
+                LogError($"✗ Enemy 풀 초기화 실패: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Effect 풀 초기화
+        /// </summary>
+        private void InitializeEffectPools()
+        {
+            LogMessage("Effect 풀 초기화 중...");
+
+            try
+            {
+                EffectPoolInitializer.InitializeAllPools();
+                LogMessage("✓ Effect 풀 초기화 완료");
+            }
+            catch (System.Exception e)
+            {
+                LogError($"✗ Effect 풀 초기화 실패: {e.Message}");
+            }
+        }
+
 
         // ====== 유틸리티 ======
 
@@ -289,14 +423,17 @@ namespace GASPT.Core
             int count = 0;
 
             if (GameResourceManager.HasInstance) count++;
+            if (PoolManager.HasInstance) count++;
             if (DamageNumberPool.HasInstance) count++;
             if (CurrencySystem.HasInstance) count++;
             if (InventorySystem.HasInstance) count++;
             if (PlayerLevel.HasInstance) count++;
+            // if (RoomManager.HasInstance) count++; // Scene별로 관리
             if (SaveSystem.HasInstance) count++;
             if (StatusEffectManager.HasInstance) count++;
             if (SkillSystem.HasInstance) count++;
             if (LootSystem.HasInstance) count++;
+            if (SkillItemManager.HasInstance) count++;
 
             return count;
         }
@@ -331,15 +468,18 @@ namespace GASPT.Core
         {
             Debug.Log("========== 싱글톤 상태 확인 ==========");
             Debug.Log($"GameResourceManager: {(GameResourceManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"PoolManager: {(PoolManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"DamageNumberPool: {(DamageNumberPool.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"CurrencySystem: {(CurrencySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"InventorySystem: {(InventorySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PlayerLevel: {(PlayerLevel.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            // Debug.Log($"RoomManager: {(RoomManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}"); // Scene별로 관리
             Debug.Log($"SaveSystem: {(SaveSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SkillSystem: {(SkillSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"LootSystem: {(LootSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/9개 싱글톤 생성됨");
+            Debug.Log($"SkillItemManager: {(SkillItemManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"총 {GetPreloadedCount()}/11개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 

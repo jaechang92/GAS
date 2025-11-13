@@ -26,20 +26,20 @@
 **핵심 아이디어**: Skul: The Hero Slayer를 오마주한 2D 플랫포머 로그라이크
 
 **주요 특징**:
-- ⭐ **스컬 교체 시스템**: 2개 스컬 동시 장착, 실시간 전환(Q키)
+- ⭐ **폼 교체 시스템**: 2개 폼 동시 장착, 실시간 전환(Q키)
 - ⭐ **아이템-스킬 연동**: 아이템 획득 시 사용 가능한 스킬 변경
 - ⭐ **절차적 던전**: 매번 다른 구조의 던전 생성
 - ⭐ **로그라이크 루프**: 죽으면 처음부터, 메타 진행으로 점진적 강화
-- ⭐ **스컬 각성**: 업그레이드를 통한 능력 향상
+- ⭐ **폼 각성**: 업그레이드를 통한 능력 향상
 
 ### 플레이어 캐릭터
 
-**기본 캐릭터**: 마법사(MageSkull)
+**기본 캐릭터**: 마법사(MageForm)
 - 원거리 마법 공격
 - 빠른 이동 속도
 - 순간이동/화염구 등 마법 스킬
 
-**확장 스컬 (Phase B 이후)**:
+**확장 폼 (Phase B 이후)**:
 - Warrior: 근접 전투형
 - Assassin: 빠른 공격형
 - Tank: 방어형
@@ -104,7 +104,7 @@
 
 ### ❌ 구현 필요 시스템
 
-1. **스컬 교체 시스템** (핵심!)
+1. **폼 교체 시스템** (핵심!)
 2. **아이템-스킬 연동**
 3. **절차적 던전 생성**
 4. **적 AI 완성**
@@ -141,7 +141,7 @@
 
 **Phase B 완료 시**:
 - ✅ 절차적 던전 생성
-- ✅ 2개 스컬 교체 가능
+- ✅ 2개 폼 교체 가능
 - ✅ 메타 진행 (영구 업그레이드)
 - ✅ 완전한 로그라이크 루프
 
@@ -150,32 +150,32 @@
 ## 🚀 Phase A: 최소 플레이 가능 프로토타입
 
 ### 목표
-**"마법사 스컬로 던전을 돌아다니며 적을 처치하고 아이템을 먹으면 스킬이 바뀌는 게임"**
+**"마법사 폼로 던전을 돌아다니며 적을 처치하고 아이템을 먹으면 스킬이 바뀌는 게임"**
 
 **예상 기간**: 3주 (15-20일)
 
 ---
 
-## 📝 Phase A-1: MageSkull 기본 구현
+## 📝 Phase A-1: MageForm 기본 구현
 
 **작업 기간**: 1주 (6일)
 **담당**: Player 시스템
 
 ### 목표
-마법사 스컬로 플레이 가능한 기본 캐릭터 구현
+마법사 폼로 플레이 가능한 기본 캐릭터 구현
 
 ### 구현 파일 구조
 
 ```
-Assets/_Project/Scripts/Gameplay/Skull/
+Assets/_Project/Scripts/Gameplay/Form/
 ├── Core/
-│   ├── ISkullController.cs          # 스컬 인터페이스
-│   ├── BaseSkull.cs                 # 스컬 기본 클래스
-│   ├── SkullData.cs                 # ScriptableObject 스컬 데이터
-│   └── SkullManager.cs              # 스컬 관리 싱글톤
+│   ├── IFormController.cs          # 폼 인터페이스
+│   ├── BaseForm.cs                 # 폼 기본 클래스
+│   ├── FormData.cs                 # ScriptableObject 폼 데이터
+│   └── FormManager.cs              # 폼 관리 싱글톤
 │
 ├── Implementations/
-│   └── MageSkull.cs                 # 마법사 스컬 구현
+│   └── MageForm.cs                 # 마법사 폼 구현
 │
 └── Abilities/
     ├── MagicMissileAbility.cs       # 기본 공격 (마법 미사일)
@@ -185,18 +185,18 @@ Assets/_Project/Scripts/Gameplay/Skull/
 
 ### 핵심 코드 구조
 
-#### 1. ISkullController 인터페이스
+#### 1. IFormController 인터페이스
 
 ```csharp
-// Assets/_Project/Scripts/Gameplay/Skull/Core/ISkullController.cs
-namespace GASPT.Skull
+// Assets/_Project/Scripts/Gameplay/Form/Core/IFormController.cs
+namespace GASPT.Form
 {
-    public interface ISkullController
+    public interface IFormController
     {
         string SkullName { get; }
-        SkullType SkullType { get; }
+        FormType FormType { get; }
 
-        // 스컬 활성화/비활성화
+        // 폼 활성화/비활성화
         void Activate();
         void Deactivate();
 
@@ -210,7 +210,7 @@ namespace GASPT.Skull
         IAbility GetAbility(int slotIndex);
     }
 
-    public enum SkullType
+    public enum FormType
     {
         Mage,      // 마법사
         Warrior,   // 전사
@@ -220,40 +220,40 @@ namespace GASPT.Skull
 }
 ```
 
-#### 2. BaseSkull 추상 클래스
+#### 2. BaseForm 추상 클래스
 
 ```csharp
-// Assets/_Project/Scripts/Gameplay/Skull/Core/BaseSkull.cs
+// Assets/_Project/Scripts/Gameplay/Form/Core/BaseForm.cs
 using UnityEngine;
 using GASPT.GAS;
 
-namespace GASPT.Skull
+namespace GASPT.Form
 {
-    public abstract class BaseSkull : MonoBehaviour, ISkullController
+    public abstract class BaseForm : MonoBehaviour, IFormController
     {
-        [Header("Skull Info")]
-        [SerializeField] protected SkullData skullData;
+        [Header("Form Info")]
+        [SerializeField] protected FormData formData;
 
         [Header("Abilities")]
         protected IAbility[] abilities = new IAbility[4];  // 0: 기본공격, 1-3: 스킬
 
         public abstract string SkullName { get; }
-        public abstract SkullType SkullType { get; }
+        public abstract FormType FormType { get; }
 
-        public virtual float MaxHealth => skullData.maxHealth;
-        public virtual float MoveSpeed => skullData.moveSpeed;
-        public virtual float JumpPower => skullData.jumpPower;
+        public virtual float MaxHealth => formData.maxHealth;
+        public virtual float MoveSpeed => formData.moveSpeed;
+        public virtual float JumpPower => formData.jumpPower;
 
         public virtual void Activate()
         {
             gameObject.SetActive(true);
-            Debug.Log($"[Skull] {SkullName} Activated");
+            Debug.Log($"[Form] {SkullName} Activated");
         }
 
         public virtual void Deactivate()
         {
             gameObject.SetActive(false);
-            Debug.Log($"[Skull] {SkullName} Deactivated");
+            Debug.Log($"[Form] {SkullName} Deactivated");
         }
 
         public void SetAbility(int slotIndex, IAbility ability)
@@ -271,20 +271,20 @@ namespace GASPT.Skull
 }
 ```
 
-#### 3. SkullData ScriptableObject
+#### 3. FormData ScriptableObject
 
 ```csharp
-// Assets/_Project/Scripts/Gameplay/Skull/Core/SkullData.cs
+// Assets/_Project/Scripts/Gameplay/Form/Core/FormData.cs
 using UnityEngine;
 
-namespace GASPT.Skull
+namespace GASPT.Form
 {
-    [CreateAssetMenu(fileName = "SkullData", menuName = "GASPT/Skull/Skull Data")]
-    public class SkullData : ScriptableObject
+    [CreateAssetMenu(fileName = "FormData", menuName = "GASPT/Form/Form Data")]
+    public class FormData : ScriptableObject
     {
         [Header("Basic Info")]
-        public string skullName;
-        public SkullType skullType;
+        public string formName;
+        public FormType formType;
         public Sprite icon;
 
         [Header("Stats")]
@@ -299,19 +299,19 @@ namespace GASPT.Skull
 }
 ```
 
-#### 4. MageSkull 구현
+#### 4. MageForm 구현
 
 ```csharp
-// Assets/_Project/Scripts/Gameplay/Skull/Implementations/MageSkull.cs
+// Assets/_Project/Scripts/Gameplay/Form/Implementations/MageForm.cs
 using UnityEngine;
 using GASPT.Player;
 
-namespace GASPT.Skull
+namespace GASPT.Form
 {
-    public class MageSkull : BaseSkull
+    public class MageForm : BaseForm
     {
         public override string SkullName => "Mage";
-        public override SkullType SkullType => SkullType.Mage;
+        public override FormType FormType => FormType.Mage;
 
         private CharacterPhysics physics;
 
@@ -351,11 +351,11 @@ namespace GASPT.Skull
 #### 5. MagicMissileAbility (기본 공격)
 
 ```csharp
-// Assets/_Project/Scripts/Gameplay/Skull/Abilities/MagicMissileAbility.cs
+// Assets/_Project/Scripts/Gameplay/Form/Abilities/MagicMissileAbility.cs
 using System.Threading;
 using UnityEngine;
 
-namespace GASPT.Skull
+namespace GASPT.Form
 {
     public class MagicMissileAbility : IAbility
     {
@@ -384,13 +384,13 @@ namespace GASPT.Skull
 
 ### 테스트 계획
 
-#### 테스트 씬: MageSkullTest.unity
+#### 테스트 씬: MageFormTest.unity
 
 **플레이어 오브젝트 구성**:
 ```
 Player (GameObject)
 ├── CharacterPhysics (Component)
-├── MageSkull (Component)
+├── MageForm (Component)
 ├── InputHandler (Component)
 ├── Animator (Component)
 ├── SpriteRenderer (Component)
@@ -410,14 +410,14 @@ Player (GameObject)
 
 | 일차 | 작업 내용 | 산출물 |
 |------|-----------|--------|
-| 1일 | 인터페이스/베이스 클래스 | ISkullController, BaseSkull, SkullData |
-| 2-3일 | MageSkull 구현 | MageSkull.cs, 스탯 적용 |
+| 1일 | 인터페이스/베이스 클래스 | IFormController, BaseForm, FormData |
+| 2-3일 | MageForm 구현 | MageForm.cs, 스탯 적용 |
 | 4-5일 | Abilities 구현 | MagicMissileAbility, TeleportAbility, FireballAbility |
-| 6일 | 테스트 씬 구성 및 디버깅 | MageSkullTest.unity |
+| 6일 | 테스트 씬 구성 및 디버깅 | MageFormTest.unity |
 
 ### 완료 조건
 
-✅ 마법사 스컬로 이동/점프/공격이 가능하며, 스킬 슬롯이 정상 작동함
+✅ 마법사 폼로 이동/점프/공격이 가능하며, 스킬 슬롯이 정상 작동함
 
 ---
 
@@ -975,17 +975,17 @@ namespace GASPT.Item
 ```csharp
 // Assets/_Project/Scripts/Gameplay/Item/ItemPickup.cs
 using UnityEngine;
-using GASPT.Skull;
+using GASPT.Form;
 
 namespace GASPT.Item
 {
     public class ItemPickup : MonoBehaviour
     {
-        private ISkullController currentSkull;
+        private IFormController currentSkull;
 
         private void Start()
         {
-            currentSkull = GetComponent<ISkullController>();
+            currentSkull = GetComponent<IFormController>();
         }
 
         private void OnTriggerEnter2D(Collider2D collision)
@@ -1079,7 +1079,7 @@ namespace GASPT.Item
 
 | Week | Phase | 작업 내용 | 산출물 | 완료 조건 |
 |------|-------|-----------|--------|-----------|
-| **1주** | A-1 | MageSkull 구현 | MageSkull.cs, 3개 Abilities | 마법사로 이동/공격 가능 |
+| **1주** | A-1 | MageForm 구현 | MageForm.cs, 3개 Abilities | 마법사로 이동/공격 가능 |
 | **2주** | A-2 | Enemy AI + Combat | BasicEnemyAI.cs, Combat 연동 | 적과 전투 가능 |
 | **3주 전반** | A-3 | Room System | Room.cs, RoomDoor.cs, 테스트 씬 | 3개 방 진행 가능 |
 | **3주 후반** | A-4 | Item-Skill | ItemPickup.cs, 아이템 3종 | 아이템 먹으면 스킬 변경 |
@@ -1092,7 +1092,7 @@ namespace GASPT.Item
 
 Phase A가 완료되면 다음이 **모두** 가능해야 합니다:
 
-1. ✅ 마법사 스컬로 플레이 시작
+1. ✅ 마법사 폼로 플레이 시작
 2. ✅ WASD 이동, Space 점프, 마우스 클릭으로 마법 공격
 3. ✅ 적이 플레이어를 추적하고 공격
 4. ✅ 적을 처치하면 다음 방으로 진행
@@ -1119,14 +1119,14 @@ Phase A가 완료되면 다음이 **모두** 가능해야 합니다:
 - 선택적 경로 (보물방, 상점방)
 - 미니맵 시스템
 
-### Phase B-2: 스컬 교체 시스템 (1-2주)
+### Phase B-2: 폼 교체 시스템 (1-2주)
 
-**목표**: 2개 스컬 동시 장착 + Q키 전환
+**목표**: 2개 폼 동시 장착 + Q키 전환
 
 **구현 내용**:
-- SkullManager 확장 (2개 스컬 슬롯)
+- FormManager 확장 (2개 폼 슬롯)
 - Q키 입력 처리
-- 스컬 전환 애니메이션
+- 폼 전환 애니메이션
 - 스탯/스킬 자동 적용
 
 ### Phase B-3: 메타 진행 시스템 (1-2주)
@@ -1135,7 +1135,7 @@ Phase A가 완료되면 다음이 **모두** 가능해야 합니다:
 
 **구현 내용**:
 - 뼈/영혼 리소스 시스템
-- 업그레이드 트리 (체력, 공격력, 새 스컬 해금)
+- 업그레이드 트리 (체력, 공격력, 새 폼 해금)
 - PlayerPrefs/JSON 저장
 - 업그레이드 UI
 
@@ -1181,7 +1181,7 @@ Phase C (이후 확장)
 
 **완료 기준**:
 - ✅ 절차적 던전 생성
-- ✅ 2개 스컬 교체 가능
+- ✅ 2개 폼 교체 가능
 - ✅ 메타 진행 (영구 업그레이드)
 - ✅ 완전한 로그라이크 루프
 
@@ -1197,16 +1197,16 @@ Phase C (이후 확장)
 cd D:/JaeChang/UintyDev/GASPT/GASPT
 git checkout master
 git pull origin master
-git checkout -b 014-skull-platformer-phase-a
+git checkout -b 014-form-platformer-phase-a
 ```
 
 ### 2단계: 폴더 구조 생성
 
 **Windows Command**:
 ```cmd
-mkdir Assets\_Project\Scripts\Gameplay\Skull\Core
-mkdir Assets\_Project\Scripts\Gameplay\Skull\Implementations
-mkdir Assets\_Project\Scripts\Gameplay\Skull\Abilities
+mkdir Assets\_Project\Scripts\Gameplay\Form\Core
+mkdir Assets\_Project\Scripts\Gameplay\Form\Implementations
+mkdir Assets\_Project\Scripts\Gameplay\Form\Abilities
 mkdir Assets\_Project\Scripts\Gameplay\Level\Room
 mkdir Assets\_Project\Scripts\Gameplay\Level\Manager
 mkdir Assets\_Project\Scripts\Gameplay\Item
@@ -1215,7 +1215,7 @@ mkdir Assets\_Project\Scripts\Gameplay\Item
 **확인**:
 ```
 Assets/_Project/Scripts/Gameplay/
-├── Skull/
+├── Form/
 │   ├── Core/
 │   ├── Implementations/
 │   └── Abilities/
@@ -1228,10 +1228,10 @@ Assets/_Project/Scripts/Gameplay/
 ### 3단계: 작업 순서
 
 1. **Week 1 (Phase A-1)**
-   - [ ] ISkullController.cs 작성
-   - [ ] BaseSkull.cs 작성
-   - [ ] SkullData.cs 작성
-   - [ ] MageSkull.cs 작성
+   - [ ] IFormController.cs 작성
+   - [ ] BaseForm.cs 작성
+   - [ ] FormData.cs 작성
+   - [ ] MageForm.cs 작성
    - [ ] 3개 Abilities 작성
    - [ ] 테스트 씬 구성
 
@@ -1269,7 +1269,7 @@ Assets/_Project/Scripts/Gameplay/
 
 **Phase A-1 테스트**:
 ```
-1. MageSkullTest.unity 씬 열기
+1. MageFormTest.unity 씬 열기
 2. Play 모드 진입
 3. WASD로 이동 확인
 4. Space로 점프 확인
@@ -1300,8 +1300,8 @@ Assets/_Project/Scripts/Gameplay/
 ### 커밋 메시지 규칙
 
 ```
-[Phase A-1] ISkullController 인터페이스 구현
-[Phase A-1] MageSkull 기본 구조 완성
+[Phase A-1] IFormController 인터페이스 구현
+[Phase A-1] MageForm 기본 구조 완성
 [Phase A-2] BasicEnemyAI 추적 로직 구현
 [Phase A-3] Room 시스템 완성
 [Phase A-4] 아이템 드롭 시스템 구현
@@ -1325,7 +1325,7 @@ Assets/_Project/Scripts/Gameplay/
 ### 개발 시 주의사항
 
 1. **기존 시스템과의 충돌 방지**
-   - 새 네임스페이스 사용 (`GASPT.Skull`, `GASPT.Level`, `GASPT.Item`)
+   - 새 네임스페이스 사용 (`GASPT.Form`, `GASPT.Level`, `GASPT.Item`)
    - 기존 RPG 시스템 파일 수정 최소화
 
 2. **Awaitable 패턴 준수**
@@ -1374,7 +1374,7 @@ Assets/_Project/Scripts/Gameplay/
 ### Phase B 성공 지표
 
 - ✅ 재플레이성: 던전이 매번 다름
-- ✅ 스컬 교체: 2개 스컬 자유롭게 전환
+- ✅ 폼 교체: 2개 폼 자유롭게 전환
 - ✅ 메타 진행: 업그레이드로 점진적 강화
 - ✅ 플레이 시간: 30분 이상 플레이 가능
 
@@ -1423,14 +1423,14 @@ Assets/_Project/Scripts/Gameplay/
 
 ---
 
-**다음 작업**: [Phase A-1: MageSkull 기본 구현](#phase-a-1-mageskull-기본-구현) 시작
+**다음 작업**: [Phase A-1: MageForm 기본 구현](#phase-a-1-mageform-기본-구현) 시작
 
 **시작 명령어**:
 ```bash
-git checkout -b 014-skull-platformer-phase-a
+git checkout -b 014-form-platformer-phase-a
 ```
 
-**첫 파일**: `Assets/_Project/Scripts/Gameplay/Skull/Core/ISkullController.cs`
+**첫 파일**: `Assets/_Project/Scripts/Gameplay/Form/Core/IFormController.cs`
 
 ---
 

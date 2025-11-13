@@ -17,8 +17,8 @@ namespace GASPT.UI
         // ====== UI 참조 ======
 
         [Header("UI References")]
-        [SerializeField] private Transform slotContainer;
         [SerializeField] private GameObject pickupSlotPrefab;
+        [SerializeField] private Transform slotContainer;
 
 
         // ====== 설정 ======

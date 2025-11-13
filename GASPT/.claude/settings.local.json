@@ -6,7 +6,13 @@
       "Bash(gh pr create:*)",
       "Bash(dir:*)",
       "Bash(gh pr list:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(findstr:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
