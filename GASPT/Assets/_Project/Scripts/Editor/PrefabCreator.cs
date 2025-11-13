@@ -73,7 +73,7 @@ namespace GASPT.Editor
             GUI.backgroundColor = Color.green;
             if (GUILayout.Button("🚀 모든 프리팹 생성", GUILayout.Height(40)))
             {
-                CreateAllPrefabs();
+                EditorApplication.delayCall += CreateAllPrefabs;
             }
             GUI.backgroundColor = Color.white;
 
@@ -84,22 +84,22 @@ namespace GASPT.Editor
 
             if (GUILayout.Button("MageForm 프리팹 생성"))
             {
-                CreateMageFormPrefab();
+                EditorApplication.delayCall += CreateMageFormPrefab;
             }
 
             if (GUILayout.Button("Projectile 프리팹 생성"))
             {
-                CreateProjectilePrefabs();
+                EditorApplication.delayCall += CreateProjectilePrefabs;
             }
 
             if (GUILayout.Button("VisualEffect 프리팹 생성"))
             {
-                CreateVisualEffectPrefab();
+                EditorApplication.delayCall += CreateVisualEffectPrefab;
             }
 
             if (GUILayout.Button("BasicMeleeEnemy 프리팹 생성"))
             {
-                CreateBasicMeleeEnemyPrefab();
+                EditorApplication.delayCall += CreateBasicMeleeEnemyPrefab;
             }
 
             GUILayout.Space(20);
@@ -107,7 +107,7 @@ namespace GASPT.Editor
             // 폴더 생성 버튼
             if (GUILayout.Button("프리팹 폴더 생성"))
             {
-                CreatePrefabFolders();
+                EditorApplication.delayCall += CreatePrefabFolders;
             }
 
             GUILayout.Space(10);

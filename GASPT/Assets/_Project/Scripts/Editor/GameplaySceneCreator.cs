@@ -88,7 +88,7 @@ namespace GASPT.Editor
             GUI.backgroundColor = Color.green;
             if (GUILayout.Button("🚀 GameplayScene 생성", GUILayout.Height(50)))
             {
-                CreateGameplayScene();
+                EditorApplication.delayCall += CreateGameplayScene;
             }
             GUI.backgroundColor = Color.white;
 
@@ -99,22 +99,22 @@ namespace GASPT.Editor
 
             if (GUILayout.Button("플레이어만 생성"))
             {
-                CreatePlayer();
+                EditorApplication.delayCall += CreatePlayer;
             }
 
             if (GUILayout.Button("방 시스템만 생성"))
             {
-                CreateRoomSystem();
+                EditorApplication.delayCall += CreateRoomSystem;
             }
 
             if (GUILayout.Button("UI만 생성"))
             {
-                CreateAllUI();
+                EditorApplication.delayCall += CreateAllUI;
             }
 
             if (GUILayout.Button("카메라만 생성"))
             {
-                CreateCameraSystem();
+                EditorApplication.delayCall += CreateCameraSystem;
             }
 
             GUILayout.Space(20);
