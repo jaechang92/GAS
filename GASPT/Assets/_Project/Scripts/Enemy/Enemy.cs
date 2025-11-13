@@ -12,12 +12,15 @@ using Core.Enums;
 namespace GASPT.Enemies
 {
     /// <summary>
-    /// 적 MonoBehaviour
+    /// 적 MonoBehaviour (추상 클래스)
     /// EnemyData를 기반으로 적의 스탯과 행동을 관리
     /// 오브젝트 풀링 지원
+    ///
+    /// ⚠️ 주의: 이 클래스는 직접 Component로 추가할 수 없습니다.
+    /// PlatformerEnemy, BasicMeleeEnemy 등 상속받은 클래스를 사용하세요.
     /// </summary>
     [RequireComponent(typeof(PooledObject))]
-    public class Enemy : MonoBehaviour, IPoolable
+    public abstract class Enemy : MonoBehaviour, IPoolable
     {
         // ====== EnemyData 참조 ======
 

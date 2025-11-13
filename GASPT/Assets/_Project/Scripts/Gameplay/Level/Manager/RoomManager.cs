@@ -90,6 +90,9 @@ namespace GASPT.Gameplay.Level
                 }
             }
 
+            // 방 순서 정렬 (StartRoom → 일반 방들 → BossRoom)
+            SortRooms();
+
             // 모든 방 이벤트 구독
             foreach (var room in rooms)
             {
@@ -99,6 +102,38 @@ namespace GASPT.Gameplay.Level
             }
 
             Debug.Log($"[RoomManager] 총 {rooms.Count}개의 방 초기화 완료");
+        }
+
+        /// <summary>
+        /// 방 목록 정렬 (StartRoom → 일반 방들 → BossRoom)
+        /// </summary>
+        private void SortRooms()
+        {
+            if (rooms.Count <= 1)
+            {
+                return; // 1개 이하면 정렬 불필요
+            }
+
+            rooms.Sort((a, b) =>
+            {
+                // StartRoom이 항상 첫 번째
+                if (a.name.Contains("StartRoom")) return -1;
+                if (b.name.Contains("StartRoom")) return 1;
+
+                // BossRoom이 항상 마지막
+                if (a.name.Contains("BossRoom")) return 1;
+                if (b.name.Contains("BossRoom")) return -1;
+
+                // 나머지는 X 좌표 또는 이름순으로 정렬 (X 좌표 기준)
+                return a.transform.position.x.CompareTo(b.transform.position.x);
+            });
+
+            // 정렬 결과 로그
+            Debug.Log("[RoomManager] 방 순서:");
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                Debug.Log($"  [{i}] {rooms[i].name} (Position: {rooms[i].transform.position})");
+            }
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
-using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Data;
+using GASPT.ResourceManagement;
+using UnityEngine;
 
 namespace GASPT.Gameplay.Enemy
 {
@@ -39,8 +40,10 @@ namespace GASPT.Gameplay.Enemy
         /// </summary>
         private static void InitializeBasicMeleeEnemyPool()
         {
-            // 런타임에서 BasicMeleeEnemy 프리팹 생성
-            GameObject enemyPrefab = CreateBasicMeleeEnemyPrefab();
+            // Resources 폴더에서 기존 프리팹 로드
+            GameObject enemyPrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Enemies.Basic
+            );
 
             // 풀 생성 (초기 5개, 확장 가능)
             PoolManager.Instance.CreatePool(

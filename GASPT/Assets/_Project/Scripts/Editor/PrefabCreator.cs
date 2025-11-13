@@ -257,6 +257,15 @@ namespace GASPT.Editor
             // PooledObject 추가
             PooledObject pooledObject = projectileObj.AddComponent<PooledObject>();
 
+            // TrailRenderer 추가
+            TrailRenderer trail = projectileObj.AddComponent<TrailRenderer>();
+            trail.time = 0.3f;
+            trail.startWidth = 0.15f;
+            trail.endWidth = 0.02f;
+            trail.material = new Material(Shader.Find("Sprites/Default"));
+            trail.startColor = Color.cyan;
+            trail.endColor = new Color(0f, 1f, 1f, 0f); // 투명한 cyan
+
             // MagicMissileProjectile 추가
             MagicMissileProjectile projectile = projectileObj.AddComponent<MagicMissileProjectile>();
 
@@ -312,6 +321,15 @@ namespace GASPT.Editor
 
             // PooledObject 추가
             PooledObject pooledObject = projectileObj.AddComponent<PooledObject>();
+
+            // TrailRenderer 추가
+            TrailRenderer trail = projectileObj.AddComponent<TrailRenderer>();
+            trail.time = 0.5f;
+            trail.startWidth = 0.3f;
+            trail.endWidth = 0.05f;
+            trail.material = new Material(Shader.Find("Sprites/Default"));
+            trail.startColor = new Color(1f, 0.5f, 0f, 1f); // 주황색
+            trail.endColor = new Color(1f, 0f, 0f, 0f); // 투명한 빨강
 
             // FireballProjectile 추가
             FireballProjectile projectile = projectileObj.AddComponent<FireballProjectile>();
@@ -412,7 +430,9 @@ namespace GASPT.Editor
             }
 
             PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
-            Enemy enemy = enemyObj.AddComponent<Enemy>();
+
+            // BasicMeleeEnemy만 추가 (Enemy는 abstract class이므로 직접 추가 불가)
+            // BasicMeleeEnemy가 PlatformerEnemy를 상속하고, PlatformerEnemy가 Enemy를 상속함
             BasicMeleeEnemy basicMeleeEnemy = enemyObj.AddComponent<BasicMeleeEnemy>();
 
             // 프리팹 저장

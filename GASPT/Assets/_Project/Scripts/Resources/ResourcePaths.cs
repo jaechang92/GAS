@@ -36,19 +36,13 @@ namespace GASPT.ResourceManagement
             }
 
             // Enemy Prefabs
-            public static class Enemy
+            public static class Enemies
             {
                 /// <summary>
-                /// Goblin Prefab 경로 (예시)
-                /// Resources/Prefabs/Enemy/Goblin.prefab
+                /// BasicMeleeEnemy Prefab 경로
+                /// Resources/Prefabs/Enemy/BasicMeleeEnemy.prefab
                 /// </summary>
-                public const string Goblin = "Prefabs/Enemy/Goblin";
-
-                /// <summary>
-                /// Orc Prefab 경로 (예시)
-                /// Resources/Prefabs/Enemy/Orc.prefab
-                /// </summary>
-                public const string Orc = "Prefabs/Enemy/Orc";
+                public const string Basic = "Prefabs/Enemies/BasicMeleeEnemy";
             }
 
             // Effect Prefabs
@@ -65,6 +59,22 @@ namespace GASPT.ResourceManagement
                 /// Resources/Prefabs/Effects/BuffEffect.prefab
                 /// </summary>
                 public const string BuffEffect = "Prefabs/Effects/BuffEffect";
+            }
+
+            // Projectile Prefabs
+            public static class Projectiles
+            {
+                /// <summary>
+                /// FireballProjectile Prefab 경로
+                /// Resources/Prefabs/Projectiles/FireballProjectile.prefab
+                /// </summary>
+                public const string FireballProjectile = "Prefabs/Projectiles/FireballProjectile";
+
+                /// <summary>
+                /// MagicMissileProjectile Prefab 경로
+                /// Resources/Prefabs/Projectiles/MagicMissileProjectile.prefab
+                /// </summary>
+                public const string MagicMissileProjectile = "Prefabs/Projectiles/MagicMissileProjectile";
             }
         }
 
