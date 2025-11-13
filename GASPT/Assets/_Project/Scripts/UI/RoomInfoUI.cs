@@ -17,25 +17,16 @@ namespace GASPT.UI
 
         // ====== Unity 생명주기 ======
 
-        private void OnEnable()
+        private void Start()
         {
-            // RoomManager 이벤트 구독
-            if (RoomManager.HasInstance)
-            {
-                RoomManager.Instance.OnRoomChanged += OnRoomChanged;
-            }
+            // Start에서 구독 (모든 Awake 완료 후 → RoomManager 싱글톤 보장)
+            SubscribeToRoomManager();
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
-            // RoomManager 이벤트 구독 해제
-            if (RoomManager.HasInstance)
-            {
-                RoomManager.Instance.OnRoomChanged -= OnRoomChanged;
-            }
-
-            // 현재 방 이벤트 구독 해제
-            UnsubscribeFromCurrentRoom();
+            // 이벤트 구독 해제
+            UnsubscribeFromRoomManager();
         }
 
 
@@ -119,6 +110,40 @@ namespace GASPT.UI
 
 
         // ====== 이벤트 구독 관리 ======
+
+        /// <summary>
+        /// RoomManager 이벤트 구독
+        /// </summary>
+        private void SubscribeToRoomManager()
+        {
+            if (!RoomManager.HasInstance)
+            {
+                Debug.LogWarning("[RoomInfoUI] RoomManager를 찾을 수 없습니다.");
+                return;
+            }
+
+            RoomManager.Instance.OnRoomChanged += OnRoomChanged;
+
+            // 현재 방이 이미 설정되어 있다면 수동으로 호출하여 이벤트 구독
+            if (RoomManager.Instance.CurrentRoom != null)
+            {
+                OnRoomChanged(RoomManager.Instance.CurrentRoom);
+            }
+        }
+
+        /// <summary>
+        /// RoomManager 이벤트 구독 해제
+        /// </summary>
+        private void UnsubscribeFromRoomManager()
+        {
+            if (RoomManager.HasInstance)
+            {
+                RoomManager.Instance.OnRoomChanged -= OnRoomChanged;
+            }
+
+            // 현재 방 이벤트 구독 해제
+            UnsubscribeFromCurrentRoom();
+        }
 
         /// <summary>
         /// 현재 방 이벤트 구독 해제
