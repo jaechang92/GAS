@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using UnityEngine.UI;
 using GASPT.Gameplay.Player;
 using GASPT.Form;
 using GASPT.Gameplay.Projectiles;
@@ -22,6 +23,7 @@ namespace GASPT.Editor
         private const string ProjectilesPrefabsPath = "Assets/Resources/Prefabs/Projectiles";
         private const string EffectsPrefabsPath = "Assets/Resources/Prefabs/Effects";
         private const string EnemiesPrefabsPath = "Assets/Resources/Prefabs/Enemies";
+        private const string UIPrefabsPath = "Assets/Resources/Prefabs/UI";
         private const string TexturesPath = "Assets/Resources/Textures/Placeholders";
 
         private Vector2 scrollPosition;
@@ -29,6 +31,7 @@ namespace GASPT.Editor
         private bool createProjectiles = true;
         private bool createEffects = true;
         private bool createEnemy = true;
+        private bool createUI = true;
 
         [MenuItem("Tools/GASPT/Prefab Creator")]
         public static void ShowWindow()
@@ -54,7 +57,9 @@ namespace GASPT.Editor
                 "- MagicMissileProjectile\n" +
                 "- FireballProjectile\n" +
                 "- VisualEffect (범용 효과)\n" +
-                "- BasicMeleeEnemy",
+                "- BasicMeleeEnemy\n" +
+                "- BuffIcon (버프 아이콘)\n" +
+                "- PickupSlot (아이템 슬롯)",
                 MessageType.Info
             );
 
@@ -66,6 +71,7 @@ namespace GASPT.Editor
             createProjectiles = EditorGUILayout.Toggle("Projectiles (투사체)", createProjectiles);
             createEffects = EditorGUILayout.Toggle("VisualEffect (효과)", createEffects);
             createEnemy = EditorGUILayout.Toggle("BasicMeleeEnemy (적)", createEnemy);
+            createUI = EditorGUILayout.Toggle("UI Prefabs (버프/아이템)", createUI);
 
             GUILayout.Space(20);
 
@@ -102,6 +108,11 @@ namespace GASPT.Editor
                 EditorApplication.delayCall += CreateBasicMeleeEnemyPrefab;
             }
 
+            if (GUILayout.Button("UI 프리팹 생성 (BuffIcon, PickupSlot)"))
+            {
+                EditorApplication.delayCall += CreateUIPrefabs;
+            }
+
             GUILayout.Space(20);
 
             // 폴더 생성 버튼
@@ -118,7 +129,8 @@ namespace GASPT.Editor
                 $"Player: {PlayerPrefabsPath}\n" +
                 $"Projectiles: {ProjectilesPrefabsPath}\n" +
                 $"Effects: {EffectsPrefabsPath}\n" +
-                $"Enemies: {EnemiesPrefabsPath}",
+                $"Enemies: {EnemiesPrefabsPath}\n" +
+                $"UI: {UIPrefabsPath}",
                 MessageType.None
             );
 
@@ -161,6 +173,12 @@ namespace GASPT.Editor
                 createdCount++;
             }
 
+            if (createUI)
+            {
+                CreateUIPrefabs();
+                createdCount += 2; // BuffIcon + PickupSlot
+            }
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
@@ -178,6 +196,7 @@ namespace GASPT.Editor
             CreateFolderIfNotExists(ProjectilesPrefabsPath);
             CreateFolderIfNotExists(EffectsPrefabsPath);
             CreateFolderIfNotExists(EnemiesPrefabsPath);
+            CreateFolderIfNotExists(UIPrefabsPath);
             CreateFolderIfNotExists(TexturesPath);
 
             AssetDatabase.Refresh();
@@ -440,6 +459,137 @@ namespace GASPT.Editor
             DestroyImmediate(enemyObj);
 
             Debug.Log($"[PrefabCreator] BasicMeleeEnemy 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// UI 프리팹들 생성
+        /// </summary>
+        private void CreateUIPrefabs()
+        {
+            CreateBuffIconPrefab();
+            CreatePickupSlotPrefab();
+        }
+
+        /// <summary>
+        /// BuffIcon UI 프리팹 생성
+        /// </summary>
+        private void CreateBuffIconPrefab()
+        {
+            string prefabPath = $"{UIPrefabsPath}/BuffIcon.prefab";
+
+            GameObject buffIconObj = new GameObject("BuffIcon");
+
+            // RectTransform 추가 (UI 요소)
+            RectTransform rectTransform = buffIconObj.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(50f, 50f);
+            rectTransform.anchorMin = new Vector2(0f, 0f);
+            rectTransform.anchorMax = new Vector2(0f, 0f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // Image 추가 (배경)
+            Image bgImage = buffIconObj.AddComponent<Image>();
+            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f); // 어두운 반투명 배경
+
+            // Icon 자식 오브젝트 생성
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(buffIconObj.transform);
+
+            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
+            iconRect.sizeDelta = new Vector2(40f, 40f);
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = Vector2.zero;
+
+            Image iconImage = iconObj.AddComponent<Image>();
+            iconImage.color = Color.white;
+
+            // StackCount 텍스트 자식 오브젝트 생성
+            GameObject stackTextObj = new GameObject("StackCount");
+            stackTextObj.transform.SetParent(buffIconObj.transform);
+
+            RectTransform stackRect = stackTextObj.AddComponent<RectTransform>();
+            stackRect.sizeDelta = new Vector2(30f, 20f);
+            stackRect.anchorMin = new Vector2(1f, 0f);
+            stackRect.anchorMax = new Vector2(1f, 0f);
+            stackRect.pivot = new Vector2(1f, 0f);
+            stackRect.anchoredPosition = new Vector2(-2f, 2f);
+
+            TMPro.TextMeshProUGUI stackText = stackTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            stackText.text = "1";
+            stackText.fontSize = 14f;
+            stackText.color = Color.white;
+            stackText.alignment = TMPro.TextAlignmentOptions.BottomRight;
+            stackText.enableAutoSizing = true;
+            stackText.fontSizeMin = 10f;
+            stackText.fontSizeMax = 14f;
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(buffIconObj, prefabPath);
+            DestroyImmediate(buffIconObj);
+
+            Debug.Log($"[PrefabCreator] BuffIcon 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// PickupSlot UI 프리팹 생성
+        /// </summary>
+        private void CreatePickupSlotPrefab()
+        {
+            string prefabPath = $"{UIPrefabsPath}/PickupSlot.prefab";
+
+            GameObject slotObj = new GameObject("PickupSlot");
+
+            // RectTransform 추가 (UI 요소)
+            RectTransform rectTransform = slotObj.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(60f, 60f);
+            rectTransform.anchorMin = new Vector2(0f, 0f);
+            rectTransform.anchorMax = new Vector2(0f, 0f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // Image 추가 (배경)
+            Image bgImage = slotObj.AddComponent<Image>();
+            bgImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f); // 어두운 반투명 배경
+
+            // ItemIcon 자식 오브젝트 생성
+            GameObject iconObj = new GameObject("ItemIcon");
+            iconObj.transform.SetParent(slotObj.transform);
+
+            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
+            iconRect.sizeDelta = new Vector2(50f, 50f);
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = Vector2.zero;
+
+            Image iconImage = iconObj.AddComponent<Image>();
+            iconImage.color = Color.white;
+
+            // Quantity 텍스트 자식 오브젝트 생성
+            GameObject quantityTextObj = new GameObject("Quantity");
+            quantityTextObj.transform.SetParent(slotObj.transform);
+
+            RectTransform quantityRect = quantityTextObj.AddComponent<RectTransform>();
+            quantityRect.sizeDelta = new Vector2(40f, 20f);
+            quantityRect.anchorMin = new Vector2(1f, 0f);
+            quantityRect.anchorMax = new Vector2(1f, 0f);
+            quantityRect.pivot = new Vector2(1f, 0f);
+            quantityRect.anchoredPosition = new Vector2(-3f, 3f);
+
+            TMPro.TextMeshProUGUI quantityText = quantityTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            quantityText.text = "1";
+            quantityText.fontSize = 16f;
+            quantityText.color = Color.white;
+            quantityText.alignment = TMPro.TextAlignmentOptions.BottomRight;
+            quantityText.enableAutoSizing = true;
+            quantityText.fontSizeMin = 12f;
+            quantityText.fontSizeMax = 16f;
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(slotObj, prefabPath);
+            DestroyImmediate(slotObj);
+
+            Debug.Log($"[PrefabCreator] PickupSlot 프리팹 생성 완료: {prefabPath}");
         }
 
         /// <summary>
