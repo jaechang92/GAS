@@ -9,6 +9,7 @@ using GASPT.Gameplay.Effects;
 using GASPT.Enemies;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Enemy;
+using GASPT.UI;
 
 namespace GASPT.Editor
 {
@@ -486,43 +487,102 @@ namespace GASPT.Editor
             rectTransform.anchorMax = new Vector2(0f, 0f);
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
-            // Image 추가 (배경)
-            Image bgImage = buffIconObj.AddComponent<Image>();
-            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f); // 어두운 반투명 배경
+            // BorderImage (테두리)
+            GameObject borderObj = new GameObject("Border");
+            borderObj.transform.SetParent(buffIconObj.transform);
+            RectTransform borderRect = borderObj.AddComponent<RectTransform>();
+            borderRect.anchorMin = Vector2.zero;
+            borderRect.anchorMax = Vector2.one;
+            borderRect.sizeDelta = Vector2.zero;
+            borderRect.anchoredPosition = Vector2.zero;
+            Image borderImage = borderObj.AddComponent<Image>();
+            borderImage.color = new Color(0.3f, 0.3f, 0.3f, 1f); // 기본 테두리 색
+
+            // Background (배경)
+            GameObject bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(buffIconObj.transform);
+            RectTransform bgRect = bgObj.AddComponent<RectTransform>();
+            bgRect.anchorMin = new Vector2(0.05f, 0.05f);
+            bgRect.anchorMax = new Vector2(0.95f, 0.95f);
+            bgRect.sizeDelta = Vector2.zero;
+            bgRect.anchoredPosition = Vector2.zero;
+            Image bgImage = bgObj.AddComponent<Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f); // 어두운 배경
 
             // Icon 자식 오브젝트 생성
             GameObject iconObj = new GameObject("Icon");
             iconObj.transform.SetParent(buffIconObj.transform);
-
             RectTransform iconRect = iconObj.AddComponent<RectTransform>();
-            iconRect.sizeDelta = new Vector2(40f, 40f);
-            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
-            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMin = new Vector2(0.1f, 0.1f);
+            iconRect.anchorMax = new Vector2(0.9f, 0.9f);
+            iconRect.sizeDelta = Vector2.zero;
             iconRect.anchoredPosition = Vector2.zero;
-
             Image iconImage = iconObj.AddComponent<Image>();
             iconImage.color = Color.white;
 
-            // StackCount 텍스트 자식 오브젝트 생성
+            // TimerFill (radial fill 타이머)
+            GameObject timerObj = new GameObject("TimerFill");
+            timerObj.transform.SetParent(buffIconObj.transform);
+            RectTransform timerRect = timerObj.AddComponent<RectTransform>();
+            timerRect.anchorMin = Vector2.zero;
+            timerRect.anchorMax = Vector2.one;
+            timerRect.sizeDelta = Vector2.zero;
+            timerRect.anchoredPosition = Vector2.zero;
+            Image timerImage = timerObj.AddComponent<Image>();
+            timerImage.color = new Color(0f, 0f, 0f, 0.5f); // 반투명 검정
+            timerImage.type = Image.Type.Filled;
+            timerImage.fillMethod = Image.FillMethod.Radial360;
+            timerImage.fillOrigin = (int)Image.Origin360.Top;
+            timerImage.fillAmount = 1f;
+            timerImage.fillClockwise = false;
+
+            // StackCount 텍스트 (우하단)
             GameObject stackTextObj = new GameObject("StackCount");
             stackTextObj.transform.SetParent(buffIconObj.transform);
-
             RectTransform stackRect = stackTextObj.AddComponent<RectTransform>();
-            stackRect.sizeDelta = new Vector2(30f, 20f);
+            stackRect.sizeDelta = new Vector2(25f, 18f);
             stackRect.anchorMin = new Vector2(1f, 0f);
             stackRect.anchorMax = new Vector2(1f, 0f);
             stackRect.pivot = new Vector2(1f, 0f);
             stackRect.anchoredPosition = new Vector2(-2f, 2f);
-
             TMPro.TextMeshProUGUI stackText = stackTextObj.AddComponent<TMPro.TextMeshProUGUI>();
             stackText.text = "1";
-            stackText.fontSize = 14f;
+            stackText.fontSize = 12f;
             stackText.color = Color.white;
             stackText.alignment = TMPro.TextAlignmentOptions.BottomRight;
+            stackText.fontStyle = TMPro.FontStyles.Bold;
             stackText.enableAutoSizing = true;
-            stackText.fontSizeMin = 10f;
-            stackText.fontSizeMax = 14f;
+            stackText.fontSizeMin = 8f;
+            stackText.fontSizeMax = 12f;
+
+            // TimeText (중앙 하단)
+            GameObject timeTextObj = new GameObject("TimeText");
+            timeTextObj.transform.SetParent(buffIconObj.transform);
+            RectTransform timeRect = timeTextObj.AddComponent<RectTransform>();
+            timeRect.sizeDelta = new Vector2(45f, 15f);
+            timeRect.anchorMin = new Vector2(0.5f, 0f);
+            timeRect.anchorMax = new Vector2(0.5f, 0f);
+            timeRect.pivot = new Vector2(0.5f, 0f);
+            timeRect.anchoredPosition = new Vector2(0f, 1f);
+            TMPro.TextMeshProUGUI timeText = timeTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+            timeText.text = "10s";
+            timeText.fontSize = 10f;
+            timeText.color = Color.yellow;
+            timeText.alignment = TMPro.TextAlignmentOptions.Bottom;
+            timeText.fontStyle = TMPro.FontStyles.Bold;
+            timeText.enableAutoSizing = true;
+            timeText.fontSizeMin = 6f;
+            timeText.fontSizeMax = 10f;
+
+            // BuffIcon 컴포넌트 추가 및 참조 설정
+            BuffIcon buffIcon = buffIconObj.AddComponent<BuffIcon>();
+            SerializedObject so = new SerializedObject(buffIcon);
+            so.FindProperty("iconImage").objectReferenceValue = iconImage;
+            so.FindProperty("timerFillImage").objectReferenceValue = timerImage;
+            so.FindProperty("stackText").objectReferenceValue = stackText;
+            so.FindProperty("timeText").objectReferenceValue = timeText;
+            so.FindProperty("borderImage").objectReferenceValue = borderImage;
+            so.ApplyModifiedProperties();
 
             // 프리팹 저장
             PrefabUtility.SaveAsPrefabAsset(buffIconObj, prefabPath);
