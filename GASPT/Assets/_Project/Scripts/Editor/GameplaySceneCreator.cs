@@ -2,8 +2,11 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using TMPro;
 using GASPT.Gameplay.Level;
 using GASPT.Core;
+using GASPT.UI;
 
 namespace GASPT.Editor
 {
@@ -301,7 +304,17 @@ namespace GASPT.Editor
             BoxCollider2D collider = ground.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(roomWidth, 1f);
 
-            ground.layer = LayerMask.NameToLayer("Default");
+            // Layer 설정 (Ground)
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer == -1)
+            {
+                Debug.LogWarning("[GameplaySceneCreator] 'Ground' Layer가 없습니다! Project Settings > Tags and Layers에서 Layer 8을 'Ground'로 추가하세요.");
+                ground.layer = 0; // Default layer
+            }
+            else
+            {
+                ground.layer = groundLayer;
+            }
         }
 
         /// <summary>
@@ -330,6 +343,18 @@ namespace GASPT.Editor
                 // BoxCollider2D 추가 (2D 충돌)
                 BoxCollider2D collider = platform.AddComponent<BoxCollider2D>();
                 collider.size = new Vector2(8f, 0.5f);
+
+                // Layer 설정 (Ground)
+                int groundLayer = LayerMask.NameToLayer("Ground");
+                if (groundLayer == -1)
+                {
+                    Debug.LogWarning("[GameplaySceneCreator] 'Ground' Layer가 없습니다! Project Settings > Tags and Layers에서 Layer 8을 'Ground'로 추가하세요.");
+                    platform.layer = 0; // Default layer
+                }
+                else
+                {
+                    platform.layer = groundLayer;
+                }
             }
         }
 
@@ -442,13 +467,12 @@ namespace GASPT.Editor
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
 
-            canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
-            canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-
-            var scaler = canvasObj.GetComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
+
+            canvasObj.AddComponent<GraphicRaycaster>();
 
             // EventSystem 생성
             if (GameObject.Find("EventSystem") == null)
@@ -459,7 +483,16 @@ namespace GASPT.Editor
             }
 
             Debug.Log("[GameplaySceneCreator] UI Canvas 및 EventSystem 생성 완료");
-            Debug.Log("[GameplaySceneCreator] UI 요소는 Tools > GASPT > UI Creator 메뉴에서 개별 생성하세요");
+
+            // 모든 UI 요소 생성
+            CreatePlayerHealthBarUI(canvas);
+            CreatePlayerManaBarUI(canvas);
+            CreatePlayerExpBarUI(canvas);
+            CreateBuffIconPanelUI(canvas);
+            CreateItemPickupUI(canvas);
+            CreateRoomInfoUI(canvas);
+
+            Debug.Log("[GameplaySceneCreator] 모든 UI 요소 생성 완료");
         }
 
         /// <summary>
@@ -597,6 +630,293 @@ namespace GASPT.Editor
 
                 AssetDatabase.CreateFolder(parentPath, folderName);
             }
+        }
+
+
+        // ====== UI 생성 메서드들 ======
+
+        /// <summary>
+        /// PlayerHealthBar UI 생성
+        /// </summary>
+        private void CreatePlayerHealthBarUI(Canvas canvas)
+        {
+            GameObject healthBarPanel = new GameObject("PlayerHealthBar");
+            healthBarPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = healthBarPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f); // 상단 중앙
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0, -50);
+            rect.sizeDelta = new Vector2(400, 40);
+
+            // 배경
+            Image bgImage = healthBarPanel.AddComponent<Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+
+            // HP 슬라이더
+            CreateUISlider(healthBarPanel, "HPSlider", new Vector2(0, 0), new Vector2(380, 20),
+                          new Color(0.2f, 0.8f, 0.2f, 1f), out Slider hpSlider);
+
+            // HP 텍스트
+            CreateUIText(healthBarPanel, "HPText", new Vector2(0, 0), new Vector2(380, 30),
+                        "100 / 100", 18, out TMP_Text hpText);
+
+            // PlayerHealthBar 컴포넌트 추가
+            PlayerHealthBar healthBar = healthBarPanel.AddComponent<PlayerHealthBar>();
+            SerializedObject so = new SerializedObject(healthBar);
+            so.FindProperty("hpSlider").objectReferenceValue = hpSlider;
+            so.FindProperty("hpText").objectReferenceValue = hpText;
+            so.ApplyModifiedProperties();
+
+            Debug.Log("[GameplaySceneCreator] PlayerHealthBar 생성 완료");
+        }
+
+        /// <summary>
+        /// PlayerManaBar UI 생성
+        /// </summary>
+        private void CreatePlayerManaBarUI(Canvas canvas)
+        {
+            GameObject manaBarPanel = new GameObject("PlayerManaBar");
+            manaBarPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = manaBarPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0, -100); // HealthBar 아래
+            rect.sizeDelta = new Vector2(400, 30);
+
+            // 배경
+            Image bgImage = manaBarPanel.AddComponent<Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+
+            // Mana 슬라이더
+            CreateUISlider(manaBarPanel, "ManaSlider", new Vector2(0, 0), new Vector2(380, 15),
+                          new Color(0.2f, 0.5f, 1f, 1f), out Slider manaSlider);
+
+            // Mana 텍스트
+            CreateUIText(manaBarPanel, "ManaText", new Vector2(0, 0), new Vector2(380, 25),
+                        "100 / 100", 14, out TMP_Text manaText);
+
+            // PlayerManaBar 컴포넌트 추가
+            PlayerManaBar manaBar = manaBarPanel.AddComponent<PlayerManaBar>();
+            SerializedObject so = new SerializedObject(manaBar);
+            so.FindProperty("manaSlider").objectReferenceValue = manaSlider;
+            so.FindProperty("manaText").objectReferenceValue = manaText;
+            so.ApplyModifiedProperties();
+
+            Debug.Log("[GameplaySceneCreator] PlayerManaBar 생성 완료");
+        }
+
+        /// <summary>
+        /// PlayerExpBar UI 생성
+        /// </summary>
+        private void CreatePlayerExpBarUI(Canvas canvas)
+        {
+            GameObject expBarPanel = new GameObject("PlayerExpBar");
+            expBarPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = expBarPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0f); // 하단 중앙
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0, 10);
+            rect.sizeDelta = new Vector2(600, 30);
+
+            // 배경
+            Image bgImage = expBarPanel.AddComponent<Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.7f);
+
+            // Exp 슬라이더
+            CreateUISlider(expBarPanel, "ExpSlider", new Vector2(50, 0), new Vector2(480, 15),
+                          new Color(1f, 0.8f, 0.2f, 1f), out Slider expSlider);
+
+            // Exp 텍스트
+            CreateUIText(expBarPanel, "ExpText", new Vector2(50, 0), new Vector2(480, 25),
+                        "0 / 100", 14, out TMP_Text expText);
+
+            // 레벨 텍스트
+            CreateUIText(expBarPanel, "LevelText", new Vector2(-240, 0), new Vector2(100, 30),
+                        "Lv.1", 18, out TMP_Text levelText);
+
+            // PlayerExpBar 컴포넌트 추가
+            PlayerExpBar expBar = expBarPanel.AddComponent<PlayerExpBar>();
+            SerializedObject so = new SerializedObject(expBar);
+            so.FindProperty("expSlider").objectReferenceValue = expSlider;
+            so.FindProperty("expText").objectReferenceValue = expText;
+            so.FindProperty("levelText").objectReferenceValue = levelText;
+            so.ApplyModifiedProperties();
+
+            Debug.Log("[GameplaySceneCreator] PlayerExpBar 생성 완료");
+        }
+
+        /// <summary>
+        /// BuffIconPanel UI 생성
+        /// </summary>
+        private void CreateBuffIconPanelUI(Canvas canvas)
+        {
+            GameObject buffPanel = new GameObject("BuffIconPanel");
+            buffPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = buffPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f); // 왼쪽 상단
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(20, -20);
+            rect.sizeDelta = new Vector2(400, 80);
+
+            // HorizontalLayoutGroup 추가
+            HorizontalLayoutGroup layoutGroup = buffPanel.AddComponent<HorizontalLayoutGroup>();
+            layoutGroup.spacing = 5;
+            layoutGroup.childAlignment = TextAnchor.MiddleLeft;
+            layoutGroup.childControlWidth = false;
+            layoutGroup.childControlHeight = false;
+
+            // BuffIconPanel 컴포넌트 추가
+            BuffIconPanel buffIconPanel = buffPanel.AddComponent<BuffIconPanel>();
+
+            Debug.Log("[GameplaySceneCreator] BuffIconPanel 생성 완료");
+        }
+
+        /// <summary>
+        /// ItemPickupUI 생성
+        /// </summary>
+        private void CreateItemPickupUI(Canvas canvas)
+        {
+            GameObject pickupPanel = new GameObject("ItemPickupUIPanel");
+            pickupPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = pickupPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f); // 상단 중앙
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0, -150);
+            rect.sizeDelta = new Vector2(400, 150);
+
+            // VerticalLayoutGroup 추가
+            VerticalLayoutGroup layoutGroup = pickupPanel.AddComponent<VerticalLayoutGroup>();
+            layoutGroup.spacing = 5;
+            layoutGroup.childAlignment = TextAnchor.UpperCenter;
+            layoutGroup.childControlWidth = false;
+            layoutGroup.childControlHeight = false;
+
+            // ItemPickupUI 컴포넌트 추가
+            ItemPickupUI pickupUI = pickupPanel.AddComponent<ItemPickupUI>();
+
+            Debug.Log("[GameplaySceneCreator] ItemPickupUI 생성 완료");
+        }
+
+        /// <summary>
+        /// 방 정보 UI 생성 (현재 방/총 방 수, 적 수)
+        /// </summary>
+        private void CreateRoomInfoUI(Canvas canvas)
+        {
+            GameObject roomInfoPanel = new GameObject("RoomInfoPanel");
+            roomInfoPanel.transform.SetParent(canvas.transform, false);
+
+            // RectTransform 설정
+            RectTransform rect = roomInfoPanel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f); // 오른쪽 상단
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-20, -20);
+            rect.sizeDelta = new Vector2(200, 80);
+
+            // 배경
+            Image bgImage = roomInfoPanel.AddComponent<Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.7f);
+
+            // 방 정보 텍스트
+            CreateUIText(roomInfoPanel, "RoomText", new Vector2(0, 15), new Vector2(180, 30),
+                        "Room 1 / 3", 16, out TMP_Text roomText);
+
+            // 적 수 텍스트
+            CreateUIText(roomInfoPanel, "EnemyText", new Vector2(0, -15), new Vector2(180, 30),
+                        "Enemies: 0", 16, out TMP_Text enemyText);
+
+            // RoomInfoUI 컴포넌트 추가
+            RoomInfoUI roomInfoUI = roomInfoPanel.AddComponent<RoomInfoUI>();
+            SerializedObject so = new SerializedObject(roomInfoUI);
+            so.FindProperty("roomText").objectReferenceValue = roomText;
+            so.FindProperty("enemyText").objectReferenceValue = enemyText;
+            so.ApplyModifiedProperties();
+
+            Debug.Log("[GameplaySceneCreator] RoomInfoUI 생성 완료");
+        }
+
+        /// <summary>
+        /// UI 슬라이더 생성 헬퍼
+        /// </summary>
+        private void CreateUISlider(GameObject parent, string name, Vector2 position, Vector2 size,
+                                    Color fillColor, out Slider slider)
+        {
+            GameObject sliderObj = new GameObject(name);
+            sliderObj.transform.SetParent(parent.transform, false);
+
+            RectTransform rect = sliderObj.AddComponent<RectTransform>();
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            slider = sliderObj.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 1f;
+
+            // Background
+            GameObject bg = new GameObject("Background");
+            bg.transform.SetParent(sliderObj.transform, false);
+            RectTransform bgRect = bg.AddComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.sizeDelta = Vector2.zero;
+            Image bgImage = bg.AddComponent<Image>();
+            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+
+            // Fill Area
+            GameObject fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(sliderObj.transform, false);
+            RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
+            fillAreaRect.anchorMin = Vector2.zero;
+            fillAreaRect.anchorMax = Vector2.one;
+            fillAreaRect.sizeDelta = Vector2.zero;
+
+            // Fill
+            GameObject fill = new GameObject("Fill");
+            fill.transform.SetParent(fillArea.transform, false);
+            RectTransform fillRect = fill.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.sizeDelta = Vector2.zero;
+            Image fillImage = fill.AddComponent<Image>();
+            fillImage.color = fillColor;
+
+            slider.fillRect = fillRect;
+        }
+
+        /// <summary>
+        /// UI 텍스트 생성 헬퍼 (TextMeshPro)
+        /// </summary>
+        private void CreateUIText(GameObject parent, string name, Vector2 position, Vector2 size,
+                                  string text, int fontSize, out TMP_Text tmpText)
+        {
+            GameObject textObj = new GameObject(name);
+            textObj.transform.SetParent(parent.transform, false);
+
+            RectTransform rect = textObj.AddComponent<RectTransform>();
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            tmpText = textObj.AddComponent<TextMeshProUGUI>();
+            tmpText.text = text;
+            tmpText.fontSize = fontSize;
+            tmpText.color = Color.white;
+            tmpText.alignment = TextAlignmentOptions.Center;
         }
     }
 }
