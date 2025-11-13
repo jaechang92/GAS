@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-12
-**현재 브랜치**: `015-playable-prototype-phase-b1`
-**작업 세션**: Phase B-2 적 스폰 및 전투 시스템 완료
+**최종 업데이트**: 2025-11-13
+**현재 브랜치**: `master`
+**작업 세션**: Phase B 완료 및 Master 병합, Phase C 기획 완료
 
 ---
 
@@ -1015,25 +1015,87 @@
 - 커밋: 447d184 - 기능: Phase B-2 적 스폰 및 전투 시스템 완료
 - 파일 변경: 43개 파일 (+4,926줄, -32줄)
 
+#### ✅ Phase B-3: UI System Integration
+**완료 Task**: 5개
+**완료 날짜**: 2025-11-13
+
+**핵심 구현**:
+
+1. **RoomInfoUI.cs** (168줄) - **신규**
+   - 현재 방 번호 및 총 방 수 실시간 표시
+   - 적 수 실시간 업데이트
+   - Unity 초기화 순서 문제 해결 (OnEnable → Start)
+   - RoomManager.OnRoomChanged, Room.OnEnemyCountChanged 이벤트 구독
+
+2. **GameplaySceneCreator.cs** (+318줄)
+   - CreateAllUI() 메서드 확장 (6개 UI 자동 생성)
+   - CreateRoomInfoUI() 추가
+   - Ground/Platform Layer 설정 추가
+
+3. **PrefabCreator.cs** (+152줄)
+   - CreateUIPrefabs() 추가 (BuffIcon + PickupSlot)
+   - BuffIcon 컴포넌트 및 모든 UI 참조 설정
+   - PickupSlot UI 프리팹 생성
+
+4. **기존 UI 컴포넌트 검증** ✅
+   - PlayerHealthBar.cs (390줄) - PlayerStats 완전 연동
+   - PlayerManaBar.cs - OnManaChanged 이벤트 구독
+   - PlayerExpBar.cs - OnExpChanged, OnLevelUp 이벤트 구독
+   - BuffIconPanel.cs - StatusEffectManager 이벤트 구독
+
+**수정된 주요 버그** (6개):
+1. ✅ 3D Collider 문제 → 수동 BoxCollider2D 추가
+2. ✅ Sprite 참조 손실 → PNG 파일 저장
+3. ✅ EditorWindow GUI 레이아웃 오류 → EditorApplication.delayCall
+4. ✅ RoomInfoUI 초기화 순서 문제 → OnEnable → Start
+5. ✅ RoomManager 방 순서 랜덤 → SortRooms() 추가
+6. ✅ Enemy 컴포넌트 중복 → abstract class
+
+**생성된 문서**:
+- PHASE_B_COMPLETE.md (650줄) - Phase B 전체 완료 문서
+- ERROR_SOLUTIONS_PORTFOLIO.md (+357줄, Section 7) - EditorWindow GUI 오류
+
+**브랜치 정보**:
+- 브랜치: 015-playable-prototype-phase-b1
+- 최종 커밋: 8501c9e - 문서: Phase B 완료 문서 작성
+- PR #9: Master 병합 완료 ✅
+- 파일 변경: 222개 파일 (+26,049줄, -372줄)
+
 ---
 
 ## 🎯 현재 작업 상태
 
 ### Git 상태
 ```bash
-브랜치: 015-playable-prototype-phase-b1 (로컬)
-원격 푸시: 대기 중
-최종 커밋: 447d184 (기능: Phase B-2 적 스폰 및 전투 시스템 완료)
+브랜치: master
+상태: 최신 커밋과 동기화됨
+최종 커밋: 531b65d (Merge PR #9 - Phase B 완료)
+PR #9: Phase B (B-1, B-2, B-3) Master 병합 완료 ✅
 ```
 
-**오늘 작업 브랜치 (2025-11-12)**:
-1. 015-playable-prototype-phase-b1 (Phase B-1, B-2) → 구현 완료 ✅
+**최근 작업 (2025-11-13)**:
+1. ✅ **Phase B-3 완료** - UI System Integration
+   - RoomInfoUI.cs 신규 작성 (168줄)
+   - 6개 버그 수정
+   - Phase B 완료 문서 작성
+
+2. ✅ **PR #9 병합** - Phase B → Master
+   - 222개 파일 (+26,049줄, -372줄)
+   - Fast-forward 병합 성공
+
+3. ✅ **Phase C 기획 완료**
+   - PHASE_C_PLAN.md 작성 (230줄)
+   - 4개 서브 Phase 기획 (C-1, C-2, C-3, C-4)
+
+**이전 작업 브랜치**:
+1. 015-playable-prototype-phase-b1 (Phase B-1, B-2, B-3) → Master 병합 완료 ✅
    - **Phase B-1: Playable Prototype Editor Tools** (2개 파일, 1,035줄)
    - **Phase B-2: Enemy Spawn & Combat System** (4개 파일 수정, +107줄)
+   - **Phase B-3: UI System Integration** (7개 파일, +500줄)
    - 자동화 도구: PrefabCreator, GameplaySceneCreator
    - Layer 시스템 추가: Enemy Layer + targetLayers
    - 자동 던전 시작: autoStartFirstRoom 옵션
-   - 43개 프리팹/텍스처/씬 파일 생성
+   - 222개 파일 변경
 
 2. 014-skull-platformer-phase-a (Phase A-1, A-2, A-3, A-4, Phase 14) → 머지 완료 ✅
    - Phase A-1: MageForm 시스템 7개 파일 생성 (607줄)
