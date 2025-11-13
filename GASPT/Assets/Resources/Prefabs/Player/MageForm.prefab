@@ -15,9 +15,9 @@ GameObject:
   - component: {fileID: 5059884112024295284}
   - component: {fileID: 386030167504199815}
   - component: {fileID: 6529828692987712201}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: MageForm
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -188,7 +188,7 @@ MonoBehaviour:
   groundCheckRadius: 0.2
   groundLayer:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 8
   spriteRenderer: {fileID: 0}
   startsLookingRight: 1
   showDebugLogs: 0
@@ -235,7 +235,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5101090103779282342}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: GroundCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
