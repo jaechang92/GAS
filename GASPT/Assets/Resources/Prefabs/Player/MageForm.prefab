@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 5059884112024295284}
   - component: {fileID: 386030167504199815}
   - component: {fileID: 6529828692987712201}
+  - component: {fileID: 3982767124044409226}
   m_Layer: 6
   m_Name: MageForm
   m_TagString: Player
@@ -226,6 +227,23 @@ MonoBehaviour:
   showDebugLogs: 1
   magicAuraEffect: {fileID: 0}
   magicColor: {r: 0.5, g: 0.5, b: 1, a: 1}
+--- !u!114 &3982767124044409226
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3641093501239033311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95cbab6effd587f4b96a02083efaf02d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Stats.PlayerStats
+  testItemToEquip: {fileID: 0}
+  baseHP: 100
+  baseAttack: 10
+  baseDefense: 5
+  baseMana: 100
 --- !u!1 &6271596513212663218
 GameObject:
   m_ObjectHideFlags: 0

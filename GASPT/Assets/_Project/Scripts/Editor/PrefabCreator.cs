@@ -109,7 +109,7 @@ namespace GASPT.Editor
                 EditorApplication.delayCall += CreateBasicMeleeEnemyPrefab;
             }
 
-            if (GUILayout.Button("UI 프리팹 생성 (BuffIcon, PickupSlot)"))
+            if (GUILayout.Button("UI 프리팹 생성 (BuffIcon)"))
             {
                 EditorApplication.delayCall += CreateUIPrefabs;
             }
@@ -468,7 +468,6 @@ namespace GASPT.Editor
         private void CreateUIPrefabs()
         {
             CreateBuffIconPrefab();
-            CreatePickupSlotPrefab();
         }
 
         /// <summary>
@@ -589,67 +588,6 @@ namespace GASPT.Editor
             DestroyImmediate(buffIconObj);
 
             Debug.Log($"[PrefabCreator] BuffIcon 프리팹 생성 완료: {prefabPath}");
-        }
-
-        /// <summary>
-        /// PickupSlot UI 프리팹 생성
-        /// </summary>
-        private void CreatePickupSlotPrefab()
-        {
-            string prefabPath = $"{UIPrefabsPath}/PickupSlot.prefab";
-
-            GameObject slotObj = new GameObject("PickupSlot");
-
-            // RectTransform 추가 (UI 요소)
-            RectTransform rectTransform = slotObj.AddComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(60f, 60f);
-            rectTransform.anchorMin = new Vector2(0f, 0f);
-            rectTransform.anchorMax = new Vector2(0f, 0f);
-            rectTransform.pivot = new Vector2(0.5f, 0.5f);
-
-            // Image 추가 (배경)
-            Image bgImage = slotObj.AddComponent<Image>();
-            bgImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f); // 어두운 반투명 배경
-
-            // ItemIcon 자식 오브젝트 생성
-            GameObject iconObj = new GameObject("ItemIcon");
-            iconObj.transform.SetParent(slotObj.transform);
-
-            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
-            iconRect.sizeDelta = new Vector2(50f, 50f);
-            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
-            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.pivot = new Vector2(0.5f, 0.5f);
-            iconRect.anchoredPosition = Vector2.zero;
-
-            Image iconImage = iconObj.AddComponent<Image>();
-            iconImage.color = Color.white;
-
-            // Quantity 텍스트 자식 오브젝트 생성
-            GameObject quantityTextObj = new GameObject("Quantity");
-            quantityTextObj.transform.SetParent(slotObj.transform);
-
-            RectTransform quantityRect = quantityTextObj.AddComponent<RectTransform>();
-            quantityRect.sizeDelta = new Vector2(40f, 20f);
-            quantityRect.anchorMin = new Vector2(1f, 0f);
-            quantityRect.anchorMax = new Vector2(1f, 0f);
-            quantityRect.pivot = new Vector2(1f, 0f);
-            quantityRect.anchoredPosition = new Vector2(-3f, 3f);
-
-            TMPro.TextMeshProUGUI quantityText = quantityTextObj.AddComponent<TMPro.TextMeshProUGUI>();
-            quantityText.text = "1";
-            quantityText.fontSize = 16f;
-            quantityText.color = Color.white;
-            quantityText.alignment = TMPro.TextAlignmentOptions.BottomRight;
-            quantityText.enableAutoSizing = true;
-            quantityText.fontSizeMin = 12f;
-            quantityText.fontSizeMax = 16f;
-
-            // 프리팹 저장
-            PrefabUtility.SaveAsPrefabAsset(slotObj, prefabPath);
-            DestroyImmediate(slotObj);
-
-            Debug.Log($"[PrefabCreator] PickupSlot 프리팹 생성 완료: {prefabPath}");
         }
 
         /// <summary>
