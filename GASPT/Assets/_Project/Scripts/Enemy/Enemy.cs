@@ -426,10 +426,22 @@ namespace GASPT.Enemies
             // PoolManager를 통해 풀로 반환
             if (PoolManager.Instance != null)
             {
-                // Enemy 타입에 맞게 Despawn (BasicMeleeEnemy 등)
+                // Enemy 타입에 맞게 Despawn
                 if (this is GASPT.Gameplay.Enemy.BasicMeleeEnemy basicMelee)
                 {
                     PoolManager.Instance.Despawn(basicMelee);
+                }
+                else if (this is GASPT.Gameplay.Enemy.RangedEnemy rangedEnemy)
+                {
+                    PoolManager.Instance.Despawn(rangedEnemy);
+                }
+                else if (this is GASPT.Gameplay.Enemy.FlyingEnemy flyingEnemy)
+                {
+                    PoolManager.Instance.Despawn(flyingEnemy);
+                }
+                else if (this is GASPT.Gameplay.Enemy.EliteEnemy eliteEnemy)
+                {
+                    PoolManager.Instance.Despawn(eliteEnemy);
                 }
                 else
                 {

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &3641093501239033311
+--- !u!1 &4709617319050463817
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,45 +8,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8939543485399961505}
-  - component: {fileID: 2449605290322367981}
-  - component: {fileID: 8070684089312402637}
-  - component: {fileID: 7606054761081432096}
-  - component: {fileID: 5059884112024295284}
-  - component: {fileID: 386030167504199815}
-  - component: {fileID: 6529828692987712201}
-  - component: {fileID: 6122019937945740000}
-  m_Layer: 6
-  m_Name: MageForm
+  - component: {fileID: 3294218105149419303}
+  - component: {fileID: 6633063968261057731}
+  - component: {fileID: 3912063605614136998}
+  - component: {fileID: 8710919272309985159}
+  - component: {fileID: 1766356312830910077}
+  - component: {fileID: 6789681346089107265}
+  m_Layer: 7
+  m_Name: FlyingEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8939543485399961505
+--- !u!4 &3294218105149419303
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
+  m_GameObject: {fileID: 4709617319050463817}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 5101090103779282342}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!50 &2449605290322367981
+--- !u!50 &6633063968261057731
 Rigidbody2D:
   serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
+  m_GameObject: {fileID: 4709617319050463817}
   m_BodyType: 0
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
@@ -54,7 +51,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 3
+  m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -66,13 +63,13 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!61 &8070684089312402637
-BoxCollider2D:
+--- !u!58 &3912063605614136998
+CircleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
+  m_GameObject: {fileID: 4709617319050463817}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -96,29 +93,19 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
---- !u!212 &7606054761081432096
+  m_Radius: 0.5
+--- !u!212 &8710919272309985159
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
+  m_GameObject: {fileID: 4709617319050463817}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -170,108 +157,37 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &5059884112024295284
+--- !u!114 &1766356312830910077
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
+  m_GameObject: {fileID: 4709617319050463817}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3fbf6dd1d5e45c4dba1d8a44cdb30d9, type: 3}
+  m_Script: {fileID: 11500000, guid: 3c9e14f64b5c19a4a9daaee1db2d652d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Gameplay.Player.PlayerController
-  moveSpeed: 5
-  jumpForce: 10
-  airControlMultiplier: 0.8
-  groundCheck: {fileID: 0}
-  groundCheckRadius: 0.2
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Core.Pooling.PooledObject
+  autoReturn: 0
+  autoReturnTime: 3
+--- !u!114 &6789681346089107265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4709617319050463817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caec3af076c68e6499b4a7299e2bcfe9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Gameplay.Enemy.FlyingEnemy
+  enemyData: {fileID: 0}
+  currentHp: 0
+  targetFlyHeight: 6
   groundLayer:
     serializedVersion: 2
-    m_Bits: 8
-  spriteRenderer: {fileID: 0}
-  startsLookingRight: 1
+    m_Bits: 256
   showDebugLogs: 0
---- !u!114 &386030167504199815
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 914310068314aeb4383fecd42e31926e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Form.FormInputHandler
-  targetForm: {fileID: 0}
-  jumpKey: 32
-  basicAttackKey: 323
-  skill1Key: 113
-  skill2Key: 101
-  showDebugLogs: 0
---- !u!114 &6529828692987712201
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 654d5fb0e437c1348ac3647ffbe0fb10, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Form.MageForm
-  formData: {fileID: 0}
-  showDebugLogs: 1
-  magicAuraEffect: {fileID: 0}
-  magicColor: {r: 0.5, g: 0.5, b: 1, a: 1}
---- !u!114 &6122019937945740000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3641093501239033311}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 95cbab6effd587f4b96a02083efaf02d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Stats.PlayerStats
-  testItemToEquip: {fileID: 0}
-  baseHP: 100
-  baseAttack: 10
-  baseDefense: 5
-  baseMana: 100
---- !u!1 &6271596513212663218
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5101090103779282342}
-  m_Layer: 0
-  m_Name: GroundCheck
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5101090103779282342
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6271596513212663218}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8939543485399961505}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  showGizmos: 1

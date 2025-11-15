@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Core;
+using GASPT.ResourceManagement;
 
 namespace GASPT.Core.Pooling
 {
@@ -128,6 +129,51 @@ namespace GASPT.Core.Pooling
             }
 
             return pool.Get(position, rotation);
+        }
+
+        /// <summary>
+        /// 프리팹 경로로 오브젝트 스폰 (편의 메서드)
+        /// 풀이 없으면 자동 생성
+        /// </summary>
+        public T Spawn<T>(string prefabPath, Vector3 position, Quaternion rotation) where T : Component
+        {
+            // 풀이 이미 존재하면 바로 스폰 (성능 최적화)
+            if (HasPool<T>())
+            {
+                return Spawn<T>(position, rotation);
+            }
+
+            // 풀이 없을 때만 프리팹 로드 및 풀 생성
+            if (!GameResourceManager.HasInstance)
+            {
+                Debug.LogError($"[PoolManager] GameResourceManager를 찾을 수 없습니다!");
+                return null;
+            }
+
+            // 프리팹 로드
+            GameObject prefab = GameResourceManager.Instance.LoadPrefab(prefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"[PoolManager] 프리팹을 로드할 수 없습니다: {prefabPath}");
+                return null;
+            }
+
+            // T 컴포넌트 확인
+            T component = prefab.GetComponent<T>();
+            if (component == null)
+            {
+                Debug.LogError($"[PoolManager] 프리팹에 {typeof(T).Name} 컴포넌트가 없습니다: {prefabPath}");
+                return null;
+            }
+
+            // 풀 생성 (초기 크기 10, 자동 확장)
+            CreatePool(component, initialSize: 10, canGrow: true);
+
+            if (showDebugLogs)
+                Debug.Log($"[PoolManager] {typeof(T).Name} 풀 자동 생성 완료 (경로: {prefabPath})");
+
+            // 생성된 풀에서 스폰
+            return Spawn<T>(position, rotation);
         }
 
         /// <summary>

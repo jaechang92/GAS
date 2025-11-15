@@ -31,6 +31,9 @@ namespace GASPT.Gameplay.Projectiles
             // MagicMissileProjectile 풀 생성
             InitializeMagicMissilePool();
 
+            // EnemyProjectile 풀 생성
+            InitializeEnemyProjectilePool();
+
             isInitialized = true;
             Debug.Log("[ProjectilePoolInitializer] 투사체 풀 초기화 완료");
         }
@@ -85,6 +88,32 @@ namespace GASPT.Gameplay.Projectiles
             );
 
             Debug.Log("[ProjectilePoolInitializer] MagicMissileProjectile 풀 생성 완료");
+        }
+
+        /// <summary>
+        /// EnemyProjectile 풀 초기화
+        /// </summary>
+        private static void InitializeEnemyProjectilePool()
+        {
+            // Resources 폴더에서 기존 프리팹 로드
+            GameObject enemyProjectilePrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Projectiles.EnemyProjectile
+            );
+
+            if (enemyProjectilePrefab == null)
+            {
+                Debug.LogError("[ProjectilePoolInitializer] EnemyProjectile 프리팹을 찾을 수 없습니다!");
+                return;
+            }
+
+            // 풀 생성 (초기 10개, 확장 가능)
+            PoolManager.Instance.CreatePool(
+                enemyProjectilePrefab.GetComponent<EnemyProjectile>(),
+                initialSize: 10,
+                canGrow: true
+            );
+
+            Debug.Log("[ProjectilePoolInitializer] EnemyProjectile 풀 생성 완료");
         }
 
         /// <summary>

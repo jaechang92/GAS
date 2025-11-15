@@ -2,7 +2,51 @@ namespace GASPT.ResourceManagement
 {
     /// <summary>
     /// 리소스 경로 상수 관리 클래스
-    /// Resources 폴더 내 모든 리소스 경로를 상수로 정의
+    /// Resources 폴더 내 모든 리소스 경로를 상수로 정의하여 중앙 집중식 관리
+    ///
+    /// <para><b>사용 목적:</b></para>
+    /// <list type="bullet">
+    /// <item>하드코딩된 경로 문자열 제거</item>
+    /// <item>오타로 인한 런타임 에러 방지</item>
+    /// <item>리팩토링 시 경로 변경 용이</item>
+    /// <item>IDE 자동완성 지원</item>
+    /// </list>
+    ///
+    /// <para><b>사용 예제:</b></para>
+    /// <code>
+    /// // Prefab 로드
+    /// GameObject prefab = GameResourceManager.Instance.LoadPrefab(
+    ///     ResourcePaths.Prefabs.Player.MageForm
+    /// );
+    ///
+    /// // ScriptableObject 로드
+    /// StatusEffectData data = GameResourceManager.Instance.LoadScriptableObject&lt;StatusEffectData&gt;(
+    ///     ResourcePaths.Data.StatusEffects.AttackUp
+    /// );
+    ///
+    /// // 오브젝트 풀에서 스폰
+    /// FireballProjectile projectile = PoolManager.Instance.Spawn&lt;FireballProjectile&gt;(
+    ///     ResourcePaths.Prefabs.Projectiles.FireballProjectile,
+    ///     position,
+    ///     rotation
+    /// );
+    /// </code>
+    ///
+    /// <para><b>새 경로 추가 방법:</b></para>
+    /// <list type="number">
+    /// <item>해당 카테고리의 static class에 const string 추가</item>
+    /// <item>경로는 "Prefabs/", "Data/" 등으로 시작 (Resources/ 제외)</item>
+    /// <item>XML 주석으로 설명 및 실제 파일 경로 명시</item>
+    /// <item>예시 경로는 주석에 (예시) 또는 (예정) 표시</item>
+    /// </list>
+    ///
+    /// <para><b>주의사항:</b></para>
+    /// <list type="bullet">
+    /// <item>경로는 Resources 폴더 기준 상대 경로 (Resources/ 제외)</item>
+    /// <item>확장자(.prefab, .asset) 제외</item>
+    /// <item>인스턴스 데이터에 경로 저장 금지 (공유 리소스만 여기 정의)</item>
+    /// <item>에디터 전용 경로(Assets/...)는 에디터 스크립트에 별도 정의</item>
+    /// </list>
     /// </summary>
     public static class ResourcePaths
     {
@@ -13,6 +57,28 @@ namespace GASPT.ResourceManagement
         /// </summary>
         public static class Prefabs
         {
+            // Player Prefabs
+            public static class Player
+            {
+                /// <summary>
+                /// MageForm Prefab 경로
+                /// Resources/Prefabs/Player/MageForm.prefab
+                /// </summary>
+                public const string MageForm = "Prefabs/Player/MageForm";
+
+                /// <summary>
+                /// WarriorForm Prefab 경로 (예정)
+                /// Resources/Prefabs/Player/WarriorForm.prefab
+                /// </summary>
+                public const string WarriorForm = "Prefabs/Player/WarriorForm";
+
+                /// <summary>
+                /// RogueForm Prefab 경로 (예정)
+                /// Resources/Prefabs/Player/RogueForm.prefab
+                /// </summary>
+                public const string RogueForm = "Prefabs/Player/RogueForm";
+            }
+
             // UI Prefabs
             public static class UI
             {
@@ -33,6 +99,18 @@ namespace GASPT.ResourceManagement
                 /// Resources/Prefabs/UI/DroppedItem.prefab
                 /// </summary>
                 public const string DroppedItem = "Prefabs/UI/DroppedItem";
+
+                /// <summary>
+                /// BuffIcon Prefab 경로
+                /// Resources/Prefabs/UI/BuffIcon.prefab
+                /// </summary>
+                public const string BuffIcon = "Prefabs/UI/BuffIcon";
+
+                /// <summary>
+                /// PickupSlot Prefab 경로
+                /// Resources/Prefabs/UI/PickupSlot.prefab
+                /// </summary>
+                public const string PickupSlot = "Prefabs/UI/ItemPickupSlot";
             }
 
             // Enemy Prefabs
@@ -40,9 +118,27 @@ namespace GASPT.ResourceManagement
             {
                 /// <summary>
                 /// BasicMeleeEnemy Prefab 경로
-                /// Resources/Prefabs/Enemy/BasicMeleeEnemy.prefab
+                /// Resources/Prefabs/Enemies/BasicMeleeEnemy.prefab
                 /// </summary>
                 public const string Basic = "Prefabs/Enemies/BasicMeleeEnemy";
+
+                /// <summary>
+                /// RangedEnemy Prefab 경로
+                /// Resources/Prefabs/Enemies/RangedEnemy.prefab
+                /// </summary>
+                public const string Ranged = "Prefabs/Enemies/RangedEnemy";
+
+                /// <summary>
+                /// FlyingEnemy Prefab 경로
+                /// Resources/Prefabs/Enemies/FlyingEnemy.prefab
+                /// </summary>
+                public const string Flying = "Prefabs/Enemies/FlyingEnemy";
+
+                /// <summary>
+                /// EliteEnemy Prefab 경로
+                /// Resources/Prefabs/Enemies/EliteEnemy.prefab
+                /// </summary>
+                public const string Elite = "Prefabs/Enemies/EliteEnemy";
             }
 
             // Effect Prefabs
@@ -75,6 +171,12 @@ namespace GASPT.ResourceManagement
                 /// Resources/Prefabs/Projectiles/MagicMissileProjectile.prefab
                 /// </summary>
                 public const string MagicMissileProjectile = "Prefabs/Projectiles/MagicMissileProjectile";
+
+                /// <summary>
+                /// EnemyProjectile Prefab 경로
+                /// Resources/Prefabs/Projectiles/EnemyProjectile.prefab
+                /// </summary>
+                public const string EnemyProjectile = "Prefabs/Projectiles/EnemyProjectile";
             }
         }
 
@@ -112,10 +214,28 @@ namespace GASPT.ResourceManagement
             public static class Enemies
             {
                 /// <summary>
-                /// Goblin 데이터 (예시)
-                /// Resources/Data/Enemies/Goblin.asset
+                /// BasicMeleeGoblin 데이터 (Phase C-1)
+                /// Resources/Data/Enemies/BasicMeleeGoblin.asset
                 /// </summary>
-                public const string Goblin = "Data/Enemies/Goblin";
+                public const string BasicMeleeGoblin = "Data/Enemies/BasicMeleeGoblin";
+
+                /// <summary>
+                /// RangedGoblin 데이터 (Phase C-1)
+                /// Resources/Data/Enemies/RangedGoblin.asset
+                /// </summary>
+                public const string RangedGoblin = "Data/Enemies/RangedGoblin";
+
+                /// <summary>
+                /// FlyingBat 데이터 (Phase C-1)
+                /// Resources/Data/Enemies/FlyingBat.asset
+                /// </summary>
+                public const string FlyingBat = "Data/Enemies/FlyingBat";
+
+                /// <summary>
+                /// EliteOrc 데이터 (Phase C-1)
+                /// Resources/Data/Enemies/EliteOrc.asset
+                /// </summary>
+                public const string EliteOrc = "Data/Enemies/EliteOrc";
             }
 
             // Item Data

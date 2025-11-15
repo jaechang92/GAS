@@ -10,33 +10,33 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 244b73df0d89e004d8f5dcec9ecf78b9, type: 3}
-  m_Name: EliteOrc
+  m_Name: RangedGoblin
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Data.EnemyData
-  enemyType: 1
-  enemyClass: 3
-  enemyName: "\uC815\uC608 \uC624\uD06C"
+  enemyType: 0
+  enemyClass: 1
+  enemyName: "\uC6D0\uAC70\uB9AC \uACE0\uBE14\uB9B0"
   icon: {fileID: 0}
-  maxHp: 80
-  attack: 15
-  minGoldDrop: 40
-  maxGoldDrop: 60
-  expReward: 50
+  maxHp: 25
+  attack: 7
+  minGoldDrop: 10
+  maxGoldDrop: 20
+  expReward: 15
   lootTable: {fileID: 0}
-  moveSpeed: 1.8
-  detectionRange: 8
+  moveSpeed: 1.5
+  detectionRange: 12
   attackRange: 2
-  patrolDistance: 3
-  chaseSpeed: 3
-  attackCooldown: 1.2
-  optimalAttackDistance: 10
-  minDistance: 5
+  patrolDistance: 4
+  chaseSpeed: 2
+  attackCooldown: 2
+  optimalAttackDistance: 8
+  minDistance: 4
   flyHeight: 6
   diveSpeed: 10
   flySpeed: 3
-  chargeCooldown: 6
-  areaCooldown: 8
-  areaAttackRadius: 3.5
-  chargeSpeed: 10
-  chargeDistance: 6
-  showNameTag: 1
+  chargeCooldown: 5
+  areaCooldown: 7
+  areaAttackRadius: 3
+  chargeSpeed: 8
+  chargeDistance: 5
+  showNameTag: 0
   showBossHealthBar: 0

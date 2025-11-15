@@ -7,6 +7,7 @@ using TMPro;
 using GASPT.Gameplay.Level;
 using GASPT.Core;
 using GASPT.UI;
+using GASPT.ResourceManagement;
 
 namespace GASPT.Editor
 {
@@ -17,7 +18,6 @@ namespace GASPT.Editor
     public class GameplaySceneCreator : EditorWindow
     {
         private const string ScenePath = "Assets/_Project/Scenes/GameplayScene.unity";
-        private const string PrefabsPath = "Prefabs";
         private const string TexturesPath = "Assets/Resources/Textures/Placeholders";
 
         private Vector2 scrollPosition;
@@ -363,8 +363,8 @@ namespace GASPT.Editor
         /// </summary>
         private void CreatePlayer()
         {
-            // 프리팹 로드
-            GameObject mageFormPrefab = Resources.Load<GameObject>($"{PrefabsPath}/Player/MageForm");
+            // 프리팹 로드 (ResourcePaths 사용)
+            GameObject mageFormPrefab = Resources.Load<GameObject>(ResourcePaths.Prefabs.Player.MageForm);
 
             if (mageFormPrefab == null)
             {
@@ -386,10 +386,24 @@ namespace GASPT.Editor
         /// </summary>
         private void CreateEnemySpawnPoints()
         {
-            // TestGoblin EnemyData 로드
-            GASPT.Data.EnemyData testGoblinData = AssetDatabase.LoadAssetAtPath<GASPT.Data.EnemyData>("Assets/_Project/Data/Enemies/TestGoblin.asset");
+            // 다양한 EnemyData 로드
+            string[] enemyDataPaths = new string[]
+            {
+                "Assets/_Project/Data/Enemies/TestGoblin.asset",      // BasicMelee
+                "Assets/_Project/Data/Enemies/RangedGoblin.asset",    // Ranged (없으면 TestGoblin)
+                "Assets/_Project/Data/Enemies/FlyingBat.asset",       // Flying (없으면 TestGoblin)
+                "Assets/_Project/Data/Enemies/EliteOrc.asset"         // Elite (없으면 TestGoblin)
+            };
 
-            if (testGoblinData == null)
+            GASPT.Data.EnemyData[] enemyDatas = new GASPT.Data.EnemyData[enemyDataPaths.Length];
+            for (int i = 0; i < enemyDataPaths.Length; i++)
+            {
+                enemyDatas[i] = AssetDatabase.LoadAssetAtPath<GASPT.Data.EnemyData>(enemyDataPaths[i]);
+            }
+
+            // TestGoblin은 반드시 있어야 함 (fallback)
+            GASPT.Data.EnemyData fallbackData = enemyDatas[0];
+            if (fallbackData == null)
             {
                 Debug.LogWarning("[GameplaySceneCreator] TestGoblin EnemyData를 찾을 수 없습니다! 스폰 포인트에 EnemyData가 할당되지 않습니다.");
             }
@@ -403,6 +417,7 @@ namespace GASPT.Editor
             }
 
             int totalSpawnPoints = 0;
+            int[] enemyTypeCounts = new int[4]; // 각 타입별 생성 수 카운트
 
             // 각 방마다 2~4개 스폰 포인트 생성
             for (int roomIndex = 0; roomIndex < roomCount; roomIndex++)
@@ -435,12 +450,15 @@ namespace GASPT.Editor
                     // EnemySpawnPoint 컴포넌트 추가
                     var spawnPointComponent = spawnPoint.AddComponent<EnemySpawnPoint>();
 
+                    // 가중치 랜덤으로 EnemyData 선택
+                    GASPT.Data.EnemyData selectedData = GetWeightedRandomEnemyData(enemyDatas, fallbackData, ref enemyTypeCounts);
+
                     // EnemyData 자동 할당
-                    if (testGoblinData != null)
+                    if (selectedData != null)
                     {
                         SerializedObject so = new SerializedObject(spawnPointComponent);
                         SerializedProperty enemyDataProp = so.FindProperty("enemyData");
-                        enemyDataProp.objectReferenceValue = testGoblinData;
+                        enemyDataProp.objectReferenceValue = selectedData;
                         so.ApplyModifiedProperties();
                     }
 
@@ -453,7 +471,43 @@ namespace GASPT.Editor
                 }
             }
 
-            Debug.Log($"[GameplaySceneCreator] 적 스폰 포인트 생성 완료 (총 {totalSpawnPoints}개, EnemyData: {(testGoblinData != null ? testGoblinData.enemyName : "None")})");
+            Debug.Log($"[GameplaySceneCreator] 적 스폰 포인트 생성 완료 (총 {totalSpawnPoints}개)\n" +
+                     $"BasicMelee: {enemyTypeCounts[0]}, Ranged: {enemyTypeCounts[1]}, Flying: {enemyTypeCounts[2]}, Elite: {enemyTypeCounts[3]}");
+        }
+
+        /// <summary>
+        /// 가중치 랜덤으로 EnemyData 선택
+        /// </summary>
+        private GASPT.Data.EnemyData GetWeightedRandomEnemyData(GASPT.Data.EnemyData[] enemyDatas, GASPT.Data.EnemyData fallback, ref int[] counts)
+        {
+            float rand = Random.value;
+
+            // 가중치: BasicMelee 40%, Ranged 30%, Flying 20%, Elite 10%
+            int selectedIndex;
+            if (rand < 0.4f)
+                selectedIndex = 0; // BasicMelee
+            else if (rand < 0.7f)
+                selectedIndex = 1; // Ranged
+            else if (rand < 0.9f)
+                selectedIndex = 2; // Flying
+            else
+                selectedIndex = 3; // Elite
+
+            // 선택된 EnemyData 가져오기 (없으면 fallback)
+            GASPT.Data.EnemyData selected = enemyDatas[selectedIndex];
+            if (selected == null)
+            {
+                selected = fallback;
+                selectedIndex = 0; // fallback은 BasicMelee로 간주
+            }
+
+            // 카운트 증가
+            if (counts != null && selectedIndex >= 0 && selectedIndex < counts.Length)
+            {
+                counts[selectedIndex]++;
+            }
+
+            return selected;
         }
 
         /// <summary>
@@ -779,6 +833,10 @@ namespace GASPT.Editor
 
             // BuffIconPanel 컴포넌트 추가
             BuffIconPanel buffIconPanel = buffPanel.AddComponent<BuffIconPanel>();
+            SerializedObject so = new SerializedObject(buffIconPanel);
+            so.FindProperty("buffIconPrefab").objectReferenceValue = Resources.Load<GameObject>(ResourcePaths.Prefabs.UI.BuffIcon);
+            so.FindProperty("iconContainer").objectReferenceValue = buffPanel.transform;
+            so.ApplyModifiedProperties();
 
             Debug.Log("[GameplaySceneCreator] BuffIconPanel 생성 완료");
         }
@@ -808,6 +866,10 @@ namespace GASPT.Editor
 
             // ItemPickupUI 컴포넌트 추가
             ItemPickupUI pickupUI = pickupPanel.AddComponent<ItemPickupUI>();
+            SerializedObject so = new SerializedObject(pickupUI);
+            so.FindProperty("pickupSlotPrefab").objectReferenceValue = Resources.Load<GameObject>(ResourcePaths.Prefabs.UI.PickupSlot);
+            so.FindProperty("slotContainer").objectReferenceValue = pickupPanel.transform;
+            so.ApplyModifiedProperties();
 
             Debug.Log("[GameplaySceneCreator] ItemPickupUI 생성 완료");
         }

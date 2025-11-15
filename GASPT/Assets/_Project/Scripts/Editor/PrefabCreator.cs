@@ -10,6 +10,8 @@ using GASPT.Enemies;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Enemy;
 using GASPT.UI;
+using Unity.VisualScripting;
+using GASPT.Stats;
 
 namespace GASPT.Editor
 {
@@ -159,7 +161,8 @@ namespace GASPT.Editor
             if (createProjectiles)
             {
                 CreateProjectilePrefabs();
-                createdCount += 2; // MagicMissile + Fireball
+                CreateEnemyProjectilePrefab();
+                createdCount += 3; // MagicMissile + Fireball + EnemyProjectile
             }
 
             if (createEffects)
@@ -171,7 +174,10 @@ namespace GASPT.Editor
             if (createEnemy)
             {
                 CreateBasicMeleeEnemyPrefab();
-                createdCount++;
+                CreateRangedEnemyPrefab();
+                CreateFlyingEnemyPrefab();
+                CreateEliteEnemyPrefab();
+                createdCount += 4; // BasicMelee + Ranged + Flying + Elite
             }
 
             if (createUI)
@@ -213,6 +219,8 @@ namespace GASPT.Editor
 
             // GameObject 생성
             GameObject mageFormObj = new GameObject("MageForm");
+            mageFormObj.layer = LayerMask.NameToLayer("Player");
+            mageFormObj.tag = "Player";
 
             // 컴포넌트 추가
             Rigidbody2D rb = mageFormObj.AddComponent<Rigidbody2D>();
@@ -222,14 +230,16 @@ namespace GASPT.Editor
             rb.gravityScale = 3f;
 
             BoxCollider2D collider = mageFormObj.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(1f, 2f);
-            collider.offset = new Vector2(0f, 1f);
 
             SpriteRenderer sr = mageFormObj.AddComponent<SpriteRenderer>();
             sr.sprite = CreatePlaceholderSprite(new Color(0.5f, 0.5f, 1f, 1f)); // 파란색 (Mage)
             sr.color = Color.white; // 스프라이트 색상 유지
 
             PlayerController playerController = mageFormObj.AddComponent<PlayerController>();
+            SerializedObject so = new SerializedObject(playerController);
+            so.FindProperty("groundLayer").intValue = LayerMask.GetMask("Ground");
+            so.ApplyModifiedProperties();
+
             FormInputHandler formInputHandler = mageFormObj.AddComponent<FormInputHandler>();
             MageForm mageForm = mageFormObj.AddComponent<MageForm>();
 
@@ -237,6 +247,8 @@ namespace GASPT.Editor
             GameObject groundCheck = new GameObject("GroundCheck");
             groundCheck.transform.SetParent(mageFormObj.transform);
             groundCheck.transform.localPosition = new Vector3(0f, 0f, 0f); // 발 위치
+
+            PlayerStats playerStats = mageFormObj.AddComponent<PlayerStats>();
 
             // 프리팹 저장
             PrefabUtility.SaveAsPrefabAsset(mageFormObj, prefabPath);
@@ -430,8 +442,6 @@ namespace GASPT.Editor
             rb.gravityScale = 3f;
 
             BoxCollider2D collider = enemyObj.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(1f, 1.5f);
-            collider.offset = new Vector2(0f, 0.75f);
 
             SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
             sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.3f, 0.3f, 1f)); // 빨간색 (Enemy)
@@ -460,6 +470,180 @@ namespace GASPT.Editor
             DestroyImmediate(enemyObj);
 
             Debug.Log($"[PrefabCreator] BasicMeleeEnemy 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// RangedEnemy 프리팹 생성
+        /// </summary>
+        private void CreateRangedEnemyPrefab()
+        {
+            string prefabPath = $"{EnemiesPrefabsPath}/RangedEnemy.prefab";
+
+            GameObject enemyObj = new GameObject("RangedEnemy");
+
+            // 컴포넌트 추가
+            Rigidbody2D rb = enemyObj.AddComponent<Rigidbody2D>();
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.gravityScale = 3f;
+
+            BoxCollider2D collider = enemyObj.AddComponent<BoxCollider2D>();
+
+            SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
+            sr.sprite = CreatePlaceholderSprite(new Color(0.5f, 1f, 0.5f, 1f)); // 연두색 (원거리 적)
+            sr.color = Color.white;
+
+            // Layer 설정 (Enemy)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다!");
+                enemyObj.layer = 0;
+            }
+            else
+            {
+                enemyObj.layer = enemyLayer;
+            }
+
+            // FirePoint 자식 오브젝트 생성
+            GameObject firePointObj = new GameObject("FirePoint");
+            firePointObj.transform.SetParent(enemyObj.transform);
+            firePointObj.transform.localPosition = new Vector3(0.5f, 0.5f, 0f);
+
+            PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
+            RangedEnemy rangedEnemy = enemyObj.AddComponent<RangedEnemy>();
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(enemyObj, prefabPath);
+            DestroyImmediate(enemyObj);
+
+            Debug.Log($"[PrefabCreator] RangedEnemy 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// FlyingEnemy 프리팹 생성
+        /// </summary>
+        private void CreateFlyingEnemyPrefab()
+        {
+            string prefabPath = $"{EnemiesPrefabsPath}/FlyingEnemy.prefab";
+
+            GameObject enemyObj = new GameObject("FlyingEnemy");
+
+            // 컴포넌트 추가
+            Rigidbody2D rb = enemyObj.AddComponent<Rigidbody2D>();
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.gravityScale = 0f; // 비행 적은 중력 무시
+
+            CircleCollider2D collider = enemyObj.AddComponent<CircleCollider2D>();
+            collider.radius = 0.5f;
+            collider.isTrigger = true; // 급강하 공격 감지용
+
+            SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
+            sr.sprite = CreatePlaceholderSprite(new Color(0.5f, 0.5f, 1f, 1f)); // 하늘색 (비행 적)
+            sr.color = Color.white;
+
+            // Layer 설정 (Enemy)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다!");
+                enemyObj.layer = 0;
+            }
+            else
+            {
+                enemyObj.layer = enemyLayer;
+            }
+
+            PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
+            FlyingEnemy flyingEnemy = enemyObj.AddComponent<FlyingEnemy>();
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(enemyObj, prefabPath);
+            DestroyImmediate(enemyObj);
+
+            Debug.Log($"[PrefabCreator] FlyingEnemy 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// EliteEnemy 프리팹 생성
+        /// </summary>
+        private void CreateEliteEnemyPrefab()
+        {
+            string prefabPath = $"{EnemiesPrefabsPath}/EliteEnemy.prefab";
+
+            GameObject enemyObj = new GameObject("EliteEnemy");
+
+            // 컴포넌트 추가
+            Rigidbody2D rb = enemyObj.AddComponent<Rigidbody2D>();
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.gravityScale = 3f;
+
+            BoxCollider2D collider = enemyObj.AddComponent<BoxCollider2D>();
+
+            SpriteRenderer sr = enemyObj.AddComponent<SpriteRenderer>();
+            sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.5f, 0f, 1f)); // 주황색 (정예 적)
+            sr.color = Color.white;
+
+            // Layer 설정 (Enemy)
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            if (enemyLayer == -1)
+            {
+                Debug.LogWarning("[PrefabCreator] 'Enemy' Layer가 없습니다!");
+                enemyObj.layer = 0;
+            }
+            else
+            {
+                enemyObj.layer = enemyLayer;
+            }
+
+            PooledObject pooledObject = enemyObj.AddComponent<PooledObject>();
+            EliteEnemy eliteEnemy = enemyObj.AddComponent<EliteEnemy>();
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(enemyObj, prefabPath);
+            DestroyImmediate(enemyObj);
+
+            Debug.Log($"[PrefabCreator] EliteEnemy 프리팹 생성 완료: {prefabPath}");
+        }
+
+        /// <summary>
+        /// EnemyProjectile 프리팹 생성
+        /// </summary>
+        private void CreateEnemyProjectilePrefab()
+        {
+            string prefabPath = $"{ProjectilesPrefabsPath}/EnemyProjectile.prefab";
+
+            GameObject projObj = new GameObject("EnemyProjectile");
+
+            // CircleCollider2D 추가 (Trigger)
+            CircleCollider2D collider = projObj.AddComponent<CircleCollider2D>();
+            collider.radius = 0.3f;
+            collider.isTrigger = true;
+
+            // SpriteRenderer 추가
+            SpriteRenderer sr = projObj.AddComponent<SpriteRenderer>();
+            sr.sprite = CreatePlaceholderSprite(new Color(1f, 0.2f, 0.2f, 1f)); // 빨간색 (적 투사체)
+            sr.color = Color.white;
+
+            // Layer 설정 (Projectile이나 Default)
+            projObj.layer = 0; // Default layer
+
+            // PooledObject 추가
+            PooledObject pooledObject = projObj.AddComponent<PooledObject>();
+
+            // EnemyProjectile 추가
+            EnemyProjectile enemyProjectile = projObj.AddComponent<EnemyProjectile>();
+
+            // 프리팹 저장
+            PrefabUtility.SaveAsPrefabAsset(projObj, prefabPath);
+            DestroyImmediate(projObj);
+
+            Debug.Log($"[PrefabCreator] EnemyProjectile 프리팹 생성 완료: {prefabPath}");
         }
 
         /// <summary>

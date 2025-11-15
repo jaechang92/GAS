@@ -12,7 +12,8 @@
       "Bash(findstr:*)",
       "Bash(git mv:*)",
       "Bash(git rm:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

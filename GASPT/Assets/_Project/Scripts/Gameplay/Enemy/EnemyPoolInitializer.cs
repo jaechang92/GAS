@@ -29,7 +29,14 @@ namespace GASPT.Gameplay.Enemy
             // BasicMeleeEnemy 풀 생성
             InitializeBasicMeleeEnemyPool();
 
-            // TODO: 다른 Enemy 타입 풀 추가 (예: BasicRangedEnemy, Boss 등)
+            // RangedEnemy 풀 생성
+            InitializeRangedEnemyPool();
+
+            // FlyingEnemy 풀 생성
+            InitializeFlyingEnemyPool();
+
+            // EliteEnemy 풀 생성
+            InitializeEliteEnemyPool();
 
             isInitialized = true;
             Debug.Log("[EnemyPoolInitializer] Enemy 풀 초기화 완료");
@@ -53,6 +60,84 @@ namespace GASPT.Gameplay.Enemy
             );
 
             Debug.Log("[EnemyPoolInitializer] BasicMeleeEnemy 풀 생성 완료");
+        }
+
+        /// <summary>
+        /// RangedEnemy 풀 초기화
+        /// </summary>
+        private static void InitializeRangedEnemyPool()
+        {
+            // Resources 폴더에서 기존 프리팹 로드
+            GameObject enemyPrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Enemies.Ranged
+            );
+
+            if (enemyPrefab == null)
+            {
+                Debug.LogWarning("[EnemyPoolInitializer] RangedEnemy 프리팹을 찾을 수 없습니다!");
+                return;
+            }
+
+            // 풀 생성 (초기 3개, 확장 가능)
+            PoolManager.Instance.CreatePool(
+                enemyPrefab.GetComponent<RangedEnemy>(),
+                initialSize: 3,
+                canGrow: true
+            );
+
+            Debug.Log("[EnemyPoolInitializer] RangedEnemy 풀 생성 완료");
+        }
+
+        /// <summary>
+        /// FlyingEnemy 풀 초기화
+        /// </summary>
+        private static void InitializeFlyingEnemyPool()
+        {
+            // Resources 폴더에서 기존 프리팹 로드
+            GameObject enemyPrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Enemies.Flying
+            );
+
+            if (enemyPrefab == null)
+            {
+                Debug.LogWarning("[EnemyPoolInitializer] FlyingEnemy 프리팹을 찾을 수 없습니다!");
+                return;
+            }
+
+            // 풀 생성 (초기 3개, 확장 가능)
+            PoolManager.Instance.CreatePool(
+                enemyPrefab.GetComponent<FlyingEnemy>(),
+                initialSize: 3,
+                canGrow: true
+            );
+
+            Debug.Log("[EnemyPoolInitializer] FlyingEnemy 풀 생성 완료");
+        }
+
+        /// <summary>
+        /// EliteEnemy 풀 초기화
+        /// </summary>
+        private static void InitializeEliteEnemyPool()
+        {
+            // Resources 폴더에서 기존 프리팹 로드
+            GameObject enemyPrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Enemies.Elite
+            );
+
+            if (enemyPrefab == null)
+            {
+                Debug.LogWarning("[EnemyPoolInitializer] EliteEnemy 프리팹을 찾을 수 없습니다!");
+                return;
+            }
+
+            // 풀 생성 (초기 2개, 확장 가능)
+            PoolManager.Instance.CreatePool(
+                enemyPrefab.GetComponent<EliteEnemy>(),
+                initialSize: 2,
+                canGrow: true
+            );
+
+            Debug.Log("[EnemyPoolInitializer] EliteEnemy 풀 생성 완료");
         }
 
 

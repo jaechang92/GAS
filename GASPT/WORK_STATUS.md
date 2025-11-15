@@ -1650,3 +1650,175 @@ private void OnDisable()
 🏰 **던전 시스템**: 자동 방 진입 → 적 스폰 → 전투 → 클리어
 ⚠️ **다음 세션 필수**: Unity에서 "Enemy" Layer 추가 (Layer 6)
 📖 **테스트 가이드**: PHASE_B2_TEST_GUIDE.md 참고
+
+---
+
+## 📝 Phase C-1 완료 (2025-11-15)
+
+### ✅ Phase C-1: 다양한 적 타입 추가 (완료)
+
+**작업 기간**: 2025-11-15
+**브랜치**: master
+**작업 내용**: 3가지 새로운 적 타입 + 적 투사체 구현
+
+#### 📦 구현된 적 타입
+
+1. **RangedEnemy (원거리 공격 적)**
+   - 파일: `Assets/_Project/Scripts/Gameplay/Enemy/RangedEnemy.cs` (~417줄)
+   - 특징:
+     - 일정 거리 유지하며 투사체 발사
+     - 플레이어가 너무 가까우면 후퇴 (Retreat 상태)
+     - 최적 공격 거리(8m)에서 정지 후 공격
+   - 주요 상태: Idle → Patrol → Chase → RangedAttack ↔ Retreat
+   - 스탯: HP 25, 공격력 7, 골드 10-20, 경험치 15
+
+2. **FlyingEnemy (비행 적)**
+   - 파일: `Assets/_Project/Scripts/Gameplay/Enemy/FlyingEnemy.cs` (~492줄)
+   - 특징:
+     - 공중에서 순찰하다 플레이어 발견 시 급강하 공격
+     - 중력 무시 (gravityScale = 0)
+     - Trigger 충돌 사용 (물리적 충돌 없음)
+   - 주요 상태: Fly → PositionAbove → DiveAttack → ReturnToAir
+   - 스탯: HP 20, 공격력 8, 골드 12-18, 경험치 18
+
+3. **EliteEnemy (정예 적)**
+   - 파일: `Assets/_Project/Scripts/Gameplay/Enemy/EliteEnemy.cs` (~478줄)
+   - 특징:
+     - 돌진 공격 (ChargeAttack: 6초 쿨다운)
+     - 범위 공격 (AreaAttack: 8초 쿨다운, 반경 3.5m, 2배 데미지)
+     - 높은 체력과 공격력
+   - 주요 상태: Idle → Patrol → Chase → Attack (+ ChargeAttack/AreaAttack)
+   - 스탯: HP 80, 공격력 15, 골드 40-60, 경험치 50
+
+4. **EnemyProjectile (적 투사체)**
+   - 파일: `Assets/_Project/Scripts/Gameplay/Projectiles/EnemyProjectile.cs` (~120줄)
+   - 특징:
+     - RangedEnemy가 발사하는 투사체
+     - Player 레이어만 타겟 (적 무시)
+     - 충돌 또는 5초 후 풀로 자동 반환
+
+#### 🛠️ 수정된 파일
+
+1. **EnemyData.cs** (+55줄, 후에 -5줄)
+   - 원거리 적 설정 추가: `optimalAttackDistance`, `minDistance`
+   - 비행 적 설정 추가: `flyHeight`, `diveSpeed`, `flySpeed`
+   - 정예 적 스킬 설정 추가: `chargeCooldown`, `areaCooldown`, `areaAttackRadius`, `chargeSpeed`, `chargeDistance`
+   - ~~`projectilePrefabPath` 추가~~ → 삭제 (ResourcePaths 사용으로 변경)
+
+2. **PoolManager.cs** (+50줄, 최적화)
+   - `Spawn<T>(string prefabPath, Vector3, Quaternion)` 오버로드 추가
+   - 풀이 없으면 프리팹 로드 후 자동 생성
+   - 성능 최적화: `HasPool()` 체크로 조기 반환
+
+3. **ResourcePaths.cs** (+30줄)
+   - 새 적 경로 추가: `Enemies.Ranged`, `Enemies.Flying`, `Enemies.Elite`
+   - 투사체 경로 추가: `Projectiles.EnemyProjectile`
+
+4. **ProjectilePoolInitializer.cs** (+30줄)
+   - `InitializeEnemyProjectilePool()` 메서드 추가
+   - EnemyProjectile 풀 초기화 (초기 10개)
+
+5. **EnemyPoolInitializer.cs** (+85줄)
+   - `InitializeRangedEnemyPool()` 메서드 추가 (초기 3개)
+   - `InitializeFlyingEnemyPool()` 메서드 추가 (초기 3개)
+   - `InitializeEliteEnemyPool()` 메서드 추가 (초기 2개)
+
+6. **Enemy.cs** (+15줄)
+   - `ReturnToPoolDelayed()`: 새 적 타입 Despawn 처리 추가
+   - RangedEnemy, FlyingEnemy, EliteEnemy 케이스 추가
+
+7. **PrefabCreator.cs** (+180줄)
+   - `CreateRangedEnemyPrefab()` 메서드 추가
+   - `CreateFlyingEnemyPrefab()` 메서드 추가
+   - `CreateEliteEnemyPrefab()` 메서드 추가
+   - `CreateEnemyProjectilePrefab()` 메서드 추가
+
+8. **GameplaySceneCreator.cs** (+130줄)
+   - `GetWeightedRandomEnemyData()`: 가중치 랜덤 적 선택
+     - 40% BasicMelee
+     - 30% RangedEnemy
+     - 20% FlyingEnemy
+     - 10% EliteEnemy
+
+#### 🆕 생성된 파일
+
+1. **EnemyDataCreator.cs** (에디터 도구)
+   - 파일: `Assets/_Project/Scripts/Editor/EnemyDataCreator.cs` (~330줄)
+   - 기능: Unity 메뉴에서 EnemyData 에셋 자동 생성
+   - 메뉴: `Tools → GASPT → Enemy Data Creator`
+   - 생성 에셋:
+     - RangedGoblin.asset (원거리 고블린)
+     - FlyingBat.asset (비행 박쥐)
+     - EliteOrc.asset (정예 오크)
+
+2. **PHASE_C1_TEST_GUIDE.md** (테스트 가이드)
+   - 파일: `PHASE_C1_TEST_GUIDE.md` (~520줄)
+   - 내용:
+     - Unity 에셋 생성 가이드
+     - 프리팹 생성 가이드
+     - 씬 테스트 절차
+     - 적 타입별 검증 체크리스트
+     - 문제 해결 (Troubleshooting)
+     - 성능 최적화 확인
+
+#### 🔧 주요 기술 결정 및 수정 사항
+
+1. **ResourcePaths 패턴 적용**
+   - 문제: RangedEnemy가 `Data.projectilePrefabPath` 사용 (인스턴스 데이터에 경로 저장)
+   - 해결: `ResourcePaths.Prefabs.Projectiles.EnemyProjectile` 상수 사용
+   - 이유: EnemyProjectile은 모든 RangedEnemy가 공유하는 리소스
+
+2. **Initializer 패턴 준수**
+   - 문제: PoolManager 자동 생성 방식이 기존 Initializer 패턴과 충돌
+   - 해결: 명시적 초기화(Initializer) + 폴백(PoolManager 자동 생성) 병행
+   - 적용: ProjectilePoolInitializer, EnemyPoolInitializer에 새 타입 추가
+
+3. **PoolManager 성능 최적화**
+   - 최적화: `Spawn(string, Vector3, Quaternion)` 오버로드 개선
+   - 변경: `HasPool()` 체크 후 조기 반환 → 불필요한 프리팹 로드 방지
+
+#### 📊 코드 통계
+
+**총 추가 라인**: ~1,560줄
+- 새 클래스: ~1,487줄
+  - EnemyProjectile.cs: ~120줄
+  - RangedEnemy.cs: ~417줄
+  - FlyingEnemy.cs: ~492줄
+  - EliteEnemy.cs: ~478줄
+- 에디터 도구: ~330줄
+  - EnemyDataCreator.cs: ~330줄
+- 기존 파일 수정: ~520줄
+
+**수정된 파일**: 8개
+**생성된 파일**: 6개 (4개 클래스 + 1개 에디터 도구 + 1개 가이드)
+
+#### 🎯 다음 단계
+
+**Unity 에디터 작업 필요**:
+1. `Tools → GASPT → Enemy Data Creator`로 3개 EnemyData 에셋 생성
+2. `Tools → GASPT → Prefab Creator`로 4개 프리팹 생성
+   - RangedEnemy.prefab
+   - FlyingEnemy.prefab
+   - EliteEnemy.prefab
+   - EnemyProjectile.prefab
+3. PHASE_C1_TEST_GUIDE.md 참고하여 씬 테스트 진행
+
+**Phase C-2 이후 작업**:
+- 적 AI 개선 (벽 감지, 낭떠러지 인식)
+- 적 애니메이션 시스템
+- 적 스킬 확장 (보스 스킬, 탄막 패턴)
+- 적 밸런싱 (플레이 테스트 기반)
+
+---
+
+**최종 업데이트**: 2025-11-15
+**현재 브랜치**: master
+**작업 상태**: Phase C-1 코드 구현 완료 ✅, Unity 에셋 생성 대기 중
+**총 코드 라인**: ~30,424줄 (+1,560줄)
+
+🚀 **Phase C-1 완료!**
+🎮 **3가지 새 적 타입**: RangedEnemy, FlyingEnemy, EliteEnemy
+💥 **적 투사체**: EnemyProjectile (원거리 공격)
+🛠️ **자동화 도구**: EnemyDataCreator (에셋 원클릭 생성)
+📖 **테스트 가이드**: PHASE_C1_TEST_GUIDE.md 참고
+⚠️ **다음 필수**: Unity에서 에셋 및 프리팹 생성

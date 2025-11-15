@@ -17,6 +17,9 @@ namespace GASPT.Data
         [Tooltip("적 타입 (Normal, Named, Boss)")]
         public EnemyType enemyType;
 
+        [Tooltip("적 클래스 (어떤 Enemy 컴포넌트를 사용할지 결정)")]
+        public EnemyClass enemyClass = EnemyClass.BasicMelee;
+
 
         // ====== 기본 정보 ======
 
@@ -85,6 +88,58 @@ namespace GASPT.Data
         [Tooltip("공격 쿨다운 (초)")]
         [Range(0.5f, 5f)]
         public float attackCooldown = 1.5f;
+
+
+        // ====== 원거리 적 설정 (RangedEnemy용) ======
+
+        [Header("원거리 적 설정")]
+        [Tooltip("최적 공격 거리 (RangedEnemy용)")]
+        [Range(5f, 20f)]
+        public float optimalAttackDistance = 10f;
+
+        [Tooltip("최소 안전 거리 (RangedEnemy용)")]
+        [Range(2f, 10f)]
+        public float minDistance = 5f;
+
+
+        // ====== 비행 적 설정 (FlyingEnemy용) ======
+
+        [Header("비행 적 설정")]
+        [Tooltip("비행 높이 (FlyingEnemy용)")]
+        [Range(3f, 10f)]
+        public float flyHeight = 6f;
+
+        [Tooltip("급강하 속도 (FlyingEnemy용)")]
+        [Range(5f, 20f)]
+        public float diveSpeed = 10f;
+
+        [Tooltip("일반 비행 속도 (FlyingEnemy용)")]
+        [Range(1f, 8f)]
+        public float flySpeed = 3f;
+
+
+        // ====== 정예 적 스킬 설정 (EliteEnemy용) ======
+
+        [Header("정예 적 스킬 설정")]
+        [Tooltip("돌진 공격 쿨다운 (초)")]
+        [Range(3f, 10f)]
+        public float chargeCooldown = 5f;
+
+        [Tooltip("범위 공격 쿨다운 (초)")]
+        [Range(5f, 15f)]
+        public float areaCooldown = 7f;
+
+        [Tooltip("범위 공격 반경")]
+        [Range(2f, 6f)]
+        public float areaAttackRadius = 3f;
+
+        [Tooltip("돌진 속도")]
+        [Range(5f, 15f)]
+        public float chargeSpeed = 8f;
+
+        [Tooltip("돌진 거리")]
+        [Range(3f, 10f)]
+        public float chargeDistance = 5f;
 
 
         // ====== UI ======

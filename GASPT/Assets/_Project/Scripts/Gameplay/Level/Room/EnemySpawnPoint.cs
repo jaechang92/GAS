@@ -2,6 +2,7 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Enemy;
+using Core.Enums;
 
 namespace GASPT.Gameplay.Level
 {
@@ -92,15 +93,47 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private GameObject CreateEnemyFromData(EnemyData data)
         {
-            // 풀에서 BasicMeleeEnemy 가져오기
-            var enemy = PoolManager.Instance.Spawn<BasicMeleeEnemy>(
-                transform.position,
-                Quaternion.identity
-            );
+            GASPT.Enemies.Enemy enemy;
+
+            // EnemyClass에 따라 적절한 Enemy 타입 스폰
+            switch (data.enemyClass)
+            {
+                case EnemyClass.BasicMelee:
+                    enemy = PoolManager.Instance.Spawn<BasicMeleeEnemy>(
+                        transform.position,
+                        Quaternion.identity
+                    );
+                    break;
+
+                case EnemyClass.Ranged:
+                    enemy = PoolManager.Instance.Spawn<RangedEnemy>(
+                        transform.position,
+                        Quaternion.identity
+                    );
+                    break;
+
+                case EnemyClass.Flying:
+                    enemy = PoolManager.Instance.Spawn<FlyingEnemy>(
+                        transform.position,
+                        Quaternion.identity
+                    );
+                    break;
+
+                case EnemyClass.Elite:
+                    enemy = PoolManager.Instance.Spawn<EliteEnemy>(
+                        transform.position,
+                        Quaternion.identity
+                    );
+                    break;
+
+                default:
+                    Debug.LogError($"[EnemySpawnPoint] {name}: 알 수 없는 EnemyClass '{data.enemyClass}'!");
+                    return null;
+            }
 
             if (enemy == null)
             {
-                Debug.LogError($"[EnemySpawnPoint] {name}: 풀에서 BasicMeleeEnemy를 가져올 수 없습니다!");
+                Debug.LogError($"[EnemySpawnPoint] {name}: 풀에서 {data.enemyClass} 타입의 Enemy를 가져올 수 없습니다!");
                 return null;
             }
 
