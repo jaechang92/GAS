@@ -1,8 +1,8 @@
 # 작업 현황 및 다음 단계
 
-**최종 업데이트**: 2025-11-13
+**최종 업데이트**: 2025-11-15
 **현재 브랜치**: `master`
-**작업 세션**: Phase B 완료 및 Master 병합, Phase C 기획 완료
+**작업 세션**: Phase C-1 완전 완료 (적 타입 시스템 + 테스트)
 
 ---
 
@@ -1777,6 +1777,56 @@ private void OnDisable()
    - 최적화: `Spawn(string, Vector3, Quaternion)` 오버로드 개선
    - 변경: `HasPool()` 체크 후 조기 반환 → 불필요한 프리팹 로드 방지
 
+4. **EnemyClass 타입 시스템 추가** ⭐ NEW
+   - 문제: EnemySpawnPoint가 항상 BasicMeleeEnemy만 스폰 (하드코딩)
+   - 해결: EnemyClass enum 추가 → 동적 적 타입 스폰
+   - 구현:
+     - `Core/Enums/EnemyClass.cs`: BasicMelee, Ranged, Flying, Elite
+     - `EnemyData.enemyClass` 필드 추가
+     - `EnemySpawnPoint.CreateEnemyFromData()`: switch문으로 타입별 스폰
+     - `EnemyDataCreator`: enemyClass 자동 설정
+   - 상속 구조 고려:
+     - GASPT.Enemies.Enemy (최상위)
+       ├─ PlatformerEnemy (지면 기반)
+       │  ├─ BasicMeleeEnemy
+       │  ├─ RangedEnemy
+       │  └─ EliteEnemy
+       └─ FlyingEnemy (직접 상속, 중력 무시)
+
+5. **중복 Creator 파일 정리**
+   - 삭제: BuffIconCreator, ItemPickupUICreator, PlayerExpBarCreator, PlayerHealthBarCreator, PlayerManaBarCreator
+   - 이유: GameplaySceneCreator로 통합됨
+
+6. **문서 추가**
+   - `RESOURCE_PATHS_GUIDE.md`: ResourcePaths 사용 가이드
+   - `docs/reference/unity-layermask-reference.md`: LayerMask API 완전 가이드
+   - `docs/reference/README.md`: 레퍼런스 문서 인덱스
+
+#### 🧪 테스트 결과
+
+**테스트 일자**: 2025-11-15
+**테스트 환경**: GameplayScene (재생성), Room_1
+
+✅ **적 스폰 테스트**
+- RangedGoblin → RangedEnemy 컴포넌트 스폰 확인
+- FlyingBat → FlyingEnemy 컴포넌트 스폰 확인
+- EliteOrc → EliteEnemy 컴포넌트 스폰 확인
+
+✅ **EnemyClass 타입 시스템**
+- enemyClass 필드 기반 동적 스폰 검증
+- EnemyData → 올바른 Enemy 클래스 매핑 확인
+
+✅ **에셋 생성**
+- EnemyDataCreator로 3개 에셋 생성 성공
+- 각 에셋의 enemyClass 자동 설정 확인
+
+✅ **GameplayScene 생성**
+- 가중치 랜덤 적 배치 (40% Basic, 30% Ranged, 20% Flying, 10% Elite)
+- Room_1에 2~4개 SpawnPoint 자동 생성
+- 다양한 적 타입 스폰 확인
+
+**모든 테스트 통과** 🎉
+
 #### 📊 코드 통계
 
 **총 추가 라인**: ~1,560줄
@@ -1794,16 +1844,16 @@ private void OnDisable()
 
 #### 🎯 다음 단계
 
-**Unity 에디터 작업 필요**:
-1. `Tools → GASPT → Enemy Data Creator`로 3개 EnemyData 에셋 생성
-2. `Tools → GASPT → Prefab Creator`로 4개 프리팹 생성
+**✅ Unity 에디터 작업 완료**:
+1. ✅ `Tools → GASPT → Enemy Data Creator`로 3개 EnemyData 에셋 생성
+2. ✅ `Tools → GASPT → Prefab Creator`로 4개 프리팹 생성
    - RangedEnemy.prefab
    - FlyingEnemy.prefab
    - EliteEnemy.prefab
    - EnemyProjectile.prefab
-3. PHASE_C1_TEST_GUIDE.md 참고하여 씬 테스트 진행
+3. ✅ PHASE_C1_TEST_GUIDE.md 참고하여 씬 테스트 완료
 
-**Phase C-2 이후 작업**:
+**Phase C-2 이후 작업 (권장)**:
 - 적 AI 개선 (벽 감지, 낭떠러지 인식)
 - 적 애니메이션 시스템
 - 적 스킬 확장 (보스 스킬, 탄막 패턴)
@@ -1813,12 +1863,15 @@ private void OnDisable()
 
 **최종 업데이트**: 2025-11-15
 **현재 브랜치**: master
-**작업 상태**: Phase C-1 코드 구현 완료 ✅, Unity 에셋 생성 대기 중
+**작업 상태**: Phase C-1 완전 완료 ✅ (코드 + 에셋 + 테스트)
 **총 코드 라인**: ~30,424줄 (+1,560줄)
+**커밋 해시**: a8b2433
 
-🚀 **Phase C-1 완료!**
+✅ **Phase C-1 완전 완료!**
 🎮 **3가지 새 적 타입**: RangedEnemy, FlyingEnemy, EliteEnemy
 💥 **적 투사체**: EnemyProjectile (원거리 공격)
-🛠️ **자동화 도구**: EnemyDataCreator (에셋 원클릭 생성)
-📖 **테스트 가이드**: PHASE_C1_TEST_GUIDE.md 참고
-⚠️ **다음 필수**: Unity에서 에셋 및 프리팹 생성
+🔧 **EnemyClass 타입 시스템**: 동적 적 스폰 구현
+🛠️ **자동화 도구**: EnemyDataCreator (enemyClass 자동 설정)
+📝 **문서 추가**: PHASE_C1_TEST_GUIDE.md, RESOURCE_PATHS_GUIDE.md, LayerMask 레퍼런스
+🧪 **테스트 완료**: RangedEnemy, FlyingEnemy, EliteEnemy 스폰 및 동작 검증
+🎯 **다음 작업**: Phase C-2 (플레이어 스킬 확장) 또는 Phase C-3 (레벨 디자인)
