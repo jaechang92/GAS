@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Stats;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.Data;
 using GASPT.Skills;
 using GASPT.Level;

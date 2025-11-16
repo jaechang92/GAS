@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 
 namespace GASPT.Form
 {
@@ -13,36 +13,38 @@ namespace GASPT.Form
     /// 관통할 때마다 데미지 감소
     /// 오브젝트 풀링 적용
     /// </summary>
-    public class LightningBoltAbility : IAbility
+    public class LightningBoltAbility : BaseProjectileAbility
     {
-        public string AbilityName => "Lightning Bolt";
-        public float Cooldown => 4f;  // 4초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Lightning Bolt";
+        public override float Cooldown => 4f;  // 4초 쿨다운
 
-        // 스킬 설정
+
+        // ====== 스킬 설정 ======
+
         private const int BaseDamage = 40;
         private const int DamageDecayPerHit = 10;  // 관통할 때마다 -10
         private const int MaxPierceCount = 3;      // 최대 3명
         private const float LightningRange = 15f;  // 최대 사거리
         private const float LightningWidth = 0.5f; // 번개 두께
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[LightningBolt] 쿨다운 중...");
                 return;
             }
 
-            // 쿨다운 즉시 시작 (중복 실행 방지)
-            lastUsedTime = Time.time;
+            // 쿨다운 시작 (중복 실행 방지)
+            StartCooldown();
 
             // 마우스 방향 계산
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector2 direction = (mousePos - caster.transform.position).normalized;
+            Vector2 direction = GetMouseDirection(caster);
 
             Debug.Log($"[LightningBolt] 번개 발사! 방향: {direction}");
 

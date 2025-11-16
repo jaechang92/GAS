@@ -271,7 +271,13 @@ namespace GASPT.UI
 
             try
             {
-                await FlashColorAsync(flashColor, flashCts.Token);
+                await UIAnimationHelper.FlashColorAsync(
+                    fillImage,
+                    flashColor,
+                    normalColor,
+                    flashDuration,
+                    flashCts.Token
+                );
             }
             catch (System.OperationCanceledException)
             {
@@ -279,32 +285,6 @@ namespace GASPT.UI
             }
         }
 
-        /// <summary>
-        /// 색상 플래시 Awaitable
-        /// </summary>
-        private async Awaitable FlashColorAsync(Color flashColor, CancellationToken ct)
-        {
-            float elapsed = 0f;
-
-            // 플래시 색상으로 변경
-            fillImage.color = flashColor;
-
-            // 점진적으로 원래 색상으로 복귀
-            while (elapsed < flashDuration)
-            {
-                if (ct.IsCancellationRequested) return;
-
-                elapsed += Time.deltaTime;
-                float t = elapsed / flashDuration;
-
-                fillImage.color = Color.Lerp(flashColor, normalColor, t);
-
-                await Awaitable.NextFrameAsync(ct);
-            }
-
-            // 최종 색상 설정
-            fillImage.color = normalColor;
-        }
 
         /// <summary>
         /// 레벨업 애니메이션

@@ -9,7 +9,7 @@ using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
 using Core.Enums;
 
-namespace GASPT.Enemies
+namespace GASPT.Gameplay.Enemy
 {
     /// <summary>
     /// 적 MonoBehaviour (추상 클래스)
@@ -116,12 +116,11 @@ namespace GASPT.Enemies
             SubscribeToStatusEffectEvents();
         }
 
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
             // StatusEffect 이벤트 구독 해제
             UnsubscribeFromStatusEffectEvents();
         }
-
 
         // ====== 초기화 ======
 

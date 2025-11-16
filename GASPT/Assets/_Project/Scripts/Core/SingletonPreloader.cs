@@ -10,9 +10,6 @@ using GASPT.ResourceManagement;
 using GASPT.Skills;
 using GASPT.Loot;
 using GASPT.Core.Pooling;
-using GASPT.Gameplay.Projectiles;
-using GASPT.Gameplay.Enemy;
-using GASPT.Gameplay.Effects;
 using GASPT.Gameplay.Item;
 
 namespace GASPT.Core
@@ -118,14 +115,8 @@ namespace GASPT.Core
             // 8. Skill Item System (LootSystem 의존)
             PreloadSkillItemManager();
 
-            // 9. Projectile Pools (PoolManager 의존)
-            InitializeProjectilePools();
-
-            // 10. Enemy Pools (PoolManager 의존)
-            InitializeEnemyPools();
-
-            // 11. Effect Pools (PoolManager 의존)
-            InitializeEffectPools();
+            // Note: Pool 초기화는 PoolInitializer.cs에서 자동으로 처리됩니다
+            // (RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)로 자동 실행)
 
             LogMessage($"총 {GetPreloadedCount()}개의 싱글톤 사전 로딩 완료");
         }
@@ -358,59 +349,6 @@ namespace GASPT.Core
             }
         }
 
-        /// <summary>
-        /// 투사체 풀 초기화
-        /// </summary>
-        private void InitializeProjectilePools()
-        {
-            LogMessage("투사체 풀 초기화 중...");
-
-            try
-            {
-                ProjectilePoolInitializer.InitializeAllPools();
-                LogMessage("✓ 투사체 풀 초기화 완료");
-            }
-            catch (System.Exception e)
-            {
-                LogError($"✗ 투사체 풀 초기화 실패: {e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Enemy 풀 초기화
-        /// </summary>
-        private void InitializeEnemyPools()
-        {
-            LogMessage("Enemy 풀 초기화 중...");
-
-            try
-            {
-                EnemyPoolInitializer.InitializeAllPools();
-                LogMessage("✓ Enemy 풀 초기화 완료");
-            }
-            catch (System.Exception e)
-            {
-                LogError($"✗ Enemy 풀 초기화 실패: {e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Effect 풀 초기화
-        /// </summary>
-        private void InitializeEffectPools()
-        {
-            LogMessage("Effect 풀 초기화 중...");
-
-            try
-            {
-                EffectPoolInitializer.InitializeAllPools();
-                LogMessage("✓ Effect 풀 초기화 완료");
-            }
-            catch (System.Exception e)
-            {
-                LogError($"✗ Effect 풀 초기화 실패: {e.Message}");
-            }
-        }
 
 
         // ====== 유틸리티 ======

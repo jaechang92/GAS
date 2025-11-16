@@ -11,29 +11,29 @@ namespace GASPT.Form
     /// 마우스 방향으로 빠른 마법 투사체 발사
     /// 오브젝트 풀링 적용
     /// </summary>
-    public class MagicMissileAbility : IAbility
+    public class MagicMissileAbility : BaseProjectileAbility
     {
-        public string AbilityName => "Magic Missile";
-        public float Cooldown => 0.5f;  // 0.5초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Magic Missile";
+        public override float Cooldown => 0.5f;  // 0.5초 쿨다운
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[MagicMissile] 쿨다운 중...");
                 return;
             }
 
-            // 쿨다운 즉시 시작 (중복 실행 방지)
-            lastUsedTime = Time.time;
+            // 쿨다운 시작 (중복 실행 방지)
+            StartCooldown();
 
             // 마우스 방향 계산
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector2 direction = (mousePos - caster.transform.position).normalized;
+            Vector2 direction = GetMouseDirection(caster);
 
             Debug.Log($"[MagicMissile] 발사! 방향: {direction}");
 
@@ -43,6 +43,9 @@ namespace GASPT.Form
             // 비동기 작업 없음 (Projectile이 자체적으로 움직임)
             await Task.CompletedTask;
         }
+
+
+        // ====== 발사 ======
 
         /// <summary>
         /// 마법 미사일 발사 (풀 사용)

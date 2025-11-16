@@ -29,18 +29,15 @@ namespace GASPT.Editor
             GUILayout.Space(10);
 
             EditorGUILayout.HelpBox(
-                "Phase C-1 적 타입 데이터 에셋을 자동으로 생성합니다.\n\n" +
+                "Phase C-1, C-2 적 타입 데이터 에셋을 자동으로 생성합니다.\n\n" +
                 "생성 위치: Assets/_Project/Data/Enemies/\n\n" +
                 "생성될 에셋:\n" +
                 "1. RangedGoblin (원거리 공격 고블린)\n" +
-                "   - 일정 거리 유지하며 투사체 발사\n" +
-                "   - 플레이어가 너무 가까우면 후퇴\n\n" +
                 "2. FlyingBat (비행 박쥐)\n" +
-                "   - 공중에서 순찰하다 급강하 공격\n" +
-                "   - 중력 무시, 트리거 충돌 사용\n\n" +
                 "3. EliteOrc (정예 오크)\n" +
-                "   - 돌진 공격 및 범위 공격 스킬 보유\n" +
-                "   - 높은 체력과 공격력",
+                "4. FireDragon (보스 - Phase C-2) ⭐\n" +
+                "   - 3단계 Phase 전투 시스템\n" +
+                "   - Phase별 고유 패턴 공격",
                 MessageType.Info
             );
 
@@ -74,6 +71,17 @@ namespace GASPT.Editor
                 CreateEliteOrcData();
             }
 
+            GUILayout.Space(10);
+
+            // Phase C-2: 보스 생성
+            EditorGUILayout.LabelField("Phase C-2 보스:", EditorStyles.boldLabel);
+            GUI.backgroundColor = Color.yellow;
+            if (GUILayout.Button("⭐ FireDragon 데이터 생성 (보스)", GUILayout.Height(30)))
+            {
+                CreateFireDragonData();
+            }
+            GUI.backgroundColor = Color.white;
+
             GUILayout.Space(20);
 
             // 기존 에셋 확인 버튼
@@ -103,16 +111,18 @@ namespace GASPT.Editor
             CreateRangedGoblinData();
             CreateFlyingBatData();
             CreateEliteOrcData();
+            CreateFireDragonData();
 
             AssetDatabase.Refresh();
 
             Debug.Log("[EnemyDataCreator] ✅ 모든 EnemyData 에셋 생성 완료!");
             EditorUtility.DisplayDialog(
                 "생성 완료",
-                "3개의 EnemyData 에셋이 생성되었습니다!\n\n" +
+                "4개의 EnemyData 에셋이 생성되었습니다!\n\n" +
                 "- RangedGoblin.asset\n" +
                 "- FlyingBat.asset\n" +
-                "- EliteOrc.asset\n\n" +
+                "- EliteOrc.asset\n" +
+                "- FireDragon.asset (보스) ⭐\n\n" +
                 $"위치: {EnemyDataPath}",
                 "확인"
             );
@@ -291,6 +301,71 @@ namespace GASPT.Editor
 
             AssetDatabase.CreateAsset(data, assetPath);
             Debug.Log($"[EnemyDataCreator] ✅ EliteOrc 생성: {assetPath}");
+        }
+
+        /// <summary>
+        /// FireDragon 데이터 생성 (보스)
+        /// Phase C-2: 3단계 보스 전투 시스템
+        /// </summary>
+        private void CreateFireDragonData()
+        {
+            string assetPath = Path.Combine(EnemyDataPath, "FireDragon.asset");
+
+            // 이미 존재하면 경고
+            if (AssetDatabase.LoadAssetAtPath<EnemyData>(assetPath) != null)
+            {
+                if (!EditorUtility.DisplayDialog(
+                    "덮어쓰기 확인",
+                    "FireDragon.asset이 이미 존재합니다.\n덮어쓰시겠습니까?",
+                    "덮어쓰기",
+                    "취소"))
+                {
+                    return;
+                }
+            }
+
+            EnemyData data = ScriptableObject.CreateInstance<EnemyData>();
+
+            // ====== 기본 정보 ======
+            data.enemyType = EnemyType.Boss;
+            data.enemyClass = EnemyClass.Boss;
+            data.enemyName = "화염 드래곤";
+
+            // ====== 스탯 ======
+            data.maxHp = 500;
+            data.attack = 25;
+
+            // ====== 보상 ======
+            data.minGoldDrop = 200;
+            data.maxGoldDrop = 300;
+            data.expReward = 500;
+
+            // ====== 플랫포머 설정 ======
+            data.moveSpeed = 2f;
+            data.detectionRange = 15f;
+            data.attackRange = 2.5f;
+            data.patrolDistance = 5f;
+            data.chaseSpeed = 3.5f;
+            data.attackCooldown = 1f;
+
+            // ====== 보스 전용 설정 ======
+            data.bossRangedCooldown = 3f;          // Phase 1 원거리 공격
+            data.bossChargeCooldown = 5f;          // Phase 2 돌진 공격
+            data.bossSummonCooldown = 10f;         // Phase 2 소환
+            data.bossAreaCooldown = 7f;            // Phase 3 범위 공격
+            data.bossAreaRadius = 5f;              // Phase 3 범위 공격 반경
+            data.bossProjectileSpeed = 10f;        // 투사체 속도
+            data.bossProjectileDamage = 20;        // 투사체 데미지
+            data.bossAreaDamage = 40;              // 범위 공격 데미지
+            data.bossChargeSpeed = 12f;            // 돌진 속도
+            data.bossChargeDistance = 10f;         // 돌진 거리
+
+            // ====== UI ======
+            data.showNameTag = false;
+            data.showBossHealthBar = true;
+
+            AssetDatabase.CreateAsset(data, assetPath);
+            Debug.Log($"[EnemyDataCreator] ✅ FireDragon (보스) 생성: {assetPath}");
         }
 
 

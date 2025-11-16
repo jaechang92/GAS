@@ -13,11 +13,40 @@ MonoBehaviour:
   m_Name: FireDragon
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Data.EnemyData
   enemyType: 2
-  enemyName: FireDragon
+  enemyClass: 4
+  enemyName: "\uD654\uC5FC \uB4DC\uB798\uACE4"
   icon: {fileID: 0}
-  maxHp: 150
-  attack: 15
-  minGoldDrop: 100
-  maxGoldDrop: 150
+  maxHp: 500
+  attack: 25
+  minGoldDrop: 200
+  maxGoldDrop: 300
+  expReward: 500
+  lootTable: {fileID: 0}
+  moveSpeed: 2
+  detectionRange: 15
+  attackRange: 2.5
+  patrolDistance: 5
+  chaseSpeed: 3.5
+  attackCooldown: 1
+  optimalAttackDistance: 10
+  minDistance: 5
+  flyHeight: 6
+  diveSpeed: 10
+  flySpeed: 3
+  chargeCooldown: 5
+  areaCooldown: 7
+  areaAttackRadius: 3
+  chargeSpeed: 8
+  chargeDistance: 5
+  bossRangedCooldown: 3
+  bossChargeCooldown: 5
+  bossSummonCooldown: 10
+  bossAreaCooldown: 7
+  bossAreaRadius: 5
+  bossProjectileSpeed: 10
+  bossProjectileDamage: 20
+  bossAreaDamage: 40
+  bossChargeSpeed: 12
+  bossChargeDistance: 10
   showNameTag: 0
   showBossHealthBar: 1

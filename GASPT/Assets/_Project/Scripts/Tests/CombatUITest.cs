@@ -1,6 +1,6 @@
 using UnityEngine;
 using GASPT.Stats;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.UI;
 
 namespace GASPT.Tests

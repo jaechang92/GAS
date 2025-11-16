@@ -13,7 +13,9 @@
       "Bash(git mv:*)",
       "Bash(git rm:*)",
       "Bash(git checkout:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(measure-object:*)"
     ],
     "deny": [],
     "ask": []

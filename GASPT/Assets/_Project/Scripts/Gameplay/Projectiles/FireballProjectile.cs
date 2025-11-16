@@ -1,6 +1,6 @@
 using UnityEngine;
 using GASPT.Core.Pooling;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.Gameplay.Effects;
 
 namespace GASPT.Gameplay.Projectiles
@@ -109,7 +109,7 @@ namespace GASPT.Gameplay.Projectiles
 
             foreach (var hit in hits)
             {
-                GASPT.Enemies.Enemy enemy = hit.GetComponent<GASPT.Enemies.Enemy>();
+                GASPT.Gameplay.Enemy.Enemy enemy = hit.GetComponent<GASPT.Gameplay.Enemy.Enemy>();
                 if (enemy != null && !enemy.IsDead)
                 {
                     enemy.TakeDamage((int)damage);

@@ -8,7 +8,7 @@ using GASPT.Save;
 using GASPT.UI;
 using GASPT.StatusEffects;
 using UnityEngine;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 
 namespace GASPT.Stats
 {

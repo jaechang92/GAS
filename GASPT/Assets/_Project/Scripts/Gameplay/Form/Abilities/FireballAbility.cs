@@ -11,29 +11,29 @@ namespace GASPT.Form
     /// 강력한 화염 투사체 발사 (폭발 범위 데미지)
     /// 오브젝트 풀링 적용
     /// </summary>
-    public class FireballAbility : IAbility
+    public class FireballAbility : BaseProjectileAbility
     {
-        public string AbilityName => "Fireball";
-        public float Cooldown => 5f;  // 5초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Fireball";
+        public override float Cooldown => 5f;  // 5초 쿨다운
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[Fireball] 쿨다운 중...");
                 return;
             }
 
-            // 쿨다운 즉시 시작 (중복 실행 방지)
-            lastUsedTime = Time.time;
+            // 쿨다운 시작 (중복 실행 방지)
+            StartCooldown();
 
             // 마우스 방향 계산
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector2 direction = (mousePos - caster.transform.position).normalized;
+            Vector2 direction = GetMouseDirection(caster);
 
             Debug.Log($"[Fireball] 화염구 발사! 방향: {direction}");
 
@@ -43,6 +43,9 @@ namespace GASPT.Form
             // 비동기 작업 없음 (Projectile이 자체적으로 움직임)
             await Task.CompletedTask;
         }
+
+
+        // ====== 발사 ======
 
         /// <summary>
         /// 화염구 발사 (풀 사용)

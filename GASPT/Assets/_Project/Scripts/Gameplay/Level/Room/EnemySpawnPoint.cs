@@ -93,7 +93,7 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private GameObject CreateEnemyFromData(EnemyData data)
         {
-            GASPT.Enemies.Enemy enemy;
+            GASPT.Gameplay.Enemy.Enemy enemy;
 
             // EnemyClass에 따라 적절한 Enemy 타입 스폰
             switch (data.enemyClass)

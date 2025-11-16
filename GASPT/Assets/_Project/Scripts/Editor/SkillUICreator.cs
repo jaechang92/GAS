@@ -18,7 +18,7 @@ namespace GASPT.Editor
             Debug.Log("========== Skill UI Panel 생성 시작 ==========");
 
             // Canvas 찾기 또는 생성
-            Canvas canvas = GetOrCreateCanvas();
+            Canvas canvas = EditorUtilities.FindOrCreateCanvas("[SkillUICreator]");
 
             // SkillUIPanel 생성
             GameObject panelObj = CreatePanel(canvas);
@@ -55,34 +55,6 @@ namespace GASPT.Editor
             Debug.Log($"✅ 모든 참조 자동 연결 완료");
         }
 
-
-        // ====== Canvas 생성/찾기 ======
-
-        private static Canvas GetOrCreateCanvas()
-        {
-            // 기존 Canvas 찾기
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
-            if (canvas != null)
-            {
-                Debug.Log($"✓ 기존 Canvas 재사용: {canvas.name}");
-                return canvas;
-            }
-
-            // 새 Canvas 생성
-            GameObject canvasObj = new GameObject("Canvas");
-            canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            canvasObj.AddComponent<GraphicRaycaster>();
-
-            Debug.Log($"✓ Canvas 생성: {canvasObj.name}");
-            return canvas;
-        }
 
 
         // ====== Panel 생성 ======

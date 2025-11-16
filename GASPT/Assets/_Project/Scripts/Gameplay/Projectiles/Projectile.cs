@@ -149,7 +149,7 @@ namespace GASPT.Gameplay.Projectiles
         protected virtual void OnHit(Collider2D hitCollider)
         {
             // Enemy에 데미지 적용
-            var enemy = hitCollider.GetComponent<GASPT.Enemies.Enemy>();
+            var enemy = hitCollider.GetComponent<GASPT.Gameplay.Enemy.Enemy>();
             if (enemy != null && !enemy.IsDead)
             {
                 enemy.TakeDamage((int)damage);

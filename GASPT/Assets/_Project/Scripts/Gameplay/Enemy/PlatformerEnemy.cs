@@ -1,5 +1,4 @@
 using UnityEngine;
-using GASPT.Enemies;
 
 namespace GASPT.Gameplay.Enemy
 {
@@ -10,7 +9,7 @@ namespace GASPT.Gameplay.Enemy
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
-    public abstract class PlatformerEnemy : GASPT.Enemies.Enemy
+    public abstract class PlatformerEnemy : Enemy
     {
         // ====== 상태 ======
 

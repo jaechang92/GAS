@@ -142,6 +142,50 @@ namespace GASPT.Data
         public float chargeDistance = 5f;
 
 
+        // ====== 보스 전용 설정 (BossEnemy용) ======
+
+        [Header("보스 전용 설정")]
+        [Tooltip("Phase 1 원거리 공격 쿨다운 (초)")]
+        [Range(2f, 10f)]
+        public float bossRangedCooldown = 3f;
+
+        [Tooltip("Phase 2 돌진 공격 쿨다운 (초)")]
+        [Range(3f, 15f)]
+        public float bossChargeCooldown = 5f;
+
+        [Tooltip("Phase 2 소환 쿨다운 (초)")]
+        [Range(5f, 20f)]
+        public float bossSummonCooldown = 10f;
+
+        [Tooltip("Phase 3 범위 공격 쿨다운 (초)")]
+        [Range(5f, 15f)]
+        public float bossAreaCooldown = 7f;
+
+        [Tooltip("Phase 3 범위 공격 반경")]
+        [Range(3f, 10f)]
+        public float bossAreaRadius = 5f;
+
+        [Tooltip("투사체 속도 (보스 원거리 공격)")]
+        [Range(5f, 20f)]
+        public float bossProjectileSpeed = 8f;
+
+        [Tooltip("투사체 데미지 (보스 원거리 공격)")]
+        [Range(10, 50)]
+        public int bossProjectileDamage = 15;
+
+        [Tooltip("범위 공격 데미지")]
+        [Range(20, 100)]
+        public int bossAreaDamage = 30;
+
+        [Tooltip("돌진 속도 (보스)")]
+        [Range(5f, 20f)]
+        public float bossChargeSpeed = 10f;
+
+        [Tooltip("돌진 거리 (보스)")]
+        [Range(5f, 15f)]
+        public float bossChargeDistance = 8f;
+
+
         // ====== UI ======
 
         [Header("UI")]

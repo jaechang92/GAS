@@ -1,6 +1,6 @@
 using UnityEngine;
 using GASPT.Core.Pooling;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.Gameplay.Effects;
 
 namespace GASPT.Gameplay.Projectiles
@@ -57,7 +57,7 @@ namespace GASPT.Gameplay.Projectiles
         /// </summary>
         protected override void OnHit(Collider2D hitCollider)
         {
-            GASPT.Enemies.Enemy enemy = hitCollider.GetComponent<GASPT.Enemies.Enemy>();
+            GASPT.Gameplay.Enemy.Enemy enemy = hitCollider.GetComponent<GASPT.Gameplay.Enemy.Enemy>();
             if (enemy != null && !enemy.IsDead)
             {
                 // 데미지 적용

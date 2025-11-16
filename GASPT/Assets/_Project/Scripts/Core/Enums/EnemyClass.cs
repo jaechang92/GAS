@@ -28,6 +28,12 @@ namespace Core.Enums
         /// 엘리트 적 (EliteEnemy)
         /// 특수 패턴과 강화된 능력
         /// </summary>
-        Elite
+        Elite,
+
+        /// <summary>
+        /// 보스 적 (BossEnemy)
+        /// 다단계 전투 및 복잡한 패턴
+        /// </summary>
+        Boss
     }
 }

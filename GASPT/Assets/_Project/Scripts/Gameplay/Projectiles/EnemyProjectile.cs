@@ -32,6 +32,25 @@ namespace GASPT.Gameplay.Projectiles
         }
 
 
+        // ====== 초기화 ======
+
+        /// <summary>
+        /// 투사체 초기화 및 발사
+        /// </summary>
+        /// <param name="direction">발사 방향</param>
+        /// <param name="projectileSpeed">투사체 속도</param>
+        /// <param name="projectileDamage">투사체 데미지</param>
+        public void Initialize(Vector2 direction, float projectileSpeed, int projectileDamage)
+        {
+            // 속도 및 데미지 설정
+            speed = projectileSpeed;
+            damage = projectileDamage;
+
+            // 발사
+            Launch(direction);
+        }
+
+
         // ====== 충돌 ======
 
         /// <summary>

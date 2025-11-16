@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 
 namespace GASPT.UI
 {

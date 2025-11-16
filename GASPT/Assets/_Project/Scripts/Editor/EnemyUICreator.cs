@@ -93,7 +93,7 @@ namespace GASPT.Editor
             AssignEnemyNameTagReferences(nameTagScript, nameText, background);
 
             // 5. 프리팹으로 저장
-            SaveAsPrefab(nameTag, ENEMY_NAME_TAG_PREFAB_PATH);
+            EditorUtilities.SaveAsPrefab(nameTag, ENEMY_NAME_TAG_PREFAB_PATH, "[EnemyUICreator]");
 
             // 6. Scene에서 제거
             Object.DestroyImmediate(nameTag);
@@ -141,7 +141,7 @@ namespace GASPT.Editor
             Debug.Log("[EnemyUICreator] BossHealthBar 생성 시작...");
 
             // 1. Canvas 찾기 또는 생성 (Screen Space Overlay)
-            Canvas canvas = FindOrCreateOverlayCanvas();
+            Canvas canvas = EditorUtilities.FindOrCreateCanvas("[EnemyUICreator]");
 
             // 2. BossHealthBar GameObject 생성
             GameObject bossHealthBar = new GameObject("BossHealthBar");
@@ -175,7 +175,7 @@ namespace GASPT.Editor
             AssignBossHealthBarReferences(bossHealthBarScript, bossNameText, healthBarFill, healthText);
 
             // 8. 프리팹으로 저장
-            SaveAsPrefab(bossHealthBar, BOSS_HEALTH_BAR_PREFAB_PATH);
+            EditorUtilities.SaveAsPrefab(bossHealthBar, BOSS_HEALTH_BAR_PREFAB_PATH, "[EnemyUICreator]");
 
             Debug.Log("[EnemyUICreator] BossHealthBar 생성 완료");
 
@@ -183,39 +183,6 @@ namespace GASPT.Editor
             Selection.activeGameObject = bossHealthBar;
         }
 
-        /// <summary>
-        /// Canvas 찾기 또는 생성 (Screen Space Overlay)
-        /// </summary>
-        private static Canvas FindOrCreateOverlayCanvas()
-        {
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
-
-            if (canvas == null || canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            {
-                Debug.Log("[EnemyUICreator] Screen Space Overlay Canvas를 찾을 수 없어 새로 생성합니다.");
-
-                // Canvas 생성
-                GameObject canvasObj = new GameObject("Canvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-                // CanvasScaler 추가
-                CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1920, 1080);
-
-                // GraphicRaycaster 추가
-                canvasObj.AddComponent<GraphicRaycaster>();
-
-                Debug.Log("[EnemyUICreator] Canvas 생성 완료");
-            }
-            else
-            {
-                Debug.Log("[EnemyUICreator] 기존 Canvas를 사용합니다.");
-            }
-
-            return canvas;
-        }
 
         /// <summary>
         /// BossNameText 생성
@@ -364,37 +331,6 @@ namespace GASPT.Editor
             {
                 Debug.LogError("[EnemyUICreator] BossHealthBar 필드를 찾을 수 없습니다.");
             }
-        }
-
-
-        // ====== 프리팹으로 저장 ======
-
-        /// <summary>
-        /// GameObject를 프리팹으로 저장
-        /// </summary>
-        private static void SaveAsPrefab(GameObject gameObject, string prefabPath)
-        {
-            // 프리팹 디렉토리 생성 (없으면)
-            string directory = System.IO.Path.GetDirectoryName(prefabPath);
-            if (!System.IO.Directory.Exists(directory))
-            {
-                System.IO.Directory.CreateDirectory(directory);
-                Debug.Log($"[EnemyUICreator] 디렉토리 생성: {directory}");
-            }
-
-            // 기존 프리팹이 있으면 경고
-            if (System.IO.File.Exists(prefabPath))
-            {
-                Debug.LogWarning($"[EnemyUICreator] 기존 프리팹이 있습니다. 덮어씁니다: {prefabPath}");
-            }
-
-            // 프리팹으로 저장
-            PrefabUtility.SaveAsPrefabAsset(gameObject, prefabPath);
-
-            // AssetDatabase 새로고침
-            AssetDatabase.Refresh();
-
-            Debug.Log($"[EnemyUICreator] 프리팹 저장 완료: {prefabPath}");
         }
     }
 }

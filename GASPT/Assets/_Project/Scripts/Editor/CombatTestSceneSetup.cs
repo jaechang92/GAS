@@ -273,7 +273,7 @@ namespace GASPT.Editor
             GameObject enemy = new GameObject("EnemyPrefab");
 
             // Enemy 컴포넌트 추가
-            enemy.AddComponent<GASPT.Enemies.Enemy>();
+            enemy.AddComponent<GASPT.Gameplay.Enemy.Enemy>();
 
             // 비주얼 (임시 Sphere)
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);

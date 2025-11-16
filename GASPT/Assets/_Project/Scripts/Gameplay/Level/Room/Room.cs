@@ -229,7 +229,7 @@ namespace GASPT.Gameplay.Level
             aliveEnemyCount++;
 
             // Enemy 컴포넌트의 OnDeath 이벤트 구독
-            var enemy = enemyObj.GetComponent<GASPT.Enemies.Enemy>();
+            var enemy = enemyObj.GetComponent<GASPT.Gameplay.Enemy.Enemy>();
             if (enemy != null)
             {
                 enemy.OnDeath += OnEnemyDeath;
@@ -239,7 +239,7 @@ namespace GASPT.Gameplay.Level
         /// <summary>
         /// 적 사망 시 호출
         /// </summary>
-        private void OnEnemyDeath(GASPT.Enemies.Enemy enemy)
+        private void OnEnemyDeath(GASPT.Gameplay.Enemy.Enemy enemy)
         {
             aliveEnemyCount--;
             OnEnemyCountChanged?.Invoke(this, aliveEnemyCount);

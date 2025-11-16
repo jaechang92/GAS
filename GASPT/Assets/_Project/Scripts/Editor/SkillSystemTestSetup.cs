@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using GASPT.Skills;
 using GASPT.Stats;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.Testing;
 using GASPT.Core;
 using GASPT.Data;

@@ -1,7 +1,7 @@
 using UnityEngine;
 using GASPT.Data;
 using GASPT.Stats;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using Core.Enums;
 
 namespace GASPT.StatusEffects

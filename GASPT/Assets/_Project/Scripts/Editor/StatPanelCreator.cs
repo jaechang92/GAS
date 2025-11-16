@@ -13,6 +13,7 @@ namespace GASPT.Editor
     public static class StatPanelCreator
     {
         private const string PREFAB_PATH = "Assets/_Project/Prefabs/UI/StatPanel.prefab";
+        private const string LOG_PREFIX = "[StatPanelCreator]";
 
         /// <summary>
         /// StatPanel UI 프리팹 생성 (메뉴 항목)
@@ -20,10 +21,10 @@ namespace GASPT.Editor
         [MenuItem("Tools/GASPT/Create StatPanel UI")]
         public static void CreateStatPanelUI()
         {
-            Debug.Log("[StatPanelCreator] StatPanel UI 생성 시작...");
+            Debug.Log($"{LOG_PREFIX} StatPanel UI 생성 시작...");
 
-            // 1. Canvas 찾기 또는 생성
-            Canvas canvas = FindOrCreateCanvas();
+            // 1. Canvas 찾기 또는 생성 (EditorUtilities 사용)
+            Canvas canvas = EditorUtilities.FindOrCreateCanvas(LOG_PREFIX);
 
             // 2. StatPanel GameObject 생성
             GameObject statPanel = CreateStatPanelGameObject(canvas.transform);
@@ -40,51 +41,14 @@ namespace GASPT.Editor
             StatPanelUI statPanelUI = statPanel.AddComponent<StatPanelUI>();
             AssignReferences(statPanelUI, hpText, attackText, defenseText);
 
-            // 6. 프리팹으로 저장
-            SaveAsPrefab(statPanel);
+            // 6. 프리팹으로 저장 (EditorUtilities 사용)
+            EditorUtilities.SaveAsPrefab(statPanel, PREFAB_PATH, LOG_PREFIX);
 
-            Debug.Log($"[StatPanelCreator] StatPanel UI 생성 완료! 프리팹 경로: {PREFAB_PATH}");
-            Debug.Log("[StatPanelCreator] Scene에 생성된 StatPanel은 프리팹으로 저장되었습니다. Scene에서 사용하려면 프리팹을 드래그하세요.");
+            Debug.Log($"{LOG_PREFIX} StatPanel UI 생성 완료! 프리팹 경로: {PREFAB_PATH}");
+            Debug.Log($"{LOG_PREFIX} Scene에 생성된 StatPanel은 프리팹으로 저장되었습니다. Scene에서 사용하려면 프리팹을 드래그하세요.");
 
             // Scene에서 선택
             Selection.activeGameObject = statPanel;
-        }
-
-
-        // ====== Canvas 생성 ======
-
-        /// <summary>
-        /// Canvas 찾기 또는 생성
-        /// </summary>
-        private static Canvas FindOrCreateCanvas()
-        {
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
-
-            if (canvas == null)
-            {
-                Debug.Log("[StatPanelCreator] Canvas를 찾을 수 없어 새로 생성합니다.");
-
-                // Canvas 생성
-                GameObject canvasObj = new GameObject("Canvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-                // CanvasScaler 추가
-                CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1920, 1080);
-
-                // GraphicRaycaster 추가
-                canvasObj.AddComponent<GraphicRaycaster>();
-
-                Debug.Log("[StatPanelCreator] Canvas 생성 완료");
-            }
-            else
-            {
-                Debug.Log("[StatPanelCreator] 기존 Canvas를 사용합니다.");
-            }
-
-            return canvas;
         }
 
 
@@ -209,34 +173,5 @@ namespace GASPT.Editor
         }
 
 
-        // ====== 프리팹으로 저장 ======
-
-        /// <summary>
-        /// GameObject를 프리팹으로 저장
-        /// </summary>
-        private static void SaveAsPrefab(GameObject gameObject)
-        {
-            // 프리팹 디렉토리 생성 (없으면)
-            string directory = System.IO.Path.GetDirectoryName(PREFAB_PATH);
-            if (!System.IO.Directory.Exists(directory))
-            {
-                System.IO.Directory.CreateDirectory(directory);
-                Debug.Log($"[StatPanelCreator] 디렉토리 생성: {directory}");
-            }
-
-            // 기존 프리팹이 있으면 경고
-            if (System.IO.File.Exists(PREFAB_PATH))
-            {
-                Debug.LogWarning($"[StatPanelCreator] 기존 프리팹이 있습니다. 덮어씁니다: {PREFAB_PATH}");
-            }
-
-            // 프리팹으로 저장
-            PrefabUtility.SaveAsPrefabAsset(gameObject, PREFAB_PATH);
-
-            // AssetDatabase 새로고침
-            AssetDatabase.Refresh();
-
-            Debug.Log($"[StatPanelCreator] 프리팹 저장 완료: {PREFAB_PATH}");
-        }
     }
 }

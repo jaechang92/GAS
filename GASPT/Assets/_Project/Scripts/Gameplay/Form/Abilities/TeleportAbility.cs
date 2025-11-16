@@ -8,27 +8,31 @@ namespace GASPT.Form
     /// 순간이동 - 마법사 스킬 1
     /// 마우스 방향으로 짧은 거리 텔레포트
     /// </summary>
-    public class TeleportAbility : IAbility
+    public class TeleportAbility : BaseProjectileAbility
     {
-        public string AbilityName => "Teleport";
-        public float Cooldown => 3f;  // 3초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Teleport";
+        public override float Cooldown => 3f;  // 3초 쿨다운
+
+
+        // ====== 스킬 설정 ======
+
         private const float TeleportDistance = 5f;  // 텔레포트 거리
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[Teleport] 쿨다운 중...");
                 return;
             }
 
             // 마우스 방향 계산
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector2 direction = (mousePos - caster.transform.position).normalized;
+            Vector2 direction = GetMouseDirection(caster);
 
             // 텔레포트 위치 계산
             Vector3 teleportPos = caster.transform.position + (Vector3)(direction * TeleportDistance);
@@ -37,7 +41,7 @@ namespace GASPT.Form
             PerformTeleport(caster, teleportPos);
 
             // 쿨다운 시작
-            lastUsedTime = Time.time;
+            StartCooldown();
 
             Debug.Log($"[Teleport] 순간이동! {caster.transform.position} → {teleportPos}");
 

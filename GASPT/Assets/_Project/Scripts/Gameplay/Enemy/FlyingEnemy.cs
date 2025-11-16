@@ -1,5 +1,4 @@
 using UnityEngine;
-using GASPT.Enemies;
 
 namespace GASPT.Gameplay.Enemy
 {
@@ -7,13 +6,17 @@ namespace GASPT.Gameplay.Enemy
     /// 비행 적
     /// FSM: Idle → Fly → PositionAbove → DiveAttack → ReturnToAir → Dead
     /// 공중에서 이동하며 플레이어 머리 위에서 급강하 공격
-    /// PlatformerEnemy를 사용하지 않고 Enemy를 직접 상속
+    ///
+    /// ✅ PlatformerEnemy 상속으로 중복 코드 제거:
+    /// - 컴포넌트 필드 (rb, col, spriteRenderer)
+    /// - 플레이어 참조 (playerTransform, playerStats)
+    /// - 공통 메서드 (FindPlayer, Stop, IsPlayerInDetectionRange 등)
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
-    public class FlyingEnemy : GASPT.Enemies.Enemy
+    public class FlyingEnemy : PlatformerEnemy
     {
-        // ====== 상태 ======
+        // ====== 비행 전용 상태 ======
 
         /// <summary>
         /// 비행 적 AI 상태
@@ -28,21 +31,8 @@ namespace GASPT.Gameplay.Enemy
             Dead            // 사망
         }
 
-        private FlyingState currentState = FlyingState.Idle;
-        private FlyingState previousState = FlyingState.Idle;
-
-
-        // ====== 컴포넌트 ======
-
-        private Rigidbody2D rb;
-        private Collider2D col;
-        private SpriteRenderer spriteRenderer;
-
-
-        // ====== 플레이어 참조 ======
-
-        private Transform playerTransform;
-        private GASPT.Stats.PlayerStats playerStats;
+        private FlyingState flyingState = FlyingState.Idle;
+        private FlyingState previousFlyingState = FlyingState.Idle;
 
 
         // ====== 비행 설정 ======
@@ -52,123 +42,89 @@ namespace GASPT.Gameplay.Enemy
         [SerializeField] private LayerMask groundLayer = 1 << 8; // Ground Layer
 
 
-        // ====== 상태 변수 ======
+        // ====== 비행 전용 상태 변수 ======
 
-        private Vector3 startPosition;
         private Vector3 diveStartPosition;
         private bool isDiving;
-        private float lastAttackTime;
-        private bool isFacingRight = true;
 
 
-        // ====== 디버그 ======
+        // ====== Unity 생명주기 (Override) ======
 
-        [Header("디버그")]
-        [SerializeField] private bool showDebugLogs = false;
-        [SerializeField] private bool showGizmos = true;
-
-
-        // ====== Unity 생명주기 ======
-
-        private void Start()
+        protected override void Start()
         {
-            InitializeComponents();
-            FindPlayer();
+            base.Start(); // PlatformerEnemy.Start() 호출
 
-            startPosition = transform.position;
+            // 비행 높이 초기화
             targetFlyHeight = transform.position.y + (Data != null ? Data.flyHeight : 6f);
 
-            ChangeState(FlyingState.Idle);
+            ChangeFlyingState(FlyingState.Idle);
         }
 
-        private void Update()
+        protected override void Update()
         {
             if (IsDead)
             {
-                if (currentState != FlyingState.Dead)
+                if (flyingState != FlyingState.Dead)
                 {
-                    ChangeState(FlyingState.Dead);
+                    ChangeFlyingState(FlyingState.Dead);
                 }
                 return;
             }
 
-            UpdateState();
+            UpdateFlyingState();
         }
 
-        private void FixedUpdate()
+        protected override void FixedUpdate()
         {
             if (IsDead) return;
 
-            PhysicsUpdate();
+            PhysicsUpdateFlying();
         }
 
 
-        // ====== 초기화 ======
+        // ====== 초기화 (Override) ======
 
         /// <summary>
-        /// 컴포넌트 초기화
+        /// 컴포넌트 초기화 (비행 적 전용)
         /// </summary>
-        private void InitializeComponents()
+        protected override void InitializeComponents()
         {
-            rb = GetComponent<Rigidbody2D>();
-            col = GetComponent<Collider2D>();
-            spriteRenderer = GetComponent<SpriteRenderer>();
+            base.InitializeComponents(); // PlatformerEnemy 초기화
 
-            // Rigidbody2D 설정 (중력 무시)
+            // 비행 특성: 중력 비활성화
             if (rb != null)
             {
-                rb.gravityScale = 0f; // 비행 적은 중력 무시
-                rb.freezeRotation = true;
-                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.gravityScale = 0f;
             }
 
             if (showDebugLogs)
                 Debug.Log($"[FlyingEnemy] {Data?.enemyName} 컴포넌트 초기화 완료 (중력 무시)");
         }
 
-        /// <summary>
-        /// 플레이어 찾기
-        /// </summary>
-        private void FindPlayer()
-        {
-            playerStats = FindAnyObjectByType<GASPT.Stats.PlayerStats>();
 
-            if (playerStats != null)
-            {
-                playerTransform = playerStats.transform;
-                if (showDebugLogs)
-                    Debug.Log($"[FlyingEnemy] {Data?.enemyName} 플레이어 찾기 성공");
-            }
-            else
-            {
-                Debug.LogWarning($"[FlyingEnemy] {Data?.enemyName} 플레이어를 찾을 수 없습니다!");
-            }
-        }
-
-
-        // ====== FSM 상태 관리 ======
+        // ====== FSM 상태 관리 (비행 전용) ======
 
         /// <summary>
-        /// 상태 변경
+        /// 비행 상태 변경
         /// </summary>
-        private void ChangeState(FlyingState newState)
+        private void ChangeFlyingState(FlyingState newState)
         {
-            if (currentState == newState) return;
+            if (flyingState == newState) return;
 
-            previousState = currentState;
-            currentState = newState;
+            previousFlyingState = flyingState;
+            flyingState = newState;
 
             if (showDebugLogs)
-                Debug.Log($"[FlyingEnemy] {Data?.enemyName} 상태 변경: {previousState} → {currentState}");
+                Debug.Log($"[FlyingEnemy] {Data?.enemyName} 상태 변경: {previousFlyingState} → {flyingState}");
 
-            OnStateExit(previousState);
-            OnStateEnter(currentState);
+            OnFlyingStateExit(previousFlyingState);
+            OnFlyingStateEnter(flyingState);
         }
 
         /// <summary>
-        /// 상태 진입 시 호출
+        /// 비행 상태 진입 시 호출
         /// </summary>
-        private void OnStateEnter(FlyingState state)
+        private void OnFlyingStateEnter(FlyingState state)
         {
             switch (state)
             {
@@ -210,19 +166,19 @@ namespace GASPT.Gameplay.Enemy
         }
 
         /// <summary>
-        /// 상태 퇴장 시 호출
+        /// 비행 상태 퇴장 시 호출
         /// </summary>
-        private void OnStateExit(FlyingState state)
+        private void OnFlyingStateExit(FlyingState state)
         {
             // 필요 시 구현
         }
 
         /// <summary>
-        /// 상태 업데이트 (매 프레임)
+        /// 비행 상태 업데이트 (매 프레임)
         /// </summary>
-        private void UpdateState()
+        private void UpdateFlyingState()
         {
-            switch (currentState)
+            switch (flyingState)
             {
                 case FlyingState.Idle:
                     UpdateIdle();
@@ -251,13 +207,13 @@ namespace GASPT.Gameplay.Enemy
         }
 
         /// <summary>
-        /// 물리 업데이트 (FixedUpdate)
+        /// 비행 물리 업데이트 (FixedUpdate)
         /// </summary>
-        private void PhysicsUpdate()
+        private void PhysicsUpdateFlying()
         {
             if (Data == null) return;
 
-            switch (currentState)
+            switch (flyingState)
             {
                 case FlyingState.Fly:
                     PhysicsFly();
@@ -283,7 +239,7 @@ namespace GASPT.Gameplay.Enemy
         private void UpdateIdle()
         {
             // 일정 시간 후 Fly 상태로 전환
-            ChangeState(FlyingState.Fly);
+            ChangeFlyingState(FlyingState.Fly);
         }
 
 
@@ -291,10 +247,10 @@ namespace GASPT.Gameplay.Enemy
 
         private void UpdateFly()
         {
-            // 플레이어 감지 체크
+            // 플레이어 감지 체크 (PlatformerEnemy의 메서드 사용)
             if (IsPlayerInDetectionRange())
             {
-                ChangeState(FlyingState.PositionAbove);
+                ChangeFlyingState(FlyingState.PositionAbove);
                 return;
             }
 
@@ -328,8 +284,8 @@ namespace GASPT.Gameplay.Enemy
 
             rb.linearVelocity = velocity;
 
-            // 스프라이트 반전
-            UpdateSpriteDirection();
+            // 스프라이트 반전 (PlatformerEnemy의 Flip 로직 활용)
+            UpdateFlyingDirection();
         }
 
 
@@ -340,7 +296,7 @@ namespace GASPT.Gameplay.Enemy
             // 목표 위치 도달 체크 (PhysicsUpdate에서 이동)
             if (IsAbovePlayer())
             {
-                ChangeState(FlyingState.DiveAttack);
+                ChangeFlyingState(FlyingState.DiveAttack);
             }
         }
 
@@ -365,7 +321,7 @@ namespace GASPT.Gameplay.Enemy
             else if (direction.x < -0.01f)
                 isFacingRight = false;
 
-            UpdateSpriteDirection();
+            UpdateFlyingDirection();
         }
 
 
@@ -376,7 +332,7 @@ namespace GASPT.Gameplay.Enemy
             // 지면 또는 플레이어 충돌 체크 (PhysicsUpdate에서 이동)
             if (IsGroundBelow() || HasDivedEnough())
             {
-                ChangeState(FlyingState.ReturnToAir);
+                ChangeFlyingState(FlyingState.ReturnToAir);
             }
         }
 
@@ -394,7 +350,7 @@ namespace GASPT.Gameplay.Enemy
             else if (diveDirection.x < -0.01f)
                 isFacingRight = false;
 
-            UpdateSpriteDirection();
+            UpdateFlyingDirection();
         }
 
 
@@ -405,7 +361,7 @@ namespace GASPT.Gameplay.Enemy
             // 목표 높이 도달 체크
             if (Mathf.Abs(transform.position.y - targetFlyHeight) < 0.5f)
             {
-                ChangeState(FlyingState.Fly);
+                ChangeFlyingState(FlyingState.Fly);
                 lastAttackTime = Time.time;
             }
         }
@@ -417,17 +373,7 @@ namespace GASPT.Gameplay.Enemy
         }
 
 
-        // ====== 플레이어 감지 ======
-
-        /// <summary>
-        /// 플레이어가 감지 범위 안에 있는지 확인
-        /// </summary>
-        private bool IsPlayerInDetectionRange()
-        {
-            if (Data == null || playerTransform == null) return false;
-            float distance = Vector2.Distance(transform.position, playerTransform.position);
-            return distance <= Data.detectionRange;
-        }
+        // ====== 비행 전용 유틸리티 ======
 
         /// <summary>
         /// 플레이어 위에 있는지 확인
@@ -463,22 +409,10 @@ namespace GASPT.Gameplay.Enemy
             return hit.collider != null;
         }
 
-
-        // ====== 이동 ======
-
         /// <summary>
-        /// 정지
+        /// 비행 방향에 따라 스프라이트 업데이트
         /// </summary>
-        private void Stop()
-        {
-            if (rb == null) return;
-            rb.linearVelocity = Vector2.zero;
-        }
-
-        /// <summary>
-        /// 스프라이트 방향 업데이트
-        /// </summary>
-        private void UpdateSpriteDirection()
+        private void UpdateFlyingDirection()
         {
             if (spriteRenderer != null)
             {
@@ -497,8 +431,8 @@ namespace GASPT.Gameplay.Enemy
                 var player = collision.GetComponent<GASPT.Stats.PlayerStats>();
                 if (player != null && !player.IsDead)
                 {
-                    DealDamageTo(player);
-                    ChangeState(FlyingState.ReturnToAir);
+                    DealDamageTo(player); // PlatformerEnemy의 메서드 사용
+                    ChangeFlyingState(FlyingState.ReturnToAir);
 
                     if (showDebugLogs)
                         Debug.Log($"[FlyingEnemy] {Data?.enemyName} 플레이어 급강하 공격 성공!");
@@ -507,15 +441,13 @@ namespace GASPT.Gameplay.Enemy
         }
 
 
-        // ====== Gizmos ======
+        // ====== Gizmos (Override) ======
 
-        private void OnDrawGizmos()
+        protected override void OnDrawGizmos()
         {
-            if (!showGizmos || Data == null) return;
+            base.OnDrawGizmos(); // PlatformerEnemy Gizmos
 
-            // 감지 범위 (노란색)
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, Data.detectionRange);
+            if (!showGizmos || Data == null) return;
 
             // 목표 비행 높이 (시안색)
             Gizmos.color = Color.cyan;
@@ -524,17 +456,15 @@ namespace GASPT.Gameplay.Enemy
             Gizmos.DrawLine(heightLine - Vector3.right * 2f, heightLine + Vector3.right * 2f);
         }
 
-        private void OnDrawGizmosSelected()
+        protected override void OnDrawGizmosSelected()
         {
+            base.OnDrawGizmosSelected(); // PlatformerEnemy Gizmos
+
             if (Data == null) return;
 
-            // 플레이어까지의 선 (마젠타)
+            // 플레이어 위 목표 위치
             if (playerTransform != null)
             {
-                Gizmos.color = Color.magenta;
-                Gizmos.DrawLine(transform.position, playerTransform.position);
-
-                // 플레이어 위 목표 위치
                 Vector3 targetPosition = new Vector3(
                     playerTransform.position.x,
                     playerTransform.position.y + Data.flyHeight,
@@ -544,9 +474,9 @@ namespace GASPT.Gameplay.Enemy
                 Gizmos.DrawWireSphere(targetPosition, 0.5f);
             }
 
-            // 현재 상태 표시
-            UnityEditor.Handles.Label(transform.position + Vector3.up * 2f,
-                $"State: {currentState}\nHP: {CurrentHp}/{MaxHp}");
+            // 현재 비행 상태 표시
+            UnityEditor.Handles.Label(transform.position + Vector3.up * 3f,
+                $"FlyingState: {flyingState}\nHP: {CurrentHp}/{MaxHp}");
         }
 
 
@@ -556,7 +486,7 @@ namespace GASPT.Gameplay.Enemy
         private void DebugPrintInfo()
         {
             Debug.Log($"=== {Data?.enemyName} FlyingEnemy Info ===\n" +
-                     $"State: {currentState}\n" +
+                     $"Flying State: {flyingState}\n" +
                      $"Position: {transform.position}\n" +
                      $"Target Fly Height: {targetFlyHeight}\n" +
                      $"Is Diving: {isDiving}\n" +
@@ -567,15 +497,15 @@ namespace GASPT.Gameplay.Enemy
         }
 
         [ContextMenu("Force State: Idle")]
-        private void DebugForceIdle() => ChangeState(FlyingState.Idle);
+        private void DebugForceIdle() => ChangeFlyingState(FlyingState.Idle);
 
         [ContextMenu("Force State: Fly")]
-        private void DebugForceFly() => ChangeState(FlyingState.Fly);
+        private void DebugForceFly() => ChangeFlyingState(FlyingState.Fly);
 
         [ContextMenu("Force State: PositionAbove")]
-        private void DebugForcePositionAbove() => ChangeState(FlyingState.PositionAbove);
+        private void DebugForcePositionAbove() => ChangeFlyingState(FlyingState.PositionAbove);
 
         [ContextMenu("Force State: DiveAttack")]
-        private void DebugForceDiveAttack() => ChangeState(FlyingState.DiveAttack);
+        private void DebugForceDiveAttack() => ChangeFlyingState(FlyingState.DiveAttack);
     }
 }

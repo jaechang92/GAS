@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
-using GASPT.Enemies;
+using GASPT.Gameplay.Enemy;
 using GASPT.StatusEffects;
 
 namespace GASPT.Form
@@ -13,34 +13,37 @@ namespace GASPT.Form
     /// 마우스 위치에 빙결 범위 공격 (데미지 + 슬로우)
     /// 오브젝트 풀링 적용
     /// </summary>
-    public class IceBlastAbility : IAbility
+    public class IceBlastAbility : BaseProjectileAbility
     {
-        public string AbilityName => "Ice Blast";
-        public float Cooldown => 3f;  // 3초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Ice Blast";
+        public override float Cooldown => 3f;  // 3초 쿨다운
 
-        // 스킬 설정
+
+        // ====== 스킬 설정 ======
+
         private const int Damage = 30;
         private const float BlastRadius = 2.5f;
         private const float SlowDuration = 2f;
         private const float SlowAmount = 0.5f;  // 50% 슬로우
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[IceBlast] 쿨다운 중...");
                 return;
             }
 
-            // 쿨다운 즉시 시작 (중복 실행 방지)
-            lastUsedTime = Time.time;
+            // 쿨다운 시작 (중복 실행 방지)
+            StartCooldown();
 
             // 마우스 위치 가져오기
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
+            Vector3 mousePos = GetMousePosition();
 
             Debug.Log($"[IceBlast] 빙결 시전! 위치: {mousePos}");
 

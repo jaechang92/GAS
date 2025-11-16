@@ -13,27 +13,31 @@ namespace GASPT.Form
     /// 시각적 보호막 효과 표시
     /// 오브젝트 풀링 및 StatusEffect 시스템 사용
     /// </summary>
-    public class ShieldAbility : IAbility
+    public class ShieldAbility : BaseAbility
     {
-        public string AbilityName => "Shield";
-        public float Cooldown => 8f;  // 8초 쿨다운
+        // ====== Ability 정보 ======
 
-        private float lastUsedTime;
+        public override string AbilityName => "Shield";
+        public override float Cooldown => 8f;  // 8초 쿨다운
 
-        // 스킬 설정
+
+        // ====== 스킬 설정 ======
+
         private const float ShieldDuration = 3f;  // 3초간 무적
 
-        public async Task ExecuteAsync(GameObject caster, CancellationToken token)
+
+        // ====== 실행 ======
+
+        public override async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
             // 쿨다운 체크
-            if (Time.time - lastUsedTime < Cooldown)
+            if (!CheckCooldown())
             {
-                Debug.Log("[Shield] 쿨다운 중...");
                 return;
             }
 
-            // 쿨다운 즉시 시작 (중복 실행 방지)
-            lastUsedTime = Time.time;
+            // 쿨다운 시작 (중복 실행 방지)
+            StartCooldown();
 
             Debug.Log($"[Shield] 보호막 시전! (지속시간: {ShieldDuration}초)");
 
