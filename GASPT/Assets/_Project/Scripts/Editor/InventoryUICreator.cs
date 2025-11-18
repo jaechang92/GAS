@@ -478,13 +478,18 @@ namespace GASPT.EditorTools
             GameObject slot = new GameObject("EquipmentSlot");
 
             RectTransform slotRect = slot.AddComponent<RectTransform>();
-            slotRect.anchorMin = new Vector2(0f, 0.5f);
-            slotRect.anchorMax = new Vector2(1f, 0.5f);
-            slotRect.pivot = new Vector2(0.5f, 0.5f);
+            slotRect.anchorMin = new Vector2(0f, 1f);  // Left Top
+            slotRect.anchorMax = new Vector2(0f, 1f);  // Left Top
+            slotRect.pivot = new Vector2(0f, 1f);      // Left Top
             slotRect.sizeDelta = new Vector2(0f, 120f);
 
             Image slotBg = slot.AddComponent<Image>();
             slotBg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+
+            // LayoutElement 추가 (VerticalLayoutGroup 호환)
+            LayoutElement layoutElement = slot.AddComponent<LayoutElement>();
+            layoutElement.flexibleWidth = 1f;
+            layoutElement.preferredHeight = 120f;
 
             // SlotNameText
             GameObject slotNameObj = new GameObject("SlotNameText");
