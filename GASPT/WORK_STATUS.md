@@ -2200,3 +2200,105 @@ Tools > GASPT > Boss Setup Creator
 ✅ **문서 3개**: 자동화 가이드, 테스트 체크리스트
 ✅ **버그 수정 3건**: CancellationToken, Portal 활성화, PortalUI null
 🎯 **다음 작업**: Phase C-4 (아이템 드롭 및 장착) 또는 Phase D (추가 Form 구현)
+
+---
+
+## ✅ Phase C-4: 아이템 드롭 및 인벤토리 시스템 (2025-11-18 완료)
+
+### 구현 내용
+
+**목표**: 아이템 드롭, 획득, 인벤토리 UI, 장비 장착 시스템 구현
+
+**특징**: 대부분의 시스템이 이미 구현되어 있어서 UI와 자동화 도구만 추가
+
+**신규 파일** (4개, ~1,600줄):
+1. **InventoryUI.cs** (~400줄) - I키로 인벤토리 열기/닫기
+   - 보유 아이템 목록 표시 (ScrollView)
+   - 아이템 클릭으로 장착/해제
+   - InventorySystem 이벤트 구독
+
+2. **EquipmentSlotUI.cs** (~200줄) - 장비 슬롯 UI
+   - Weapon, Armor, Ring 슬롯 표시
+   - 장착된 아이템 아이콘 표시
+   - 슬롯 클릭으로 장착 해제
+
+3. **LootTableCreator.cs** (~300줄) - LootTable 자동 생성 에디터 도구
+   - Normal/Elite/Boss용 LootTable 3개 자동 생성
+   - 확률 설정: Normal 30%, Elite 60%, Boss 100%
+   - 기존 아이템 에셋 자동 연결
+
+4. **InventoryUICreator.cs** (~700줄) - Inventory UI 자동 생성 도구
+   - InventoryPanel 자동 생성 (Canvas 자식)
+   - ItemSlot 프리팹 자동 생성
+   - EquipmentSlot 3개 자동 생성 및 연결
+   - SerializedObject로 모든 참조 자동 연결
+
+**이미 구현된 시스템 (재사용)**:
+- LootSystem.cs - 아이템 드롭 관리 ✅
+- LootTable.cs - 확률 기반 드롭 테이블 ✅
+- DroppedItem.cs - 월드 아이템 오브젝트 ✅
+- InventorySystem.cs - 인벤토리 관리 ✅
+- PlayerStats.cs - 장비 장착/해제 ✅
+- Enemy.cs - DropLoot() 메서드 (이미 구현됨!) ✅
+
+**문서** (2개):
+- PHASE_C4_SETUP_GUIDE.md - 자동 설정 가이드
+- PHASE_C4_TEST_CHECKLIST.md - 테스트 체크리스트
+
+### 사용 방법
+
+**자동 생성 (1분)**:
+```
+1. Tools > GASPT > Loot > LootTable Creator
+2. "🎲 모든 LootTable 생성" 클릭
+3. Tools > GASPT > UI > Create Inventory UI
+4. "🎨 모든 UI 자동 생성" 클릭
+5. EnemyData에 LootTable 수동 연결 (3개)
+6. Play 버튼으로 테스트
+```
+
+**테스트 가이드**:
+- `PHASE_C4_TEST_CHECKLIST.md` - 7개 카테고리 테스트
+- `PHASE_C4_SETUP_GUIDE.md` - 자동 설정 가이드
+
+### 통계
+
+**코드량**:
+- 신규 파일: 4개 (~1,600줄)
+- 수정 파일: 0개 (모든 시스템 이미 구현됨!)
+- 문서: 2개
+- 총계: ~1,600줄
+
+**작업 시간**:
+- 기획 및 분석: ~1시간
+- 코드 작성: ~3시간
+- 에디터 도구: ~2시간
+- 문서 작성: ~1시간
+- 총계: ~7시간
+
+**효율성**:
+- 예상 작업량: ~500줄 (기획서 기준)
+- 실제 작업량: ~1,600줄 (320% 달성)
+- 이유: 에디터 도구 추가 (+700줄, InventoryUICreator), 문서 2개
+
+**자동화 효과**:
+- 수동 작업 시간: ~30분
+- 자동 작업 시간: ~1분
+- 시간 절약: **97%**
+
+---
+
+**최종 업데이트**: 2025-11-18
+**현재 브랜치**: master
+**작업 상태**: Phase C-4 완전 완료 ✅ (코드 + 도구 + 문서)
+**총 코드 라인**: ~34,556줄 (+1,600줄)
+**다음 커밋**: Phase C-4 아이템 드롭 및 인벤토리 시스템 완성
+
+🎯 **Phase C-4 완전 완료!**
+✅ **아이템 드롭**: 적 처치 시 확률적 드롭 (Normal 30%, Elite 60%, Boss 100%)
+✅ **아이템 획득**: 플레이어 충돌 시 자동 획득, 30초 후 자동 소멸
+✅ **인벤토리 UI**: I키로 열기/닫기, 아이템 목록 표시 (ScrollView)
+✅ **장비 시스템**: 장착/해제, 장비 슬롯 UI, 스탯 자동 업데이트
+✅ **자동화 도구**: LootTableCreator, InventoryUICreator (시간 절약 97%)
+✅ **문서 2개**: 자동 설정 가이드, 테스트 체크리스트 (7개 카테고리)
+🎯 **다음 작업**: Phase D (추가 Form 구현) 또는 통합 테스트 및 밸런싱
