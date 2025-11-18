@@ -286,89 +286,29 @@ namespace GASPT.EditorTools
         }
 
         /// <summary>
-        /// EquipmentSlot 생성
+        /// EquipmentSlot 생성 (프리팹 인스턴스화)
         /// </summary>
         private GameObject CreateEquipmentSlot(string name, GameObject parent)
         {
-            GameObject slot = new GameObject(name);
-            slot.transform.SetParent(parent.transform, false);
+            // 프리팹 로드
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath + "EquipmentSlot.prefab");
 
-            RectTransform slotRect = slot.AddComponent<RectTransform>();
-            slotRect.anchorMin = new Vector2(0f, 0.5f);
-            slotRect.anchorMax = new Vector2(1f, 0.5f);
-            slotRect.pivot = new Vector2(0.5f, 0.5f);
-            slotRect.sizeDelta = new Vector2(0f, 120f);
+            if (prefab == null)
+            {
+                Debug.LogError($"[InventoryUICreator] EquipmentSlot 프리팹을 찾을 수 없습니다: {PrefabPath}EquipmentSlot.prefab");
+                return null;
+            }
 
-            Image slotBg = slot.AddComponent<Image>();
-            slotBg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+            // 프리팹 인스턴스화
+            GameObject slot = PrefabUtility.InstantiatePrefab(prefab, parent.transform) as GameObject;
+            slot.name = name;
 
-            // SlotNameText
-            GameObject slotNameObj = new GameObject("SlotNameText");
-            slotNameObj.transform.SetParent(slot.transform, false);
-
-            RectTransform slotNameRect = slotNameObj.AddComponent<RectTransform>();
-            slotNameRect.anchorMin = new Vector2(0f, 1f);
-            slotNameRect.anchorMax = new Vector2(1f, 1f);
-            slotNameRect.pivot = new Vector2(0.5f, 1f);
-            slotNameRect.anchoredPosition = new Vector2(0f, -10f);
-            slotNameRect.sizeDelta = new Vector2(-20f, 30f);
-
-            TextMeshProUGUI slotNameText = slotNameObj.AddComponent<TextMeshProUGUI>();
-            slotNameText.text = name.Replace("Slot", "");
-            slotNameText.fontSize = 20f;
-            slotNameText.alignment = TextAlignmentOptions.Center;
-            slotNameText.color = Color.yellow;
-
-            // IconImage
-            GameObject iconObj = new GameObject("IconImage");
-            iconObj.transform.SetParent(slot.transform, false);
-
-            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0f, 0.5f);
-            iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(10f, -10f);
-            iconRect.sizeDelta = new Vector2(60f, 60f);
-
-            Image iconImage = iconObj.AddComponent<Image>();
-            iconImage.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-
-            // ItemNameText
-            GameObject itemNameObj = new GameObject("ItemNameText");
-            itemNameObj.transform.SetParent(slot.transform, false);
-
-            RectTransform itemNameRect = itemNameObj.AddComponent<RectTransform>();
-            itemNameRect.anchorMin = new Vector2(0f, 0.5f);
-            itemNameRect.anchorMax = new Vector2(1f, 0.5f);
-            itemNameRect.pivot = new Vector2(0.5f, 0.5f);
-            itemNameRect.anchoredPosition = new Vector2(40f, -10f);
-            itemNameRect.sizeDelta = new Vector2(-100f, 40f);
-
-            TextMeshProUGUI itemNameText = itemNameObj.AddComponent<TextMeshProUGUI>();
-            itemNameText.text = "비어있음";
-            itemNameText.fontSize = 18f;
-            itemNameText.alignment = TextAlignmentOptions.Left;
-            itemNameText.color = Color.gray;
-
-            // EmptySlotObject
-            GameObject emptyObj = new GameObject("EmptySlotObject");
-            emptyObj.transform.SetParent(slot.transform, false);
-
-            RectTransform emptyRect = emptyObj.AddComponent<RectTransform>();
-            emptyRect.anchorMin = Vector2.zero;
-            emptyRect.anchorMax = Vector2.one;
-            emptyRect.sizeDelta = Vector2.zero;
-
-            // EquipmentSlotUI 컴포넌트 추가
-            EquipmentSlotUI slotUI = slot.AddComponent<EquipmentSlotUI>();
-
-            // SerializedObject로 참조 설정
-            SerializedObject so = new SerializedObject(slotUI);
-            so.FindProperty("slotNameText").objectReferenceValue = slotNameText;
-            so.FindProperty("iconImage").objectReferenceValue = iconImage;
-            so.FindProperty("itemNameText").objectReferenceValue = itemNameText;
-            so.FindProperty("emptySlotObject").objectReferenceValue = emptyObj;
-            so.ApplyModifiedProperties();
+            // SlotNameText만 업데이트
+            TextMeshProUGUI slotNameText = slot.transform.Find("SlotNameText")?.GetComponent<TextMeshProUGUI>();
+            if (slotNameText != null)
+            {
+                slotNameText.text = name.Replace("Slot", "");
+            }
 
             return slot;
         }
@@ -523,11 +463,102 @@ namespace GASPT.EditorTools
         }
 
         /// <summary>
-        /// EquipmentSlot 프리팹 생성 (현재는 사용하지 않음, 추후 확장용)
+        /// EquipmentSlot 프리팹 생성 (템플릿)
         /// </summary>
         private void CreateEquipmentSlotPrefab()
         {
-            Debug.Log("[InventoryUICreator] EquipmentSlot은 InventoryPanel 내부에서 자동 생성됩니다.");
+            // 폴더 확인
+            if (!Directory.Exists(PrefabPath))
+            {
+                Directory.CreateDirectory(PrefabPath);
+            }
+
+            GameObject slot = new GameObject("EquipmentSlot");
+
+            RectTransform slotRect = slot.AddComponent<RectTransform>();
+            slotRect.anchorMin = new Vector2(0f, 0.5f);
+            slotRect.anchorMax = new Vector2(1f, 0.5f);
+            slotRect.pivot = new Vector2(0.5f, 0.5f);
+            slotRect.sizeDelta = new Vector2(0f, 120f);
+
+            Image slotBg = slot.AddComponent<Image>();
+            slotBg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+
+            // SlotNameText
+            GameObject slotNameObj = new GameObject("SlotNameText");
+            slotNameObj.transform.SetParent(slot.transform, false);
+
+            RectTransform slotNameRect = slotNameObj.AddComponent<RectTransform>();
+            slotNameRect.anchorMin = new Vector2(0f, 1f);
+            slotNameRect.anchorMax = new Vector2(1f, 1f);
+            slotNameRect.pivot = new Vector2(0.5f, 1f);
+            slotNameRect.anchoredPosition = new Vector2(0f, -10f);
+            slotNameRect.sizeDelta = new Vector2(-20f, 30f);
+
+            TextMeshProUGUI slotNameText = slotNameObj.AddComponent<TextMeshProUGUI>();
+            slotNameText.text = "Slot";
+            slotNameText.fontSize = 20f;
+            slotNameText.alignment = TextAlignmentOptions.Center;
+            slotNameText.color = Color.yellow;
+
+            // IconImage
+            GameObject iconObj = new GameObject("IconImage");
+            iconObj.transform.SetParent(slot.transform, false);
+
+            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(10f, -10f);
+            iconRect.sizeDelta = new Vector2(60f, 60f);
+
+            Image iconImage = iconObj.AddComponent<Image>();
+            iconImage.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+
+            // ItemNameText
+            GameObject itemNameObj = new GameObject("ItemNameText");
+            itemNameObj.transform.SetParent(slot.transform, false);
+
+            RectTransform itemNameRect = itemNameObj.AddComponent<RectTransform>();
+            itemNameRect.anchorMin = new Vector2(0f, 0.5f);
+            itemNameRect.anchorMax = new Vector2(1f, 0.5f);
+            itemNameRect.pivot = new Vector2(0.5f, 0.5f);
+            itemNameRect.anchoredPosition = new Vector2(40f, -10f);
+            itemNameRect.sizeDelta = new Vector2(-100f, 40f);
+
+            TextMeshProUGUI itemNameText = itemNameObj.AddComponent<TextMeshProUGUI>();
+            itemNameText.text = "비어있음";
+            itemNameText.fontSize = 18f;
+            itemNameText.alignment = TextAlignmentOptions.Left;
+            itemNameText.color = Color.gray;
+
+            // EmptySlotObject
+            GameObject emptyObj = new GameObject("EmptySlotObject");
+            emptyObj.transform.SetParent(slot.transform, false);
+
+            RectTransform emptyRect = emptyObj.AddComponent<RectTransform>();
+            emptyRect.anchorMin = Vector2.zero;
+            emptyRect.anchorMax = Vector2.one;
+            emptyRect.sizeDelta = Vector2.zero;
+
+            // EquipmentSlotUI 컴포넌트 추가
+            EquipmentSlotUI slotUI = slot.AddComponent<EquipmentSlotUI>();
+
+            // SerializedObject로 참조 설정
+            SerializedObject so = new SerializedObject(slotUI);
+            so.FindProperty("slotNameText").objectReferenceValue = slotNameText;
+            so.FindProperty("iconImage").objectReferenceValue = iconImage;
+            so.FindProperty("itemNameText").objectReferenceValue = itemNameText;
+            so.FindProperty("emptySlotObject").objectReferenceValue = emptyObj;
+            so.ApplyModifiedProperties();
+
+            // 프리팹 저장
+            string prefabPath = PrefabPath + "EquipmentSlot.prefab";
+            PrefabUtility.SaveAsPrefabAsset(slot, prefabPath);
+
+            DestroyImmediate(slot);
+
+            Debug.Log($"[InventoryUICreator] EquipmentSlot 프리팹 생성 완료: {prefabPath}");
         }
 
 
@@ -555,6 +586,14 @@ namespace GASPT.EditorTools
             {
                 AssetDatabase.DeleteAsset(itemSlotPath);
                 Debug.Log("[InventoryUICreator] ItemSlot 프리팹 삭제 완료");
+            }
+
+            // EquipmentSlot 프리팹 삭제
+            string equipmentSlotPath = PrefabPath + "EquipmentSlot.prefab";
+            if (File.Exists(equipmentSlotPath))
+            {
+                AssetDatabase.DeleteAsset(equipmentSlotPath);
+                Debug.Log("[InventoryUICreator] EquipmentSlot 프리팹 삭제 완료");
             }
 
             AssetDatabase.SaveAssets();
