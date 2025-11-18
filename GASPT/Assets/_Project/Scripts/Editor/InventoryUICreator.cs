@@ -274,7 +274,9 @@ namespace GASPT.EditorTools
 
             // Vertical Layout
             VerticalLayoutGroup layout = equipPanel.AddComponent<VerticalLayoutGroup>();
+            layout.childControlWidth = false;
             layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
             layout.spacing = 20f;
             layout.padding = new RectOffset(20, 20, 20, 20);
