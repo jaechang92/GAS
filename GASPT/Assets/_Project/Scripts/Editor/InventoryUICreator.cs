@@ -57,14 +57,14 @@ namespace GASPT.EditorTools
             // 버튼
             if (GUILayout.Button("🎨 모든 UI 자동 생성", GUILayout.Height(40f)))
             {
-                CreateAllUI();
+                EditorApplication.delayCall += CreateAllUI;
             }
 
             GUILayout.Space(10f);
 
             if (GUILayout.Button("🗑️ 모든 UI 삭제", GUILayout.Height(30f)))
             {
-                DeleteAllUI();
+                EditorApplication.delayCall += DeleteAllUI;
             }
 
             GUILayout.Space(20f);
@@ -294,6 +294,9 @@ namespace GASPT.EditorTools
             slot.transform.SetParent(parent.transform, false);
 
             RectTransform slotRect = slot.AddComponent<RectTransform>();
+            slotRect.anchorMin = new Vector2(0f, 0.5f);
+            slotRect.anchorMax = new Vector2(1f, 0.5f);
+            slotRect.pivot = new Vector2(0.5f, 0.5f);
             slotRect.sizeDelta = new Vector2(0f, 120f);
 
             Image slotBg = slot.AddComponent<Image>();
@@ -423,7 +426,10 @@ namespace GASPT.EditorTools
             GameObject slot = new GameObject("ItemSlot");
 
             RectTransform slotRect = slot.AddComponent<RectTransform>();
-            slotRect.sizeDelta = new Vector2(400f, 80f);
+            slotRect.anchorMin = new Vector2(0f, 0.5f);
+            slotRect.anchorMax = new Vector2(1f, 0.5f);
+            slotRect.pivot = new Vector2(0.5f, 0.5f);
+            slotRect.sizeDelta = new Vector2(0f, 80f);
 
             Image slotBg = slot.AddComponent<Image>();
             slotBg.color = new Color(0.3f, 0.3f, 0.3f, 1f);
