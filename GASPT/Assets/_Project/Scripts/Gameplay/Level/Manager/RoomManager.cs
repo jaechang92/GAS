@@ -28,17 +28,24 @@ namespace GASPT.Gameplay.Level
         [Tooltip("현재 등록된 방 목록 (자동 업데이트)")]
         [SerializeField] private List<Room> rooms = new List<Room>();
 
+        [Header("UI")]
+        [Tooltip("던전 클리어 UI")]
+        [SerializeField] private GASPT.UI.DungeonCompleteUI dungeonCompleteUI;
+
 
         // ====== 현재 상태 ======
 
         private Room currentRoom;
         private int currentRoomIndex = -1;
+        private int totalGoldEarned = 0;
+        private int totalExpEarned = 0;
 
 
         // ====== 이벤트 ======
 
         public event Action<Room> OnRoomChanged;
         public event Action<Room> OnRoomCleared;
+        public event Action OnDungeonCompleted;
 
 
         // ====== 프로퍼티 ======
@@ -251,7 +258,75 @@ namespace GASPT.Gameplay.Level
         private void OnDungeonComplete()
         {
             Debug.Log("[RoomManager] 던전 클리어!");
-            // TODO: 클리어 UI, 보상 등
+
+            // 보스 방 여부 확인
+            bool isBossRoom = currentRoom != null && currentRoom.name.Contains("Boss");
+
+            // 던전 완주 보상 지급
+            GiveDungeonCompleteRewards(isBossRoom);
+
+            // 플레이어 완전 회복
+            HealPlayerFull();
+
+            // 이벤트 발생
+            OnDungeonCompleted?.Invoke();
+
+            // DungeonCompleteUI 표시
+            if (dungeonCompleteUI != null)
+            {
+                dungeonCompleteUI.Show(totalGoldEarned, totalExpEarned);
+            }
+            else
+            {
+                Debug.LogWarning("[RoomManager] DungeonCompleteUI가 할당되지 않았습니다.");
+            }
+        }
+
+        /// <summary>
+        /// 던전 완주 보상 지급
+        /// </summary>
+        private void GiveDungeonCompleteRewards(bool isBossRoom)
+        {
+            // 보스 방 클리어 시 특별 보상 (x2)
+            int bonusGold = isBossRoom ? 500 : 200;
+            int bonusExp = isBossRoom ? 1000 : 500;
+
+            // 골드 지급
+            var currencySystem = GASPT.Economy.CurrencySystem.Instance;
+            if (currencySystem != null)
+            {
+                currencySystem.AddGold(bonusGold);
+                totalGoldEarned += bonusGold;
+                Debug.Log($"[RoomManager] 던전 완주 보너스 골드 {bonusGold} 획득!");
+            }
+
+            // 경험치 지급
+            var playerLevel = GASPT.Level.PlayerLevel.Instance;
+            if (playerLevel != null)
+            {
+                playerLevel.AddExp(bonusExp);
+                totalExpEarned += bonusExp;
+                Debug.Log($"[RoomManager] 던전 완주 보너스 경험치 {bonusExp} 획득!");
+            }
+        }
+
+        /// <summary>
+        /// 플레이어 완전 회복
+        /// </summary>
+        private void HealPlayerFull()
+        {
+            var playerStats = FindAnyObjectByType<GASPT.Stats.PlayerStats>();
+
+            if (playerStats == null)
+            {
+                Debug.LogWarning("[RoomManager] PlayerStats를 찾을 수 없습니다. 체력 회복 불가.");
+                return;
+            }
+
+            // 완전 회복 (Revive 메서드 사용)
+            playerStats.Revive();
+
+            Debug.Log($"[RoomManager] 플레이어 완전 회복! ({playerStats.CurrentHP}/{playerStats.MaxHP})");
         }
 
 

@@ -92,15 +92,29 @@ namespace GASPT.Level
             currentLevel = startingLevel;
             currentExp = 0;
 
-            // PlayerStats 찾기
-            playerStats = FindAnyObjectByType<PlayerStats>();
+            Debug.Log($"[PlayerLevel] 초기화 완료 - Level: {currentLevel}, EXP: {currentExp}/{RequiredExp}");
+        }
 
+        /// <summary>
+        /// PlayerStats 참조 가져오기 (Lazy Initialization)
+        /// </summary>
+        private PlayerStats GetPlayerStats()
+        {
             if (playerStats == null)
             {
-                Debug.LogWarning("[PlayerLevel] PlayerStats를 찾을 수 없습니다. 레벨업 스탯 증가가 작동하지 않습니다.");
+                playerStats = FindAnyObjectByType<PlayerStats>();
+
+                if (playerStats == null)
+                {
+                    Debug.LogWarning("[PlayerLevel] PlayerStats를 찾을 수 없습니다.");
+                }
+                else
+                {
+                    Debug.Log("[PlayerLevel] PlayerStats 참조 획득 성공");
+                }
             }
 
-            Debug.Log($"[PlayerLevel] 초기화 완료 - Level: {currentLevel}, EXP: {currentExp}/{RequiredExp}");
+            return playerStats;
         }
 
 
@@ -179,7 +193,9 @@ namespace GASPT.Level
         /// </summary>
         private void ApplyLevelUpStats()
         {
-            if (playerStats == null)
+            PlayerStats stats = GetPlayerStats();
+
+            if (stats == null)
             {
                 Debug.LogWarning("[PlayerLevel] PlayerStats가 없어서 스탯을 증가시킬 수 없습니다.");
                 return;
@@ -193,31 +209,31 @@ namespace GASPT.Level
 
             if (baseHPField != null)
             {
-                int currentHP = (int)baseHPField.GetValue(playerStats);
-                baseHPField.SetValue(playerStats, currentHP + hpPerLevel);
+                int currentHP = (int)baseHPField.GetValue(stats);
+                baseHPField.SetValue(stats, currentHP + hpPerLevel);
             }
 
             if (baseAttackField != null)
             {
-                int currentAttack = (int)baseAttackField.GetValue(playerStats);
-                baseAttackField.SetValue(playerStats, currentAttack + attackPerLevel);
+                int currentAttack = (int)baseAttackField.GetValue(stats);
+                baseAttackField.SetValue(stats, currentAttack + attackPerLevel);
             }
 
             if (baseDefenseField != null)
             {
-                int currentDefense = (int)baseDefenseField.GetValue(playerStats);
-                baseDefenseField.SetValue(playerStats, currentDefense + defensePerLevel);
+                int currentDefense = (int)baseDefenseField.GetValue(stats);
+                baseDefenseField.SetValue(stats, currentDefense + defensePerLevel);
             }
 
             // 스탯 재계산 강제 실행 (Dirty Flag 설정)
             var isDirtyField = typeof(PlayerStats).GetField("isDirty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (isDirtyField != null)
             {
-                isDirtyField.SetValue(playerStats, true);
+                isDirtyField.SetValue(stats, true);
             }
 
             // 현재 HP를 MaxHP로 회복 (레벨업 보너스)
-            playerStats.Revive();
+            stats.Revive();
 
             Debug.Log($"[PlayerLevel] 스탯 증가 적용: HP +{hpPerLevel}, Attack +{attackPerLevel}, Defense +{defensePerLevel}");
         }

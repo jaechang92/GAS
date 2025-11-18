@@ -276,7 +276,8 @@ namespace GASPT.Gameplay.Level
                     }
                 }
 
-                await Awaitable.WaitForSecondsAsync(0.5f, token);
+                // token 없이 대기 (while 조건으로 취소 체크)
+                await Awaitable.WaitForSecondsAsync(0.5f);
             }
         }
 
@@ -352,6 +353,46 @@ namespace GASPT.Gameplay.Level
                     playerLevel.AddExp(roomData.bonusExp);
                     Debug.Log($"[Room] 보너스 경험치 {roomData.bonusExp} 획득!");
                 }
+            }
+
+            // 체력 회복 (현재 MaxHP의 30%)
+            HealPlayer(0.3f);
+        }
+
+        /// <summary>
+        /// 플레이어 체력 회복
+        /// </summary>
+        /// <param name="healPercent">회복 비율 (0.0 ~ 1.0)</param>
+        private void HealPlayer(float healPercent)
+        {
+            var playerStats = FindAnyObjectByType<GASPT.Stats.PlayerStats>();
+
+            if (playerStats == null)
+            {
+                Debug.LogWarning("[Room] PlayerStats를 찾을 수 없습니다. 체력 회복 불가.");
+                return;
+            }
+
+            // 현재 MaxHP의 healPercent만큼 회복
+            int maxHp = playerStats.MaxHP;
+            int healAmount = Mathf.RoundToInt(maxHp * healPercent);
+
+            // 현재 HP 확인
+            int currentHp = playerStats.CurrentHP;
+            int newHp = Mathf.Min(currentHp + healAmount, maxHp);
+            int actualHealed = newHp - currentHp;
+
+            if (actualHealed > 0)
+            {
+                // PlayerStats.Heal() 메서드가 없으므로 직접 HP 설정
+                // Reflection을 사용하거나, TakeDamage(-healAmount) 사용
+                playerStats.TakeDamage(-healAmount); // 음수 데미지 = 회복
+
+                Debug.Log($"[Room] 체력 회복! +{actualHealed} HP (현재: {playerStats.CurrentHP}/{maxHp})");
+            }
+            else
+            {
+                Debug.Log($"[Room] 이미 체력이 가득 차 있습니다. ({currentHp}/{maxHp})");
             }
         }
 

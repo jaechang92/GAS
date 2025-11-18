@@ -63,8 +63,10 @@ namespace GASPT.Gameplay.Enemy
 
         // ====== Unity 생명주기 ======
 
-        protected virtual void Start()
+        protected override void Start()
         {
+            base.Start(); // Enemy.Start() 호출 (HP 초기화)
+
             InitializeComponents();
             FindPlayer();
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Core;
+using GASPT.UI;
 
 namespace GASPT.Gameplay.Level
 {
@@ -42,11 +43,20 @@ namespace GASPT.Gameplay.Level
         [SerializeField] private Color activeColor = new Color(0, 1f, 1f, 1f); // 시안색
 
 
+        // ====== UI ======
+
+        [Header("UI")]
+        [Tooltip("포탈 상호작용 UI (PortalUI)")]
+        [SerializeField] private PortalUI portalUI;
+
+
         // ====== 상태 ======
 
         private bool isActive = false;
         private Collider2D portalCollider;
         private Room parentRoom;
+        private bool playerInRange = false;
+        private GASPT.Stats.PlayerStats playerInPortal = null;
 
 
         // ====== Unity 생명주기 ======
@@ -61,6 +71,16 @@ namespace GASPT.Gameplay.Level
 
             // 초기 상태 설정
             SetActive(startActive);
+
+            // 디버그 로그
+            if (parentRoom == null)
+            {
+                Debug.LogWarning($"[Portal] {name}: 부모 Room을 찾을 수 없습니다! Portal은 Room의 자식이어야 합니다.");
+            }
+            else
+            {
+                Debug.Log($"[Portal] {name}: 부모 Room 찾기 성공 - {parentRoom.name}");
+            }
         }
 
         private void Start()
@@ -69,6 +89,23 @@ namespace GASPT.Gameplay.Level
             if (autoActivateOnRoomClear && parentRoom != null)
             {
                 parentRoom.OnRoomClear += OnRoomCleared;
+                Debug.Log($"[Portal] {name}: Room 클리어 이벤트 구독 완료 (AutoActivate: {autoActivateOnRoomClear})");
+            }
+            else
+            {
+                Debug.LogWarning($"[Portal] {name}: Room 클리어 이벤트 구독 실패! (AutoActivate: {autoActivateOnRoomClear}, ParentRoom: {parentRoom != null})");
+            }
+        }
+
+        private void Update()
+        {
+            // E키 입력 체크 (플레이어가 포탈 범위 안에 있고, 포탈이 활성화 상태일 때)
+            if (playerInRange && isActive && playerInPortal != null)
+            {
+                if (Input.GetKeyDown(KeyCode.E))
+                {
+                    OnPlayerUsePortal();
+                }
             }
         }
 
@@ -91,19 +128,58 @@ namespace GASPT.Gameplay.Level
             // 플레이어 확인 (PlayerStats 컴포넌트로 확인)
             if (other.TryGetComponent<GASPT.Stats.PlayerStats>(out var player))
             {
-                OnPlayerEnter(player);
+                playerInRange = true;
+                playerInPortal = player;
+
+                // PortalUI 표시
+                if(portalUI == null) portalUI = FindAnyObjectByType<PortalUI>(FindObjectsInactive.Include);
+
+                if (portalUI != null)
+                {
+                    portalUI.Show();
+                }
+
+                Debug.Log($"[Portal] 플레이어가 포탈 범위 진입!");
+            }
+        }
+
+        private void OnTriggerExit2D(Collider2D other)
+        {
+            // 플레이어 확인
+            if (other.TryGetComponent<GASPT.Stats.PlayerStats>(out var player))
+            {
+                playerInRange = false;
+                playerInPortal = null;
+
+                // PortalUI 숨김
+                if (portalUI != null)
+                {
+                    portalUI.Hide();
+                }
+
+                Debug.Log($"[Portal] 플레이어가 포탈 범위 벗어남!");
             }
         }
 
 
-        // ====== 플레이어 진입 ======
+        // ====== 포탈 사용 ======
 
         /// <summary>
-        /// 플레이어가 포탈에 진입했을 때
+        /// 플레이어가 포탈 사용 (E키 입력 시)
         /// </summary>
-        private void OnPlayerEnter(GASPT.Stats.PlayerStats player)
+        private void OnPlayerUsePortal()
         {
-            Debug.Log($"[Portal] 플레이어가 포탈에 진입!");
+            Debug.Log($"[Portal] 플레이어가 포탈 사용!");
+
+            // PortalUI 숨김
+            if (portalUI != null)
+            {
+                portalUI.Hide();
+            }
+
+            // 플레이어 범위 초기화
+            playerInRange = false;
+            playerInPortal = null;
 
             // 다음 방으로 이동
             UsePortalAsync().Forget();

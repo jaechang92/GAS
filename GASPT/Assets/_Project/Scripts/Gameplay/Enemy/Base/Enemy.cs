@@ -101,7 +101,7 @@ namespace GASPT.Gameplay.Enemy
             // Awake에서 호출하면 AddComponent 시 enemyData가 아직 설정되지 않아 에러 발생
         }
 
-        private void Start()
+        protected virtual void Start()
         {
             // Inspector에서 직접 설정한 경우 Start에서 초기화
             if (enemyData != null && currentHp == 0)

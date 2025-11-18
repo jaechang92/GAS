@@ -335,6 +335,27 @@ namespace GASPT.Editor
             string minionPath = Path.Combine(EnemyPrefabsPath, "BasicMeleeEnemy.prefab");
             GameObject minionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(minionPath);
 
+            // BasicMeleeEnemy 데이터 로드 (소환용 - 적절한 데이터로 변경 가능)
+            // 여러 가능한 경로 시도 (TestGoblin, NormalGoblin 등)
+            string[] possibleMinionDataPaths = new string[]
+            {
+                Path.Combine(EnemyDataPath, "TestGoblin.asset"),
+                Path.Combine(EnemyDataPath, "Normal Goblin.asset"),
+                Path.Combine(EnemyDataPath, "NormalGoblin.asset"),
+                Path.Combine(EnemyDataPath, "BasicMeleeGoblin.asset")
+            };
+
+            EnemyData minionData = null;
+            foreach (string path in possibleMinionDataPaths)
+            {
+                minionData = AssetDatabase.LoadAssetAtPath<EnemyData>(path);
+                if (minionData != null)
+                {
+                    Debug.Log($"[BossSetupCreator] 미니언 데이터 로드 성공: {path}");
+                    break;
+                }
+            }
+
             // GameObject 생성
             GameObject boss = new GameObject("BossEnemy_FireDragon");
 
@@ -346,6 +367,9 @@ namespace GASPT.Editor
 
             // Transform 설정
             boss.transform.localScale = new Vector3(3f, 3f, 1f);
+
+            // Layer 설정
+            boss.layer = LayerMask.NameToLayer("Enemy");
 
             // Rigidbody2D 추가
             Rigidbody2D rb = boss.AddComponent<Rigidbody2D>();
@@ -386,6 +410,17 @@ namespace GASPT.Editor
             else
             {
                 Debug.LogWarning("[BossSetupCreator] BasicMeleeEnemy.prefab을 찾을 수 없습니다.");
+            }
+
+            // Minion Data 할당
+            if (minionData != null)
+            {
+                so.FindProperty("minionData").objectReferenceValue = minionData;
+                Debug.Log($"[BossSetupCreator] ✅ Minion Data 할당: {minionData.enemyName}");
+            }
+            else
+            {
+                Debug.LogWarning("[BossSetupCreator] ⚠️ Minion EnemyData를 찾을 수 없습니다. Inspector에서 수동으로 설정하세요.");
             }
 
             // maxSummonCount

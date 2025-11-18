@@ -39,6 +39,7 @@ namespace GASPT.Gameplay.Enemy
         private bool isCharging = false;
         private Vector3 chargeStartPos;
         private Vector3 chargeTargetPos;
+        private Vector2 chargeDirection;
 
 
         // ====== Phase 2 패턴: 소환 ======
@@ -49,6 +50,9 @@ namespace GASPT.Gameplay.Enemy
 
         [SerializeField] [Tooltip("소환할 적 타입 (BasicMeleeEnemy)")]
         private GameObject minionPrefab;
+
+        [SerializeField] [Tooltip("소환할 적의 EnemyData")]
+        private GASPT.Data.EnemyData minionData;
 
         private float lastSummonTime;
         private int currentSummonCount = 0;
@@ -80,13 +84,68 @@ namespace GASPT.Gameplay.Enemy
 
             if (IsDead) return;
 
-            // Phase별 패턴 실행
-            ExecutePhasePatterns();
-
             // 돌진 중이면 돌진 처리
             if (isCharging)
             {
                 UpdateCharge();
+            }
+            else
+            {
+                // 돌진 중이 아닐 때만 Phase별 패턴 실행
+                ExecutePhasePatterns();
+            }
+        }
+
+        /// <summary>
+        /// 상태 업데이트 (기본 추격 로직)
+        /// </summary>
+        protected override void UpdateState()
+        {
+            // 돌진 중에는 상태 업데이트 안 함
+            if (isCharging) return;
+
+            // 플레이어가 감지 범위 안에 있으면 추격
+            if (IsPlayerInDetectionRange())
+            {
+                ChasePlayer();
+
+                // 공격 범위 안에 들어오면 공격
+                if (IsPlayerInAttackRange() && CanAttack())
+                {
+                    AttackPlayer();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 플레이어 추격 (기본 이동)
+        /// </summary>
+        private void ChasePlayer()
+        {
+            if (playerTransform == null || Data == null || rb == null) return;
+
+            // 플레이어 방향 계산
+            Vector2 direction = GetDirectionToPlayer();
+
+            // 수평 이동 (X축만)
+            float horizontalDirection = Mathf.Sign(direction.x);
+
+            // Rigidbody2D로 이동
+            Vector2 moveVelocity = new Vector2(
+                horizontalDirection * Data.chaseSpeed,
+                rb.linearVelocity.y // Y축은 중력 유지
+            );
+
+            rb.linearVelocity = moveVelocity;
+
+            // 스프라이트 방향 전환
+            if (horizontalDirection > 0.01f && !isFacingRight)
+            {
+                Flip();
+            }
+            else if (horizontalDirection < -0.01f && isFacingRight)
+            {
+                Flip();
             }
         }
 
@@ -281,38 +340,120 @@ namespace GASPT.Gameplay.Enemy
 
         private void ExecuteChargeAttack()
         {
-            if (playerTransform == null || Data == null) return;
+            if (playerTransform == null || Data == null || col == null) return;
 
-            // 돌진 시작 위치 및 목표 위치 설정
+            // 돌진 시작 위치 설정
             chargeStartPos = transform.position;
-            Vector2 direction = (playerTransform.position - transform.position).normalized;
-            chargeTargetPos = chargeStartPos + (Vector3)(direction * Data.bossChargeDistance);
+
+            // 플레이어 방향 계산 (수평만)
+            Vector2 directionToPlayer = new Vector2(
+                playerTransform.position.x - transform.position.x,
+                0f
+            );
+
+            float distanceToPlayer = directionToPlayer.magnitude;
+
+            // 돌진 거리 결정 (플레이어까지의 거리 vs 최대 돌진 거리)
+            float chargeDistance = Mathf.Min(distanceToPlayer, Data.bossChargeDistance);
+            chargeDirection = directionToPlayer.normalized;
+
+            // CapsuleCollider2D 크기 가져오기
+            CapsuleCollider2D capsule = col as CapsuleCollider2D;
+            if (capsule == null)
+            {
+                Debug.LogWarning("[BossEnemy] CapsuleCollider2D가 아닙니다. 돌진 취소!");
+                return;
+            }
+
+            // Collider 크기 (스케일 적용)
+            Vector2 capsuleSize = capsule.size;
+            Vector2 scaledSize = new Vector2(
+                capsuleSize.x * Mathf.Abs(transform.localScale.x),
+                capsuleSize.y * Mathf.Abs(transform.localScale.y)
+            );
+
+            // CapsuleCast2D로 보스 크기를 고려한 장애물 체크
+            RaycastHit2D hit = Physics2D.CapsuleCast(
+                transform.position,                    // 시작 위치
+                scaledSize,                            // Capsule 크기
+                CapsuleDirection2D.Vertical,           // 방향
+                0f,                                    // 회전 각도
+                chargeDirection,                       // Cast 방향
+                chargeDistance,                        // Cast 거리
+                LayerMask.GetMask("Ground", "Platform") // 지형 레이어
+            );
+
+            if (hit.collider != null)
+            {
+                // 장애물이 있으면 돌진 취소
+                if (showDebugLogs)
+                    Debug.Log($"[BossEnemy] 돌진 경로에 장애물 감지: {hit.collider.name} (거리: {hit.distance:F1}m). 돌진 취소!");
+
+                lastChargeAttackTime = Time.time; // 쿨다운만 적용
+                return;
+            }
+
+            // 목표 위치 설정 (Y축은 현재 위치 유지)
+            chargeTargetPos = chargeStartPos + new Vector3(
+                chargeDirection.x * chargeDistance,
+                0f,
+                0f
+            );
 
             isCharging = true;
             lastChargeAttackTime = Time.time;
 
             if (showDebugLogs)
-                Debug.Log($"[BossEnemy] 돌진 공격 시작! {chargeStartPos} → {chargeTargetPos}");
+                Debug.Log($"[BossEnemy] 돌진 공격 시작! {chargeStartPos} → {chargeTargetPos} (거리: {chargeDistance:F1}m)");
         }
 
         private void UpdateCharge()
         {
-            if (Data == null) return;
+            if (Data == null || rb == null) return;
 
-            // 목표 위치까지 이동
-            transform.position = Vector3.MoveTowards(
-                transform.position,
-                chargeTargetPos,
-                Data.bossChargeSpeed * Time.deltaTime
-            );
+            // Rigidbody2D로 이동 (물리 기반)
+            Vector2 moveVelocity = chargeDirection * Data.bossChargeSpeed;
+            moveVelocity.y = rb.linearVelocity.y; // Y축은 중력 유지
 
-            // 도착 확인
-            if (Vector3.Distance(transform.position, chargeTargetPos) < 0.1f)
+            rb.linearVelocity = moveVelocity;
+
+            // 도착 확인 (X축 거리만 체크)
+            float horizontalDistance = Mathf.Abs(transform.position.x - chargeTargetPos.x);
+            if (horizontalDistance < 0.5f)
             {
                 isCharging = false;
+                rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // 돌진 종료 시 정지
 
                 if (showDebugLogs)
                     Debug.Log($"[BossEnemy] 돌진 공격 완료!");
+            }
+        }
+
+        /// <summary>
+        /// 충돌 처리 (돌진 중 장애물과 충돌 시 중단)
+        /// </summary>
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            // 돌진 중일 때만 충돌 처리
+            if (!isCharging) return;
+
+            // Ground 또는 Platform 레이어와 충돌 시 돌진 중단
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            int platformLayer = LayerMask.NameToLayer("Platform");
+
+            if (collision.gameObject.layer == groundLayer || collision.gameObject.layer == platformLayer)
+            {
+                // 돌진 중단
+                isCharging = false;
+
+                // 속도 0으로 설정
+                if (rb != null)
+                {
+                    rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+                }
+
+                if (showDebugLogs)
+                    Debug.Log($"[BossEnemy] 돌진 중 장애물 충돌! ({collision.gameObject.name}) 돌진 중단!");
             }
         }
 
@@ -335,6 +476,12 @@ namespace GASPT.Gameplay.Enemy
                 return;
             }
 
+            if (minionData == null)
+            {
+                Debug.LogWarning("[BossEnemy] minionData가 null입니다. Inspector에서 설정하세요.");
+                return;
+            }
+
             // 소환 위치 (보스 주변 랜덤)
             Vector3 summonPos = transform.position + new Vector3(
                 Random.Range(-3f, 3f),
@@ -347,20 +494,28 @@ namespace GASPT.Gameplay.Enemy
 
             if (minion != null)
             {
-                currentSummonCount++;
-
                 // 소환된 적 사망 시 카운트 감소
                 Enemy minionEnemy = minion.GetComponent<Enemy>();
                 if (minionEnemy != null)
                 {
+                    // EnemyData 설정 (중요!)
+                    minionEnemy.InitializeWithData(minionData);
+
+                    currentSummonCount++;
+
                     minionEnemy.OnDeath += (enemy) =>
                     {
                         currentSummonCount--;
                     };
-                }
 
-                if (showDebugLogs)
-                    Debug.Log($"[BossEnemy] 소환 완료! 위치: {summonPos}, 현재 소환 수: {currentSummonCount}");
+                    if (showDebugLogs)
+                        Debug.Log($"[BossEnemy] 소환 완료! 위치: {summonPos}, 현재 소환 수: {currentSummonCount}");
+                }
+                else
+                {
+                    Debug.LogError("[BossEnemy] 소환된 프리팹에 Enemy 컴포넌트가 없습니다!");
+                    Destroy(minion);
+                }
             }
 
             lastSummonTime = Time.time;
@@ -425,11 +580,118 @@ namespace GASPT.Gameplay.Enemy
 
             if (!showGizmos || Data == null) return;
 
+            // Phase 2 돌진 경로 시각화
+            if (phaseController != null && phaseController.CurrentPhase == BossPhase.Phase2)
+            {
+                if (playerTransform != null && col != null)
+                {
+                    CapsuleCollider2D capsule = col as CapsuleCollider2D;
+                    if (capsule != null)
+                    {
+                        // Collider 크기 (스케일 적용)
+                        Vector2 capsuleSize = capsule.size;
+                        Vector2 scaledSize = new Vector2(
+                            capsuleSize.x * Mathf.Abs(transform.localScale.x),
+                            capsuleSize.y * Mathf.Abs(transform.localScale.y)
+                        );
+
+                        // 돌진 가능 거리
+                        Vector2 horizontalDir = new Vector2(
+                            playerTransform.position.x - transform.position.x,
+                            0f
+                        ).normalized;
+
+                        Vector3 chargeEnd = transform.position + new Vector3(
+                            horizontalDir.x * Data.bossChargeDistance,
+                            0f,
+                            0f
+                        );
+
+                        // CapsuleCast 영역 시각화 (초록색 캡슐)
+                        Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
+                        DrawCapsuleGizmo(transform.position, scaledSize);
+                        DrawCapsuleGizmo(chargeEnd, scaledSize);
+
+                        // 돌진 경로 선 (초록색)
+                        Gizmos.color = Color.green;
+                        Gizmos.DrawLine(transform.position, chargeEnd);
+
+                        // 돌진 중일 때 (빨간색)
+                        if (isCharging)
+                        {
+                            Gizmos.color = new Color(1f, 0f, 0f, 0.5f);
+                            DrawCapsuleGizmo(transform.position, scaledSize);
+                            DrawCapsuleGizmo(chargeTargetPos, scaledSize);
+
+                            Gizmos.color = Color.red;
+                            Gizmos.DrawLine(transform.position, chargeTargetPos);
+                            Gizmos.DrawWireSphere(chargeTargetPos, 0.5f);
+                        }
+                    }
+                }
+            }
+
             // Phase 3 범위 공격 범위 (빨간색 원)
             if (phaseController != null && phaseController.CurrentPhase == BossPhase.Phase3)
             {
                 Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
                 Gizmos.DrawWireSphere(transform.position, Data.bossAreaRadius);
+            }
+        }
+
+        /// <summary>
+        /// Capsule Gizmo 그리기 (디버깅용)
+        /// </summary>
+        private void DrawCapsuleGizmo(Vector3 position, Vector2 size)
+        {
+            float radius = size.x * 0.5f;
+            float height = size.y;
+
+            // 상단 반원
+            Vector3 topCenter = position + Vector3.up * (height * 0.5f - radius);
+            DrawHalfCircle(topCenter, radius, true);
+
+            // 하단 반원
+            Vector3 bottomCenter = position + Vector3.down * (height * 0.5f - radius);
+            DrawHalfCircle(bottomCenter, radius, false);
+
+            // 좌우 세로선
+            Gizmos.DrawLine(
+                topCenter + Vector3.left * radius,
+                bottomCenter + Vector3.left * radius
+            );
+            Gizmos.DrawLine(
+                topCenter + Vector3.right * radius,
+                bottomCenter + Vector3.right * radius
+            );
+        }
+
+        /// <summary>
+        /// 반원 그리기 (디버깅용)
+        /// </summary>
+        private void DrawHalfCircle(Vector3 center, float radius, bool top)
+        {
+            int segments = 16;
+            float angleStart = top ? 0f : 180f;
+            float angleEnd = top ? 180f : 360f;
+
+            Vector3 prevPoint = center + new Vector3(
+                Mathf.Cos(angleStart * Mathf.Deg2Rad) * radius,
+                Mathf.Sin(angleStart * Mathf.Deg2Rad) * radius,
+                0f
+            );
+
+            for (int i = 1; i <= segments; i++)
+            {
+                float angle = Mathf.Lerp(angleStart, angleEnd, i / (float)segments);
+                Vector3 newPoint = center + new Vector3(
+                    Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
+                    Mathf.Sin(angle * Mathf.Deg2Rad) * radius,
+                    0f
+                );
+
+                Gizmos.DrawLine(prevPoint, newPoint);
+                prevPoint = newPoint;
             }
         }
 

@@ -14,6 +14,7 @@
 5. [ScriptableObject Serialization과 기본값 문제](#섹션-5-scriptableobject-serialization과-기본값-문제)
 6. [오브젝트 풀링 시스템 구축 및 최적화](#6-오브젝트-풀링-시스템-구축-및-최적화)
 7. [Unity EditorWindow GUI 레이아웃 오류](#7-unity-editorwindow-gui-레이아웃-오류)
+8. [virtual vs override: 메서드 하이딩과 오버라이딩의 차이](#8-virtual-vs-override-메서드-하이딩과-오버라이딩의-차이)
 
 ---
 
@@ -3104,6 +3105,454 @@ e67dceb - 수정: EditorWindow GUI 레이아웃 오류 해결
 
 ---
 
+## 8. virtual vs override: 메서드 하이딩과 오버라이딩의 차이
+
+### 📋 오류 개요
+- **발생 날짜**: 2025-11-17
+- **작업 컨텍스트**: BossEnemy 보스 HP 초기화 버그 수정 (Phase C-2)
+- **관련 브랜치**: `master`
+- **오류 코드**: CS0114 (메서드 하이딩 경고)
+
+### 🔴 문제 상황
+
+#### 발생한 버그
+BossEnemy의 HP가 초기화되지 않아 0으로 남아있는 문제가 발생했습니다.
+
+#### 원인 분석
+상속 계층에서 `Start()` 메서드가 제대로 호출되지 않았습니다:
+
+```
+Enemy (베이스 클래스)
+  ↓
+PlatformerEnemy (중간 클래스)
+  ↓
+BossEnemy (최종 클래스)
+```
+
+**문제점:**
+1. `Enemy.Start()`가 `private`으로 선언되어 상속되지 않음
+2. `PlatformerEnemy.Start()`가 `base.Start()`를 호출하지 않음
+3. `PlatformerEnemy.Start()`를 `virtual`로 선언하여 메서드 하이딩 발생
+
+#### 컴파일러 경고
+```
+CS0114: 'PlatformerEnemy.Start()' hides inherited member 'Enemy.Start()'.
+To make the current member override that implementation, add the override keyword.
+Otherwise add the new keyword.
+```
+
+---
+
+### 🔍 핵심 개념: virtual vs override
+
+#### 1️⃣ virtual (새로운 가상 메서드 선언)
+
+**의미:**
+- 베이스 클래스에서 "이 메서드는 자식에서 재정의 가능하다"고 **선언**
+- 새로운 가상 메서드 체인의 시작점
+
+**사용 예시:**
+```csharp
+// Enemy.cs (베이스 클래스)
+public class Enemy : MonoBehaviour
+{
+    protected virtual void Start()  // ✅ 가상 메서드 선언
+    {
+        Initialize();  // HP 초기화
+    }
+}
+```
+
+#### 2️⃣ override (가상 메서드 재정의)
+
+**의미:**
+- 부모 클래스의 가상 메서드를 **재정의**
+- 상속 체인을 유지하며 기능 확장
+
+**사용 예시:**
+```csharp
+// PlatformerEnemy.cs (중간 클래스)
+public class PlatformerEnemy : Enemy
+{
+    protected override void Start()  // ✅ 부모 메서드 재정의
+    {
+        base.Start();  // Enemy.Start() 호출
+        InitializeComponents();
+    }
+}
+
+// BossEnemy.cs (최종 클래스)
+public class BossEnemy : PlatformerEnemy
+{
+    protected override void Start()  // ✅ 계속 재정의 가능
+    {
+        base.Start();  // PlatformerEnemy.Start() 호출
+        InitializePhaseController();
+    }
+}
+```
+
+---
+
+### ⚠️ 잘못된 방법: virtual 재선언 (메서드 하이딩)
+
+#### 문제가 된 코드
+
+```csharp
+// Enemy.cs
+public class Enemy
+{
+    protected virtual void Start()
+    {
+        Debug.Log("Enemy.Start() - HP 초기화");
+        Initialize();
+    }
+}
+
+// PlatformerEnemy.cs
+public class PlatformerEnemy : Enemy
+{
+    protected virtual void Start()  // ❌ 새로운 virtual (하이딩)
+    {
+        base.Start();
+        Debug.Log("PlatformerEnemy.Start()");
+    }
+}
+
+// BossEnemy.cs
+public class BossEnemy : PlatformerEnemy
+{
+    protected override void Start()
+    {
+        base.Start();
+        Debug.Log("BossEnemy.Start()");
+    }
+}
+```
+
+#### 실행 결과
+```
+✅ 직접 호출 시 (boss.Start()):
+   Enemy.Start() - HP 초기화
+   PlatformerEnemy.Start()
+   BossEnemy.Start()
+   → 정상 작동 (base.Start() 명시적 호출 때문)
+
+❌ 다형성 사용 시 (Enemy타입으로 참조):
+   Enemy boss = new BossEnemy();
+   boss.Start();
+
+   → Enemy.Start()만 호출됨!
+   → PlatformerEnemy.Start(), BossEnemy.Start() 호출 안 됨!
+```
+
+---
+
+### ✅ 올바른 방법: override 사용
+
+#### 수정된 코드
+
+```csharp
+// Enemy.cs
+public class Enemy : MonoBehaviour
+{
+    protected virtual void Start()  // ✅ virtual 선언
+    {
+        if (enemyData != null && currentHp == 0)
+        {
+            Initialize();  // HP 초기화
+        }
+    }
+}
+
+// PlatformerEnemy.cs
+public class PlatformerEnemy : Enemy
+{
+    protected override void Start()  // ✅ override로 재정의
+    {
+        base.Start();  // Enemy.Start() 호출
+
+        InitializeComponents();
+        FindPlayer();
+        startPosition = transform.position;
+        ChangeState(EnemyState.Idle);
+    }
+}
+
+// BossEnemy.cs
+public class BossEnemy : PlatformerEnemy
+{
+    protected override void Start()  // ✅ override로 재정의
+    {
+        base.Start();  // PlatformerEnemy.Start() 호출
+
+        InitializePhaseController();
+        CreateBossHealthBar();
+    }
+}
+```
+
+#### 실행 결과
+```
+✅ 직접 호출 시 (boss.Start()):
+   Enemy.Start() - HP 초기화
+   PlatformerEnemy.Start()
+   BossEnemy.Start()
+
+✅ 다형성 사용 시 (Enemy타입으로 참조):
+   Enemy boss = new BossEnemy();
+   boss.Start();
+
+   → BossEnemy.Start() 호출됨!
+   → base.Start() 체인을 따라 모두 호출됨!
+```
+
+---
+
+### 🧪 다형성 차이점 비교
+
+#### 테스트 코드
+```csharp
+public void TestPolymorphism()
+{
+    // BossEnemy 인스턴스를 Enemy 타입으로 참조
+    Enemy enemy = new BossEnemy();
+
+    enemy.Start();  // 어떤 Start()가 호출될까?
+}
+```
+
+#### virtual (메서드 하이딩) 방식
+```csharp
+public class PlatformerEnemy : Enemy
+{
+    protected virtual void Start()  // 새로운 virtual
+    {
+        base.Start();
+        // ...
+    }
+}
+```
+
+**메서드 테이블:**
+```
+Enemy 타입으로 참조 → Enemy.Start() 호출
+   └─ Enemy.Start()만 실행됨 ❌
+```
+
+#### override (메서드 오버라이딩) 방식 ✅
+```csharp
+public class PlatformerEnemy : Enemy
+{
+    protected override void Start()  // override
+    {
+        base.Start();
+        // ...
+    }
+}
+```
+
+**메서드 테이블:**
+```
+Enemy 타입으로 참조 → 실제 타입(BossEnemy)의 Start() 호출
+   └─ BossEnemy.Start()
+      └─ base.Start() → PlatformerEnemy.Start()
+         └─ base.Start() → Enemy.Start() ✅
+```
+
+---
+
+### 📊 비교표: virtual vs override
+
+| 항목 | virtual (하이딩) | override (오버라이딩) ✅ |
+|------|-----------------|----------------------|
+| **선언 위치** | 베이스 클래스 또는 새 체인 시작 | 자식 클래스 (부모에 virtual 있어야 함) |
+| **의미** | 새로운 가상 메서드 선언 | 부모 메서드 재정의 |
+| **컴파일** | 경고 발생 (CS0114) | 정상 |
+| **실행 (직접 호출)** | 작동 (base.Start() 때문) | 작동 |
+| **실행 (다형성)** | 부모 타입으로 참조 시 문제 ❌ | 올바르게 작동 ✅ |
+| **상속 체인** | 끊어짐 (숨겨짐) | 유지됨 |
+| **재정의 가능** | 가능 (새 체인 시작) | 가능 (override 자동 virtual) |
+| **사용 사례** | 완전히 새로운 메서드 만들 때 | 부모 기능 확장할 때 |
+
+---
+
+### 🔄 Override 체인 (계속 재정의 가능)
+
+C#에서 **override된 메서드는 자동으로 virtual 속성을 유지**하므로 계속 재정의 가능합니다:
+
+```csharp
+// 1단계: virtual
+public class Enemy
+{
+    protected virtual void Start() { }
+}
+
+// 2단계: override (자동으로 virtual)
+public class PlatformerEnemy : Enemy
+{
+    protected override void Start()
+    {
+        base.Start();
+    }
+}
+
+// 3단계: override (자동으로 virtual)
+public class BossEnemy : PlatformerEnemy
+{
+    protected override void Start()
+    {
+        base.Start();
+    }
+}
+
+// 4단계: 계속 가능
+public class SuperBoss : BossEnemy
+{
+    protected override void Start()
+    {
+        base.Start();
+    }
+}
+```
+
+#### Override 체인 중단 (sealed)
+```csharp
+public class FinalBoss : BossEnemy
+{
+    protected sealed override void Start()  // 더 이상 override 불가
+    {
+        base.Start();
+    }
+}
+
+public class CannotOverride : FinalBoss
+{
+    // ❌ 컴파일 에러!
+    // protected override void Start() { }
+}
+```
+
+---
+
+### 🛠️ 해결 과정
+
+#### Step 1: Enemy.Start()를 virtual로 변경
+```csharp
+// BEFORE ❌
+private void Start()
+{
+    if (enemyData != null && currentHp == 0)
+    {
+        Initialize();
+    }
+}
+
+// AFTER ✅
+protected virtual void Start()
+{
+    if (enemyData != null && currentHp == 0)
+    {
+        Initialize();
+    }
+}
+```
+
+#### Step 2: PlatformerEnemy.Start()를 override로 변경
+```csharp
+// BEFORE ❌
+protected virtual void Start()
+{
+    InitializeComponents();
+    FindPlayer();
+    // ...
+}
+
+// AFTER ✅
+protected override void Start()
+{
+    base.Start();  // Enemy.Start() 호출
+
+    InitializeComponents();
+    FindPlayer();
+    // ...
+}
+```
+
+#### Step 3: BossEnemy.Start()는 이미 override ✅
+```csharp
+protected override void Start()
+{
+    base.Start();  // PlatformerEnemy.Start() 호출
+
+    InitializePhaseController();
+    CreateBossHealthBar();
+}
+```
+
+---
+
+### ✅ 결과
+
+#### 호출 순서 (수정 후)
+```
+BossEnemy.Start()
+  ↓
+base.Start() → PlatformerEnemy.Start()
+  ↓
+base.Start() → Enemy.Start()
+  ↓
+Initialize() → currentHp = maxHp ✅
+```
+
+#### 테스트 확인
+- ✅ 보스 HP가 500으로 정상 설정됨
+- ✅ 보스 체력바 정상 표시
+- ✅ 미니언 HP도 정상 설정됨
+- ✅ 다형성 사용 시에도 정상 작동
+- ✅ 컴파일러 경고 사라짐
+
+---
+
+### 💡 핵심 교훈
+
+#### 1. virtual은 선언, override는 재정의
+- **virtual**: "재정의 가능한 메서드를 선언한다"
+- **override**: "부모의 메서드를 재정의한다"
+
+#### 2. 상속 계층에서는 override 사용
+- 베이스 클래스: `virtual`
+- 모든 자식 클래스: `override`
+- 새로운 메서드 체인이 필요한 경우만 `virtual` 재선언
+
+#### 3. base.Start() 호출은 필수
+- 부모의 초기화 로직을 실행하기 위해 반드시 `base.Start()` 호출
+- 상속 체인의 모든 클래스가 제대로 초기화되도록 보장
+
+#### 4. 다형성을 고려한 설계
+- Unity는 주로 직접 참조를 사용하지만, 올바른 OOP 설계가 중요
+- `override`를 사용해야 다형성이 제대로 작동
+
+#### 5. 컴파일러 경고 무시하지 말기
+- CS0114 경고는 의도하지 않은 메서드 하이딩을 알려줌
+- 경고가 나오면 `override` 또는 `new` 키워드로 의도를 명확히 해야 함
+
+---
+
+### 📖 참고 자료
+
+#### Microsoft C# 공식 문서
+- [virtual (C# Reference)](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/virtual)
+- [override (C# Reference)](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/override)
+- [Polymorphism](https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/object-oriented/polymorphism)
+- [sealed (C# Reference)](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/sealed)
+
+#### Unity 관련
+- [MonoBehaviour Messages Order](https://docs.unity3d.com/Manual/ExecutionOrder.html)
+- [Inheritance in Unity](https://docs.unity3d.com/Manual/class-MonoBehaviour.html)
+
+---
+
 **문서 작성자**: Jae Chang
 **프로젝트 GitHub**: https://github.com/jaechang92/GAS
-**마지막 업데이트**: 2025-11-13
+**마지막 업데이트**: 2025-11-17

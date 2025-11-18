@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &8487305451702590666
+--- !u!1 &4522858186742940289
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,26 +8,26 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6258966486784998806}
-  - component: {fileID: 839032592237761600}
-  - component: {fileID: 5413408093775463749}
-  - component: {fileID: 8647545730474784466}
-  - component: {fileID: 4234455456119683325}
-  - component: {fileID: 3844394498026372018}
-  m_Layer: 0
+  - component: {fileID: 7978583111331187988}
+  - component: {fileID: 6653512902483219578}
+  - component: {fileID: 477054882536771593}
+  - component: {fileID: 3996916167877978819}
+  - component: {fileID: 1096646309447295988}
+  - component: {fileID: 2204046112133848737}
+  m_Layer: 7
   m_Name: BossEnemy_FireDragon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6258966486784998806
+--- !u!4 &7978583111331187988
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -36,13 +36,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &839032592237761600
+--- !u!212 &6653512902483219578
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -94,14 +94,14 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!50 &5413408093775463749
+--- !u!50 &477054882536771593
 Rigidbody2D:
   serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   m_BodyType: 0
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
@@ -121,13 +121,13 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!70 &8647545730474784466
+--- !u!70 &3996916167877978819
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -158,13 +158,13 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 2}
   m_Direction: 0
---- !u!114 &4234455456119683325
+--- !u!114 &1096646309447295988
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c9e14f64b5c19a4a9daaee1db2d652d, type: 3}
@@ -172,13 +172,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Core.Pooling.PooledObject
   autoReturn: 0
   autoReturnTime: 3
---- !u!114 &3844394498026372018
+--- !u!114 &2204046112133848737
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8487305451702590666}
+  m_GameObject: {fileID: 4522858186742940289}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b2fd9c9c583778e43aa8c95ba302adab, type: 3}
@@ -191,3 +191,4 @@ MonoBehaviour:
   bossHealthBarPrefab: {fileID: 0}
   maxSummonCount: 3
   minionPrefab: {fileID: 1462390206004444925, guid: e3390433eb5d5c44f90dde3a41682df9, type: 3}
+  minionData: {fileID: 11400000, guid: c21e69d3514069f4e8a46a3bb2fb34aa, type: 2}
