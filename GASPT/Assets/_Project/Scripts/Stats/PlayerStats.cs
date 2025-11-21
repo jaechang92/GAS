@@ -7,6 +7,8 @@ using GASPT.Combat;
 using GASPT.Save;
 using GASPT.UI;
 using GASPT.StatusEffects;
+using GASPT.Core;
+using GASPT.DTOs;
 using UnityEngine;
 using GASPT.Gameplay.Enemy;
 
@@ -174,7 +176,7 @@ namespace GASPT.Stats
         /// 스탯 변경 시 발생하는 이벤트
         /// 매개변수: (StatType, 이전 값, 새 값)
         /// </summary>
-        public event Action<StatType, int, int> OnStatChanged;
+        public event Action<StatType, int, int> OnStatsChanged;
 
         /// <summary>
         /// 데미지를 받았을 때 발생하는 이벤트
@@ -194,9 +196,10 @@ namespace GASPT.Stats
         public event Action OnDeath;
 
         /// <summary>
-        /// 마나 변경 시 발생하는 이벤트
-        /// 매개변수: (현재 마나, 최대 마나)
+        /// [DEPRECATED] 마나 변경 시 발생하는 이벤트
+        /// OnStatsChanged(StatType.Mana, oldValue, newValue)를 대신 사용하세요
         /// </summary>
+        [System.Obsolete("OnManaChanged는 더 이상 사용되지 않습니다. OnStatsChanged(StatType.Mana, ...)를 사용하세요.", false)]
         public event Action<int, int> OnManaChanged;
 
 
@@ -218,6 +221,15 @@ namespace GASPT.Stats
             Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, MaxMana: {MaxMana}, CurrentMana: {CurrentMana}, Attack: {Attack}, Defense: {Defense}");
         }
 
+        private void Start()
+        {
+            // RunManager에 등록 (데이터 주입 포함)
+            if (RunManager.HasInstance)
+            {
+                RunManager.Instance.RegisterPlayer(this);
+            }
+        }
+
         private void OnEnable()
         {
             // StatusEffect 이벤트 구독 (OnEnable에서 구독해야 StatusEffectManager 초기화 후 구독 가능)
@@ -228,6 +240,15 @@ namespace GASPT.Stats
         {
             // StatusEffect 이벤트 구독 해제
             UnsubscribeFromStatusEffectEvents();
+        }
+
+        private void OnDestroy()
+        {
+            // RunManager에서 해제 (데이터 저장 포함)
+            if (RunManager.HasInstance)
+            {
+                RunManager.Instance.UnregisterPlayer(this);
+            }
         }
 
 
@@ -280,12 +301,7 @@ namespace GASPT.Stats
             NotifyStatChangedIfDifferent(StatType.HP, oldHP, finalHP);
             NotifyStatChangedIfDifferent(StatType.Attack, oldAttack, finalAttack);
             NotifyStatChangedIfDifferent(StatType.Defense, oldDefense, finalDefense);
-
-            // Mana 변경 이벤트 (StatType.Mana가 없으면 별도 처리)
-            if (oldMana != finalMana)
-            {
-                OnManaChanged?.Invoke(currentMana, finalMana);
-            }
+            NotifyStatChangedIfDifferent(StatType.Mana, oldMana, finalMana);
 
             Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}, Mana: {finalMana}");
         }
@@ -297,7 +313,7 @@ namespace GASPT.Stats
         {
             if (oldValue != newValue)
             {
-                OnStatChanged?.Invoke(statType, oldValue, newValue);
+                OnStatsChanged?.Invoke(statType, oldValue, newValue);
                 Debug.Log($"[PlayerStats] {statType} 변경: {oldValue} → {newValue}");
             }
         }
@@ -390,6 +406,20 @@ namespace GASPT.Stats
             equippedItems.TryGetValue(slot, out Item item);
             return item;
         }
+
+        /// <summary>
+        /// 모든 장착된 아이템 가져오기 (읽기 전용 복사본)
+        /// </summary>
+        /// <returns>장착된 아이템 딕셔너리 (읽기 전용)</returns>
+        public Dictionary<EquipmentSlot, Item> GetAllEquippedItems()
+        {
+            return new Dictionary<EquipmentSlot, Item>(equippedItems);
+        }
+
+        /// <summary>
+        /// 장착된 아이템 개수
+        /// </summary>
+        public int EquippedItemCount => equippedItems.Count;
 
         /// <summary>
         /// 모든 아이템 장착 해제
@@ -578,6 +608,91 @@ namespace GASPT.Stats
             OnHealed?.Invoke(healAmount, currentHP, MaxHP);
         }
 
+        /// <summary>
+        /// RunData로부터 플레이어 초기화 (씬 로드 후)
+        /// RunManager.SyncToPlayer()에서 호출됨
+        /// </summary>
+        public void InitializeFromRunData(PlayerRunData data)
+        {
+            if (data == null)
+            {
+                Debug.LogWarning("[PlayerStats] InitializeFromRunData: data가 null입니다.");
+                return;
+            }
+
+            // 이전 값 저장
+            int oldHP = currentHP;
+            int oldMana = currentMana;
+
+            // 기본 스탯 설정
+            baseHP = data.maxHP;
+            baseAttack = data.baseAttack;
+            baseDefense = data.baseDefense;
+            baseMana = data.maxMana;
+
+            // 현재 상태 복원
+            currentHP = data.currentHP;
+            currentMana = data.currentMana;
+            isDead = currentHP <= 0;
+
+            // 스탯 재계산
+            isDirty = true;
+            RecalculateIfDirty();
+
+            Debug.Log($"[PlayerStats] RunData로 초기화 완료 - HP: {currentHP}/{MaxHP}, Mana: {currentMana}/{MaxMana}, Attack: {Attack}, Defense: {Defense}");
+
+            // 이벤트 발생
+            OnStatsChanged?.Invoke(StatType.HP, oldHP, currentHP);
+            OnStatsChanged?.Invoke(StatType.Mana, oldMana, currentMana);
+        }
+
+        /// <summary>
+        /// 현재 상태를 RunData로 변환 (씬 전환 전)
+        /// RunManager.SyncFromPlayer()에서 호출됨
+        /// </summary>
+        public PlayerRunData ToRunData()
+        {
+            return new PlayerRunData
+            {
+                maxHP = baseHP,
+                currentHP = currentHP,
+                maxMana = baseMana,
+                currentMana = currentMana,
+                baseAttack = baseAttack,
+                baseDefense = baseDefense,
+                level = 1, // TODO: PlayerLevel 연동
+                currentExp = 0
+            };
+        }
+
+        /// <summary>
+        /// 런 시작 시 플레이어를 초기 상태로 리셋
+        /// GameManager.StartNewRun()에서 호출됨
+        /// </summary>
+        public void ResetToBaseStats()
+        {
+            // 모든 장비 해제
+            UnequipAll();
+
+            // 이전 값 저장
+            int oldHP = currentHP;
+            int oldMana = currentMana;
+
+            // HP/마나 최대로 회복
+            isDead = false;
+            currentHP = MaxHP;
+            currentMana = MaxMana;
+
+            // 상태 효과 클리어 (있다면)
+            // ClearAllStatusEffects();
+
+            Debug.Log($"[PlayerStats] 기본 스탯으로 리셋 - HP: {currentHP}/{MaxHP}, Mana: {currentMana}/{MaxMana}");
+
+            // OnStatsChanged로 통일된 이벤트 발생
+            OnStatsChanged?.Invoke(StatType.HP, oldHP, currentHP);
+            OnStatsChanged?.Invoke(StatType.Mana, oldMana, currentMana);
+        }
+
 
         // ====== Mana 관리 ======
 
@@ -611,7 +726,7 @@ namespace GASPT.Stats
             Debug.Log($"[PlayerStats] 마나 소비: {amount} (Mana {previousMana} → {currentMana})");
 
             // 이벤트 발생
-            OnManaChanged?.Invoke(currentMana, MaxMana);
+            OnStatsChanged?.Invoke(StatType.Mana, previousMana, currentMana);
 
             return true;
         }
@@ -637,7 +752,7 @@ namespace GASPT.Stats
             Debug.Log($"[PlayerStats] 마나 회복: {actualRegenerated} (Mana {previousMana} → {currentMana})");
 
             // 이벤트 발생
-            OnManaChanged?.Invoke(currentMana, MaxMana);
+            OnStatsChanged?.Invoke(StatType.Mana, previousMana, currentMana);
         }
 
 
@@ -790,14 +905,14 @@ namespace GASPT.Stats
             {
                 // 공격력 변경 이벤트 발생
                 int currentAttack = Attack;
-                OnStatChanged?.Invoke(StatType.Attack, currentAttack, currentAttack);
+                OnStatsChanged?.Invoke(StatType.Attack, currentAttack, currentAttack);
             }
             else if (effect.EffectType == StatusEffectType.DefenseUp ||
                      effect.EffectType == StatusEffectType.DefenseDown)
             {
                 // 방어력 변경 이벤트 발생
                 int currentDefense = Defense;
-                OnStatChanged?.Invoke(StatType.Defense, currentDefense, currentDefense);
+                OnStatsChanged?.Invoke(StatType.Defense, currentDefense, currentDefense);
             }
         }
 

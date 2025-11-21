@@ -223,7 +223,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 654d5fb0e437c1348ac3647ffbe0fb10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Form.MageForm
-  formData: {fileID: 0}
+  formData: {fileID: 11400000, guid: a1b2c3d4e5f6789012345678901234ab, type: 2}
   showDebugLogs: 1
   magicAuraEffect: {fileID: 0}
   magicColor: {r: 0.5, g: 0.5, b: 1, a: 1}

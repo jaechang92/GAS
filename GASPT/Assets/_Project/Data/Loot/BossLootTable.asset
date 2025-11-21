@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c4b28d28c53e4c4da196ace429fa898, type: 3}
+  m_Name: BossLootTable
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Loot.LootTable
+  lootEntries:
+  - item: {fileID: 11400000, guid: 00a6ab7eca6221a4688043624941cd11, type: 2}
+    dropChance: 0.4
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: e34edf26a5940e9468da5c02f5dba78e, type: 2}
+    dropChance: 0.3
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 77e69231d27298249aa34b1979ffc20b, type: 2}
+    dropChance: 0.3
+    minQuantity: 1
+    maxQuantity: 1
+  allowNoDrop: 0
+  debugLog: 1

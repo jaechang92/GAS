@@ -21,7 +21,7 @@ MonoBehaviour:
   minGoldDrop: 200
   maxGoldDrop: 300
   expReward: 500
-  lootTable: {fileID: 0}
+  lootTable: {fileID: 11400000, guid: 78ae498b1992d8349ac684b0e3b55675, type: 2}
   moveSpeed: 2
   detectionRange: 15
   attackRange: 2.5

@@ -8,13 +8,11 @@ namespace GASPT.UI
     /// 던전 클리어 UI
     /// 던전 완주 시 보상 정보를 표시하고 다음 행동 선택
     /// </summary>
-    public class DungeonCompleteUI : MonoBehaviour
+    public class DungeonCompleteUI : BaseUI
     {
         // ====== UI 요소 ======
 
-        [Header("UI 요소")]
-        [Tooltip("UI 패널 (활성화/비활성화)")]
-        [SerializeField] private GameObject uiPanel;
+        [Header("Dungeon Complete UI 요소")]
 
         [Tooltip("타이틀 텍스트")]
         [SerializeField] private Text titleText;
@@ -41,10 +39,10 @@ namespace GASPT.UI
 
         // ====== Unity 생명주기 ======
 
-        private void Awake()
+        protected override void Awake()
         {
-            // 초기 상태: 숨김
-            Hide();
+            // BaseUI Awake 호출 (Panel 자동 숨김)
+            base.Awake();
 
             // 버튼 이벤트 연결
             if (nextDungeonButton != null)
@@ -68,16 +66,14 @@ namespace GASPT.UI
         // ====== UI 표시/숨김 ======
 
         /// <summary>
-        /// UI 표시
+        /// UI 표시 (보상 정보 포함)
         /// </summary>
         /// <param name="totalGold">총 획득 골드</param>
         /// <param name="totalExp">총 획득 경험치</param>
         public void Show(int totalGold, int totalExp)
         {
-            if (uiPanel != null)
-            {
-                uiPanel.SetActive(true);
-            }
+            // BaseUI의 Show() 호출 (Panel 활성화)
+            base.Show();
 
             // 보상 정보 업데이트
             UpdateRewardText(totalGold, totalExp);
@@ -92,14 +88,12 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// UI 숨김
+        /// UI 숨김 (BaseUI.Hide() override)
         /// </summary>
-        public void Hide()
+        public override void Hide()
         {
-            if (uiPanel != null)
-            {
-                uiPanel.SetActive(false);
-            }
+            // BaseUI의 Hide() 호출 (Panel 비활성화)
+            base.Hide();
 
             // 시간 재개
             if (pauseGameOnShow)
@@ -186,13 +180,13 @@ namespace GASPT.UI
         // ====== 디버그 ======
 
         [ContextMenu("Show UI (Test)")]
-        private void DebugShow()
+        private new void DebugShow()
         {
             Show(1000, 500);
         }
 
         [ContextMenu("Hide UI (Test)")]
-        private void DebugHide()
+        private new void DebugHide()
         {
             Hide();
         }

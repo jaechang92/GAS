@@ -89,6 +89,7 @@ namespace GASPT.Core
             PreloadPoolManager();
 
             // 1. UI Systems (게임플레이 중 자주 사용)
+            PreloadFadeController();
             PreloadDamageNumberPool();
 
             // 2. Economy Systems
@@ -115,6 +116,15 @@ namespace GASPT.Core
             // 8. Skill Item System (LootSystem 의존)
             PreloadSkillItemManager();
 
+            // 9. RunManager (런 데이터 관리 - GameManager 이전에 초기화)
+            PreloadRunManager();
+
+            // 10. GameManager (최종 - 모든 시스템 참조 허브)
+            PreloadGameManager();
+
+            // 10. GameFlowStateMachine (게임 Flow FSM - GameManager 의존)
+            PreloadGameFlowStateMachine();
+
             // Note: Pool 초기화는 PoolInitializer.cs에서 자동으로 처리됩니다
             // (RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)로 자동 실행)
 
@@ -137,6 +147,25 @@ namespace GASPT.Core
             else
             {
                 LogError("✗ GameResourceManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// FadeController 사전 로딩
+        /// </summary>
+        private void PreloadFadeController()
+        {
+            LogMessage("FadeController 초기화 중...");
+
+            var instance = FadeController.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ FadeController 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ FadeController 초기화 실패");
             }
         }
 
@@ -331,6 +360,75 @@ namespace GASPT.Core
         }
 
         /// <summary>
+        /// RunManager 사전 로딩 (런 데이터 관리)
+        /// </summary>
+        private void PreloadRunManager()
+        {
+            LogMessage("RunManager 초기화 중...");
+
+            var instance = RunManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ RunManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ RunManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// GameManager 사전 로딩 (모든 시스템의 참조 허브)
+        /// </summary>
+        private void PreloadGameManager()
+        {
+            LogMessage("GameManager 초기화 중...");
+
+            var instance = GameManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ GameManager 초기화 완료");
+                LogMessage($"  - 메타 골드: {instance.Meta?.TotalGold ?? 0}");
+                LogMessage($"  - 언락 Form: {instance.Meta?.UnlockedFormCount ?? 0}개");
+            }
+            else
+            {
+                LogError("✗ GameManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// GameFlowStateMachine 사전 로딩 (게임 Flow FSM)
+        /// </summary>
+        private void PreloadGameFlowStateMachine()
+        {
+            LogMessage("GameFlowStateMachine 초기화 중...");
+
+            var instance = GameFlowStateMachine.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ GameFlowStateMachine 초기화 완료");
+
+                // 게임 자동 시작 (Initializing 상태로 진입)
+                if (!instance.IsRunning)
+                {
+                    instance.StartGame();
+                    LogMessage("✓ GameFlowStateMachine 자동 시작 (Initializing 상태)");
+                }
+
+                LogMessage($"  - FSM 상태: {instance.CurrentStateId}");
+                LogMessage($"  - FSM 실행 중: {instance.IsRunning}");
+            }
+            else
+            {
+                LogError("✗ GameFlowStateMachine 초기화 실패");
+            }
+        }
+
+        /// <summary>
         /// PoolManager 사전 로딩
         /// </summary>
         private void PreloadPoolManager()
@@ -362,6 +460,7 @@ namespace GASPT.Core
 
             if (GameResourceManager.HasInstance) count++;
             if (PoolManager.HasInstance) count++;
+            if (FadeController.HasInstance) count++;
             if (DamageNumberPool.HasInstance) count++;
             if (CurrencySystem.HasInstance) count++;
             if (InventorySystem.HasInstance) count++;
@@ -372,6 +471,9 @@ namespace GASPT.Core
             if (SkillSystem.HasInstance) count++;
             if (LootSystem.HasInstance) count++;
             if (SkillItemManager.HasInstance) count++;
+            if (RunManager.HasInstance) count++;
+            if (GameManager.HasInstance) count++;
+            if (GameFlowStateMachine.HasInstance) count++;
 
             return count;
         }
@@ -407,6 +509,7 @@ namespace GASPT.Core
             Debug.Log("========== 싱글톤 상태 확인 ==========");
             Debug.Log($"GameResourceManager: {(GameResourceManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PoolManager: {(PoolManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"FadeController: {(FadeController.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"DamageNumberPool: {(DamageNumberPool.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"CurrencySystem: {(CurrencySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"InventorySystem: {(InventorySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
@@ -417,7 +520,10 @@ namespace GASPT.Core
             Debug.Log($"SkillSystem: {(SkillSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"LootSystem: {(LootSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SkillItemManager: {(SkillItemManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/11개 싱글톤 생성됨");
+            Debug.Log($"RunManager: {(RunManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"GameManager: {(GameManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"GameFlowStateMachine: {(GameFlowStateMachine.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"총 {GetPreloadedCount()}/15개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 

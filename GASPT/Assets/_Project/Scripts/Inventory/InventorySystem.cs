@@ -5,6 +5,7 @@ using GASPT.Data;
 using GASPT.Stats;
 using GASPT.Save;
 using Core.Enums;
+using GASPT.Core;
 
 namespace GASPT.Inventory
 {
@@ -47,7 +48,7 @@ namespace GASPT.Inventory
         protected override void OnAwake()
         {
             // PlayerStats 찾기
-            playerStats = FindAnyObjectByType<PlayerStats>();
+            playerStats = GameManager.Instance.PlayerStats;
 
             if (playerStats == null)
             {

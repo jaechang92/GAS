@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GASPT.Stats;
+using Core.Enums;
+using Core;
 
 namespace GASPT.UI
 {
@@ -67,7 +69,16 @@ namespace GASPT.UI
 
         private void Start()
         {
-            FindPlayerStats();
+            // 비동기 초기화
+            InitializeAsync().Forget();
+        }
+
+        /// <summary>
+        /// 비동기 초기화 (PlayerStats를 찾을 때까지 대기)
+        /// </summary>
+        private async Awaitable InitializeAsync()
+        {
+            await FindPlayerStatsAsync();
             SubscribeToEvents(); // PlayerStats를 찾은 후 이벤트 구독
             InitializeUI();
         }
@@ -103,22 +114,66 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// PlayerStats 자동 검색
+        /// PlayerStats 자동 검색 (동기) - RunManager 우선 사용
         /// </summary>
         private void FindPlayerStats()
         {
             if (playerStats == null)
             {
-                playerStats = FindAnyObjectByType<PlayerStats>();
+                // RunManager에서 먼저 찾기
+                if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
+                {
+                    playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
+                    Debug.Log("[PlayerManaBar] RunManager에서 PlayerStats 찾기 완료.");
+                    return;
+                }
 
-                if (playerStats == null)
+                // GameManager에서 찾기
+                if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
                 {
-                    Debug.LogError("[PlayerManaBar] PlayerStats를 찾을 수 없습니다. Scene에 PlayerStats가 있는지 확인하세요.");
+                    playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
+                    Debug.Log("[PlayerManaBar] GameManager에서 PlayerStats 찾기 완료.");
+                    return;
                 }
-                else
+
+                Debug.LogError("[PlayerManaBar] PlayerStats를 찾을 수 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// PlayerStats 자동 검색 (비동기 - 재시도 로직)
+        /// </summary>
+        private async Awaitable FindPlayerStatsAsync()
+        {
+            int maxAttempts = 50;
+            int attempts = 0;
+
+            while (playerStats == null && attempts < maxAttempts)
+            {
+                // RunManager 우선
+                if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
                 {
-                    Debug.Log("[PlayerManaBar] PlayerStats 자동 검색 완료.");
+                    playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
                 }
+                // GameManager 차선
+                else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                {
+                    playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
+                }
+
+                if (playerStats != null)
+                {
+                    Debug.Log("[PlayerManaBar] PlayerStats 찾기 성공!");
+                    break;
+                }
+
+                await Awaitable.WaitForSecondsAsync(0.1f);
+                attempts++;
+            }
+
+            if (playerStats == null)
+            {
+                Debug.LogError("[PlayerManaBar] PlayerStats를 찾을 수 없습니다. (타임아웃)");
             }
         }
 
@@ -148,7 +203,7 @@ namespace GASPT.UI
         {
             if (playerStats != null)
             {
-                playerStats.OnManaChanged += OnPlayerManaChanged;
+                playerStats.OnStatsChanged += OnPlayerStatsChanged;
 
                 Debug.Log("[PlayerManaBar] PlayerStats 이벤트 구독 완료");
             }
@@ -162,7 +217,7 @@ namespace GASPT.UI
         {
             if (playerStats != null)
             {
-                playerStats.OnManaChanged -= OnPlayerManaChanged;
+                playerStats.OnStatsChanged -= OnPlayerStatsChanged;
             }
         }
 
@@ -170,27 +225,31 @@ namespace GASPT.UI
         // ====== 이벤트 핸들러 ======
 
         /// <summary>
-        /// 플레이어 마나가 변경되었을 때
+        /// 플레이어 스탯이 변경되었을 때 (Mana만 처리)
         /// </summary>
-        private void OnPlayerManaChanged(int currentMana, int maxMana)
+        private void OnPlayerStatsChanged(StatType statType, int oldValue, int newValue)
         {
-            Debug.Log($"[PlayerManaBar] OnManaChanged 호출: {lastMana} → {currentMana}/{maxMana}");
-            UpdateManaBar(currentMana, maxMana);
+            // Mana 변경만 처리
+            if (statType != StatType.Mana)
+                return;
+
+            Debug.Log($"[PlayerManaBar] OnStatsChanged(Mana) 호출: {oldValue} → {newValue}");
+            UpdateManaBar(newValue, playerStats.MaxMana);
 
             // 마나 소모 또는 회복 플래시
-            if (currentMana < lastMana)
+            if (newValue < oldValue)
             {
                 // 마나 소모
                 FlashColor(spendColor);
             }
-            else if (currentMana > lastMana)
+            else if (newValue > oldValue)
             {
                 // 마나 회복
                 FlashColor(regenColor);
             }
 
             // 현재 마나를 lastMana에 저장
-            lastMana = currentMana;
+            lastMana = newValue;
         }
 
 

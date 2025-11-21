@@ -1,21 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)",
-      "Bash(nul)",
-      "Bash(gh pr create:*)",
-      "Bash(dir:*)",
-      "Bash(gh pr list:*)",
+      "WebSearch",
+      "Bash(git show:*)",
+      "Bash(\"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\architecture\\ARCHITECTURE_DIAGRAMS.md\")",
+      "Bash(\"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\architecture\\QUICK_REFERENCE.md\")",
+      "mcp__ide__getDiagnostics",
+      "Bash($null)",
+      "Bash(powershell:*)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\WORK_STATUS_UPDATE.md\")",
+      "Bash(mv:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)",
-      "Bash(python:*)",
-      "Bash(findstr:*)",
-      "Bash(git mv:*)",
-      "Bash(git rm:*)",
-      "Bash(git checkout:*)",
-      "Bash(git stash:*)",
-      "Bash(powershell -Command:*)",
-      "Bash(measure-object:*)"
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

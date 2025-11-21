@@ -52,11 +52,20 @@ namespace GASPT.UI
             // PlayerStats가 할당되지 않았으면 자동으로 찾기
             if (playerStats == null)
             {
-                playerStats = FindAnyObjectByType<PlayerStats>();
+                // RunManager 우선
+                if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
+                {
+                    playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
+                }
+                // GameManager 차선
+                else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                {
+                    playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
+                }
 
                 if (playerStats == null)
                 {
-                    Debug.LogError("[StatPanelUI] PlayerStats를 찾을 수 없습니다. Scene에 PlayerStats 컴포넌트가 있는지 확인하세요.");
+                    Debug.LogWarning("[StatPanelUI] PlayerStats를 찾을 수 없습니다. 런이 시작되면 자동으로 연결됩니다.");
                 }
             }
 
@@ -68,7 +77,7 @@ namespace GASPT.UI
             if (playerStats != null)
             {
                 // 이벤트 구독
-                playerStats.OnStatChanged += OnStatChanged;
+                playerStats.OnStatsChanged += OnStatChanged;
 
                 // 초기 UI 업데이트
                 UpdateAllStats();
@@ -102,7 +111,7 @@ namespace GASPT.UI
             if (playerStats != null)
             {
                 // 이벤트 구독 해제
-                playerStats.OnStatChanged -= OnStatChanged;
+                playerStats.OnStatsChanged -= OnStatChanged;
 
                 Debug.Log("[StatPanelUI] PlayerStats 이벤트 구독 해제");
             }

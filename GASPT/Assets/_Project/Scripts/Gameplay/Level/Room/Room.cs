@@ -92,6 +92,26 @@ namespace GASPT.Gameplay.Level
             }
         }
 
+        /// <summary>
+        /// RoomData로 Room 초기화 (동적 생성 시 사용)
+        /// </summary>
+        public void Initialize(RoomData data)
+        {
+            if (data == null)
+            {
+                Debug.LogError($"[Room] {name}: RoomData가 null입니다!");
+                return;
+            }
+
+            // RoomData 할당
+            roomData = data;
+
+            // Room 이름 업데이트
+            name = $"Room_{data.roomName}";
+
+            Debug.Log($"[Room] {name}: RoomData로 초기화 완료 (Difficulty: {data.difficulty}, Type: {data.roomType})");
+        }
+
 
         // ====== 방 진입 ======
 

@@ -7,14 +7,11 @@ namespace GASPT.UI
     /// 포탈 상호작용 UI
     /// 플레이어가 포탈 근처에 있을 때 "E키로 다음 방 이동" 메시지 표시
     /// </summary>
-    public class PortalUI : MonoBehaviour
+    public class PortalUI : BaseUI
     {
         // ====== UI 요소 ======
 
-        [Header("UI 요소")]
-        [Tooltip("UI 패널 (활성화/비활성화)")]
-        [SerializeField] private GameObject uiPanel;
-
+        [Header("Portal UI 요소")]
         [Tooltip("안내 텍스트")]
         [SerializeField] private Text messageText;
 
@@ -24,10 +21,10 @@ namespace GASPT.UI
 
         // ====== Unity 생명주기 ======
 
-        private void Awake()
+        protected override void Awake()
         {
-            // 초기 상태: 숨김
-            Hide();
+            // BaseUI Awake 호출 (Panel 자동 숨김)
+            base.Awake();
 
             // 기본 메시지 설정
             if (messageText != null)
@@ -37,29 +34,7 @@ namespace GASPT.UI
         }
 
 
-        // ====== UI 표시/숨김 ======
-
-        /// <summary>
-        /// UI 표시
-        /// </summary>
-        public void Show()
-        {
-            if (uiPanel != null)
-            {
-                uiPanel.SetActive(true);
-            }
-        }
-
-        /// <summary>
-        /// UI 숨김
-        /// </summary>
-        public void Hide()
-        {
-            if (uiPanel != null)
-            {
-                uiPanel.SetActive(false);
-            }
-        }
+        // ====== UI 기능 ======
 
         /// <summary>
         /// 메시지 변경
@@ -70,21 +45,6 @@ namespace GASPT.UI
             {
                 messageText.text = message;
             }
-        }
-
-
-        // ====== 디버그 ======
-
-        [ContextMenu("Show UI (Test)")]
-        private void DebugShow()
-        {
-            Show();
-        }
-
-        [ContextMenu("Hide UI (Test)")]
-        private void DebugHide()
-        {
-            Hide();
         }
     }
 }

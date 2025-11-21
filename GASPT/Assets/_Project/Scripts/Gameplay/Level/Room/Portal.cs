@@ -1,6 +1,7 @@
 using UnityEngine;
 using Core;
 using GASPT.UI;
+using GASPT.Core;
 
 namespace GASPT.Gameplay.Level
 {
@@ -46,8 +47,8 @@ namespace GASPT.Gameplay.Level
         // ====== UI ======
 
         [Header("UI")]
-        [Tooltip("포탈 상호작용 UI (PortalUI)")]
-        [SerializeField] private PortalUI portalUI;
+        [Tooltip("포탈 상호작용 UI (PortalUI) - 자동으로 생성됨")]
+        private PortalUI portalUI;
 
 
         // ====== 상태 ======
@@ -131,11 +132,17 @@ namespace GASPT.Gameplay.Level
                 playerInRange = true;
                 playerInPortal = player;
 
-                // PortalUI 표시
-                if(portalUI == null) portalUI = FindAnyObjectByType<PortalUI>(FindObjectsInactive.Include);
+                // PortalUI 생성 또는 찾기
+                if (portalUI == null)
+                {
+                    portalUI = CreateOrFindPortalUI();
+                }
 
                 if (portalUI != null)
                 {
+                    // 포탈 타입에 따라 메시지 변경
+                    string message = GetPortalMessage();
+                    portalUI.SetMessage(message);
                     portalUI.Show();
                 }
 
@@ -190,12 +197,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private async Awaitable UsePortalAsync()
         {
-            if (RoomManager.Instance == null)
-            {
-                Debug.LogError("[Portal] RoomManager를 찾을 수 없습니다!");
-                return;
-            }
-
             // 포탈 비활성화 (중복 사용 방지)
             SetActive(false);
 
@@ -205,17 +206,59 @@ namespace GASPT.Gameplay.Level
             // 방 이동
             switch (portalType)
             {
+                case PortalType.DungeonEntrance:
+                    // StartRoom → Dungeon 입장 (GameFlowStateMachine 사용)
+                    var gameFlowFSM = GameFlowStateMachine.Instance;
+                    if (gameFlowFSM != null)
+                    {
+                        gameFlowFSM.TriggerEnterDungeon();
+                        Debug.Log($"[Portal] 던전 입장 이벤트 트리거!");
+                    }
+                    else
+                    {
+                        Debug.LogError("[Portal] GameFlowStateMachine을 찾을 수 없습니다!");
+                    }
+                    break;
+
                 case PortalType.NextRoom:
-                    await RoomManager.Instance.MoveToNextRoomAsync();
+                    // 던전 내 다음 방 이동 (GameFlowStateMachine 사용)
+                    var gameFlow = GameFlowStateMachine.Instance;
+                    if (gameFlow != null)
+                    {
+                        gameFlow.TriggerEnterNextRoom();
+                        Debug.Log($"[Portal] 다음 방 이동 이벤트 트리거!");
+                    }
+                    else
+                    {
+                        Debug.LogError("[Portal] GameFlowStateMachine을 찾을 수 없습니다!");
+                    }
                     break;
 
                 case PortalType.SpecificRoom:
-                    await RoomManager.Instance.MoveToRoomAsync(targetRoomIndex);
+                    // 특정 방으로 직접 이동 (RoomManager 직접 사용)
+                    if (RoomManager.Instance != null)
+                    {
+                        await RoomManager.Instance.MoveToRoomAsync(targetRoomIndex);
+                        Debug.Log($"[Portal] 특정 방({targetRoomIndex})으로 이동 완료!");
+                    }
+                    else
+                    {
+                        Debug.LogError("[Portal] RoomManager를 찾을 수 없습니다!");
+                    }
                     break;
 
                 case PortalType.RandomRoom:
-                    int randomIndex = Random.Range(0, RoomManager.Instance.TotalRoomCount);
-                    await RoomManager.Instance.MoveToRoomAsync(randomIndex);
+                    // 랜덤 방으로 직접 이동 (RoomManager 직접 사용)
+                    if (RoomManager.Instance != null)
+                    {
+                        int randomIndex = Random.Range(0, RoomManager.Instance.TotalRoomCount);
+                        await RoomManager.Instance.MoveToRoomAsync(randomIndex);
+                        Debug.Log($"[Portal] 랜덤 방({randomIndex})으로 이동 완료!");
+                    }
+                    else
+                    {
+                        Debug.LogError("[Portal] RoomManager를 찾을 수 없습니다!");
+                    }
                     break;
             }
 
@@ -234,6 +277,78 @@ namespace GASPT.Gameplay.Level
             {
                 SetActive(true);
                 Debug.Log($"[Portal] 방 클리어 - 포탈 활성화!");
+            }
+        }
+
+
+        // ====== 유틸리티 ======
+
+        /// <summary>
+        /// PortalUI 생성 또는 찾기
+        /// </summary>
+        private PortalUI CreateOrFindPortalUI()
+        {
+            // 1. 먼저 씬에서 PortalUI 찾기
+            PortalUI existingUI = FindAnyObjectByType<PortalUI>(FindObjectsInactive.Include);
+            if (existingUI != null)
+            {
+                Debug.Log("[Portal] 기존 PortalUI 찾기 성공!");
+                return existingUI;
+            }
+
+            // 2. 없으면 Resources.Load로 Prefab 로드
+            GameObject uiPrefab = Resources.Load<GameObject>("Prefabs/UI/PortalUI");
+            if (uiPrefab == null)
+            {
+                Debug.LogError("[Portal] PortalUI Prefab을 찾을 수 없습니다! 경로: Resources/Prefabs/UI/PortalUI.prefab");
+                return null;
+            }
+
+            // 3. Canvas 찾기
+            Canvas canvas = FindAnyObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogError("[Portal] Canvas를 찾을 수 없습니다! PortalUI를 생성할 수 없습니다.");
+                return null;
+            }
+
+            // 4. PortalUI Prefab 인스턴스화
+            GameObject uiObj = Instantiate(uiPrefab, canvas.transform);
+            uiObj.name = "PortalUI";
+
+            PortalUI ui = uiObj.GetComponent<PortalUI>();
+            if (ui == null)
+            {
+                Debug.LogError("[Portal] 생성한 PortalUI에 PortalUI 컴포넌트가 없습니다!");
+                Destroy(uiObj);
+                return null;
+            }
+
+            Debug.Log("[Portal] PortalUI Prefab을 Resources.Load로 생성 완료!");
+            return ui;
+        }
+
+        /// <summary>
+        /// 포탈 타입에 따른 메시지 반환
+        /// </summary>
+        private string GetPortalMessage()
+        {
+            switch (portalType)
+            {
+                case PortalType.DungeonEntrance:
+                    return "E 키를 눌러 던전 입장";
+
+                case PortalType.NextRoom:
+                    return "E 키를 눌러 다음 방으로 이동";
+
+                case PortalType.SpecificRoom:
+                    return $"E 키를 눌러 {targetRoomIndex}번 방으로 이동";
+
+                case PortalType.RandomRoom:
+                    return "E 키를 눌러 랜덤 방으로 이동";
+
+                default:
+                    return "E 키를 눌러 이동";
             }
         }
 
@@ -355,8 +470,9 @@ namespace GASPT.Gameplay.Level
     /// </summary>
     public enum PortalType
     {
-        NextRoom,       // 다음 방으로
-        SpecificRoom,   // 특정 방으로
-        RandomRoom      // 랜덤 방으로
+        NextRoom,       // 던전 내 다음 방으로 (GameFlow 사용)
+        SpecificRoom,   // 특정 방으로 (직접 이동)
+        RandomRoom,     // 랜덤 방으로 (직접 이동)
+        DungeonEntrance // StartRoom → Dungeon 입장 (GameFlow 사용)
     }
 }

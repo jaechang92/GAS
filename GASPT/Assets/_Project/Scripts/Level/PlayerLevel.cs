@@ -102,11 +102,20 @@ namespace GASPT.Level
         {
             if (playerStats == null)
             {
-                playerStats = FindAnyObjectByType<PlayerStats>();
+                // RunManager 우선
+                if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
+                {
+                    playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
+                }
+                // GameManager 차선
+                else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                {
+                    playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
+                }
 
                 if (playerStats == null)
                 {
-                    Debug.LogWarning("[PlayerLevel] PlayerStats를 찾을 수 없습니다.");
+                    Debug.LogWarning("[PlayerLevel] PlayerStats를 찾을 수 없습니다. 런이 시작되면 자동으로 연결됩니다.");
                 }
                 else
                 {

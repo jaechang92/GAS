@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Normal Goblin
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Data.EnemyData
   enemyType: 0
+  enemyClass: 0
   enemyName: Normal Goblin
   icon: {fileID: 0}
   maxHp: 30
@@ -20,6 +21,32 @@ MonoBehaviour:
   minGoldDrop: 15
   maxGoldDrop: 25
   expReward: 10
-  lootTable: {fileID: 11400000, guid: 439afe89fe33bc44e973392a3fac75c4, type: 2}
+  lootTable: {fileID: 11400000, guid: de99b40e9835ca345895ada7d65ce8c3, type: 2}
+  moveSpeed: 2
+  detectionRange: 5
+  attackRange: 1.5
+  patrolDistance: 3
+  chaseSpeed: 3
+  attackCooldown: 1.5
+  optimalAttackDistance: 10
+  minDistance: 5
+  flyHeight: 6
+  diveSpeed: 10
+  flySpeed: 3
+  chargeCooldown: 5
+  areaCooldown: 7
+  areaAttackRadius: 3
+  chargeSpeed: 8
+  chargeDistance: 5
+  bossRangedCooldown: 3
+  bossChargeCooldown: 5
+  bossSummonCooldown: 10
+  bossAreaCooldown: 7
+  bossAreaRadius: 5
+  bossProjectileSpeed: 8
+  bossProjectileDamage: 15
+  bossAreaDamage: 30
+  bossChargeSpeed: 10
+  bossChargeDistance: 8
   showNameTag: 0
   showBossHealthBar: 0

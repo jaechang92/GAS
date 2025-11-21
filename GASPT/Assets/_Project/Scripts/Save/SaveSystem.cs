@@ -4,6 +4,7 @@ using UnityEngine;
 using GASPT.Stats;
 using GASPT.Economy;
 using GASPT.Inventory;
+using System.Collections.Generic;
 
 namespace GASPT.Save
 {
@@ -18,14 +19,24 @@ namespace GASPT.Save
         // ====== 설정 ======
 
         /// <summary>
-        /// 저장 파일명
+        /// 저장 파일명 (런 데이터)
         /// </summary>
         private const string SaveFileName = "gamesave.json";
 
         /// <summary>
-        /// 저장 파일 전체 경로
+        /// 메타 저장 파일명 (메타 진행 데이터)
+        /// </summary>
+        private const string MetaSaveFileName = "metasave.json";
+
+        /// <summary>
+        /// 저장 파일 전체 경로 (런 데이터)
         /// </summary>
         private string SaveFilePath => Path.Combine(Application.persistentDataPath, SaveFileName);
+
+        /// <summary>
+        /// 메타 저장 파일 전체 경로
+        /// </summary>
+        private string MetaSaveFilePath => Path.Combine(Application.persistentDataPath, MetaSaveFileName);
 
 
         // ====== 이벤트 ======
@@ -102,8 +113,12 @@ namespace GASPT.Save
         {
             GameSaveData saveData = new GameSaveData();
 
-            // PlayerStats 데이터 수집
-            PlayerStats playerStats = FindAnyObjectByType<PlayerStats>();
+            // PlayerStats 데이터 수집 (RunManager/GameManager 우선)
+            PlayerStats playerStats = null;
+            if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
+                playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
+            else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
             if (playerStats != null)
             {
                 saveData.playerStats = playerStats.GetSaveData();
@@ -193,8 +208,12 @@ namespace GASPT.Save
         /// </summary>
         private void ApplySaveData(GameSaveData saveData)
         {
-            // PlayerStats 데이터 적용
-            PlayerStats playerStats = FindAnyObjectByType<PlayerStats>();
+            // PlayerStats 데이터 적용 (RunManager/GameManager 우선)
+            PlayerStats playerStats = null;
+            if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
+                playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
+            else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
             if (playerStats != null && saveData.playerStats != null)
             {
                 playerStats.LoadFromSaveData(saveData.playerStats);
@@ -311,6 +330,140 @@ namespace GASPT.Save
             Debug.Log($"[SaveSystem] ========== Save File Info ==========");
             Debug.Log(GetSaveFileInfo());
             Debug.Log($"[SaveSystem] =========================================");
+        }
+
+
+        // ====== 메타 데이터 저장/로드 ======
+
+        /// <summary>
+        /// 메타 진행 데이터를 저장합니다 (메타 골드, 언락, 업적 등)
+        /// </summary>
+        public void SaveMetaData(MetaProgressionData metaData)
+        {
+            if (metaData == null)
+            {
+                Debug.LogError("[SaveSystem] SaveMetaData(): metaData가 null입니다.");
+                return;
+            }
+
+            try
+            {
+                // JSON으로 직렬화
+                string json = JsonUtility.ToJson(metaData, true);
+
+                // 파일에 쓰기
+                File.WriteAllText(MetaSaveFilePath, json);
+
+                Debug.Log($"[SaveSystem] 메타 데이터 저장 완료: {MetaSaveFilePath}");
+                Debug.Log($"[SaveSystem] 메타 골드: {metaData.totalGold}, Form: {metaData.unlockedForms.Count}개");
+            }
+            catch (Exception e)
+            {
+                string errorMsg = $"메타 데이터 저장 실패: {e.Message}";
+                Debug.LogError($"[SaveSystem] {errorMsg}");
+            }
+        }
+
+        /// <summary>
+        /// 메타 진행 데이터를 불러옵니다
+        /// </summary>
+        public MetaProgressionData LoadMetaData()
+        {
+            try
+            {
+                // 파일 존재 확인
+                if (!File.Exists(MetaSaveFilePath))
+                {
+                    Debug.Log("[SaveSystem] 메타 저장 파일이 없습니다. 새로운 메타 데이터를 반환합니다.");
+                    return new MetaProgressionData();
+                }
+
+                // 파일에서 읽기
+                string json = File.ReadAllText(MetaSaveFilePath);
+
+                // JSON 역직렬화
+                MetaProgressionData metaData = JsonUtility.FromJson<MetaProgressionData>(json);
+
+                if (metaData == null)
+                {
+                    throw new Exception("JSON 역직렬화 실패 (metaData == null)");
+                }
+
+                Debug.Log($"[SaveSystem] 메타 데이터 불러오기 완료: {MetaSaveFilePath}");
+                Debug.Log($"[SaveSystem] 메타 골드: {metaData.totalGold}, Form: {metaData.unlockedForms.Count}개");
+
+                return metaData;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[SaveSystem] 메타 데이터 불러오기 실패: {e.Message}");
+                return new MetaProgressionData();
+            }
+        }
+
+        /// <summary>
+        /// 메타 저장 파일이 존재하는지 확인합니다
+        /// </summary>
+        public bool MetaSaveFileExists()
+        {
+            return File.Exists(MetaSaveFilePath);
+        }
+
+        /// <summary>
+        /// 메타 저장 파일을 삭제합니다
+        /// </summary>
+        public void DeleteMetaSaveFile()
+        {
+            try
+            {
+                if (File.Exists(MetaSaveFilePath))
+                {
+                    File.Delete(MetaSaveFilePath);
+                    Debug.Log($"[SaveSystem] 메타 저장 파일 삭제 완료: {MetaSaveFilePath}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[SaveSystem] 삭제할 메타 저장 파일이 존재하지 않습니다: {MetaSaveFilePath}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[SaveSystem] 메타 저장 파일 삭제 실패: {e.Message}");
+            }
+        }
+
+
+        // ====== Context Menu (메타 데이터 테스트용) ======
+
+        [ContextMenu("Save Meta Data")]
+        private void TestSaveMetaData()
+        {
+            // 테스트용 더미 메타 데이터 생성
+            MetaProgressionData testData = new MetaProgressionData
+            {
+                totalGold = 5000,
+                unlockedForms = new List<string> { "MageForm", "WarriorForm" },
+                metaUpgrades = new List<MetaUpgradeEntry>
+                {
+                    new MetaUpgradeEntry("MaxHP", 3),
+                    new MetaUpgradeEntry("Attack", 2)
+                }
+            };
+
+            SaveMetaData(testData);
+        }
+
+        [ContextMenu("Load Meta Data")]
+        private void TestLoadMetaData()
+        {
+            MetaProgressionData metaData = LoadMetaData();
+            Debug.Log($"[SaveSystem] 불러온 메타 골드: {metaData.totalGold}");
+        }
+
+        [ContextMenu("Delete Meta Save File")]
+        private void TestDeleteMetaSaveFile()
+        {
+            DeleteMetaSaveFile();
         }
     }
 }

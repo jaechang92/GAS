@@ -197,7 +197,7 @@ namespace GASPT.UI
             {
                 EquipmentSlot.Weapon => "무기",
                 EquipmentSlot.Armor => "방어구",
-                EquipmentSlot.Ring => "반지",
+                EquipmentSlot.Accessory => "악세서리",
                 _ => "알 수 없음"
             };
         }

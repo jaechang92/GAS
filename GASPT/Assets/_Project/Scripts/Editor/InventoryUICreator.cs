@@ -110,21 +110,31 @@ namespace GASPT.EditorTools
         }
 
         /// <summary>
-        /// InventoryPanel 생성 (Canvas 자식)
+        /// InventoryUI 생성 (UI CANVAS 자식)
         /// </summary>
         private void CreateInventoryPanel()
         {
-            // Canvas 찾기
-            Canvas canvas = FindAnyObjectByType<Canvas>();
-            if (canvas == null)
+            // UI CANVAS 찾기
+            GameObject canvasObj = GameObject.Find("=== UI CANVAS ===");
+            if (canvasObj == null)
             {
-                EditorUtility.DisplayDialog("오류", "Scene에 Canvas가 없습니다!", "확인");
+                EditorUtility.DisplayDialog("오류", "Scene에 '=== UI CANVAS ===' 오브젝트가 없습니다!", "확인");
                 return;
             }
 
-            // InventoryPanel 생성
-            GameObject panel = new GameObject("InventoryPanel");
-            panel.transform.SetParent(canvas.transform, false);
+            // InventoryUI 부모 생성 (항상 활성화, InventoryUI 컴포넌트 포함)
+            GameObject inventoryUIObj = new GameObject("InventoryUI");
+            inventoryUIObj.transform.SetParent(canvasObj.transform, false);
+
+            RectTransform inventoryUIRect = inventoryUIObj.AddComponent<RectTransform>();
+            inventoryUIRect.anchorMin = Vector2.zero;
+            inventoryUIRect.anchorMax = Vector2.one;
+            inventoryUIRect.sizeDelta = Vector2.zero;
+            inventoryUIRect.anchoredPosition = Vector2.zero;
+
+            // Panel 자식 생성 (실제 UI, SetActive로 제어됨)
+            GameObject panel = new GameObject("Panel");
+            panel.transform.SetParent(inventoryUIObj.transform, false);
 
             RectTransform panelRect = panel.AddComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -170,13 +180,13 @@ namespace GASPT.EditorTools
             // Close Button
             CreateCloseButton(panel);
 
-            // InventoryUI 컴포넌트 추가
-            InventoryUI inventoryUI = panel.AddComponent<InventoryUI>();
+            // InventoryUI 컴포넌트 추가 (부모 오브젝트에 추가)
+            InventoryUI inventoryUI = inventoryUIObj.AddComponent<InventoryUI>();
 
             // SerializedObject로 참조 설정
             SerializedObject so = new SerializedObject(inventoryUI);
 
-            so.FindProperty("inventoryPanel").objectReferenceValue = panel;
+            so.FindProperty("panel").objectReferenceValue = panel;
             so.FindProperty("itemListContent").objectReferenceValue = panel.transform.Find("ItemListPanel/Viewport/Content");
             so.FindProperty("weaponSlot").objectReferenceValue = panel.transform.Find("EquipmentPanel/WeaponSlot")?.GetComponent<EquipmentSlotUI>();
             so.FindProperty("armorSlot").objectReferenceValue = panel.transform.Find("EquipmentPanel/ArmorSlot")?.GetComponent<EquipmentSlotUI>();
@@ -189,10 +199,10 @@ namespace GASPT.EditorTools
 
             so.ApplyModifiedProperties();
 
-            Debug.Log("[InventoryUICreator] InventoryPanel 생성 완료");
+            Debug.Log("[InventoryUICreator] InventoryUI 생성 완료 (구조: InventoryUI > Panel)");
 
-            EditorGUIUtility.PingObject(panel);
-            Selection.activeGameObject = panel;
+            EditorGUIUtility.PingObject(inventoryUIObj);
+            Selection.activeGameObject = inventoryUIObj;
         }
 
         /// <summary>
@@ -256,7 +266,7 @@ namespace GASPT.EditorTools
         }
 
         /// <summary>
-        /// EquipmentPanel 생성
+        /// EquipmentPanel 생성 (수동 배치 - LayoutGroup 제거)
         /// </summary>
         private void CreateEquipmentPanel(GameObject parent)
         {
@@ -272,25 +282,20 @@ namespace GASPT.EditorTools
             Image equipBg = equipPanel.AddComponent<Image>();
             equipBg.color = new Color(0.15f, 0.15f, 0.15f, 0.8f);
 
-            // Vertical Layout
-            VerticalLayoutGroup layout = equipPanel.AddComponent<VerticalLayoutGroup>();
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-            layout.spacing = 20f;
-            layout.padding = new RectOffset(20, 20, 20, 20);
-
-            // Equipment Slots
-            GameObject weaponSlot = CreateEquipmentSlot("WeaponSlot", equipPanel);
-            GameObject armorSlot = CreateEquipmentSlot("ArmorSlot", equipPanel);
-            GameObject ringSlot = CreateEquipmentSlot("RingSlot", equipPanel);
+            // 수동 배치 (고정 위치) - 현업 베스트 프랙티스
+            // Y 위치: -80 (첫 슬롯), -220 (두 번째), -360 (세 번째)
+            GameObject weaponSlot = CreateEquipmentSlot("WeaponSlot", equipPanel, -80f);
+            GameObject armorSlot = CreateEquipmentSlot("ArmorSlot", equipPanel, -220f);
+            GameObject ringSlot = CreateEquipmentSlot("RingSlot", equipPanel, -360f);
         }
 
         /// <summary>
         /// EquipmentSlot 생성 (프리팹 인스턴스화)
         /// </summary>
-        private GameObject CreateEquipmentSlot(string name, GameObject parent)
+        /// <param name="name">슬롯 이름 (WeaponSlot, ArmorSlot, RingSlot)</param>
+        /// <param name="parent">부모 오브젝트 (EquipmentPanel)</param>
+        /// <param name="yPos">Y 위치 (앵커 기준)</param>
+        private GameObject CreateEquipmentSlot(string name, GameObject parent, float yPos)
         {
             // 프리팹 로드
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath + "EquipmentSlot.prefab");
@@ -305,7 +310,14 @@ namespace GASPT.EditorTools
             GameObject slot = PrefabUtility.InstantiatePrefab(prefab, parent.transform) as GameObject;
             slot.name = name;
 
-            // SlotNameText만 업데이트
+            // Y 위치 설정 (수동 배치)
+            RectTransform slotRect = slot.GetComponent<RectTransform>();
+            if (slotRect != null)
+            {
+                slotRect.anchoredPosition = new Vector2(0f, yPos);
+            }
+
+            // SlotNameText 업데이트
             TextMeshProUGUI slotNameText = slot.transform.Find("SlotNameText")?.GetComponent<TextMeshProUGUI>();
             if (slotNameText != null)
             {
@@ -478,18 +490,13 @@ namespace GASPT.EditorTools
             GameObject slot = new GameObject("EquipmentSlot");
 
             RectTransform slotRect = slot.AddComponent<RectTransform>();
-            slotRect.anchorMin = new Vector2(0f, 1f);  // Left Top
-            slotRect.anchorMax = new Vector2(0f, 1f);  // Left Top
-            slotRect.pivot = new Vector2(0f, 1f);      // Left Top
-            slotRect.sizeDelta = new Vector2(0f, 120f);
+            slotRect.anchorMin = new Vector2(0f, 0.5f);  // Left Stretch (수평 stretch)
+            slotRect.anchorMax = new Vector2(1f, 0.5f);  // Left Stretch
+            slotRect.pivot = new Vector2(0.5f, 0.5f);    // Center
+            slotRect.sizeDelta = new Vector2(0f, 120f);  // width=0 (stretch), height=120
 
             Image slotBg = slot.AddComponent<Image>();
             slotBg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
-
-            // LayoutElement 추가 (VerticalLayoutGroup 호환)
-            LayoutElement layoutElement = slot.AddComponent<LayoutElement>();
-            layoutElement.flexibleWidth = 1f;
-            layoutElement.preferredHeight = 120f;
 
             // SlotNameText
             GameObject slotNameObj = new GameObject("SlotNameText");
@@ -579,12 +586,12 @@ namespace GASPT.EditorTools
             if (!EditorUtility.DisplayDialog("확인", "모든 인벤토리 UI를 삭제하시겠습니까?", "삭제", "취소"))
                 return;
 
-            // InventoryPanel 삭제 (Scene에서)
+            // InventoryUI 삭제 (Scene에서)
             InventoryUI inventoryUI = FindAnyObjectByType<InventoryUI>();
             if (inventoryUI != null)
             {
                 DestroyImmediate(inventoryUI.gameObject);
-                Debug.Log("[InventoryUICreator] InventoryPanel 삭제 완료");
+                Debug.Log("[InventoryUICreator] InventoryUI 삭제 완료");
             }
 
             // ItemSlot 프리팹 삭제

@@ -1,3 +1,4 @@
+using Core;
 using UnityEngine;
 
 namespace GASPT.Gameplay.Camera
@@ -66,20 +67,19 @@ namespace GASPT.Gameplay.Camera
 
         private void Start()
         {
-            // 타겟 자동 탐색
+            // 비동기 초기화
+            InitializeAsync().Forget();
+        }
+
+        /// <summary>
+        /// 비동기 초기화 (플레이어를 찾을 때까지 대기)
+        /// </summary>
+        private async Awaitable InitializeAsync()
+        {
+            // 타겟 자동 탐색 (재시도 로직)
             if (target == null)
             {
-                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-                if (playerObj != null)
-                {
-                    target = playerObj.transform;
-                    if (showDebugLogs)
-                        Debug.Log($"[CameraFollow] 플레이어 자동 탐색 완료: {target.name}");
-                }
-                else
-                {
-                    Debug.LogWarning("[CameraFollow] \"Player\" 태그를 가진 GameObject를 찾을 수 없습니다!");
-                }
+                await FindPlayerAsync();
             }
 
             // 초기 위치 설정 (부드러운 시작)
@@ -88,6 +88,35 @@ namespace GASPT.Gameplay.Camera
                 transform.position = target.position + offset;
                 if (showDebugLogs)
                     Debug.Log($"[CameraFollow] 초기 위치 설정: {transform.position}");
+            }
+        }
+
+        /// <summary>
+        /// 플레이어 자동 검색 (비동기 - 재시도 로직)
+        /// </summary>
+        private async Awaitable FindPlayerAsync()
+        {
+            int maxAttempts = 50;
+            int attempts = 0;
+
+            while (target == null && attempts < maxAttempts)
+            {
+                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+                if (playerObj != null)
+                {
+                    target = playerObj.transform;
+                    if (showDebugLogs)
+                        Debug.Log($"[CameraFollow] 플레이어 자동 탐색 완료: {target.name}");
+                    break;
+                }
+
+                await Awaitable.WaitForSecondsAsync(0.1f);
+                attempts++;
+            }
+
+            if (target == null)
+            {
+                Debug.LogWarning("[CameraFollow] \"Player\" 태그를 가진 GameObject를 찾을 수 없습니다! (타임아웃)");
             }
         }
 

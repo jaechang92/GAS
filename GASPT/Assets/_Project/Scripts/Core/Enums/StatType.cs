@@ -18,6 +18,11 @@ namespace Core.Enums
         /// <summary>
         /// 방어력 (Defense)
         /// </summary>
-        Defense
+        Defense,
+
+        /// <summary>
+        /// 마나 (Mana Points)
+        /// </summary>
+        Mana
     }
 }

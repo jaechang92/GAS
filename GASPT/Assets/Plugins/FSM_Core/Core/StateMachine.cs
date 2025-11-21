@@ -88,18 +88,18 @@ namespace FSM.Core
 
         public void AddState(IState state)
         {
-            if (state == null || string.IsNullOrEmpty(state.Id)) return;
+            if (state == null || string.IsNullOrEmpty(state.Name)) return;
 
-            if (states.ContainsKey(state.Id))
+            if (states.ContainsKey(state.Name))
             {
-                RemoveState(state.Id);
+                RemoveState(state.Name);
             }
 
-            state.Initialize(state.Id, gameObject, this);
-            states[state.Id] = state;
+            state.Initialize(state.Name, gameObject, this);
+            states[state.Name] = state;
 
             if (enableDebugLog)
-                Debug.Log($"[FSM] 상태 추가됨: {state.Id}");
+                Debug.Log($"[FSM] 상태 추가됨: {state.Name}");
         }
 
         public void RemoveState(string stateId)

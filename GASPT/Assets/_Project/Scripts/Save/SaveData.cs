@@ -164,4 +164,115 @@ namespace GASPT.Save
             itemPaths = new List<string>();
         }
     }
+
+
+    // ====== MetaProgression 저장 데이터 ======
+
+    /// <summary>
+    /// 메타 진행 시스템 저장 데이터
+    /// 런을 넘어 지속되는 데이터 (골드, 언락, 업적 등)
+    /// </summary>
+    [Serializable]
+    public class MetaProgressionData
+    {
+        /// <summary>
+        /// 총 메타 골드 (누적)
+        /// </summary>
+        public int totalGold;
+
+        /// <summary>
+        /// 언락된 Form 목록
+        /// </summary>
+        public List<string> unlockedForms;
+
+        /// <summary>
+        /// 메타 업그레이드 레벨
+        /// </summary>
+        public List<MetaUpgradeEntry> metaUpgrades;
+
+        /// <summary>
+        /// 달성한 업적 목록
+        /// </summary>
+        public List<AchievementEntry> achievements;
+
+
+        /// <summary>
+        /// 기본 생성자
+        /// </summary>
+        public MetaProgressionData()
+        {
+            totalGold = 0;
+            unlockedForms = new List<string>();
+            metaUpgrades = new List<MetaUpgradeEntry>();
+            achievements = new List<AchievementEntry>();
+        }
+    }
+
+    /// <summary>
+    /// 메타 업그레이드 항목 (직렬화 가능)
+    /// </summary>
+    [Serializable]
+    public class MetaUpgradeEntry
+    {
+        /// <summary>
+        /// 스탯 ID (예: "MaxHP", "Attack", "Defense")
+        /// </summary>
+        public string statId;
+
+        /// <summary>
+        /// 업그레이드 레벨
+        /// </summary>
+        public int level;
+
+
+        /// <summary>
+        /// 기본 생성자
+        /// </summary>
+        public MetaUpgradeEntry()
+        {
+        }
+
+        /// <summary>
+        /// 생성자
+        /// </summary>
+        public MetaUpgradeEntry(string statId, int level)
+        {
+            this.statId = statId;
+            this.level = level;
+        }
+    }
+
+    /// <summary>
+    /// 업적 항목 (직렬화 가능)
+    /// </summary>
+    [Serializable]
+    public class AchievementEntry
+    {
+        /// <summary>
+        /// 업적 ID
+        /// </summary>
+        public string achievementId;
+
+        /// <summary>
+        /// 달성 여부
+        /// </summary>
+        public bool unlocked;
+
+
+        /// <summary>
+        /// 기본 생성자
+        /// </summary>
+        public AchievementEntry()
+        {
+        }
+
+        /// <summary>
+        /// 생성자
+        /// </summary>
+        public AchievementEntry(string achievementId, bool unlocked)
+        {
+            this.achievementId = achievementId;
+            this.unlocked = unlocked;
+        }
+    }
 }

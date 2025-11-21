@@ -120,6 +120,11 @@ namespace GASPT.Economy
             Debug.Log($"[CurrencySystem] 골드 설정: {oldGold} → {currentGold}");
         }
 
+        public void ResetGold()
+        {
+            SetGold(startingGold);
+        }
+
         /// <summary>
         /// 골드가 충분한지 확인
         /// </summary>

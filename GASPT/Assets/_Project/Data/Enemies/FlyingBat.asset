@@ -21,7 +21,7 @@ MonoBehaviour:
   minGoldDrop: 12
   maxGoldDrop: 18
   expReward: 18
-  lootTable: {fileID: 0}
+  lootTable: {fileID: 11400000, guid: 43aaa0b6c6ff1eb49ae906b911402c4d, type: 2}
   moveSpeed: 2
   detectionRange: 10
   attackRange: 1.5
@@ -38,5 +38,15 @@ MonoBehaviour:
   areaAttackRadius: 3
   chargeSpeed: 8
   chargeDistance: 5
+  bossRangedCooldown: 3
+  bossChargeCooldown: 5
+  bossSummonCooldown: 10
+  bossAreaCooldown: 7
+  bossAreaRadius: 5
+  bossProjectileSpeed: 8
+  bossProjectileDamage: 15
+  bossAreaDamage: 30
+  bossChargeSpeed: 10
+  bossChargeDistance: 8
   showNameTag: 0
   showBossHealthBar: 0

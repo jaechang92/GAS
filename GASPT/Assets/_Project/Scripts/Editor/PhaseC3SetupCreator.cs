@@ -76,7 +76,7 @@ namespace GASPT.Editor
             GUI.backgroundColor = Color.green;
             if (GUILayout.Button("🚀 모든 UI 자동 생성", GUILayout.Height(50)))
             {
-                CreateAllUI();
+                EditorApplication.delayCall += CreateAllUI;
             }
             GUI.backgroundColor = Color.white;
 
@@ -332,18 +332,30 @@ namespace GASPT.Editor
 
         private bool CreatePortalUIPrefab()
         {
-            Debug.Log("[PhaseC3SetupCreator] PortalUI 프리팹 생성 중...");
+            Debug.Log("[PhaseC3SetupCreator] PortalUI 생성 중 (Scene에 직접 생성)...");
 
-            // Canvas 생성
-            GameObject canvasObj = new GameObject("PortalUI");
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
-            canvasObj.AddComponent<GraphicRaycaster>();
+            // UI CANVAS 찾기
+            GameObject uiCanvas = GameObject.Find("=== UI CANVAS ===");
+            if (uiCanvas == null)
+            {
+                Debug.LogError("[PhaseC3SetupCreator] '=== UI CANVAS ===' 오브젝트를 찾을 수 없습니다!");
+                EditorUtility.DisplayDialog("오류", "Scene에 '=== UI CANVAS ===' 오브젝트가 없습니다!", "확인");
+                return false;
+            }
 
-            // Panel 생성 (배경)
+            // PortalUI 부모 생성 (항상 활성화, PortalUI 컴포넌트 포함)
+            GameObject portalUIObj = new GameObject("PortalUI");
+            portalUIObj.transform.SetParent(uiCanvas.transform, false);
+
+            RectTransform portalUIRect = portalUIObj.AddComponent<RectTransform>();
+            portalUIRect.anchorMin = Vector2.zero;
+            portalUIRect.anchorMax = Vector2.one;
+            portalUIRect.sizeDelta = Vector2.zero;
+            portalUIRect.anchoredPosition = Vector2.zero;
+
+            // Panel 자식 생성 (실제 UI, SetActive로 제어됨)
             GameObject panelObj = new GameObject("Panel");
-            panelObj.transform.SetParent(canvasObj.transform, false);
+            panelObj.transform.SetParent(portalUIObj.transform, false);
 
             RectTransform panelRect = panelObj.AddComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0f);
@@ -372,24 +384,21 @@ namespace GASPT.Editor
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;
 
-            // PortalUI 컴포넌트 추가
-            PortalUI portalUI = canvasObj.AddComponent<PortalUI>();
+            // PortalUI 컴포넌트 추가 (부모 오브젝트에 추가)
+            PortalUI portalUI = portalUIObj.AddComponent<PortalUI>();
 
             // SerializedObject를 사용하여 private 필드 설정
             SerializedObject so = new SerializedObject(portalUI);
-            so.FindProperty("uiPanel").objectReferenceValue = panelObj;
+            so.FindProperty("panel").objectReferenceValue = panelObj;
             so.FindProperty("messageText").objectReferenceValue = text;
             so.FindProperty("defaultMessage").stringValue = "E 키를 눌러 다음 방으로 이동";
             so.ApplyModifiedProperties();
 
-            // 프리팹 저장
-            string prefabPath = Path.Combine(UIPrefabsPath, "PortalUI.prefab");
-            PrefabUtility.SaveAsPrefabAsset(canvasObj, prefabPath);
+            Debug.Log("[PhaseC3SetupCreator] ✅ PortalUI 생성 완료 (구조: PortalUI > Panel)");
 
-            // 씬에서 제거
-            DestroyImmediate(canvasObj);
+            EditorGUIUtility.PingObject(portalUIObj);
+            Selection.activeGameObject = portalUIObj;
 
-            Debug.Log($"[PhaseC3SetupCreator] ✅ PortalUI.prefab 생성 완료: {prefabPath}");
             return true;
         }
 
@@ -398,18 +407,30 @@ namespace GASPT.Editor
 
         private bool CreateDungeonCompleteUIPrefab()
         {
-            Debug.Log("[PhaseC3SetupCreator] DungeonCompleteUI 프리팹 생성 중...");
+            Debug.Log("[PhaseC3SetupCreator] DungeonCompleteUI 생성 중 (Scene에 직접 생성)...");
 
-            // Canvas 생성
-            GameObject canvasObj = new GameObject("DungeonCompleteUI");
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
-            canvasObj.AddComponent<GraphicRaycaster>();
+            // UI CANVAS 찾기
+            GameObject uiCanvas = GameObject.Find("=== UI CANVAS ===");
+            if (uiCanvas == null)
+            {
+                Debug.LogError("[PhaseC3SetupCreator] '=== UI CANVAS ===' 오브젝트를 찾을 수 없습니다!");
+                EditorUtility.DisplayDialog("오류", "Scene에 '=== UI CANVAS ===' 오브젝트가 없습니다!", "확인");
+                return false;
+            }
 
-            // Panel 생성 (전체 화면 배경)
+            // DungeonCompleteUI 부모 생성 (항상 활성화, DungeonCompleteUI 컴포넌트 포함)
+            GameObject dungeonUIObj = new GameObject("DungeonCompleteUI");
+            dungeonUIObj.transform.SetParent(uiCanvas.transform, false);
+
+            RectTransform dungeonUIRect = dungeonUIObj.AddComponent<RectTransform>();
+            dungeonUIRect.anchorMin = Vector2.zero;
+            dungeonUIRect.anchorMax = Vector2.one;
+            dungeonUIRect.sizeDelta = Vector2.zero;
+            dungeonUIRect.anchoredPosition = Vector2.zero;
+
+            // Panel 자식 생성 (실제 UI, SetActive로 제어됨, 전체 화면 배경)
             GameObject panelObj = new GameObject("Panel");
-            panelObj.transform.SetParent(canvasObj.transform, false);
+            panelObj.transform.SetParent(dungeonUIObj.transform, false);
 
             RectTransform panelRect = panelObj.AddComponent<RectTransform>();
             panelRect.anchorMin = Vector2.zero;
@@ -470,12 +491,12 @@ namespace GASPT.Editor
             mainMenuButtonRect.anchorMax = new Vector2(0.5f, 0.3f);
             mainMenuButtonRect.anchoredPosition = new Vector2(120, 0);
 
-            // DungeonCompleteUI 컴포넌트 추가
-            DungeonCompleteUI dungeonCompleteUI = canvasObj.AddComponent<DungeonCompleteUI>();
+            // DungeonCompleteUI 컴포넌트 추가 (부모 오브젝트에 추가)
+            DungeonCompleteUI dungeonCompleteUI = dungeonUIObj.AddComponent<DungeonCompleteUI>();
 
             // SerializedObject를 사용하여 private 필드 설정
             SerializedObject so = new SerializedObject(dungeonCompleteUI);
-            so.FindProperty("uiPanel").objectReferenceValue = panelObj;
+            so.FindProperty("panel").objectReferenceValue = panelObj;
             so.FindProperty("titleText").objectReferenceValue = titleText;
             so.FindProperty("rewardText").objectReferenceValue = rewardText;
             so.FindProperty("nextDungeonButton").objectReferenceValue = nextButtonObj.GetComponent<Button>();
@@ -484,14 +505,11 @@ namespace GASPT.Editor
             so.FindProperty("pauseGameOnShow").boolValue = true;
             so.ApplyModifiedProperties();
 
-            // 프리팹 저장
-            string prefabPath = Path.Combine(UIPrefabsPath, "DungeonCompleteUI.prefab");
-            PrefabUtility.SaveAsPrefabAsset(canvasObj, prefabPath);
+            Debug.Log("[PhaseC3SetupCreator] ✅ DungeonCompleteUI 생성 완료 (구조: DungeonCompleteUI > Panel)");
 
-            // 씬에서 제거
-            DestroyImmediate(canvasObj);
+            EditorGUIUtility.PingObject(dungeonUIObj);
+            Selection.activeGameObject = dungeonUIObj;
 
-            Debug.Log($"[PhaseC3SetupCreator] ✅ DungeonCompleteUI.prefab 생성 완료: {prefabPath}");
             return true;
         }
 
@@ -543,32 +561,32 @@ namespace GASPT.Editor
                 Path.Combine(LevelPrefabsPath, "Portal.prefab")
             );
 
-            // PortalUI 프리팹 로드
-            GameObject portalUIPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                Path.Combine(UIPrefabsPath, "PortalUI.prefab")
-            );
-
-            // DungeonCompleteUI 프리팹 로드
-            GameObject dungeonCompleteUIPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                Path.Combine(UIPrefabsPath, "DungeonCompleteUI.prefab")
-            );
-
-            if (portalPrefab == null || portalUIPrefab == null || dungeonCompleteUIPrefab == null)
+            if (portalPrefab == null)
             {
-                Debug.LogError("[PhaseC3SetupCreator] 프리팹을 찾을 수 없습니다. 먼저 프리팹을 생성하세요!");
+                Debug.LogError("[PhaseC3SetupCreator] Portal.prefab을 찾을 수 없습니다. 먼저 Portal 프리팹을 생성하세요!");
                 return false;
             }
 
-            // Scene에 UI 인스턴스 생성
-            GameObject portalUIInstance = PrefabUtility.InstantiatePrefab(portalUIPrefab) as GameObject;
-            GameObject dungeonCompleteUIInstance = PrefabUtility.InstantiatePrefab(dungeonCompleteUIPrefab) as GameObject;
+            // Scene에서 UI 찾기 (이미 생성되어 있어야 함)
+            PortalUI portalUI = FindAnyObjectByType<PortalUI>();
+            DungeonCompleteUI dungeonCompleteUI = FindAnyObjectByType<DungeonCompleteUI>();
+
+            if (portalUI == null)
+            {
+                Debug.LogWarning("[PhaseC3SetupCreator] PortalUI를 찾을 수 없습니다. 먼저 PortalUI를 생성하세요.");
+            }
+
+            if (dungeonCompleteUI == null)
+            {
+                Debug.LogWarning("[PhaseC3SetupCreator] DungeonCompleteUI를 찾을 수 없습니다. 먼저 DungeonCompleteUI를 생성하세요.");
+            }
 
             // RoomManager 찾기 및 연결
             RoomManager roomManager = FindAnyObjectByType<RoomManager>();
-            if (roomManager != null)
+            if (roomManager != null && dungeonCompleteUI != null)
             {
                 SerializedObject rmSo = new SerializedObject(roomManager);
-                rmSo.FindProperty("dungeonCompleteUI").objectReferenceValue = dungeonCompleteUIInstance.GetComponent<DungeonCompleteUI>();
+                rmSo.FindProperty("dungeonCompleteUI").objectReferenceValue = dungeonCompleteUI;
                 rmSo.ApplyModifiedProperties();
                 EditorUtility.SetDirty(roomManager);
 
@@ -576,7 +594,14 @@ namespace GASPT.Editor
             }
             else
             {
-                Debug.LogWarning("[PhaseC3SetupCreator] RoomManager를 찾을 수 없습니다.");
+                if (roomManager == null)
+                {
+                    Debug.LogWarning("[PhaseC3SetupCreator] RoomManager를 찾을 수 없습니다.");
+                }
+                if (dungeonCompleteUI == null)
+                {
+                    Debug.LogWarning("[PhaseC3SetupCreator] DungeonCompleteUI가 없어 RoomManager 연결을 건너뜁니다.");
+                }
             }
 
             // 모든 Room 찾기
@@ -612,16 +637,24 @@ namespace GASPT.Editor
             Portal[] portals = FindObjectsByType<Portal>(FindObjectsSortMode.None);
             int portalConnectedCount = 0;
 
-            foreach (Portal portal in portals)
+            if (portalUI != null)
             {
-                SerializedObject portalSo = new SerializedObject(portal);
-                portalSo.FindProperty("portalUI").objectReferenceValue = portalUIInstance.GetComponent<PortalUI>();
-                portalSo.ApplyModifiedProperties();
-                EditorUtility.SetDirty(portal);
-                portalConnectedCount++;
+                foreach (Portal portal in portals)
+                {
+                    SerializedObject portalSo = new SerializedObject(portal);
+                    portalSo.FindProperty("portalUI").objectReferenceValue = portalUI;
+                    portalSo.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(portal);
+                    portalConnectedCount++;
+                }
+
+                Debug.Log($"[PhaseC3SetupCreator] ✅ {portalConnectedCount}개 Portal에 PortalUI 연결 완료");
+            }
+            else
+            {
+                Debug.LogWarning("[PhaseC3SetupCreator] PortalUI가 없어 Portal 연결을 건너뜁니다.");
             }
 
-            Debug.Log($"[PhaseC3SetupCreator] ✅ {portalConnectedCount}개 Portal에 PortalUI 연결 완료");
             Debug.Log("[PhaseC3SetupCreator] ✅ Scene 연결 및 Portal 배치 완료!");
 
             return true;
