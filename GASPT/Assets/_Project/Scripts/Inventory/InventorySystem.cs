@@ -25,7 +25,29 @@ namespace GASPT.Inventory
 
         // ====== PlayerStats 참조 ======
 
-        private PlayerStats playerStats;
+        private PlayerStats cachedPlayerStats;
+
+        /// <summary>
+        /// PlayerStats 참조 (Property 방식 - 항상 최신 참조 보장)
+        /// </summary>
+        private PlayerStats PlayerStats
+        {
+            get
+            {
+                // 캐시된 참조가 있고 유효하면 반환
+                if (cachedPlayerStats != null)
+                    return cachedPlayerStats;
+
+                // GameManager에서 최신 참조 가져오기
+                if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
+                {
+                    cachedPlayerStats = GameManager.Instance.PlayerStats;
+                    return cachedPlayerStats;
+                }
+
+                return null;
+            }
+        }
 
 
         // ====== 이벤트 ======
@@ -50,12 +72,12 @@ namespace GASPT.Inventory
             // 초기 PlayerStats 참조 (있으면 설정, 없으면 이벤트로 대기)
             if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
             {
-                playerStats = GameManager.Instance.PlayerStats;
+                cachedPlayerStats = GameManager.Instance.PlayerStats;
                 Debug.Log("[InventorySystem] 초기 PlayerStats 참조 완료");
             }
             else
             {
-                Debug.Log("[InventorySystem] PlayerStats 대기 중 (이벤트로 등록 예정)");
+                Debug.Log("[InventorySystem] PlayerStats 대기 중 (Property로 자동 검색)");
             }
 
             Debug.Log($"[InventorySystem] 초기화 완료");
@@ -86,8 +108,8 @@ namespace GASPT.Inventory
         /// </summary>
         private void OnPlayerRegistered(PlayerStats player)
         {
-            playerStats = player;
-            Debug.Log($"[InventorySystem] Player 참조 갱신 완료: {player.name}");
+            cachedPlayerStats = player;
+            Debug.Log($"[InventorySystem] Player 참조 갱신 완료 (이벤트): {player.name}");
         }
 
         /// <summary>
@@ -95,8 +117,8 @@ namespace GASPT.Inventory
         /// </summary>
         private void OnPlayerUnregistered()
         {
-            playerStats = null;
-            Debug.Log("[InventorySystem] Player 참조 해제");
+            cachedPlayerStats = null;
+            Debug.Log("[InventorySystem] Player 참조 해제 (이벤트)");
         }
 
 
@@ -193,7 +215,7 @@ namespace GASPT.Inventory
             }
 
             // PlayerStats가 없으면 실패
-            if (playerStats == null)
+            if (PlayerStats == null)
             {
                 Debug.LogError("[InventorySystem] EquipItem(): PlayerStats를 찾을 수 없습니다.");
                 return false;
@@ -207,7 +229,7 @@ namespace GASPT.Inventory
             }
 
             // PlayerStats에 장착 요청
-            bool success = playerStats.EquipItem(item);
+            bool success = PlayerStats.EquipItem(item);
 
             if (success)
             {
@@ -229,14 +251,14 @@ namespace GASPT.Inventory
         public bool UnequipItem(EquipmentSlot slot)
         {
             // PlayerStats가 없으면 실패
-            if (playerStats == null)
+            if (PlayerStats == null)
             {
                 Debug.LogError("[InventorySystem] UnequipItem(): PlayerStats를 찾을 수 없습니다.");
                 return false;
             }
 
             // PlayerStats에 장착 해제 요청
-            bool success = playerStats.UnequipItem(slot);
+            bool success = PlayerStats.UnequipItem(slot);
 
             if (success)
             {
@@ -257,13 +279,13 @@ namespace GASPT.Inventory
         /// <returns>장착된 아이템 (없으면 null)</returns>
         public Item GetEquippedItem(EquipmentSlot slot)
         {
-            if (playerStats == null)
+            if (PlayerStats == null)
             {
                 Debug.LogError("[InventorySystem] GetEquippedItem(): PlayerStats를 찾을 수 없습니다.");
                 return null;
             }
 
-            return playerStats.GetEquippedItem(slot);
+            return PlayerStats.GetEquippedItem(slot);
         }
 
 
