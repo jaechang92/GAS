@@ -23,31 +23,9 @@ namespace GASPT.Inventory
         private List<Item> items = new List<Item>();
 
 
-        // ====== PlayerStats 참조 ======
-
-        private PlayerStats cachedPlayerStats;
-
-        /// <summary>
-        /// PlayerStats 참조 (Property 방식 - 항상 최신 참조 보장)
-        /// </summary>
-        private PlayerStats PlayerStats
-        {
-            get
-            {
-                // 캐시된 참조가 있고 유효하면 반환
-                if (cachedPlayerStats != null)
-                    return cachedPlayerStats;
-
-                // GameManager에서 최신 참조 가져오기
-                if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
-                {
-                    cachedPlayerStats = GameManager.Instance.PlayerStats;
-                    return cachedPlayerStats;
-                }
-
-                return null;
-            }
-        }
+        // ====== PlayerStats 참조 제거 ======
+        // InventorySystem은 아이템 소유권만 관리
+        // 장비 장착은 PlayerStats 또는 UI/Presenter가 직접 처리
 
 
         // ====== 이벤트 ======
@@ -69,56 +47,7 @@ namespace GASPT.Inventory
 
         protected override void OnAwake()
         {
-            // 초기 PlayerStats 참조 (있으면 설정, 없으면 이벤트로 대기)
-            if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
-            {
-                cachedPlayerStats = GameManager.Instance.PlayerStats;
-                Debug.Log("[InventorySystem] 초기 PlayerStats 참조 완료");
-            }
-            else
-            {
-                Debug.Log("[InventorySystem] PlayerStats 대기 중 (Property로 자동 검색)");
-            }
-
-            Debug.Log($"[InventorySystem] 초기화 완료");
-        }
-
-        private void OnEnable()
-        {
-            // GameManager 이벤트 구독 (Player 등록/해제 감지)
-            if (GameManager.HasInstance)
-            {
-                GameManager.Instance.OnPlayerRegistered += OnPlayerRegistered;
-                GameManager.Instance.OnPlayerUnregistered += OnPlayerUnregistered;
-            }
-        }
-
-        private void OnDisable()
-        {
-            // GameManager 이벤트 구독 해제
-            if (GameManager.HasInstance)
-            {
-                GameManager.Instance.OnPlayerRegistered -= OnPlayerRegistered;
-                GameManager.Instance.OnPlayerUnregistered -= OnPlayerUnregistered;
-            }
-        }
-
-        /// <summary>
-        /// Player 등록 시 호출 (씬 전환 후 Player 재생성)
-        /// </summary>
-        private void OnPlayerRegistered(PlayerStats player)
-        {
-            cachedPlayerStats = player;
-            Debug.Log($"[InventorySystem] Player 참조 갱신 완료 (이벤트): {player.name}");
-        }
-
-        /// <summary>
-        /// Player 해제 시 호출 (씬 전환 전 Player 파괴)
-        /// </summary>
-        private void OnPlayerUnregistered()
-        {
-            cachedPlayerStats = null;
-            Debug.Log("[InventorySystem] Player 참조 해제 (이벤트)");
+            Debug.Log($"[InventorySystem] 초기화 완료 (순수 아이템 관리자)");
         }
 
 
@@ -199,94 +128,17 @@ namespace GASPT.Inventory
         public int ItemCount => items.Count;
 
 
-        // ====== PlayerStats 통합 (장비 시스템) ======
-
-        /// <summary>
-        /// 아이템 장착 (PlayerStats 호출)
-        /// </summary>
-        /// <param name="item">장착할 아이템</param>
-        /// <returns>true: 장착 성공, false: 장착 실패</returns>
-        public bool EquipItem(Item item)
-        {
-            if (item == null)
-            {
-                Debug.LogWarning("[InventorySystem] EquipItem(): item이 null입니다.");
-                return false;
-            }
-
-            // PlayerStats가 없으면 실패
-            if (PlayerStats == null)
-            {
-                Debug.LogError("[InventorySystem] EquipItem(): PlayerStats를 찾을 수 없습니다.");
-                return false;
-            }
-
-            // 인벤토리에 아이템이 없으면 실패
-            if (!HasItem(item))
-            {
-                Debug.LogWarning($"[InventorySystem] EquipItem(): {item.itemName}을(를) 보유하고 있지 않습니다.");
-                return false;
-            }
-
-            // PlayerStats에 장착 요청
-            bool success = PlayerStats.EquipItem(item);
-
-            if (success)
-            {
-                Debug.Log($"[InventorySystem] {item.itemName} 장착 완료");
-            }
-            else
-            {
-                Debug.LogWarning($"[InventorySystem] {item.itemName} 장착 실패");
-            }
-
-            return success;
-        }
-
-        /// <summary>
-        /// 아이템 장착 해제 (PlayerStats 호출)
-        /// </summary>
-        /// <param name="slot">해제할 슬롯</param>
-        /// <returns>true: 해제 성공, false: 해제 실패</returns>
-        public bool UnequipItem(EquipmentSlot slot)
-        {
-            // PlayerStats가 없으면 실패
-            if (PlayerStats == null)
-            {
-                Debug.LogError("[InventorySystem] UnequipItem(): PlayerStats를 찾을 수 없습니다.");
-                return false;
-            }
-
-            // PlayerStats에 장착 해제 요청
-            bool success = PlayerStats.UnequipItem(slot);
-
-            if (success)
-            {
-                Debug.Log($"[InventorySystem] {slot} 슬롯 장착 해제 완료");
-            }
-            else
-            {
-                Debug.LogWarning($"[InventorySystem] {slot} 슬롯 장착 해제 실패");
-            }
-
-            return success;
-        }
-
-        /// <summary>
-        /// 특정 슬롯에 장착된 아이템 가져오기 (PlayerStats 호출)
-        /// </summary>
-        /// <param name="slot">확인할 슬롯</param>
-        /// <returns>장착된 아이템 (없으면 null)</returns>
-        public Item GetEquippedItem(EquipmentSlot slot)
-        {
-            if (PlayerStats == null)
-            {
-                Debug.LogError("[InventorySystem] GetEquippedItem(): PlayerStats를 찾을 수 없습니다.");
-                return null;
-            }
-
-            return PlayerStats.GetEquippedItem(slot);
-        }
+        // ====== 장비 시스템 제거 ======
+        //
+        // InventorySystem은 아이템 소유권만 관리합니다.
+        // 장비 장착/해제는 PlayerStats가 직접 담당합니다.
+        //
+        // 사용 예시 (UI/Presenter에서):
+        //   Item item = InventorySystem.Instance.GetItems()[0];
+        //   if (InventorySystem.Instance.HasItem(item))
+        //   {
+        //       PlayerStats.EquipItem(item);
+        //   }
 
 
         // ====== 디버그 ======

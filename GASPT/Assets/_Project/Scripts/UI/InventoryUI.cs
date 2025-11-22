@@ -393,8 +393,8 @@ namespace GASPT.UI
 
             if (equippedItem == item)
             {
-                // 장착 해제
-                bool success = inventorySystem.UnequipItem(item.slot);
+                // 장착 해제 - PlayerStats가 직접 처리
+                bool success = playerStats.UnequipItem(item.slot);
                 if (success)
                 {
                     Debug.Log($"[InventoryUI] {item.itemName} 장착 해제");
@@ -402,8 +402,15 @@ namespace GASPT.UI
             }
             else
             {
-                // 장착
-                bool success = inventorySystem.EquipItem(item);
+                // 인벤토리에 아이템이 있는지 확인 (InventorySystem 책임)
+                if (!inventorySystem.HasItem(item))
+                {
+                    Debug.LogWarning($"[InventoryUI] {item.itemName}을(를) 보유하고 있지 않습니다.");
+                    return;
+                }
+
+                // 장착 - PlayerStats가 직접 처리
+                bool success = playerStats.EquipItem(item);
                 if (success)
                 {
                     Debug.Log($"[InventoryUI] {item.itemName} 장착");
@@ -420,11 +427,11 @@ namespace GASPT.UI
         /// </summary>
         private void OnEquipmentSlotClicked(EquipmentSlot slot)
         {
-            if (inventorySystem == null)
+            if (playerStats == null)
                 return;
 
-            // 장착 해제
-            bool success = inventorySystem.UnequipItem(slot);
+            // 장착 해제 - PlayerStats가 직접 처리
+            bool success = playerStats.UnequipItem(slot);
             if (success)
             {
                 Debug.Log($"[InventoryUI] {slot} 슬롯 장착 해제");
