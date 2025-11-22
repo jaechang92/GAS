@@ -73,6 +73,46 @@ namespace GASPT.UI
             InitializeAsync().Forget();
         }
 
+        private void OnEnable()
+        {
+            // GameManager 이벤트 구독 (Player 등록/해제 감지)
+            if (GASPT.Core.GameManager.HasInstance)
+            {
+                GASPT.Core.GameManager.Instance.OnPlayerRegistered += OnPlayerRegistered;
+                GASPT.Core.GameManager.Instance.OnPlayerUnregistered += OnPlayerUnregistered;
+            }
+        }
+
+        private void OnDisable()
+        {
+            // GameManager 이벤트 구독 해제
+            if (GASPT.Core.GameManager.HasInstance)
+            {
+                GASPT.Core.GameManager.Instance.OnPlayerRegistered -= OnPlayerRegistered;
+                GASPT.Core.GameManager.Instance.OnPlayerUnregistered -= OnPlayerUnregistered;
+            }
+        }
+
+        /// <summary>
+        /// Player 등록 시 호출 (씬 전환 후 Player 재생성)
+        /// </summary>
+        private void OnPlayerRegistered(PlayerStats player)
+        {
+            SetPlayerStats(player);
+            Debug.Log($"[PlayerManaBar] Player 참조 갱신 완료 (이벤트): {player.name}");
+        }
+
+        /// <summary>
+        /// Player 해제 시 호출 (씬 전환 전 Player 파괴)
+        /// </summary>
+        private void OnPlayerUnregistered()
+        {
+            // 기존 이벤트 구독 해제
+            UnsubscribeFromEvents();
+            playerStats = null;
+            Debug.Log("[PlayerManaBar] Player 참조 해제 (이벤트)");
+        }
+
         /// <summary>
         /// 비동기 초기화 (PlayerStats를 찾을 때까지 대기)
         /// </summary>

@@ -47,15 +47,56 @@ namespace GASPT.Inventory
 
         protected override void OnAwake()
         {
-            // PlayerStats 찾기
-            playerStats = GameManager.Instance.PlayerStats;
-
-            if (playerStats == null)
+            // 초기 PlayerStats 참조 (있으면 설정, 없으면 이벤트로 대기)
+            if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
             {
-                Debug.LogWarning("[InventorySystem] PlayerStats를 찾을 수 없습니다. Scene에 PlayerStats가 있는지 확인하세요.");
+                playerStats = GameManager.Instance.PlayerStats;
+                Debug.Log("[InventorySystem] 초기 PlayerStats 참조 완료");
+            }
+            else
+            {
+                Debug.Log("[InventorySystem] PlayerStats 대기 중 (이벤트로 등록 예정)");
             }
 
             Debug.Log($"[InventorySystem] 초기화 완료");
+        }
+
+        private void OnEnable()
+        {
+            // GameManager 이벤트 구독 (Player 등록/해제 감지)
+            if (GameManager.HasInstance)
+            {
+                GameManager.Instance.OnPlayerRegistered += OnPlayerRegistered;
+                GameManager.Instance.OnPlayerUnregistered += OnPlayerUnregistered;
+            }
+        }
+
+        private void OnDisable()
+        {
+            // GameManager 이벤트 구독 해제
+            if (GameManager.HasInstance)
+            {
+                GameManager.Instance.OnPlayerRegistered -= OnPlayerRegistered;
+                GameManager.Instance.OnPlayerUnregistered -= OnPlayerUnregistered;
+            }
+        }
+
+        /// <summary>
+        /// Player 등록 시 호출 (씬 전환 후 Player 재생성)
+        /// </summary>
+        private void OnPlayerRegistered(PlayerStats player)
+        {
+            playerStats = player;
+            Debug.Log($"[InventorySystem] Player 참조 갱신 완료: {player.name}");
+        }
+
+        /// <summary>
+        /// Player 해제 시 호출 (씬 전환 전 Player 파괴)
+        /// </summary>
+        private void OnPlayerUnregistered()
+        {
+            playerStats = null;
+            Debug.Log("[InventorySystem] Player 참조 해제");
         }
 
 

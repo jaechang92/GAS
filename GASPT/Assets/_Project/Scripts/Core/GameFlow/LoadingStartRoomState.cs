@@ -33,6 +33,9 @@ namespace GASPT.Core.GameFlow
             // 던전 데이터 정리
             CleanupDungeonData();
 
+            // Player 초기화 대기 (씬 로딩 전 Player 해제 확인)
+            await WaitForPlayerUnregistered(cancellationToken);
+
             // StartRoom 씬 로드 (Single 모드 - 기존 씬 완전 교체)
             Debug.Log("[LoadingStartRoomState] StartRoom 씬 로딩 시작...");
 
@@ -53,6 +56,9 @@ namespace GASPT.Core.GameFlow
                 Debug.LogError("[LoadingStartRoomState] StartRoom 씬 로드 실패! Build Settings에 씬이 추가되었는지 확인하세요.");
                 return;
             }
+
+            // Player 초기화 대기 (씬 로딩 후 Player 등록 확인)
+            await WaitForPlayerReady(cancellationToken);
 
             // TODO: 로딩 UI 숨기기
             // LoadingUI.Hide();
@@ -105,6 +111,54 @@ namespace GASPT.Core.GameFlow
                 currencySystem.ResetGold();
                 Debug.Log("[LoadingStartRoomState] 런 골드 리셋");
             }
+        }
+
+        /// <summary>
+        /// Player 해제 대기 (씬 전환 전 Player가 파괴되었는지 확인)
+        /// </summary>
+        private async Awaitable WaitForPlayerUnregistered(CancellationToken cancellationToken)
+        {
+            int maxAttempts = 50; // 최대 5초 대기
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                // GameManager.PlayerStats가 null이면 해제 완료
+                if (!GASPT.Core.GameManager.HasInstance || GASPT.Core.GameManager.Instance.PlayerStats == null)
+                {
+                    Debug.Log("[LoadingStartRoomState] Player 해제 확인 완료");
+                    return;
+                }
+
+                await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
+                attempts++;
+            }
+
+            Debug.LogWarning("[LoadingStartRoomState] Player 해제 대기 타임아웃 (무시하고 진행)");
+        }
+
+        /// <summary>
+        /// Player 초기화 대기 (GameManager.PlayerStats가 등록될 때까지)
+        /// </summary>
+        private async Awaitable WaitForPlayerReady(CancellationToken cancellationToken)
+        {
+            int maxAttempts = 100; // 최대 10초 대기
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                // GameManager.PlayerStats 확인
+                if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                {
+                    Debug.Log("[LoadingStartRoomState] Player 초기화 완료");
+                    return;
+                }
+
+                await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
+                attempts++;
+            }
+
+            Debug.LogError("[LoadingStartRoomState] Player 초기화 실패 - 타임아웃");
         }
     }
 }

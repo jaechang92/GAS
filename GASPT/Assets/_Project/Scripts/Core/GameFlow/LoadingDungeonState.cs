@@ -53,6 +53,9 @@ namespace GASPT.Core.GameFlow
                 return;
             }
 
+            // Player 초기화 대기 (중요: 다른 시스템보다 먼저 대기)
+            await WaitForPlayerReady(cancellationToken);
+
             // RoomManager 초기화 대기
             await WaitForRoomManagerReady(cancellationToken);
 
@@ -90,6 +93,30 @@ namespace GASPT.Core.GameFlow
         {
             Debug.Log("[LoadingDungeonState] 로딩 완료 - 전투 시작");
             await Awaitable.NextFrameAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Player 초기화 대기 (GameManager.PlayerStats가 등록될 때까지)
+        /// </summary>
+        private async Awaitable WaitForPlayerReady(CancellationToken cancellationToken)
+        {
+            int maxAttempts = 100; // 최대 10초 대기 (100 * 0.1초)
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                // GameManager.PlayerStats 확인
+                if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                {
+                    Debug.Log("[LoadingDungeonState] Player 초기화 완료");
+                    return;
+                }
+
+                await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
+                attempts++;
+            }
+
+            Debug.LogError("[LoadingDungeonState] Player 초기화 실패 - 타임아웃");
         }
 
         /// <summary>

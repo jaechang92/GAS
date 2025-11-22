@@ -85,6 +85,16 @@ namespace GASPT.Core
         // ====== 이벤트 ======
 
         /// <summary>
+        /// Player 등록 시 발생 (씬 전환 후 Player 재생성 시)
+        /// </summary>
+        public event Action<PlayerStats> OnPlayerRegistered;
+
+        /// <summary>
+        /// Player 해제 시 발생 (씬 전환 전 Player 파괴 시)
+        /// </summary>
+        public event Action OnPlayerUnregistered;
+
+        /// <summary>
         /// 게임 일시정지 시 발생
         /// </summary>
         public event Action OnPaused;
@@ -131,6 +141,9 @@ namespace GASPT.Core
 
             PlayerStats = player;
             Debug.Log($"[GameManager] Player 등록 완료: HP {PlayerStats.CurrentHP}/{PlayerStats.MaxHP}");
+
+            // 이벤트 발생 - 다른 Manager들이 참조 갱신할 수 있도록
+            OnPlayerRegistered?.Invoke(player);
         }
 
         /// <summary>
@@ -142,6 +155,9 @@ namespace GASPT.Core
             {
                 Debug.Log("[GameManager] Player 해제");
                 PlayerStats = null;
+
+                // 이벤트 발생 - 다른 Manager들이 참조 해제할 수 있도록
+                OnPlayerUnregistered?.Invoke();
             }
         }
 
