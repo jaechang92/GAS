@@ -12,10 +12,19 @@ using Core;
 namespace GASPT.UI
 {
     /// <summary>
-    /// 인벤토리 UI
-    /// I키로 열기/닫기, 아이템 목록 표시, 장착/해제
-    /// Phase C-4: 아이템 드롭 및 장착 시스템
+    /// [DEPRECATED] 기존 인벤토리 UI (MVP 패턴 이전)
+    ///
+    /// ⚠️ 이 클래스는 더 이상 사용되지 않습니다!
+    /// 대신 GASPT.UI.MVP.InventoryView를 사용하세요.
+    ///
+    /// MVP 패턴으로 리팩토링되었습니다:
+    /// - InventoryView: UI 렌더링
+    /// - InventoryPresenter: 비즈니스 로직
+    /// - ItemViewModel: View 데이터
+    ///
+    /// 이 클래스는 테스트 완료 후 삭제될 예정입니다.
     /// </summary>
+    [System.Obsolete("InventoryUI는 deprecated되었습니다. GASPT.UI.MVP.InventoryView를 사용하세요.", false)]
     public class InventoryUI : BaseUI
     {
         // ====== UI 참조 ======
