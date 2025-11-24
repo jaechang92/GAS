@@ -7,8 +7,9 @@ namespace GASPT.Economy
     /// <summary>
     /// 골드 화폐 시스템 싱글톤
     /// 골드 추가, 소비, 이벤트 관리
+    /// ISaveable 인터페이스 구현으로 SaveManager 지원
     /// </summary>
-    public class CurrencySystem : SingletonManager<CurrencySystem>
+    public class CurrencySystem : SingletonManager<CurrencySystem>, ISaveable
     {
         // ====== 골드 ======
 
@@ -166,7 +167,40 @@ namespace GASPT.Economy
         }
 
 
-        // ====== Save/Load ======
+        // ====== ISaveable 인터페이스 구현 ======
+
+        /// <summary>
+        /// ISaveable 인터페이스: 저장 가능 객체 고유 ID
+        /// </summary>
+        public string SaveID => "CurrencySystem";
+
+        /// <summary>
+        /// ISaveable.GetSaveData() 명시적 구현
+        /// 내부적으로 구체적 타입의 GetSaveData()를 호출합니다
+        /// </summary>
+        object ISaveable.GetSaveData()
+        {
+            return GetSaveData();
+        }
+
+        /// <summary>
+        /// ISaveable.LoadFromSaveData(object) 명시적 구현
+        /// 타입 검증 후 구체적 타입의 LoadFromSaveData()를 호출합니다
+        /// </summary>
+        void ISaveable.LoadFromSaveData(object data)
+        {
+            if (data is CurrencyData currencyData)
+            {
+                LoadFromSaveData(currencyData);
+            }
+            else
+            {
+                Debug.LogError($"[CurrencySystem] ISaveable.LoadFromSaveData(): 잘못된 데이터 타입입니다. Expected: CurrencyData, Got: {data?.GetType().Name}");
+            }
+        }
+
+
+        // ====== Save/Load (기존 방식) ======
 
         /// <summary>
         /// 현재 화폐 데이터를 저장용 구조로 반환합니다

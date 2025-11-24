@@ -1,5 +1,6 @@
 using UnityEngine;
 using GASPT.UI;
+using GASPT.UI.MVP;
 
 namespace GASPT.Core
 {
@@ -12,8 +13,8 @@ namespace GASPT.Core
         // ====== UI 참조 ======
 
         [Header("UI References")]
-        [Tooltip("인벤토리 UI")]
-        [SerializeField] private InventoryUI inventoryUI;
+        [Tooltip("인벤토리 UI (MVP 패턴)")]
+        [SerializeField] private InventoryView inventoryView;
 
         [Tooltip("HUD UI (HP, 골드 등)")]
         [SerializeField] private BaseUI hudUI;
@@ -27,7 +28,7 @@ namespace GASPT.Core
 
         // ====== 프로퍼티 (외부 접근) ======
 
-        public InventoryUI Inventory => inventoryUI;
+        public InventoryView Inventory => inventoryView;
         public BaseUI Hud => hudUI;
         public BaseUI Pause => pauseUI;
         public BaseUI Minimap => minimapUI;
@@ -38,12 +39,12 @@ namespace GASPT.Core
         protected override void OnAwake()
         {
             // UI 자동 찾기 (Inspector에 할당 안 했을 경우)
-            if (inventoryUI == null)
+            if (inventoryView == null)
             {
-                inventoryUI = FindAnyObjectByType<InventoryUI>();
-                if (inventoryUI != null)
+                inventoryView = FindAnyObjectByType<InventoryView>();
+                if (inventoryView != null)
                 {
-                    Debug.Log("[UIManager] InventoryUI 자동 찾기 완료");
+                    Debug.Log("[UIManager] InventoryView 자동 찾기 완료");
                 }
             }
 
@@ -61,20 +62,28 @@ namespace GASPT.Core
 
         public void ShowInventory()
         {
-            inventoryUI?.Show();
+            inventoryView?.ShowUI();
             Debug.Log("[UIManager] 인벤토리 표시");
         }
 
         public void HideInventory()
         {
-            inventoryUI?.Hide();
+            inventoryView?.HideUI();
             Debug.Log("[UIManager] 인벤토리 숨김");
         }
 
         public void ToggleInventory()
         {
-            inventoryUI?.Toggle();
-            Debug.Log($"[UIManager] 인벤토리 토글: {inventoryUI?.IsVisible}");
+            // InventoryView는 BaseUI를 상속하지 않으므로 직접 Toggle 구현
+            if (inventoryView != null)
+            {
+                if (inventoryView.gameObject.activeSelf)
+                    inventoryView.HideUI();
+                else
+                    inventoryView.ShowUI();
+
+                Debug.Log($"[UIManager] 인벤토리 토글: {inventoryView.gameObject.activeSelf}");
+            }
         }
 
 
@@ -132,7 +141,7 @@ namespace GASPT.Core
         /// </summary>
         public void HideAllUI()
         {
-            inventoryUI?.Hide();
+            inventoryView?.HideUI();
             pauseUI?.Hide();
             minimapUI?.Hide();
             hudUI?.Hide();
@@ -193,7 +202,7 @@ namespace GASPT.Core
         private void DebugLogUIState()
         {
             Debug.Log("========== UI State ==========");
-            Debug.Log($"Inventory: {(inventoryUI?.IsVisible ?? false)}");
+            Debug.Log($"Inventory: {(inventoryView?.gameObject.activeSelf ?? false)}");
             Debug.Log($"HUD: {(hudUI?.IsVisible ?? false)}");
             Debug.Log($"Pause: {(pauseUI?.IsVisible ?? false)}");
             Debug.Log($"Minimap: {(minimapUI?.IsVisible ?? false)}");

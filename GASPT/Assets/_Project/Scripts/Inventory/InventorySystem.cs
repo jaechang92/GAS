@@ -12,8 +12,9 @@ namespace GASPT.Inventory
     /// <summary>
     /// 인벤토리 시스템 싱글톤
     /// 아이템 저장 및 PlayerStats와 통합하여 장비 관리
+    /// ISaveable 인터페이스 구현으로 SaveManager 지원
     /// </summary>
-    public class InventorySystem : SingletonManager<InventorySystem>
+    public class InventorySystem : SingletonManager<InventorySystem>, ISaveable
     {
         // ====== 인벤토리 ======
 
@@ -171,7 +172,40 @@ namespace GASPT.Inventory
         }
 
 
-        // ====== Save/Load ======
+        // ====== ISaveable 인터페이스 구현 ======
+
+        /// <summary>
+        /// ISaveable 인터페이스: 저장 가능 객체 고유 ID
+        /// </summary>
+        public string SaveID => "InventorySystem";
+
+        /// <summary>
+        /// ISaveable.GetSaveData() 명시적 구현
+        /// 내부적으로 구체적 타입의 GetSaveData()를 호출합니다
+        /// </summary>
+        object ISaveable.GetSaveData()
+        {
+            return GetSaveData();
+        }
+
+        /// <summary>
+        /// ISaveable.LoadFromSaveData(object) 명시적 구현
+        /// 타입 검증 후 구체적 타입의 LoadFromSaveData()를 호출합니다
+        /// </summary>
+        void ISaveable.LoadFromSaveData(object data)
+        {
+            if (data is InventoryData inventoryData)
+            {
+                LoadFromSaveData(inventoryData);
+            }
+            else
+            {
+                Debug.LogError($"[InventorySystem] ISaveable.LoadFromSaveData(): 잘못된 데이터 타입입니다. Expected: InventoryData, Got: {data?.GetType().Name}");
+            }
+        }
+
+
+        // ====== Save/Load (기존 방식) ======
 
         /// <summary>
         /// 현재 인벤토리 데이터를 저장용 구조로 반환합니다

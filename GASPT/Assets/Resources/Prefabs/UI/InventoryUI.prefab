@@ -505,7 +505,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3396032655052118479}
-  - component: {fileID: 4932569837535843603}
   m_Layer: 0
   m_Name: InventoryUI
   m_TagString: Untagged
@@ -533,27 +532,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &4932569837535843603
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5651742555090965061}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0483295bb2f6e4d43a82d1618d39aae1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.UI.InventoryUI
-  panel: {fileID: 0}
-  hideOnAwake: 1
-  itemListContent: {fileID: 5380633231809575824}
-  itemSlotPrefab: {fileID: 6253609334573371221, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
-  weaponSlot: {fileID: 3764510790681916150}
-  armorSlot: {fileID: 9001096420307814273}
-  ringSlot: {fileID: 4030875664667417581}
-  closeButton: {fileID: 5084609843613422233}
-  toggleKey: 105
 --- !u!1 &6411274104350817396
 GameObject:
   m_ObjectHideFlags: 0
@@ -1086,17 +1064,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3328895962620738833, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
   m_PrefabInstance: {fileID: 265708936024906}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &4030875664667417581 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4030859819773216935, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
-  m_PrefabInstance: {fileID: 265708936024906}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 552b23c394afb2947ae79aa1c411691c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.UI.EquipmentSlotUI
 --- !u!1001 &274234934221224529
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1219,17 +1186,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3328895962620738833, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
   m_PrefabInstance: {fileID: 274234934221224529}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &3764510790681916150 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4030859819773216935, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
-  m_PrefabInstance: {fileID: 274234934221224529}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 552b23c394afb2947ae79aa1c411691c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.UI.EquipmentSlotUI
 --- !u!1001 &627273450323462243
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1238,6 +1194,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5380633231809575824}
     m_Modifications:
+    - target: {fileID: 595910644892550732, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -1252,7 +1212,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_AnchorMin.x
@@ -1260,7 +1220,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_SizeDelta.x
@@ -1300,11 +1260,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 210
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -50
       objectReference: {fileID: 0}
     - target: {fileID: 3539441676933791604, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1318,9 +1278,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3709147678665928145, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4286611584
+      objectReference: {fileID: 0}
+    - target: {fileID: 3709147678665928145, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 6253609334573371221, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
       propertyPath: m_Name
       value: ItemSlot
+      objectReference: {fileID: 0}
+    - target: {fileID: 6818014470785271799, guid: 269e50de24e823846b203a7e81a5d10b, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1454,14 +1426,3 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3328895962620738833, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
   m_PrefabInstance: {fileID: 5411686450159062822}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9001096420307814273 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4030859819773216935, guid: fc2f84b8d05582846b3f98b32d5e2a6e, type: 3}
-  m_PrefabInstance: {fileID: 5411686450159062822}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 552b23c394afb2947ae79aa1c411691c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GASPT.UI.EquipmentSlotUI

@@ -718,7 +718,7 @@ namespace GASPT.Editor
                         "100 / 100", 18, out TMP_Text hpText);
 
             // PlayerHealthBar 컴포넌트 추가
-            PlayerHealthBar healthBar = healthBarPanel.AddComponent<PlayerHealthBar>();
+            ResourceBarView healthBar = healthBarPanel.AddComponent<ResourceBarView>();
             SerializedObject so = new SerializedObject(healthBar);
             so.FindProperty("hpSlider").objectReferenceValue = hpSlider;
             so.FindProperty("hpText").objectReferenceValue = hpText;
@@ -756,7 +756,7 @@ namespace GASPT.Editor
                         "100 / 100", 14, out TMP_Text manaText);
 
             // PlayerManaBar 컴포넌트 추가
-            PlayerManaBar manaBar = manaBarPanel.AddComponent<PlayerManaBar>();
+            ResourceBarView manaBar = manaBarPanel.AddComponent<ResourceBarView>();
             SerializedObject so = new SerializedObject(manaBar);
             so.FindProperty("manaSlider").objectReferenceValue = manaSlider;
             so.FindProperty("manaText").objectReferenceValue = manaText;
@@ -832,7 +832,7 @@ namespace GASPT.Editor
             layoutGroup.childControlHeight = false;
 
             // BuffIconPanel 컴포넌트 추가
-            BuffIconPanel buffIconPanel = buffPanel.AddComponent<BuffIconPanel>();
+            BuffIconPanelView buffIconPanel = buffPanel.AddComponent<BuffIconPanelView>();
             SerializedObject so = new SerializedObject(buffIconPanel);
             so.FindProperty("buffIconPrefab").objectReferenceValue = Resources.Load<GameObject>(ResourcePaths.Prefabs.UI.BuffIcon);
             so.FindProperty("iconContainer").objectReferenceValue = buffPanel.transform;

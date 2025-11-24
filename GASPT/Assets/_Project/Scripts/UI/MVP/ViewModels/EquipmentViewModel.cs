@@ -22,7 +22,7 @@ namespace GASPT.UI.MVP
         /// <summary>
         /// 반지 슬롯에 장착된 아이템
         /// </summary>
-        public Item RingItem { get; set; }
+        public Item AccessoryItem { get; set; }
 
 
         // ====== 편의 메서드 ======
@@ -36,7 +36,7 @@ namespace GASPT.UI.MVP
             {
                 EquipmentSlot.Weapon => WeaponItem,
                 EquipmentSlot.Armor => ArmorItem,
-                EquipmentSlot.Ring => RingItem,
+                EquipmentSlot.Accessory => AccessoryItem,
                 _ => null
             };
         }
@@ -54,8 +54,8 @@ namespace GASPT.UI.MVP
                 case EquipmentSlot.Armor:
                     ArmorItem = item;
                     break;
-                case EquipmentSlot.Ring:
-                    RingItem = item;
+                case EquipmentSlot.Accessory:
+                    AccessoryItem = item;
                     break;
             }
         }

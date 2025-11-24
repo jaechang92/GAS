@@ -298,7 +298,7 @@ namespace GASPT.UI.MVP
             {
                 equipment.WeaponItem = playerStats.GetEquippedItem(EquipmentSlot.Weapon);
                 equipment.ArmorItem = playerStats.GetEquippedItem(EquipmentSlot.Armor);
-                equipment.RingItem = playerStats.GetEquippedItem(EquipmentSlot.Ring);
+                equipment.AccessoryItem = playerStats.GetEquippedItem(EquipmentSlot.Accessory);
             }
 
             return equipment;

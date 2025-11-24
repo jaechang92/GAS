@@ -96,6 +96,9 @@ namespace GASPT.Core
             PreloadCurrencySystem();
             PreloadInventorySystem();
 
+            // 2-1. Shop System
+            PreloadShopSystem();
+
             // 3. Level System
             PreloadPlayerLevel();
             // RoomManager는 Scene별로 관리 (DontDestroyOnLoad 불필요)
@@ -103,6 +106,7 @@ namespace GASPT.Core
 
             // 4. Save System
             PreloadSaveSystem();
+            PreloadSaveManager();
 
             // 5. StatusEffect System
             PreloadStatusEffectManager();
@@ -227,6 +231,25 @@ namespace GASPT.Core
         }
 
         /// <summary>
+        /// ShopSystem 사전 로딩
+        /// </summary>
+        private void PreloadShopSystem()
+        {
+            LogMessage("ShopSystem 초기화 중...");
+
+            var instance = GASPT.Shop.ShopSystem.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ ShopSystem 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ ShopSystem 초기화 실패");
+            }
+        }
+
+        /// <summary>
         /// PlayerLevel 사전 로딩
         /// </summary>
         private void PreloadPlayerLevel()
@@ -280,6 +303,25 @@ namespace GASPT.Core
             else
             {
                 LogError("✗ SaveSystem 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// SaveManager 사전 로딩
+        /// </summary>
+        private void PreloadSaveManager()
+        {
+            LogMessage("SaveManager 초기화 중...");
+
+            var instance = SaveManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ SaveManager 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ SaveManager 초기화 실패");
             }
         }
 
@@ -464,9 +506,11 @@ namespace GASPT.Core
             if (DamageNumberPool.HasInstance) count++;
             if (CurrencySystem.HasInstance) count++;
             if (InventorySystem.HasInstance) count++;
+            if (GASPT.Shop.ShopSystem.HasInstance) count++;
             if (PlayerLevel.HasInstance) count++;
             // if (RoomManager.HasInstance) count++; // Scene별로 관리
             if (SaveSystem.HasInstance) count++;
+            if (SaveManager.HasInstance) count++;
             if (StatusEffectManager.HasInstance) count++;
             if (SkillSystem.HasInstance) count++;
             if (LootSystem.HasInstance) count++;
@@ -513,9 +557,11 @@ namespace GASPT.Core
             Debug.Log($"DamageNumberPool: {(DamageNumberPool.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"CurrencySystem: {(CurrencySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"InventorySystem: {(InventorySystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"ShopSystem: {(GASPT.Shop.ShopSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PlayerLevel: {(PlayerLevel.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             // Debug.Log($"RoomManager: {(RoomManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}"); // Scene별로 관리
             Debug.Log($"SaveSystem: {(SaveSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"SaveManager: {(SaveManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"StatusEffectManager: {(StatusEffectManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"SkillSystem: {(SkillSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"LootSystem: {(LootSystem.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
@@ -523,7 +569,7 @@ namespace GASPT.Core
             Debug.Log($"RunManager: {(RunManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"GameManager: {(GameManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"GameFlowStateMachine: {(GameFlowStateMachine.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/15개 싱글톤 생성됨");
+            Debug.Log($"총 {GetPreloadedCount()}/17개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 

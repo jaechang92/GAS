@@ -11,7 +11,17 @@
       "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\WORK_STATUS_UPDATE.md\")",
       "Bash(mv:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(REFACTORING_PORTFOLIO.md)",
+      "Bash(Get-Content \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\mcp__ide__getDiagnostics\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\Assets\\_Project\\Scripts\\UI\\InventoryUI.cs\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\BOSS_AUTO_SETUP_GUIDE.md\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\BOSS_TEST_CHECKLIST.md\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\프롬프트 핵심 구성 요소 (The Core Ingredients).md\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\development\\CurrentStatus.md\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\development\\Roadmap.md\" -ErrorAction Stop)",
+      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\reference\\QUICK_REFERENCE.md\" -ErrorAction Stop)"
     ],
     "deny": [],
     "ask": []

@@ -4,6 +4,7 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Economy;
 using GASPT.Inventory;
+using GASPT.Core;
 
 namespace GASPT.Shop
 {
@@ -22,10 +23,10 @@ namespace GASPT.Shop
     }
 
     /// <summary>
-    /// 상점 시스템 MonoBehaviour
+    /// 상점 시스템 싱글톤
     /// 아이템 구매 처리 (골드 소비 → 인벤토리 추가)
     /// </summary>
-    public class ShopSystem : MonoBehaviour
+    public class ShopSystem : SingletonManager<ShopSystem>
     {
         // ====== 상점 아이템 ======
 
@@ -57,7 +58,7 @@ namespace GASPT.Shop
 
         // ====== Unity 생명주기 ======
 
-        private void Awake()
+        protected override void OnAwake()
         {
             // 싱글톤 시스템 참조
             currencySystem = CurrencySystem.Instance;

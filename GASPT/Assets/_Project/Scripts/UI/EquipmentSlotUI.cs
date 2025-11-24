@@ -48,6 +48,14 @@ namespace GASPT.UI
         private Action<EquipmentSlot> onSlotClicked;
 
 
+        // ====== 이벤트 (MVP 패턴 지원) ======
+
+        /// <summary>
+        /// 슬롯 클릭 시 발생하는 이벤트 (MVP 패턴용)
+        /// </summary>
+        public event Action OnSlotClicked;
+
+
         // ====== Unity 생명주기 ======
 
         private void Awake()
@@ -175,7 +183,12 @@ namespace GASPT.UI
             {
                 if (currentItem != null)
                 {
+                    // 기존 콜백 방식 (하위 호환성)
                     onSlotClicked?.Invoke(slotType);
+
+                    // MVP 패턴 이벤트 발생
+                    OnSlotClicked?.Invoke();
+
                     Debug.Log($"[EquipmentSlotUI] {slotType} 슬롯 클릭 - 장착 해제 시도");
                 }
                 else

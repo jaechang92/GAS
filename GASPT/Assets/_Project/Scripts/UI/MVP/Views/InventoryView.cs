@@ -36,7 +36,7 @@ namespace GASPT.UI.MVP
         private EquipmentSlotUI armorSlot;
 
         [SerializeField] [Tooltip("반지 슬롯")]
-        private EquipmentSlotUI ringSlot;
+        private EquipmentSlotUI accessorySlot;
 
         [Header("Buttons")]
         [SerializeField] [Tooltip("닫기 버튼")]
@@ -55,6 +55,11 @@ namespace GASPT.UI.MVP
         // ====== 내부 상태 (렌더링용) ======
 
         private List<GameObject> itemSlots = new List<GameObject>();
+
+        // 장비 슬롯 이벤트 핸들러 참조 (구독 해제용)
+        private Action weaponSlotHandler;
+        private Action armorSlotHandler;
+        private Action accessorySlotHandler;
 
 
         // ====== IInventoryView 이벤트 (View → Presenter) ======
@@ -201,9 +206,9 @@ namespace GASPT.UI.MVP
             }
 
             // 반지 슬롯
-            if (ringSlot != null)
+            if (accessorySlot != null)
             {
-                ringSlot.SetItem(equipment.RingItem);
+                accessorySlot.SetItem(equipment.AccessoryItem);
             }
 
             Debug.Log("[InventoryView] DisplayEquipment 완료");
@@ -305,26 +310,29 @@ namespace GASPT.UI.MVP
         {
             if (weaponSlot != null)
             {
-                weaponSlot.OnSlotClicked += () =>
+                weaponSlotHandler = () =>
                 {
                     OnEquipmentSlotUnequipRequested?.Invoke(EquipmentSlot.Weapon);
                 };
+                weaponSlot.OnSlotClicked += weaponSlotHandler;
             }
 
             if (armorSlot != null)
             {
-                armorSlot.OnSlotClicked += () =>
+                armorSlotHandler = () =>
                 {
                     OnEquipmentSlotUnequipRequested?.Invoke(EquipmentSlot.Armor);
                 };
+                armorSlot.OnSlotClicked += armorSlotHandler;
             }
 
-            if (ringSlot != null)
+            if (accessorySlot != null)
             {
-                ringSlot.OnSlotClicked += () =>
+                accessorySlotHandler = () =>
                 {
-                    OnEquipmentSlotUnequipRequested?.Invoke(EquipmentSlot.Ring);
+                    OnEquipmentSlotUnequipRequested?.Invoke(EquipmentSlot.Accessory);
                 };
+                accessorySlot.OnSlotClicked += accessorySlotHandler;
             }
         }
 
@@ -333,19 +341,19 @@ namespace GASPT.UI.MVP
         /// </summary>
         private void CleanupEquipmentSlots()
         {
-            if (weaponSlot != null)
+            if (weaponSlot != null && weaponSlotHandler != null)
             {
-                weaponSlot.OnSlotClicked = null;
+                weaponSlot.OnSlotClicked -= weaponSlotHandler;
             }
 
-            if (armorSlot != null)
+            if (armorSlot != null && armorSlotHandler != null)
             {
-                armorSlot.OnSlotClicked = null;
+                armorSlot.OnSlotClicked -= armorSlotHandler;
             }
 
-            if (ringSlot != null)
+            if (accessorySlot != null && accessorySlotHandler != null)
             {
-                ringSlot.OnSlotClicked = null;
+                accessorySlot.OnSlotClicked -= accessorySlotHandler;
             }
         }
 

@@ -1,16 +1,14 @@
 using System;
 using System.IO;
 using UnityEngine;
-using GASPT.Stats;
-using GASPT.Economy;
-using GASPT.Inventory;
 using System.Collections.Generic;
 
 namespace GASPT.Save
 {
     /// <summary>
     /// 게임 저장/불러오기 시스템 (싱글톤)
-    /// JSON 기반 로컬 파일 저장
+    /// 단일 책임: JSON 기반 로컬 파일 I/O만 담당
+    /// 데이터 수집/복원은 SaveManager가 담당
     /// </summary>
     public class SaveSystem : SingletonManager<SaveSystem>
     {
@@ -83,13 +81,18 @@ namespace GASPT.Save
         {
             try
             {
-                // 1. 현재 데이터 수집
-                GameSaveData saveData = CollectSaveData();
+                // 1. SaveManager에서 데이터 수집 (단일 책임 원칙)
+                if (!SaveManager.HasInstance)
+                {
+                    throw new Exception("SaveManager가 초기화되지 않았습니다.");
+                }
+
+                GameSaveData saveData = SaveManager.Instance.CollectSaveData();
 
                 // 2. JSON으로 직렬화
                 string json = JsonUtility.ToJson(saveData, true);
 
-                // 3. 파일에 쓰기
+                // 3. 파일에 쓰기 (SaveSystem의 단일 책임: 파일 I/O)
                 File.WriteAllText(SaveFilePath, json);
 
                 Debug.Log($"[SaveSystem] 게임 저장 완료: {SaveFilePath}");
@@ -104,56 +107,6 @@ namespace GASPT.Save
                 Debug.LogError($"[SaveSystem] {errorMsg}");
                 OnSaveFailed?.Invoke(errorMsg);
             }
-        }
-
-        /// <summary>
-        /// 현재 게임 데이터를 수집합니다
-        /// </summary>
-        private GameSaveData CollectSaveData()
-        {
-            GameSaveData saveData = new GameSaveData();
-
-            // PlayerStats 데이터 수집 (RunManager/GameManager 우선)
-            PlayerStats playerStats = null;
-            if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
-                playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
-            else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
-                playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
-            if (playerStats != null)
-            {
-                saveData.playerStats = playerStats.GetSaveData();
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] PlayerStats를 찾을 수 없습니다. 기본값으로 저장합니다.");
-            }
-
-            // CurrencySystem 데이터 수집
-            CurrencySystem currencySystem = CurrencySystem.Instance;
-            if (currencySystem != null)
-            {
-                saveData.currency = currencySystem.GetSaveData();
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] CurrencySystem을 찾을 수 없습니다. 기본값으로 저장합니다.");
-            }
-
-            // InventorySystem 데이터 수집
-            InventorySystem inventorySystem = InventorySystem.Instance;
-            if (inventorySystem != null)
-            {
-                saveData.inventory = inventorySystem.GetSaveData();
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] InventorySystem을 찾을 수 없습니다. 기본값으로 저장합니다.");
-            }
-
-            // 저장 시간 설정
-            saveData.SaveTime = DateTime.Now;
-
-            return saveData;
         }
 
 
@@ -175,7 +128,7 @@ namespace GASPT.Save
                     return;
                 }
 
-                // 2. 파일에서 읽기
+                // 2. 파일에서 읽기 (SaveSystem의 단일 책임: 파일 I/O)
                 string json = File.ReadAllText(SaveFilePath);
 
                 // 3. JSON 역직렬화
@@ -186,8 +139,13 @@ namespace GASPT.Save
                     throw new Exception("JSON 역직렬화 실패 (saveData == null)");
                 }
 
-                // 4. 데이터 적용
-                ApplySaveData(saveData);
+                // 4. SaveManager로 데이터 복원 위임 (단일 책임 원칙)
+                if (!SaveManager.HasInstance)
+                {
+                    throw new Exception("SaveManager가 초기화되지 않았습니다.");
+                }
+
+                SaveManager.Instance.RestoreSaveData(saveData);
 
                 Debug.Log($"[SaveSystem] 게임 불러오기 완료: {SaveFilePath}");
                 Debug.Log($"[SaveSystem] 저장 시간: {saveData.SaveTime}");
@@ -203,48 +161,6 @@ namespace GASPT.Save
             }
         }
 
-        /// <summary>
-        /// 저장된 데이터를 게임에 적용합니다
-        /// </summary>
-        private void ApplySaveData(GameSaveData saveData)
-        {
-            // PlayerStats 데이터 적용 (RunManager/GameManager 우선)
-            PlayerStats playerStats = null;
-            if (GASPT.Core.RunManager.HasInstance && GASPT.Core.RunManager.Instance.CurrentPlayer != null)
-                playerStats = GASPT.Core.RunManager.Instance.CurrentPlayer;
-            else if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
-                playerStats = GASPT.Core.GameManager.Instance.PlayerStats;
-            if (playerStats != null && saveData.playerStats != null)
-            {
-                playerStats.LoadFromSaveData(saveData.playerStats);
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] PlayerStats를 찾을 수 없거나 데이터가 null입니다.");
-            }
-
-            // CurrencySystem 데이터 적용
-            CurrencySystem currencySystem = CurrencySystem.Instance;
-            if (currencySystem != null && saveData.currency != null)
-            {
-                currencySystem.LoadFromSaveData(saveData.currency);
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] CurrencySystem을 찾을 수 없거나 데이터가 null입니다.");
-            }
-
-            // InventorySystem 데이터 적용
-            InventorySystem inventorySystem = InventorySystem.Instance;
-            if (inventorySystem != null && saveData.inventory != null)
-            {
-                inventorySystem.LoadFromSaveData(saveData.inventory);
-            }
-            else
-            {
-                Debug.LogWarning("[SaveSystem] InventorySystem을 찾을 수 없거나 데이터가 null입니다.");
-            }
-        }
 
 
         // ====== 저장 파일 관리 ======
