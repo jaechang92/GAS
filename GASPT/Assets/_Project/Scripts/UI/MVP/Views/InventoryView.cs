@@ -141,6 +141,11 @@ namespace GASPT.UI.MVP
         // ====== IInventoryView 구현 (Presenter → View 명령) ======
 
         /// <summary>
+        /// UI가 현재 표시 중인지 여부
+        /// </summary>
+        public bool IsVisible => panel != null && panel.activeSelf;
+
+        /// <summary>
         /// UI 표시
         /// </summary>
         public void ShowUI()
@@ -374,6 +379,35 @@ namespace GASPT.UI.MVP
         public void Close()
         {
             OnCloseRequested?.Invoke();
+        }
+
+
+        [ContextMenu("Auto Fill References")]
+        private void AutoFillReferences()
+        {
+            // Main Panel
+            if (panel == null)
+                panel = this.transform.Find("Panel")?.gameObject;
+            // Item List
+            if (itemListContent == null)
+                itemListContent = this.transform.Find("Panel/ItemListPanel/Viewport/Content");
+            if (itemSlotPrefab == null)
+            {
+                var prefab = Resources.Load<GameObject>("Prefabs/UI/ItemSlot");
+                if (prefab != null)
+                    itemSlotPrefab = prefab;
+            }
+            // Equipment Slots
+            if (weaponSlot == null)
+                weaponSlot = this.transform.Find("Panel/EquipmentPanel/WeaponSlot")?.GetComponent<EquipmentSlotUI>();
+            if (armorSlot == null)
+                armorSlot = this.transform.Find("Panel/EquipmentPanel/ArmorSlot")?.GetComponent<EquipmentSlotUI>();
+            if (accessorySlot == null)
+                accessorySlot = this.transform.Find("Panel/EquipmentPanel/AccessorySlot")?.GetComponent<EquipmentSlotUI>();
+            // Buttons
+            if (closeButton == null)
+                closeButton = this.transform.Find("Panel/CloseButton")?.GetComponent<Button>();
+            Debug.Log("[InventoryView] AutoFillReferences 완료");
         }
     }
 }

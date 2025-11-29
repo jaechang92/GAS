@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Core;
 using GASPT.Core;
+using GASPT.Gameplay.Level.Graph;
+using GASPT.Gameplay.Level.Generation;
 using Random = UnityEngine.Random;
 
 namespace GASPT.Gameplay.Level
@@ -54,11 +57,34 @@ namespace GASPT.Gameplay.Level
         private int totalExpEarned = 0;
 
 
+        // ====== 그래프 기반 던전 (신규) ======
+
+        [Header("그래프 기반 던전")]
+        [Tooltip("현재 던전 그래프")]
+        private DungeonGraph dungeonGraph;
+
+        [Tooltip("노드별 Room 인스턴스")]
+        private Dictionary<string, Room> nodeRoomMap = new Dictionary<string, Room>();
+
+        [Tooltip("던전 생성기")]
+        private DungeonGenerator dungeonGenerator;
+
+
         // ====== 이벤트 ======
 
         public event Action<Room> OnRoomChanged;
         public event Action<Room> OnRoomCleared;
         public event Action OnDungeonCompleted;
+
+        /// <summary>
+        /// 노드 변경 이벤트 (그래프 기반)
+        /// </summary>
+        public event Action<DungeonNode> OnNodeChanged;
+
+        /// <summary>
+        /// 인접 노드 공개 이벤트 (미니맵용)
+        /// </summary>
+        public event Action<List<DungeonNode>> OnAdjacentNodesRevealed;
 
 
         // ====== 프로퍼티 ======
@@ -66,6 +92,21 @@ namespace GASPT.Gameplay.Level
         public Room CurrentRoom => currentRoom;
         public int TotalRoomCount => rooms.Count;
         public int CurrentRoomIndex => currentRoomIndex;
+
+        /// <summary>
+        /// 현재 던전 그래프
+        /// </summary>
+        public DungeonGraph DungeonGraph => dungeonGraph;
+
+        /// <summary>
+        /// 현재 노드
+        /// </summary>
+        public DungeonNode CurrentNode => dungeonGraph?.CurrentNode;
+
+        /// <summary>
+        /// 그래프 기반 던전 사용 중 여부
+        /// </summary>
+        public bool IsUsingGraphDungeon => dungeonGraph != null;
 
 
         // ====== 초기화 ======
@@ -670,6 +711,166 @@ namespace GASPT.Gameplay.Level
             playerStats.Revive();
 
             Debug.Log($"[RoomManager] 플레이어 완전 회복! ({playerStats.CurrentHP}/{playerStats.MaxHP})");
+        }
+
+
+        // ====== 그래프 기반 던전 관리 (신규) ======
+
+        /// <summary>
+        /// 던전 그래프 로드
+        /// </summary>
+        public void LoadDungeonGraph(DungeonGraph graph, Dictionary<string, Room> roomMap)
+        {
+            if (graph == null)
+            {
+                Debug.LogError("[RoomManager] DungeonGraph가 null입니다!");
+                return;
+            }
+
+            // 기존 방 정리
+            ClearRooms();
+
+            // 그래프 설정
+            dungeonGraph = graph;
+            nodeRoomMap = roomMap ?? new Dictionary<string, Room>();
+
+            // rooms 리스트도 업데이트 (하위 호환성)
+            rooms.Clear();
+            rooms.AddRange(nodeRoomMap.Values);
+
+            Debug.Log($"[RoomManager] 던전 그래프 로드 완료: {graph.NodeCount}개 노드, {nodeRoomMap.Count}개 Room");
+        }
+
+        /// <summary>
+        /// 특정 노드로 이동 (그래프 기반)
+        /// </summary>
+        public async Awaitable MoveToNodeAsync(DungeonNode targetNode)
+        {
+            if (targetNode == null)
+            {
+                Debug.LogError("[RoomManager] 대상 노드가 null입니다!");
+                return;
+            }
+
+            if (dungeonGraph == null)
+            {
+                Debug.LogError("[RoomManager] 던전 그래프가 로드되지 않았습니다!");
+                return;
+            }
+
+            // 대상 Room 가져오기
+            if (!nodeRoomMap.TryGetValue(targetNode.nodeId, out var targetRoom))
+            {
+                Debug.LogError($"[RoomManager] 노드 {targetNode.nodeId}에 대응하는 Room이 없습니다!");
+                return;
+            }
+
+            Debug.Log($"[RoomManager] 노드 이동: {dungeonGraph.currentNodeId} → {targetNode.nodeId}");
+
+            // 현재 방 비활성화
+            if (currentRoom != null)
+            {
+                currentRoom.gameObject.SetActive(false);
+            }
+
+            // 그래프 상태 업데이트
+            dungeonGraph.SetCurrentNode(targetNode.nodeId);
+
+            // 새 방 활성화
+            currentRoom = targetRoom;
+            currentRoom.gameObject.SetActive(true);
+
+            // 이벤트 발생
+            OnRoomChanged?.Invoke(currentRoom);
+            OnNodeChanged?.Invoke(targetNode);
+
+            // 인접 노드 공개
+            var adjacentNodes = dungeonGraph.GetAdjacentNodes(targetNode.nodeId);
+            foreach (var adj in adjacentNodes)
+            {
+                adj.Reveal();
+            }
+            OnAdjacentNodesRevealed?.Invoke(adjacentNodes);
+
+            // 방 진입 실행
+            await currentRoom.EnterRoomAsync();
+
+            Debug.Log($"[RoomManager] 노드 {targetNode.nodeId} ({targetNode.roomType}) 진입 완료");
+        }
+
+        /// <summary>
+        /// 노드 ID로 이동
+        /// </summary>
+        public async Awaitable MoveToNodeAsync(string nodeId)
+        {
+            var node = dungeonGraph?.GetNode(nodeId);
+            if (node == null)
+            {
+                Debug.LogError($"[RoomManager] 노드 {nodeId}를 찾을 수 없습니다!");
+                return;
+            }
+            await MoveToNodeAsync(node);
+        }
+
+        /// <summary>
+        /// 이동 가능한 다음 노드들 조회
+        /// </summary>
+        public List<DungeonNode> GetAvailableNextNodes()
+        {
+            if (dungeonGraph == null || dungeonGraph.currentNodeId == null)
+            {
+                return new List<DungeonNode>();
+            }
+
+            return dungeonGraph.GetAdjacentNodes(dungeonGraph.currentNodeId);
+        }
+
+        /// <summary>
+        /// 미방문 다음 노드들 조회
+        /// </summary>
+        public List<DungeonNode> GetUnvisitedNextNodes()
+        {
+            if (dungeonGraph == null || dungeonGraph.currentNodeId == null)
+            {
+                return new List<DungeonNode>();
+            }
+
+            return dungeonGraph.GetUnvisitedAdjacentNodes(dungeonGraph.currentNodeId);
+        }
+
+        /// <summary>
+        /// 그래프 기반 던전 시작 (Entry 노드로 이동)
+        /// </summary>
+        public async Awaitable StartGraphDungeonAsync()
+        {
+            if (dungeonGraph == null)
+            {
+                Debug.LogError("[RoomManager] 던전 그래프가 로드되지 않았습니다!");
+                return;
+            }
+
+            // Entry 노드로 이동
+            var entryNode = dungeonGraph.EntryNode;
+            if (entryNode == null)
+            {
+                Debug.LogError("[RoomManager] Entry 노드를 찾을 수 없습니다!");
+                return;
+            }
+
+            Debug.Log("[RoomManager] 그래프 기반 던전 시작!");
+            await MoveToNodeAsync(entryNode);
+        }
+
+        /// <summary>
+        /// 노드 ID로 Room 가져오기
+        /// </summary>
+        public Room GetRoomByNodeId(string nodeId)
+        {
+            if (nodeRoomMap.TryGetValue(nodeId, out var room))
+            {
+                return room;
+            }
+            return null;
         }
 
 

@@ -44,9 +44,9 @@ namespace GASPT.UI
 
         protected override void OnAwake()
         {
-            mainCamera = Camera.main;
+            // Camera는 PersistentManagers에 있으므로 지연 참조
+            // Awake 시점에는 Camera가 없을 수 있음
             LoadDamageNumberPrefab();
-            ValidateReferences();
             InitializeSharedCanvas();
             InitializePool();
         }
@@ -91,19 +91,15 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// 참조 유효성 검증
+        /// Main Camera 지연 획득
         /// </summary>
-        private void ValidateReferences()
+        private Camera GetMainCamera()
         {
-            if (damageNumberPrefab == null)
-            {
-                Debug.LogError("[DamageNumberPool] damageNumberPrefab 로드 실패. Resources 폴더 구조를 확인하세요.");
-            }
-
             if (mainCamera == null)
             {
-                Debug.LogWarning("[DamageNumberPool] Main Camera를 찾을 수 없습니다. 빌보드 효과가 작동하지 않을 수 있습니다.");
+                mainCamera = Camera.main;
             }
+            return mainCamera;
         }
 
         /// <summary>
@@ -133,11 +129,12 @@ namespace GASPT.UI
         /// </summary>
         private void UpdateCanvasBillboard()
         {
-            if (sharedCanvas != null && mainCamera != null)
+            Camera cam = GetMainCamera();
+            if (sharedCanvas != null && cam != null)
             {
                 sharedCanvas.transform.LookAt(
-                    sharedCanvas.transform.position + mainCamera.transform.rotation * Vector3.forward,
-                    mainCamera.transform.rotation * Vector3.up
+                    sharedCanvas.transform.position + cam.transform.rotation * Vector3.forward,
+                    cam.transform.rotation * Vector3.up
                 );
             }
         }

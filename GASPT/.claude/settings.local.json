@@ -1,27 +1,18 @@
 {
   "permissions": {
     "allow": [
+      "Bash(dir:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)",
+      "Read(//d/JaeChang/UintyDev/GASPT/GASPT/**)",
+      "Read(//d/JaeChang/UintyDev/GASPT/GASPT/docs/**)",
       "WebSearch",
-      "Bash(git show:*)",
-      "Bash(\"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\architecture\\ARCHITECTURE_DIAGRAMS.md\")",
-      "Bash(\"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\architecture\\QUICK_REFERENCE.md\")",
-      "mcp__ide__getDiagnostics",
-      "Bash($null)",
-      "Bash(powershell:*)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\WORK_STATUS_UPDATE.md\")",
-      "Bash(mv:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(REFACTORING_PORTFOLIO.md)",
-      "Bash(Get-Content \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\mcp__ide__getDiagnostics\" -ErrorAction SilentlyContinue)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\Assets\\_Project\\Scripts\\UI\\InventoryUI.cs\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\BOSS_AUTO_SETUP_GUIDE.md\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\BOSS_TEST_CHECKLIST.md\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\프롬프트 핵심 구성 요소 (The Core Ingredients).md\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\development\\CurrentStatus.md\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\development\\Roadmap.md\" -ErrorAction Stop)",
-      "Bash(Remove-Item \"D:\\JaeChang\\UintyDev\\GASPT\\GASPT\\docs\\reference\\QUICK_REFERENCE.md\" -ErrorAction Stop)"
+      "WebFetch(domain:docs.unity3d.com)",
+      "Bash(bash:*)",
+      "Bash(git fetch:*)",
+      "SlashCommand(/speckit.tasks)",
+      "SlashCommand(/speckit.implement)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,6 +1,7 @@
 using System.Threading;
 using UnityEngine;
 using FSM.Core;
+using GASPT.UI;
 
 namespace GASPT.Core.GameFlow
 {
@@ -24,14 +25,15 @@ namespace GASPT.Core.GameFlow
             if (currentScene != "StartRoom")
             {
                 Debug.LogWarning($"[StartRoomState] StartRoom 씬이 아닙니다! 현재 씬: {currentScene}");
-                // 씬이 다르면 LoadingStartRoomState에서 처리해야 함
             }
 
-            // TODO: 준비실 UI 표시
-            // - 상점 UI
-            // - 메타 업그레이드 UI
-            // - 정비 UI
-            // - 던전 입장 포탈 활성화 (씬에 이미 배치되어 있음)
+            // Fade In (초기 진입 시 검은 화면에서 밝아짐)
+            var fadeController = FadeController.Instance;
+            if (fadeController != null && fadeController.IsFadedOut)
+            {
+                await fadeController.FadeIn(1.0f);
+                Debug.Log("[StartRoomState] Fade In 완료");
+            }
 
             // GameManager 통합
             var gameManager = GameManager.Instance;

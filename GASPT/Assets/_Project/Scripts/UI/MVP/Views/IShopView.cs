@@ -31,6 +31,11 @@ namespace GASPT.UI.MVP
         // ====== Presenter → View 명령 ======
 
         /// <summary>
+        /// UI가 현재 표시 중인지 여부
+        /// </summary>
+        bool IsVisible { get; }
+
+        /// <summary>
         /// 상점 UI 표시
         /// </summary>
         void ShowUI();

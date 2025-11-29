@@ -60,10 +60,6 @@ namespace GASPT.ResourceManagement
             // Player Prefabs
             public static class Player
             {
-                /// <summary>
-                /// MageForm Prefab 경로
-                /// Resources/Prefabs/Player/MageForm.prefab
-                /// </summary>
                 public const string MageForm = "Prefabs/Player/MageForm";
 
                 /// <summary>
@@ -82,62 +78,21 @@ namespace GASPT.ResourceManagement
             // UI Prefabs
             public static class UI
             {
-                /// <summary>
-                /// DamageNumber Prefab 경로
-                /// Resources/Prefabs/UI/DamageNumber.prefab
-                /// </summary>
+                public const string InventoryUI = "Prefabs/UI/InventoryUI";
+                public const string ShopUI = "Prefabs/UI/ShopUI";
                 public const string DamageNumber = "Prefabs/UI/DamageNumber";
-
-                /// <summary>
-                /// HPBar Prefab 경로 (예시)
-                /// Resources/Prefabs/UI/HPBar.prefab
-                /// </summary>
                 public const string HPBar = "Prefabs/UI/HPBar";
-
-                /// <summary>
-                /// DroppedItem Prefab 경로
-                /// Resources/Prefabs/UI/DroppedItem.prefab
-                /// </summary>
                 public const string DroppedItem = "Prefabs/UI/DroppedItem";
-
-                /// <summary>
-                /// BuffIcon Prefab 경로
-                /// Resources/Prefabs/UI/BuffIcon.prefab
-                /// </summary>
                 public const string BuffIcon = "Prefabs/UI/BuffIcon";
-
-                /// <summary>
-                /// PickupSlot Prefab 경로
-                /// Resources/Prefabs/UI/PickupSlot.prefab
-                /// </summary>
                 public const string PickupSlot = "Prefabs/UI/ItemPickupSlot";
             }
 
             // Enemy Prefabs
             public static class Enemies
             {
-                /// <summary>
-                /// BasicMeleeEnemy Prefab 경로
-                /// Resources/Prefabs/Enemies/BasicMeleeEnemy.prefab
-                /// </summary>
                 public const string Basic = "Prefabs/Enemies/BasicMeleeEnemy";
-
-                /// <summary>
-                /// RangedEnemy Prefab 경로
-                /// Resources/Prefabs/Enemies/RangedEnemy.prefab
-                /// </summary>
                 public const string Ranged = "Prefabs/Enemies/RangedEnemy";
-
-                /// <summary>
-                /// FlyingEnemy Prefab 경로
-                /// Resources/Prefabs/Enemies/FlyingEnemy.prefab
-                /// </summary>
                 public const string Flying = "Prefabs/Enemies/FlyingEnemy";
-
-                /// <summary>
-                /// EliteEnemy Prefab 경로
-                /// Resources/Prefabs/Enemies/EliteEnemy.prefab
-                /// </summary>
                 public const string Elite = "Prefabs/Enemies/EliteEnemy";
             }
 
@@ -160,26 +115,13 @@ namespace GASPT.ResourceManagement
             // Projectile Prefabs
             public static class Projectiles
             {
-                /// <summary>
-                /// FireballProjectile Prefab 경로
-                /// Resources/Prefabs/Projectiles/FireballProjectile.prefab
-                /// </summary>
                 public const string FireballProjectile = "Prefabs/Projectiles/FireballProjectile";
 
-                /// <summary>
-                /// MagicMissileProjectile Prefab 경로
-                /// Resources/Prefabs/Projectiles/MagicMissileProjectile.prefab
-                /// </summary>
                 public const string MagicMissileProjectile = "Prefabs/Projectiles/MagicMissileProjectile";
 
-                /// <summary>
-                /// EnemyProjectile Prefab 경로
-                /// Resources/Prefabs/Projectiles/EnemyProjectile.prefab
-                /// </summary>
                 public const string EnemyProjectile = "Prefabs/Projectiles/EnemyProjectile";
             }
         }
-
 
         // ====== Data (ScriptableObjects) ======
 

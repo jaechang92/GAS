@@ -167,5 +167,10 @@ namespace GASPT.UI
         /// Fade 진행 중 여부
         /// </summary>
         public bool IsFading => isFading;
+
+        /// <summary>
+        /// 현재 Fade Out 상태인지 (화면이 검은색인지)
+        /// </summary>
+        public bool IsFadedOut => fadeImage != null && fadeImage.color.a >= 0.99f;
     }
 }

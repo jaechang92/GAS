@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 975b52c4142f21c43831f9b77365555b, type: 3}
+  m_Name: Stage4_Castle
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Gameplay.Level.StageConfig
+  stageName: "\uC2A4\uD14C\uC774\uC9C0 4: \uC131"
+  stageId: stage_4
+  description: "\uC131 \uC9C0\uC5ED\uC744 \uD0D0\uD5D8\uD558\uC138\uC694."
+  stageIcon: {fileID: 0}
+  backgroundImage: {fileID: 0}
+  floors: []
+  baseDifficulty: 4
+  difficultyPerFloor: 0.5
+  recommendedLevel: 20
+  baseClearGold: 400
+  baseClearExp: 200
+  rewardMultiplierPerFloor: 1.1
+  timeLimit: 0
+  allowRevive: 1
+  maxRevives: 1
+  allowCheckpoint: 1
+  prerequisiteStageIds:
+  - stage_3
+  requiredLevel: 15

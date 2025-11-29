@@ -69,6 +69,62 @@ namespace GASPT.Gameplay.Level
         public int minNormalRoomsBetweenSpecial = 1;
 
 
+        // ====== 그래프 생성 규칙 ======
+
+        [Header("그래프 생성 규칙")]
+        [Tooltip("총 층 수 (Entry 포함)")]
+        [Range(3, 20)]
+        public int totalFloors = 10;
+
+        [Tooltip("분기 생성 확률 (0~1)")]
+        [Range(0f, 1f)]
+        public float branchingFactor = 0.4f;
+
+        [Tooltip("층당 최대 분기 수")]
+        [Range(1, 3)]
+        public int maxBranches = 2;
+
+        [Tooltip("Entry→Boss 최소 경로 길이")]
+        [Range(3, 15)]
+        public int minPathLength = 5;
+
+        [Tooltip("Entry→Boss 최대 경로 길이")]
+        [Range(5, 20)]
+        public int maxPathLength = 10;
+
+        [Tooltip("비밀 방 생성 확률 (0~1)")]
+        [Range(0f, 1f)]
+        public float secretRoomChance = 0.1f;
+
+        [Tooltip("층당 최소 노드 수")]
+        [Range(1, 3)]
+        public int minNodesPerFloor = 1;
+
+        [Tooltip("층당 최대 노드 수")]
+        [Range(1, 4)]
+        public int maxNodesPerFloor = 3;
+
+
+        // ====== 방 타입 비율 ======
+
+        [Header("방 타입 비율")]
+        [Tooltip("엘리트 방 비율 (0~1)")]
+        [Range(0f, 0.5f)]
+        public float eliteRoomRatio = 0.15f;
+
+        [Tooltip("상점 방 비율 (0~1)")]
+        [Range(0f, 0.5f)]
+        public float shopRoomRatio = 0.1f;
+
+        [Tooltip("휴식 방 비율 (0~1)")]
+        [Range(0f, 0.5f)]
+        public float restRoomRatio = 0.1f;
+
+        [Tooltip("보물 방 비율 (0~1)")]
+        [Range(0f, 0.5f)]
+        public float treasureRoomRatio = 0.05f;
+
+
         // ====== 유효성 검증 ======
 
         private void OnValidate()

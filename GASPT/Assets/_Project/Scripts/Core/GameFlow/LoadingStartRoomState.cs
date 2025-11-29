@@ -3,13 +3,15 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using FSM.Core;
 using GASPT.UI;
+using GASPT.Core.SceneManagement;
+using GASPT.CameraSystem;
 
 namespace GASPT.Core.GameFlow
 {
     /// <summary>
     /// 준비실 복귀 로딩 상태
-    /// - StartRoom 씬 로드 (나중에 씬 분리 시)
-    /// - 현재는 던전 정리 및 초기화
+    /// - StartRoom 씬 로드 (Additive)
+    /// - 던전 정리 및 초기화
     /// </summary>
     public class LoadingStartRoomState : State
     {
@@ -36,29 +38,38 @@ namespace GASPT.Core.GameFlow
             // Player 초기화 대기 (씬 로딩 전 Player 해제 확인)
             await WaitForPlayerUnregistered(cancellationToken);
 
-            // StartRoom 씬 로드 (Single 모드 - 기존 씬 완전 교체)
-            Debug.Log("[LoadingStartRoomState] StartRoom 씬 로딩 시작...");
-
-            AsyncOperation loadOperation = SceneManager.LoadSceneAsync("StartRoom", LoadSceneMode.Single);
-            if (loadOperation != null)
+            // AdditiveSceneLoader를 통한 씬 전환
+            var sceneLoader = AdditiveSceneLoader.Instance;
+            if (sceneLoader != null)
             {
-                while (!loadOperation.isDone)
-                {
-                    // 로딩 진행도 표시 (TODO: LoadingUI 업데이트)
-                    // LoadingUI.SetProgress(loadOperation.progress);
-                    await Awaitable.NextFrameAsync(cancellationToken);
-                }
-
+                Debug.Log("[LoadingStartRoomState] StartRoom 씬 로딩 시작 (Additive)...");
+                await sceneLoader.SwitchContentSceneAsync("StartRoom", cancellationToken);
                 Debug.Log("[LoadingStartRoomState] StartRoom 씬 로딩 완료!");
             }
             else
             {
-                Debug.LogError("[LoadingStartRoomState] StartRoom 씬 로드 실패! Build Settings에 씬이 추가되었는지 확인하세요.");
-                return;
+                // Fallback: 기존 Single 모드 로딩
+                Debug.LogWarning("[LoadingStartRoomState] AdditiveSceneLoader 없음 - Single 모드로 로딩");
+                AsyncOperation loadOperation = SceneManager.LoadSceneAsync("StartRoom", LoadSceneMode.Single);
+                if (loadOperation != null)
+                {
+                    while (!loadOperation.isDone)
+                    {
+                        await Awaitable.NextFrameAsync(cancellationToken);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[LoadingStartRoomState] StartRoom 씬 로드 실패!");
+                    return;
+                }
             }
 
             // Player 초기화 대기 (씬 로딩 후 Player 등록 확인)
             await WaitForPlayerReady(cancellationToken);
+
+            // ★ Scene 검증 및 재할당 (카메라, UI 등)
+            await ValidateSceneReferences(cancellationToken);
 
             // TODO: 로딩 UI 숨기기
             // LoadingUI.Hide();
@@ -75,6 +86,32 @@ namespace GASPT.Core.GameFlow
             if (gameFlowFSM != null)
             {
                 gameFlowFSM.NotifyStartRoomLoaded();
+            }
+        }
+
+        /// <summary>
+        /// Scene 참조 검증 및 재할당
+        /// SceneValidationManager를 통해 모든 등록된 검증기 실행
+        /// </summary>
+        private async Awaitable ValidateSceneReferences(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingStartRoomState] Scene 검증 시작...");
+
+            if (SceneValidationManager.HasInstance)
+            {
+                bool success = await SceneValidationManager.Instance.ValidateAllAsync();
+                if (success)
+                {
+                    Debug.Log("[LoadingStartRoomState] Scene 검증 완료 - 모든 참조 유효");
+                }
+                else
+                {
+                    Debug.LogWarning("[LoadingStartRoomState] Scene 검증 완료 - 일부 참조 실패 (게임 계속 진행)");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[LoadingStartRoomState] SceneValidationManager 없음 - 검증 스킵");
             }
         }
 

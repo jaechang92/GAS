@@ -62,6 +62,17 @@ namespace GASPT.Gameplay.Level
         public int bonusExp = 20;
 
 
+        // ====== 절차적 생성 설정 ======
+
+        [Header("절차적 생성 설정")]
+        [Tooltip("최대 연결 수 (포탈 개수)")]
+        [Range(1, 6)]
+        public int maxConnections = 4;
+
+        [Tooltip("분기점으로 사용 가능 여부")]
+        public bool canBeBranch = true;
+
+
         // ====== 유효성 검증 ======
 
         private void OnValidate()

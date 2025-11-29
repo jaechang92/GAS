@@ -11,6 +11,7 @@ using GASPT.Skills;
 using GASPT.Loot;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Item;
+using GASPT.Core.SceneManagement;
 
 namespace GASPT.Core
 {
@@ -85,7 +86,10 @@ namespace GASPT.Core
             // 0. Resource Management (최우선 - 다른 시스템들이 의존)
             PreloadGameResourceManager();
 
-            // 0-1. Object Pooling (게임플레이 최적화)
+            // 0-1. AdditiveSceneLoader (씬 관리 - 다른 시스템보다 먼저)
+            PreloadAdditiveSceneLoader();
+
+            // 0-2. Object Pooling (게임플레이 최적화)
             PreloadPoolManager();
 
             // 1. UI Systems (게임플레이 중 자주 사용)
@@ -126,7 +130,13 @@ namespace GASPT.Core
             // 10. GameManager (최종 - 모든 시스템 참조 허브)
             PreloadGameManager();
 
-            // 10. GameFlowStateMachine (게임 Flow FSM - GameManager 의존)
+            // 11. UIManager (씬 로드 후 UI 참조 필요 - 지연 초기화)
+            // Note: UIManager는 씬에 배치된 UI를 참조해야 하므로
+            // BeforeSceneLoad 시점에서는 완전한 초기화가 불가능합니다.
+            // 씬 로드 후 자동으로 Instance 접근 시 초기화됩니다.
+            PreloadUIManager();
+
+            // 12. GameFlowStateMachine (게임 Flow FSM - GameManager 의존)
             PreloadGameFlowStateMachine();
 
             // Note: Pool 초기화는 PoolInitializer.cs에서 자동으로 처리됩니다
@@ -151,6 +161,25 @@ namespace GASPT.Core
             else
             {
                 LogError("✗ GameResourceManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
+        /// AdditiveSceneLoader 사전 로딩 (씬 관리 시스템)
+        /// </summary>
+        private void PreloadAdditiveSceneLoader()
+        {
+            LogMessage("AdditiveSceneLoader 초기화 중...");
+
+            var instance = AdditiveSceneLoader.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ AdditiveSceneLoader 초기화 완료");
+            }
+            else
+            {
+                LogError("✗ AdditiveSceneLoader 초기화 실패");
             }
         }
 
@@ -442,6 +471,29 @@ namespace GASPT.Core
         }
 
         /// <summary>
+        /// UIManager 사전 로딩
+        /// Note: 씬에 배치된 UI 참조가 필요하므로 BeforeSceneLoad에서는 완전 초기화 불가
+        /// </summary>
+        private void PreloadUIManager()
+        {
+            LogMessage("UIManager 초기화 중...");
+
+            // UIManager는 씬에 배치된 UI를 참조해야 함
+            // BeforeSceneLoad 시점에서는 씬이 아직 로드되지 않았으므로
+            // Instance 접근만 하여 싱글톤 객체 생성
+            var instance = UIManager.Instance;
+
+            if (instance != null)
+            {
+                LogMessage("✓ UIManager 초기화 완료 (UI 참조는 씬 로드 후 설정됨)");
+            }
+            else
+            {
+                LogError("✗ UIManager 초기화 실패");
+            }
+        }
+
+        /// <summary>
         /// GameFlowStateMachine 사전 로딩 (게임 Flow FSM)
         /// </summary>
         private void PreloadGameFlowStateMachine()
@@ -501,6 +553,7 @@ namespace GASPT.Core
             int count = 0;
 
             if (GameResourceManager.HasInstance) count++;
+            if (AdditiveSceneLoader.HasInstance) count++;
             if (PoolManager.HasInstance) count++;
             if (FadeController.HasInstance) count++;
             if (DamageNumberPool.HasInstance) count++;
@@ -517,6 +570,7 @@ namespace GASPT.Core
             if (SkillItemManager.HasInstance) count++;
             if (RunManager.HasInstance) count++;
             if (GameManager.HasInstance) count++;
+            if (UIManager.HasInstance) count++;
             if (GameFlowStateMachine.HasInstance) count++;
 
             return count;
@@ -552,6 +606,7 @@ namespace GASPT.Core
         {
             Debug.Log("========== 싱글톤 상태 확인 ==========");
             Debug.Log($"GameResourceManager: {(GameResourceManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"AdditiveSceneLoader: {(AdditiveSceneLoader.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"PoolManager: {(PoolManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"FadeController: {(FadeController.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"DamageNumberPool: {(DamageNumberPool.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
@@ -568,8 +623,9 @@ namespace GASPT.Core
             Debug.Log($"SkillItemManager: {(SkillItemManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"RunManager: {(RunManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"GameManager: {(GameManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
+            Debug.Log($"UIManager: {(UIManager.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
             Debug.Log($"GameFlowStateMachine: {(GameFlowStateMachine.HasInstance ? "✓ 생성됨" : "✗ 미생성")}");
-            Debug.Log($"총 {GetPreloadedCount()}/17개 싱글톤 생성됨");
+            Debug.Log($"총 {GetPreloadedCount()}/19개 싱글톤 생성됨");
             Debug.Log("=====================================");
         }
 

@@ -145,6 +145,11 @@ namespace GASPT.UI.MVP
         // ====== IShopView 구현 (Presenter → View 명령) ======
 
         /// <summary>
+        /// UI가 현재 표시 중인지 여부
+        /// </summary>
+        public bool IsVisible => panel != null && panel.activeSelf;
+
+        /// <summary>
         /// UI 표시
         /// </summary>
         public void ShowUI()

@@ -66,8 +66,9 @@ namespace GASPT.Gameplay.Item
             Debug.Log("[SkillItemManager] 초기화 완료");
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             // 이벤트 구독 해제
             if (LootSystem.HasInstance)
             {

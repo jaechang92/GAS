@@ -63,14 +63,22 @@ namespace GASPT.Skills
         {
             skillSlots = new Dictionary<int, Skill>();
 
-            // 플레이어 찾기
-            player = GameObject.FindWithTag("Player");
-            if (player == null)
-            {
-                Debug.LogWarning("[SkillSystem] Player 태그를 가진 GameObject를 찾을 수 없습니다.");
-            }
+            // Player는 Content Scene에 있으므로 지연 참조
+            // Awake 시점에는 Player가 없을 수 있음
 
             Debug.Log($"[SkillSystem] 초기화 완료 - 최대 슬롯 수: {maxSlots}");
+        }
+
+        /// <summary>
+        /// Player GameObject 지연 획득
+        /// </summary>
+        private GameObject GetPlayer()
+        {
+            if (player == null)
+            {
+                player = GameObject.FindWithTag("Player");
+            }
+            return player;
         }
 
 
@@ -160,7 +168,9 @@ namespace GASPT.Skills
                 return false;
             }
 
-            if (player == null)
+            // Player 지연 획득
+            GameObject currentPlayer = GetPlayer();
+            if (currentPlayer == null)
             {
                 Debug.LogError($"[SkillSystem] TryUseSkill(): Player를 찾을 수 없습니다.");
                 return false;
@@ -169,7 +179,7 @@ namespace GASPT.Skills
             Skill skill = skillSlots[slotIndex];
 
             // 스킬 실행
-            bool success = skill.TryExecute(player, target);
+            bool success = skill.TryExecute(currentPlayer, target);
 
             if (success)
             {

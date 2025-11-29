@@ -4,12 +4,14 @@ using UnityEngine.SceneManagement;
 using FSM.Core;
 using GASPT.Gameplay.Level;
 using GASPT.UI;
+using GASPT.Core.SceneManagement;
+using GASPT.CameraSystem;
 
 namespace GASPT.Core.GameFlow
 {
     /// <summary>
     /// 던전 씬 로딩 상태
-    /// - GameplayScene 로드
+    /// - GameplayScene 로드 (Additive)
     /// - RoomManager 초기화 대기
     /// - 던전 시작
     /// </summary>
@@ -32,25 +34,31 @@ namespace GASPT.Core.GameFlow
             // TODO: 로딩 UI 표시
             // LoadingUI.Show();
 
-            // GameplayScene 로드 (Single 모드 - 기존 씬 완전 교체)
-            Debug.Log("[LoadingDungeonState] GameplayScene 로딩 시작...");
-
-            AsyncOperation loadOperation = SceneManager.LoadSceneAsync("GameplayScene", LoadSceneMode.Single);
-            if (loadOperation != null)
+            // AdditiveSceneLoader를 통한 씬 전환
+            var sceneLoader = AdditiveSceneLoader.Instance;
+            if (sceneLoader != null)
             {
-                while (!loadOperation.isDone)
-                {
-                    // 로딩 진행도 표시 (TODO: LoadingUI 업데이트)
-                    // LoadingUI.SetProgress(loadOperation.progress);
-                    await Awaitable.NextFrameAsync(cancellationToken);
-                }
-
+                Debug.Log("[LoadingDungeonState] GameplayScene 로딩 시작 (Additive)...");
+                await sceneLoader.SwitchContentSceneAsync("GameplayScene", cancellationToken);
                 Debug.Log("[LoadingDungeonState] GameplayScene 로딩 완료!");
             }
             else
             {
-                Debug.LogError("[LoadingDungeonState] GameplayScene 로드 실패! Build Settings에 씬이 추가되었는지 확인하세요.");
-                return;
+                // Fallback: 기존 Single 모드 로딩
+                Debug.LogWarning("[LoadingDungeonState] AdditiveSceneLoader 없음 - Single 모드로 로딩");
+                AsyncOperation loadOperation = SceneManager.LoadSceneAsync("GameplayScene", LoadSceneMode.Single);
+                if (loadOperation != null)
+                {
+                    while (!loadOperation.isDone)
+                    {
+                        await Awaitable.NextFrameAsync(cancellationToken);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[LoadingDungeonState] GameplayScene 로드 실패!");
+                    return;
+                }
             }
 
             // Player 초기화 대기 (중요: 다른 시스템보다 먼저 대기)
@@ -71,6 +79,9 @@ namespace GASPT.Core.GameFlow
                 Debug.LogError("[LoadingDungeonState] RoomManager를 찾을 수 없습니다!");
             }
 
+            // ★ Scene 검증 및 재할당 (카메라, UI 등)
+            await ValidateSceneReferences(cancellationToken);
+
             // TODO: 로딩 UI 숨기기
             // LoadingUI.Hide();
 
@@ -86,6 +97,32 @@ namespace GASPT.Core.GameFlow
             if (gameFlowFSM != null)
             {
                 gameFlowFSM.NotifyDungeonLoaded();
+            }
+        }
+
+        /// <summary>
+        /// Scene 참조 검증 및 재할당
+        /// SceneValidationManager를 통해 모든 등록된 검증기 실행
+        /// </summary>
+        private async Awaitable ValidateSceneReferences(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingDungeonState] Scene 검증 시작...");
+
+            if (SceneValidationManager.HasInstance)
+            {
+                bool success = await SceneValidationManager.Instance.ValidateAllAsync();
+                if (success)
+                {
+                    Debug.Log("[LoadingDungeonState] Scene 검증 완료 - 모든 참조 유효");
+                }
+                else
+                {
+                    Debug.LogWarning("[LoadingDungeonState] Scene 검증 완료 - 일부 참조 실패 (게임 계속 진행)");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[LoadingDungeonState] SceneValidationManager 없음 - 검증 스킵");
             }
         }
 

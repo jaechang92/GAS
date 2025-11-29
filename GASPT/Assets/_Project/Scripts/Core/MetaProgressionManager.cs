@@ -37,7 +37,7 @@ namespace GASPT.Core
 
         // ====== 초기화 ======
 
-        private void Awake()
+        protected override void OnAwake()
         {
             // 기본 Form 언락
             UnlockedForms.Add("MageForm");

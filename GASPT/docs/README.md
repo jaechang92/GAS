@@ -25,18 +25,33 @@
 
 | 문서 | 설명 | 대상 |
 |------|------|------|
-| **[현재 진행 상황](development/CURRENT_WORK.md)** | 최신 작업 내용 및 다음 작업 | 모든 개발자 |
-| **[리팩토링 계획](development/REFACTORING_PLAN.md)** | 리팩토링 작업 진행 현황 | 모든 개발자 |
-| **[씬 리팩토링 노트](development/SCENE_REFACTORING_NOTES.md)** | SceneType 분리 내역 | 시스템 개발자 |
-| **[개발 로드맵](development/Roadmap.md)** | 전체 개발 계획 및 마일스톤 | 프로젝트 매니저 |
 | **[코딩 가이드라인](development/CodingGuidelines.md)** | 코딩 규칙 및 금지 사항 | 모든 개발자 |
+| **[개발 로드맵](development/PROJECT_MASTER_ROADMAP.md)** | 전체 개발 계획 및 마일스톤 | 프로젝트 매니저 |
 | **[Skul 시스템 설계](development/SkulSystemDesign.md)** | Skul 스타일 구현 마스터플랜 | 시스템 설계자 |
 
 **필수 문서**:
 - 개발 시작 전: **CodingGuidelines** ⚠️
-- 작업 시작 전: **CURRENT_WORK** ✅
-- 리팩토링 시: **REFACTORING_PLAN** 🔧
 - 기획 검토 시: **SkulSystemDesign** 📋
+
+---
+
+### 📝 작업 로그 (work-logs/) ⭐ NEW!
+> 프로젝트의 모든 작업 히스토리 및 진행 상황
+
+| 문서 | 설명 | 업데이트 |
+|------|------|----------|
+| **[작업 로그 홈](work-logs/README.md)** | 작업 로그 네비게이션 | - |
+| **[최신 작업](work-logs/LATEST.md)** | 현재 진행 중인 작업 및 최근 완료 작업 | 수시 |
+| **[월별 로그](work-logs/2025-11/)** | 월별 상세 작업 로그 | 작업 완료 시 |
+| **[Phase 히스토리](work-logs/phase-history/)** | Phase별 개발 히스토리 | Phase 완료 시 |
+| **[파일 목록](work-logs/file-inventory.md)** | 생성된 모든 파일 목록 | Phase 완료 시 |
+
+**작업 로그 업데이트 방법**:
+```bash
+/update-worklog          # 기본 업데이트
+/update-worklog --full   # 전체 업데이트
+/update-worklog --phase  # Phase 완료 업데이트
+```
 
 ---
 
@@ -49,11 +64,14 @@
 | **[어셈블리 아키텍처](architecture/ASSEMBLY_ARCHITECTURE.md)** | Assembly Definition 의존성 구조 | 시스템 개발자 |
 | **[어셈블리 검증 리포트](architecture/ASSEMBLY_VALIDATION_REPORT.md)** | 의존성 검증 결과 | 시스템 개발자 |
 | **[아키텍처 다이어그램](architecture/ARCHITECTURE_DIAGRAMS.md)** | 시각화 자료 및 다이어그램 | 모든 개발자 |
+| **[카메라 시스템 설계](architecture/CAMERA_SYSTEM_DESIGN.md)** | 카메라 아키텍처 및 Post-Processing | 그래픽스/연출 |
+| **[MVP 아키텍처](architecture/MVP_ARCHITECTURE.md)** | UI MVP 패턴 설계 | UI 개발자 |
 
 **활용 시나리오**:
 - 새 시스템 설계 시: **PROJECT_ARCHITECTURE** 📐
 - 의존성 확인 시: **ASSEMBLY_ARCHITECTURE** 🔗
 - 구조 이해 시: **ARCHITECTURE_DIAGRAMS** 📊
+- 카메라/연출 시: **CAMERA_SYSTEM_DESIGN** 🎥
 
 ---
 
@@ -87,6 +105,20 @@
 - 개발 중 빠른 API 찾기
 - 코드 스니펫 참조
 - 일반적인 패턴 확인
+
+---
+
+### 🎨 아트 리소스 (art/)
+> 캐릭터 및 에셋 디자인 가이드
+
+| 문서 | 설명 | 대상 |
+|------|------|------|
+| **[NPC 캐릭터 디자인 프롬프트](art/NPC_CHARACTER_DESIGN_PROMPTS.md)** | namobanana AI용 NPC 디자인 프롬프트 | 아트 제작자 |
+
+**활용법**:
+- AI 이미지 생성 시 프롬프트 참조
+- 컬러 팔레트 및 스타일 가이드 확인
+- Unity 스프라이트 설정 참조
 
 ---
 
@@ -141,14 +173,14 @@
 1. QuickStart.md - 5분 만에 실행
 2. ProjectOverview.md - 프로젝트 이해
 3. CodingGuidelines.md - 코딩 규칙 숙지
-4. CurrentStatus.md - 현재 상황 파악
+4. work-logs/LATEST.md - 현재 상황 파악
 5. 작업 시작!
 ```
 
 ### 🔄 기존 개발자 (재시작)
 ```
-1. CurrentStatus.md - 최신 상황 확인
-2. Worklog.md - 최근 작업 로그 확인
+1. work-logs/LATEST.md - 최신 상황 확인
+2. work-logs/README.md - 작업 로그 확인
 3. 작업 시작!
 ```
 
@@ -190,30 +222,33 @@
 - **코드 블록**: ` ```csharp` 사용
 
 ### 문서 업데이트
-- **CurrentStatus.md**: 작업 완료 시 즉시 업데이트
-- **Worklog.md**: 매일 작업 종료 시 업데이트
-- **Roadmap.md**: Phase 완료 시 업데이트
-- **기타 문서**: 관련 작업 완료 시 업데이트
+- **work-logs/LATEST.md**: `/update-worklog` 명령으로 자동 업데이트
+- **work-logs/월별 로그**: `/update-worklog --full` 명령으로 생성
+- **work-logs/Phase 히스토리**: `/update-worklog --phase` 명령으로 생성
+- **기타 문서**: 관련 작업 완료 시 수동 업데이트
 
 ---
 
 ## 🔍 빠른 검색
 
 ### 자주 찾는 문서
-- **지금 뭘 해야 하나요?** → [CURRENT_WORK.md](development/CURRENT_WORK.md)
+- **지금 뭘 해야 하나요?** → [LATEST.md](work-logs/LATEST.md) ⭐
 - **어떻게 시작하나요?** → [QuickStart.md](getting-started/QuickStart.md)
 - **코딩 규칙이 뭐죠?** → [CodingGuidelines.md](development/CodingGuidelines.md)
+- **작업 히스토리는?** → [work-logs/](work-logs/README.md) ⭐
 - **아키텍처가 궁금해요** → [PROJECT_ARCHITECTURE.md](architecture/PROJECT_ARCHITECTURE.md)
 - **UI 어떻게 만드나요?** → [UI_SYSTEM_DESIGN.md](guides/UI_SYSTEM_DESIGN.md)
 - **한글이 깨져요!** → [EncodingGuide.md](infrastructure/EncodingGuide.md)
 - **테스트 어떻게 하나요?** → [TESTING_GUIDE.md](testing/TESTING_GUIDE.md)
-- **전체 계획이 궁금해요** → [Roadmap.md](development/Roadmap.md)
+- **전체 계획이 궁금해요** → [PROJECT_MASTER_ROADMAP.md](development/PROJECT_MASTER_ROADMAP.md)
 
 ### 키워드 검색
 - **GAS** → FSM_GAS_INTEGRATION_SUMMARY.md, ProjectOverview.md
 - **FSM** → FSM_GAS_INTEGRATION_SUMMARY.md, FULL_GAME_FLOW_GUIDE.md
 - **UI** → UI_SYSTEM_DESIGN.md, QUICK_REFERENCE.md
 - **아키텍처** → PROJECT_ARCHITECTURE.md, ASSEMBLY_ARCHITECTURE.md
+- **카메라** → CAMERA_SYSTEM_DESIGN.md
+- **Post-Processing** → CAMERA_SYSTEM_DESIGN.md
 - **리팩토링** → REFACTORING_PLAN.md, SCENE_REFACTORING_NOTES.md
 - **Combat** → CURRENT_WORK.md, Roadmap.md
 - **테스트** → TESTING_GUIDE.md, TEST_REPORT.md
@@ -224,20 +259,24 @@
 ## 📊 문서 통계
 
 ### 문서 개수
-- **시작 가이드**: 4개
-- **개발 문서**: 6개
-- **아키텍처**: 4개
-- **가이드**: 6개
-- **레퍼런스**: 1개
-- **테스트 문서**: 3개
+- **시작 가이드**: 5개
+- **개발 문서**: 3개
+- **작업 로그**: 8개
+- **아키텍처**: 8개 (카메라 시스템 추가)
+- **가이드**: 7개
+- **레퍼런스**: 2개
+- **아트 리소스**: 1개 (NPC 디자인 프롬프트)
+- **테스트 문서**: 5개
 - **인프라 문서**: 2개
-- **히스토리**: 1개
-- **전체**: 27개 문서
+- **히스토리**: 4개
+- **전체**: 45개 문서
 
 ### 최근 업데이트
-- **2025-10-15**: 문서 구조 대폭 개편 (27개 문서)
-- **2025-10-15**: Phase 2 리팩토링 완료 (GameEvents, Panel Preload, SceneType 분리)
-- **2025-10-15**: 아키텍처, 가이드, 레퍼런스 섹션 추가
+- **2025-11-27**: NPC 캐릭터 디자인 프롬프트 문서 추가 (art/ 폴더 신설)
+- **2025-11-26**: 카메라 시스템 설계 문서 추가, Additive Scene Loading 구현
+- **2025-11-26**: work-logs 폴더 신설, 작업 로그 통합 및 자동화
+- **2025-11-22**: MVP 패턴 통합 완료
+- **2025-11-19**: 문서 정리 및 UI 시스템 리팩토링
 
 ---
 
@@ -276,5 +315,16 @@
 
 ---
 
-*최종 업데이트: 2025-10-15*
+*최종 업데이트: 2025-11-26*
 *GASPT 프로젝트 문서팀*
+
+---
+
+## 🆕 새로운 기능: 작업 로그 자동화
+
+작업 완료 후 `/update-worklog` 명령만 입력하면:
+- ✅ LATEST.md 자동 업데이트
+- ✅ 월별 상세 로그 자동 생성
+- ✅ Git 커밋 히스토리 반영
+
+[자세히 보기 →](work-logs/README.md)

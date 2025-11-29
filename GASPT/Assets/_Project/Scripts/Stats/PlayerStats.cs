@@ -196,13 +196,6 @@ namespace GASPT.Stats
         /// </summary>
         public event Action OnDeath;
 
-        /// <summary>
-        /// [DEPRECATED] 마나 변경 시 발생하는 이벤트
-        /// OnStatsChanged(StatType.Mana, oldValue, newValue)를 대신 사용하세요
-        /// </summary>
-        [System.Obsolete("OnManaChanged는 더 이상 사용되지 않습니다. OnStatsChanged(StatType.Mana, ...)를 사용하세요.", false)]
-        public event Action<int, int> OnManaChanged;
-
 
         // ====== Unity 생명주기 ======
 

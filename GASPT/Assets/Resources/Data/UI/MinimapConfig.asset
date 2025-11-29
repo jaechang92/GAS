@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74eaa6941f286674aa026b94517e3b66, type: 3}
+  m_Name: MinimapConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.UI.Minimap.MinimapConfig
+  nodeSpacingX: 80
+  nodeSpacingY: 60
+  padding: {x: 20, y: 20}
+  maxSize: {x: 400, y: 600}
+  nodeSize: 24
+  currentNodeScale: 1.3
+  bossNodeScale: 1.5
+  hiddenColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.3}
+  revealedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  unvisitedColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  visitedColor: {r: 0.4, g: 0.6, b: 0.8, a: 1}
+  currentColor: {r: 1, g: 0.8, b: 0.2, a: 1}
+  clearedColor: {r: 0.3, g: 0.8, b: 0.3, a: 1}
+  normalRoomColor: {r: 1, g: 1, b: 1, a: 1}
+  eliteRoomColor: {r: 0.8, g: 0.4, b: 0.8, a: 1}
+  bossRoomColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+  shopRoomColor: {r: 0.3, g: 0.8, b: 0.3, a: 1}
+  restRoomColor: {r: 0.5, g: 0.8, b: 1, a: 1}
+  treasureRoomColor: {r: 1, g: 0.85, b: 0.3, a: 1}
+  startRoomColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  lineWidth: 2
+  hiddenLineColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.2}
+  revealedLineColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.6}
+  traversedLineColor: {r: 0.4, g: 0.6, b: 0.8, a: 1}
+  secretLineColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.5}
+  normalRoomIcon: {fileID: 0}
+  eliteRoomIcon: {fileID: 0}
+  bossRoomIcon: {fileID: 0}
+  shopRoomIcon: {fileID: 0}
+  restRoomIcon: {fileID: 0}
+  treasureRoomIcon: {fileID: 0}
+  startRoomIcon: {fileID: 0}
+  unknownRoomIcon: {fileID: 0}
+  currentMarkerIcon: {fileID: 0}
+  selectableMarkerIcon: {fileID: 0}
+  pulseSpeed: 2
+  pulseAmount: 0.15
+  revealFadeDuration: 0.3
+  moveAnimationDuration: 0.5
+  hoverScale: 1.15
+  allowNodeClick: 1
+  allowDrag: 1
+  allowZoom: 1
+  minZoom: 0.5
+  maxZoom: 2

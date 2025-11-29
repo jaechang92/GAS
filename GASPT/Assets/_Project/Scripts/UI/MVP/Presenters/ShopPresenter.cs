@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Shop;
 using GASPT.Economy;
+using GASPT.Core;
 
 namespace GASPT.UI.MVP
 {
@@ -153,6 +154,9 @@ namespace GASPT.UI.MVP
         {
             Debug.Log("[ShopPresenter] HandleOpenRequested");
 
+            // 이미 열려있으면 무시
+            if (view.IsVisible) return;
+
             // 초기화 확인
             if (shopSystem == null || currencySystem == null)
             {
@@ -160,14 +164,25 @@ namespace GASPT.UI.MVP
                 return;
             }
 
-            // 1. UI 표시
-            view.ShowUI();
-
-            // 2. 상점 아이템 ViewModel 생성 및 표시
+            // 1. 상점 아이템 ViewModel 생성 및 표시
             RefreshShopItems();
 
-            // 3. 골드 표시
+            // 2. 골드 표시
             RefreshGold();
+
+            // 3. View 표시 (Presenter가 직접 제어)
+            view.ShowUI();
+
+            // 4. 게임 일시정지 (UIManager가 있으면 Pause 처리)
+            if (UIManager.HasInstance)
+            {
+                UIManager.Instance.NotifyFullScreenUIOpened();
+            }
+            else
+            {
+                // UIManager 없으면 직접 GameManager로 Pause
+                GameManager.Instance?.Pause();
+            }
         }
 
         /// <summary>
@@ -177,8 +192,22 @@ namespace GASPT.UI.MVP
         {
             Debug.Log("[ShopPresenter] HandleCloseRequested");
 
-            // UI 숨김
+            // 이미 닫혀있으면 무시
+            if (!view.IsVisible) return;
+
+            // View 숨김 (Presenter가 직접 제어)
             view.HideUI();
+
+            // 게임 재개 (UIManager가 있으면 Resume 처리)
+            if (UIManager.HasInstance)
+            {
+                UIManager.Instance.NotifyFullScreenUIClosed();
+            }
+            else
+            {
+                // UIManager 없으면 직접 GameManager로 Resume
+                GameManager.Instance?.Resume();
+            }
         }
 
         /// <summary>

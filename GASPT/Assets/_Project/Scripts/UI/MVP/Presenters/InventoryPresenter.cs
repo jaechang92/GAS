@@ -55,12 +55,9 @@ namespace GASPT.UI.MVP
                 return;
             }
 
-            // PlayerStats 참조
+            // PlayerStats 참조 (Content Scene 로드 후 Player가 등록되면 이벤트로 갱신됨)
             playerStats = GameManager.Instance?.PlayerStats;
-            if (playerStats == null)
-            {
-                Debug.LogWarning("[InventoryPresenter] PlayerStats를 찾을 수 없습니다. 나중에 재시도합니다.");
-            }
+            // PlayerStats는 Content Scene의 Player가 로드된 후 GameManager.OnPlayerRegistered로 갱신됨
 
             // Model 이벤트 구독
             inventorySystem.OnItemAdded += HandleItemAdded;
@@ -110,6 +107,9 @@ namespace GASPT.UI.MVP
         /// </summary>
         private void HandleOpenRequest()
         {
+            // 이미 열려있으면 무시
+            if (view.IsVisible) return;
+
             // PlayerStats 재확인 (씬 전환 후 등록되었을 수 있음)
             if (playerStats == null && GameManager.HasInstance)
             {
@@ -125,10 +125,23 @@ namespace GASPT.UI.MVP
             // 장비 ViewModel 생성
             var equipmentViewModel = CreateEquipmentViewModel();
 
-            // View 업데이트
+            // View 업데이트 (순수 렌더링)
             view.DisplayItems(itemViewModels);
             view.DisplayEquipment(equipmentViewModel);
+
+            // View 표시 (Presenter가 직접 제어)
             view.ShowUI();
+
+            // 게임 일시정지 (UIManager가 있으면 Pause 처리)
+            if (UIManager.HasInstance)
+            {
+                UIManager.Instance.NotifyFullScreenUIOpened();
+            }
+            else
+            {
+                // UIManager 없으면 직접 GameManager로 Pause
+                GameManager.Instance?.Pause();
+            }
 
             Debug.Log($"[InventoryPresenter] 인벤토리 열기: 아이템 {items.Count}개");
         }
@@ -138,7 +151,23 @@ namespace GASPT.UI.MVP
         /// </summary>
         private void HandleCloseRequest()
         {
+            // 이미 닫혀있으면 무시
+            if (!view.IsVisible) return;
+
+            // View 숨김 (Presenter가 직접 제어)
             view.HideUI();
+
+            // 게임 재개 (UIManager가 있으면 Resume 처리)
+            if (UIManager.HasInstance)
+            {
+                UIManager.Instance.NotifyFullScreenUIClosed();
+            }
+            else
+            {
+                // UIManager 없으면 직접 GameManager로 Resume
+                GameManager.Instance?.Resume();
+            }
+
             Debug.Log("[InventoryPresenter] 인벤토리 닫기");
         }
 

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using FSM.Core;
 using GASPT.Core.GameFlow;
@@ -18,6 +19,14 @@ namespace GASPT.Core
 
         // FSM 컴포넌트
         private StateMachine fsm;
+
+        // ====== 이벤트 (외부 구독용) ======
+
+        /// <summary>
+        /// 상태 변경 이벤트 (fromState, toState)
+        /// 카메라, UI 등 외부 시스템에서 구독하여 사용
+        /// </summary>
+        public event Action<string, string> OnGameStateChanged;
 
         // 상태들
         private InitializingState initializingState;
@@ -134,8 +143,8 @@ namespace GASPT.Core
 
         private void SetupTransitions()
         {
-            // Initializing → LoadingStartRoom (초기화 완료)
-            fsm.AddTransition("Initializing", "LoadingStartRoom", "InitializationComplete", priority: 10);
+            // Initializing → StartRoom (초기화 완료 - Bootstrap에서 이미 StartRoom 로드됨)
+            fsm.AddTransition("Initializing", "StartRoom", "InitializationComplete", priority: 10);
 
             // StartRoom → LoadingDungeon (던전 입장 포탈)
             fsm.AddTransition("StartRoom", "LoadingDungeon", "EnterDungeon", priority: 10);
@@ -316,6 +325,9 @@ namespace GASPT.Core
         private void OnStateChanged(string fromState, string toState)
         {
             LogMessage($"[GameFlowFSM] 상태 전환: {fromState} → {toState}");
+
+            // 외부 구독자에게 알림
+            OnGameStateChanged?.Invoke(fromState, toState);
         }
 
 
