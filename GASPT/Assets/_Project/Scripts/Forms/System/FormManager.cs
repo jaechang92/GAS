@@ -37,6 +37,9 @@ namespace GASPT.Forms
         [Header("입력")]
         [SerializeField] private KeyCode swapKey = KeyCode.Q;
 
+        [Header("참조")]
+        [SerializeField] private FormSwapSystem swapSystem;
+
         [Header("디버그")]
         [SerializeField] private bool logDebugInfo = true;
 
@@ -101,6 +104,12 @@ namespace GASPT.Forms
             {
                 primaryForm = new FormInstance(defaultForm);
                 Log($"기본 폼 설정: {primaryForm.FormName}");
+
+                // SwapSystem에 초기 폼 적용
+                if (swapSystem != null)
+                {
+                    swapSystem.InitializeWithForm(primaryForm);
+                }
             }
         }
 
@@ -170,13 +179,15 @@ namespace GASPT.Forms
 
             Log($"폼 교체: {previousForm?.FormName} → {newForm?.FormName}");
 
+            // FormSwapSystem으로 실제 교체 실행 (스탯, 외형, 이펙트 등)
+            if (swapSystem != null)
+            {
+                swapSystem.ExecuteSwap(previousForm, newForm);
+            }
+
             // 이벤트 발생
             OnFormSwapped?.Invoke(previousForm, newForm);
             OnSwapCooldownStarted?.Invoke(swapCooldown);
-
-            // TODO: 무적 프레임 적용
-            // TODO: 이펙트 재생
-            // TODO: 사운드 재생
 
             isSwapping = false;
         }
