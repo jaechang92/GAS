@@ -35,6 +35,10 @@ namespace GASPT.Forms
         [Range(1.1f, 1.5f)]
         public float awakeningStatMultiplier = 1.2f;
 
+        [Tooltip("최대 각성 단계")]
+        [Range(1, 5)]
+        public int maxAwakeningLevel = 3;
+
 
         [Header("외형")]
         [Tooltip("폼 아이콘 (UI용)")]
@@ -57,10 +61,19 @@ namespace GASPT.Forms
         [Tooltip("각성 시 재생되는 이펙트 프리팹")]
         public GameObject awakeningEffectPrefab;
 
+        [Tooltip("최대 각성 시 재생되는 특별 이펙트")]
+        public GameObject maxAwakeningEffectPrefab;
+
 
         [Header("사운드")]
         [Tooltip("폼 교체 시 재생되는 사운드")]
         public AudioClip swapSound;
+
+        [Tooltip("각성 시 재생되는 사운드")]
+        public AudioClip awakeningSound;
+
+        [Tooltip("최대 각성 시 재생되는 특별 사운드")]
+        public AudioClip maxAwakeningSound;
 
 
         [Header("스킬 (향후 연동)")]

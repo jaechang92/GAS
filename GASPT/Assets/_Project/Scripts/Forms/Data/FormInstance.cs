@@ -16,6 +16,11 @@ namespace GASPT.Forms
         public event Action<int, FormRarity> OnAwakened;
 
         /// <summary>
+        /// 최대 각성 도달 이벤트
+        /// </summary>
+        public event Action OnMaxAwakeningReached;
+
+        /// <summary>
         /// 스탯 변경 이벤트
         /// </summary>
         public event Action<FormStats> OnStatsChanged;
@@ -117,6 +122,7 @@ namespace GASPT.Forms
                 return false;
             }
 
+            int previousLevel = awakeningLevel;
             awakeningLevel++;
             RecalculateStats();
 
@@ -124,8 +130,25 @@ namespace GASPT.Forms
 
             OnAwakened?.Invoke(awakeningLevel, CurrentRarity);
 
+            // 최대 각성 도달 체크
+            if (IsMaxAwakening)
+            {
+                Debug.Log($"[FormInstance] {FormName} 최대 각성 달성!");
+                OnMaxAwakeningReached?.Invoke();
+            }
+
             return true;
         }
+
+        /// <summary>
+        /// 최대 각성 단계 (FormData에서 가져옴)
+        /// </summary>
+        public int MaxAwakeningLevel => formData?.maxAwakeningLevel ?? 3;
+
+        /// <summary>
+        /// 현재 각성 진행률 (0~1)
+        /// </summary>
+        public float AwakeningProgress => MaxAwakeningLevel > 0 ? (float)awakeningLevel / MaxAwakeningLevel : 0f;
 
         /// <summary>
         /// 스탯 재계산

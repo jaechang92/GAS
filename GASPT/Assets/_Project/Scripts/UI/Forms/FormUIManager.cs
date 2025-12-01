@@ -20,9 +20,20 @@ namespace GASPT.UI.Forms
         [SerializeField] private FormCooldownUI cooldownUI;
         [SerializeField] private FormSelectionUI selectionUI;
 
+        [Header("각성 UI")]
+        [SerializeField] private GameObject awakeningNotification;
+        [SerializeField] private GameObject maxAwakeningNotification;
+        [SerializeField] private float notificationDuration = 2f;
+
         [Header("설정")]
         [SerializeField] private bool autoFindReferences = true;
         [SerializeField] private bool logDebugInfo = true;
+
+
+        // ====== 상태 ======
+
+        private FormInstance subscribedPrimaryForm;
+        private FormInstance subscribedSecondaryForm;
 
 
         // ====== Unity 생명주기 ======
@@ -107,6 +118,10 @@ namespace GASPT.UI.Forms
                 formManager.OnFormDropped += HandleFormDropped;
                 formManager.OnSwapCooldownStarted += HandleCooldownStarted;
                 formManager.OnSwapCooldownEnded += HandleCooldownEnded;
+
+                // 초기 폼에 대한 각성 이벤트 구독
+                SubscribeToFormAwakening(formManager.CurrentForm, true);
+                SubscribeToFormAwakening(formManager.ReserveForm, false);
             }
 
             if (selectionUI != null)
@@ -132,6 +147,33 @@ namespace GASPT.UI.Forms
                 selectionUI.OnSlotSelected -= HandleSlotSelected;
                 selectionUI.OnCancelled -= HandleSelectionCancelled;
             }
+
+            // 폼 각성 이벤트 구독 해제
+            UnsubscribeFromFormAwakening(subscribedPrimaryForm);
+            UnsubscribeFromFormAwakening(subscribedSecondaryForm);
+        }
+
+        private void SubscribeToFormAwakening(FormInstance form, bool isPrimary)
+        {
+            if (form == null) return;
+
+            form.OnAwakened += HandleFormAwakened;
+            form.OnMaxAwakeningReached += HandleMaxAwakeningReached;
+
+            if (isPrimary)
+                subscribedPrimaryForm = form;
+            else
+                subscribedSecondaryForm = form;
+
+            Log($"폼 각성 이벤트 구독: {form.FormName}");
+        }
+
+        private void UnsubscribeFromFormAwakening(FormInstance form)
+        {
+            if (form == null) return;
+
+            form.OnAwakened -= HandleFormAwakened;
+            form.OnMaxAwakeningReached -= HandleMaxAwakeningReached;
         }
 
 
@@ -149,6 +191,12 @@ namespace GASPT.UI.Forms
         private void HandleFormAcquired(FormInstance form)
         {
             Log($"폼 획득됨: {form?.FormName}");
+
+            // 새 폼에 대한 각성 이벤트 구독
+            if (form != null)
+            {
+                SubscribeToFormAwakening(form, formManager.CurrentForm == form);
+            }
 
             // 슬롯 UI 업데이트
             UpdateSlotUI(primarySlotUI, formManager.CurrentForm, true);
@@ -204,6 +252,30 @@ namespace GASPT.UI.Forms
         private void HandleSelectionCancelled()
         {
             Log("선택 취소됨");
+        }
+
+        private void HandleFormAwakened(int level, FormRarity rarity)
+        {
+            Log($"폼 각성됨! 레벨: {level}, 등급: {rarity}");
+
+            // 슬롯 UI 업데이트
+            UpdateSlotUI(primarySlotUI, formManager.CurrentForm, true);
+            UpdateSlotUI(secondarySlotUI, formManager.ReserveForm, false);
+
+            // 각성 알림 표시
+            ShowAwakeningNotification();
+        }
+
+        private void HandleMaxAwakeningReached()
+        {
+            Log("최대 각성 도달!");
+
+            // 슬롯 UI 업데이트
+            UpdateSlotUI(primarySlotUI, formManager.CurrentForm, true);
+            UpdateSlotUI(secondarySlotUI, formManager.ReserveForm, false);
+
+            // 최대 각성 알림 표시
+            ShowMaxAwakeningNotification();
         }
 
 
@@ -266,6 +338,50 @@ namespace GASPT.UI.Forms
         public void RefreshUI()
         {
             InitializeUI();
+        }
+
+
+        // ====== 알림 UI ======
+
+        private void ShowAwakeningNotification()
+        {
+            if (awakeningNotification != null)
+            {
+                awakeningNotification.SetActive(true);
+                CancelInvoke(nameof(HideAwakeningNotification));
+                Invoke(nameof(HideAwakeningNotification), notificationDuration);
+            }
+        }
+
+        private void HideAwakeningNotification()
+        {
+            if (awakeningNotification != null)
+            {
+                awakeningNotification.SetActive(false);
+            }
+        }
+
+        private void ShowMaxAwakeningNotification()
+        {
+            if (maxAwakeningNotification != null)
+            {
+                maxAwakeningNotification.SetActive(true);
+                CancelInvoke(nameof(HideMaxAwakeningNotification));
+                Invoke(nameof(HideMaxAwakeningNotification), notificationDuration * 1.5f);
+            }
+            else
+            {
+                // 최대 각성 알림이 없으면 일반 각성 알림 사용
+                ShowAwakeningNotification();
+            }
+        }
+
+        private void HideMaxAwakeningNotification()
+        {
+            if (maxAwakeningNotification != null)
+            {
+                maxAwakeningNotification.SetActive(false);
+            }
         }
 
 
