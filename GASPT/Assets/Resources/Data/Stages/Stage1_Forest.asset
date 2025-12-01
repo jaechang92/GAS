@@ -17,7 +17,17 @@ MonoBehaviour:
   description: "\uC232 \uC9C0\uC5ED\uC744 \uD0D0\uD5D8\uD558\uC138\uC694."
   stageIcon: {fileID: 0}
   backgroundImage: {fileID: 0}
-  floors: []
+  floors:
+  - floorName: 
+    dungeonConfig: {fileID: 11400000, guid: 21e9898acfe1db84ba8931a5ecdb417b, type: 2}
+    environmentTheme: 
+    bgm: {fileID: 0}
+    entryCondition:
+      requiredItemId: 
+      requiredGold: 0
+      conditionDescription: 
+    isBossFloor: 0
+    isRestFloor: 0
   baseDifficulty: 1
   difficultyPerFloor: 0.5
   recommendedLevel: 5

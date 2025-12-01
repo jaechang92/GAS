@@ -169,32 +169,23 @@ namespace GASPT.Gameplay.Level
 
             Debug.Log($"[StageManager] 층 로드: {floorConfig.floorName} ({floorIndex + 1}/{currentStageConfig.TotalFloors})");
 
-            // 던전 생성
+            // 던전 생성 (그래프 기반)
             var dungeonConfig = floorConfig.dungeonConfig;
             if (dungeonConfig != null && RoomManager.Instance != null)
             {
-                if (dungeonConfig.generationType == DungeonGenerationType.Procedural)
-                {
-                    // 절차적 생성: 그래프 생성 후 RoomPlacer로 Room 배치
-                    int floorSeed = progressData.seed + floorIndex * 1000;
-                    var graph = await dungeonGenerator.GenerateDungeonAsync(dungeonConfig, floorSeed);
+                // 그래프 생성 후 RoomPlacer로 Room 배치
+                int floorSeed = progressData.seed + floorIndex * 1000;
+                var graph = await dungeonGenerator.GenerateDungeonAsync(dungeonConfig, floorSeed);
 
-                    if (graph != null)
-                    {
-                        // RoomPlacer를 사용하여 Room 인스턴스 생성
-                        var roomPlacer = new RoomPlacer(dungeonConfig.roomDataPool, dungeonConfig.roomTemplatePrefab);
-                        var roomMap = roomPlacer.PlaceRooms(graph, RoomManager.Instance.transform);
-
-                        // RoomManager에 그래프와 Room 맵 로드
-                        RoomManager.Instance.LoadDungeonGraph(graph, roomMap);
-                        await RoomManager.Instance.StartGraphDungeonAsync();
-                    }
-                }
-                else
+                if (graph != null)
                 {
-                    // 기존 방식 (Prefab/Data) - LoadDungeon 사용 (동기)
-                    RoomManager.Instance.LoadDungeon(dungeonConfig);
-                    await RoomManager.Instance.StartDungeonAsync();
+                    // RoomPlacer를 사용하여 Room 인스턴스 생성
+                    var roomPlacer = new RoomPlacer(dungeonConfig.roomDataPool, dungeonConfig.roomTemplatePrefab);
+                    var roomMap = roomPlacer.PlaceRooms(graph, RoomManager.Instance.transform);
+
+                    // RoomManager에 그래프와 Room 맵 로드
+                    RoomManager.Instance.LoadDungeonGraph(graph, roomMap);
+                    await RoomManager.Instance.StartGraphDungeonAsync();
                 }
             }
 

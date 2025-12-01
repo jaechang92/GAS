@@ -3,7 +3,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using FSM.Core;
 using GASPT.Gameplay.Level;
+using GASPT.Gameplay.Level.Graph;
+using GASPT.Gameplay.Level.Generation;
 using GASPT.UI;
+using GASPT.UI.Minimap;
 using GASPT.Core.SceneManagement;
 using GASPT.CameraSystem;
 
@@ -67,17 +70,8 @@ namespace GASPT.Core.GameFlow
             // RoomManager 초기화 대기
             await WaitForRoomManagerReady(cancellationToken);
 
-            // 던전 시작
-            var roomManager = RoomManager.Instance;
-            if (roomManager != null)
-            {
-                await roomManager.StartDungeonAsync();
-                Debug.Log("[LoadingDungeonState] 던전 시작 완료");
-            }
-            else
-            {
-                Debug.LogError("[LoadingDungeonState] RoomManager를 찾을 수 없습니다!");
-            }
+            // 던전 시작 (StageManager 또는 RoomManager 사용)
+            await StartDungeonWithStageSystem(cancellationToken);
 
             // ★ Scene 검증 및 재할당 (카메라, UI 등)
             await ValidateSceneReferences(cancellationToken);
@@ -177,6 +171,135 @@ namespace GASPT.Core.GameFlow
             else
             {
                 Debug.Log("[LoadingDungeonState] RoomManager 준비 완료");
+            }
+        }
+
+        /// <summary>
+        /// 스테이지 시스템을 통한 던전 시작
+        /// StageManager가 있으면 사용, 없으면 RoomManager 직접 사용
+        /// </summary>
+        private async Awaitable StartDungeonWithStageSystem(CancellationToken cancellationToken)
+        {
+            var stageManager = StageManager.Instance;
+            var roomManager = RoomManager.Instance;
+
+            // StageManager가 있고 스테이지 설정이 있는 경우
+            if (stageManager != null && stageManager.CurrentStage != null)
+            {
+                Debug.Log($"[LoadingDungeonState] StageManager를 통한 던전 시작: {stageManager.CurrentStage.stageName}");
+                await stageManager.LoadFloorAsync(stageManager.CurrentFloorIndex);
+                Debug.Log("[LoadingDungeonState] 스테이지 시스템 던전 시작 완료");
+
+                // 미니맵 초기화 (그래프 기반일 경우)
+                InitializeMinimapIfGraphBased();
+            }
+            // 기존 방식: RoomManager 직접 사용
+            else if (roomManager != null)
+            {
+                // 그래프 기반 던전 확인
+                if (roomManager.IsUsingGraphDungeon)
+                {
+                    await roomManager.StartGraphDungeonAsync();
+                    Debug.Log("[LoadingDungeonState] 그래프 기반 던전 시작 완료");
+
+                    // 미니맵 초기화
+                    InitializeMinimapIfGraphBased();
+                }
+                else
+                {
+                    // 방이 없으면 기본 던전 로드 시도
+                    if (roomManager.TotalRoomCount == 0)
+                    {
+                        await LoadDefaultDungeon(roomManager);
+                    }
+
+                    // 던전 시작
+                    if (roomManager.TotalRoomCount > 0)
+                    {
+                        await roomManager.StartDungeonAsync();
+                        Debug.Log("[LoadingDungeonState] 선형 던전 시작 완료");
+                    }
+                    else
+                    {
+                        Debug.LogError("[LoadingDungeonState] 던전 로드 실패 - 방이 없습니다!");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("[LoadingDungeonState] RoomManager를 찾을 수 없습니다!");
+            }
+        }
+
+        /// <summary>
+        /// 기본 던전 로드 (Resources에서 TestDungeon 로드)
+        /// </summary>
+        private async Awaitable LoadDefaultDungeon(RoomManager roomManager)
+        {
+            Debug.Log("[LoadingDungeonState] 방이 없음 - 기본 던전 로드 시도...");
+
+            // 1. StageManager에서 기본 스테이지 시작 시도
+            var stageManager = StageManager.Instance;
+            if (stageManager != null)
+            {
+                // Resources에서 기본 StageConfig 로드
+                var defaultStage = Resources.Load<StageConfig>("Data/Stages/Stage1_Forest");
+                if (defaultStage != null && defaultStage.floors != null && defaultStage.floors.Length > 0)
+                {
+                    Debug.Log($"[LoadingDungeonState] 기본 스테이지 로드: {defaultStage.stageName}");
+                    await stageManager.StartStageAsync(defaultStage);
+                    return;
+                }
+            }
+
+            // 2. Resources에서 기본 DungeonConfig 로드
+            var defaultDungeon = Resources.Load<DungeonConfig>("Data/Dungeons/TestDungeon");
+            if (defaultDungeon != null)
+            {
+                Debug.Log($"[LoadingDungeonState] 기본 던전 로드: {defaultDungeon.dungeonName}");
+
+                // 그래프 기반 던전 생성
+                var generator = new DungeonGenerator();
+                var graph = await generator.GenerateDungeonAsync(defaultDungeon);
+
+                if (graph != null && defaultDungeon.roomDataPool != null)
+                {
+                    var placer = new RoomPlacer(defaultDungeon.roomDataPool, defaultDungeon.roomTemplatePrefab);
+                    var roomMap = placer.PlaceRooms(graph, roomManager.transform);
+                    roomManager.LoadDungeonGraph(graph, roomMap);
+                    await roomManager.StartGraphDungeonAsync();
+                    InitializeMinimapIfGraphBased();
+                }
+            }
+            else
+            {
+                Debug.LogError("[LoadingDungeonState] 기본 던전 설정을 찾을 수 없습니다! (Resources/Data/Dungeons/TestDungeon)");
+            }
+        }
+
+        /// <summary>
+        /// 그래프 기반 던전일 경우 미니맵 초기화
+        /// </summary>
+        private void InitializeMinimapIfGraphBased()
+        {
+            var roomManager = RoomManager.Instance;
+            if (roomManager == null || !roomManager.IsUsingGraphDungeon) return;
+
+            var graph = roomManager.DungeonGraph;
+            if (graph == null) return;
+
+            // MinimapPresenter 찾기
+            var minimapPresenter = Object.FindAnyObjectByType<MinimapPresenter>();
+            if (minimapPresenter != null)
+            {
+                minimapPresenter.InitializeWithGraph(graph);
+                minimapPresenter.SetCurrentNode(graph.entryNodeId);
+                minimapPresenter.ShowMinimap();
+                Debug.Log("[LoadingDungeonState] 미니맵 초기화 완료");
+            }
+            else
+            {
+                Debug.LogWarning("[LoadingDungeonState] MinimapPresenter를 찾을 수 없습니다.");
             }
         }
     }

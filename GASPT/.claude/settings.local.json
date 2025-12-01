@@ -12,7 +12,11 @@
       "Bash(git fetch:*)",
       "SlashCommand(/speckit.tasks)",
       "SlashCommand(/speckit.implement)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

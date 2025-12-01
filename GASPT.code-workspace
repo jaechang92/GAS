@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "GASPT"
+		},
+		{
+			"path": "specs"
+		},
+		{
+			"path": "GASPT/Assets/_Project/Scripts"
+		}
+	],
+	"settings": {
+		"omnisharp.enableEditorConfigSupport": true,
+		"csharp.semanticHighlighting.enabled": true,
+		"csharp.format.enable": true
+	}
+}

@@ -8,6 +8,7 @@ namespace GASPT.Editor
 {
     /// <summary>
     /// DungeonConfig 커스텀 에디터
+    /// Room 기반 + Procedural 경로 생성 방식 전용
     /// </summary>
     [CustomEditor(typeof(DungeonConfig))]
     public class DungeonConfigEditor : UnityEditor.Editor
@@ -19,12 +20,9 @@ namespace GASPT.Editor
         private SerializedProperty dungeonNameProp;
         private SerializedProperty recommendedLevelProp;
         private SerializedProperty descriptionProp;
-        private SerializedProperty generationTypeProp;
-        private SerializedProperty roomPrefabsProp;
-        private SerializedProperty roomDataListProp;
-        private SerializedProperty roomTemplatePrefabProp;
         private SerializedProperty generationRulesProp;
         private SerializedProperty roomDataPoolProp;
+        private SerializedProperty roomTemplatePrefabProp;
 
 
         private void OnEnable()
@@ -34,12 +32,9 @@ namespace GASPT.Editor
             dungeonNameProp = serializedObject.FindProperty("dungeonName");
             recommendedLevelProp = serializedObject.FindProperty("recommendedLevel");
             descriptionProp = serializedObject.FindProperty("description");
-            generationTypeProp = serializedObject.FindProperty("generationType");
-            roomPrefabsProp = serializedObject.FindProperty("roomPrefabs");
-            roomDataListProp = serializedObject.FindProperty("roomDataList");
-            roomTemplatePrefabProp = serializedObject.FindProperty("roomTemplatePrefab");
             generationRulesProp = serializedObject.FindProperty("generationRules");
             roomDataPoolProp = serializedObject.FindProperty("roomDataPool");
+            roomTemplatePrefabProp = serializedObject.FindProperty("roomTemplatePrefab");
         }
 
 
@@ -55,29 +50,8 @@ namespace GASPT.Editor
 
             EditorGUILayout.Space(10);
 
-            // 생성 방식
-            EditorGUILayout.LabelField("생성 방식", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(generationTypeProp, new GUIContent("생성 타입"));
-
-            EditorGUILayout.Space(5);
-
-            // 생성 방식에 따른 필드 표시
-            DungeonGenerationType genType = (DungeonGenerationType)generationTypeProp.enumValueIndex;
-
-            switch (genType)
-            {
-                case DungeonGenerationType.Prefab:
-                    DrawPrefabMode();
-                    break;
-
-                case DungeonGenerationType.Data:
-                    DrawDataMode();
-                    break;
-
-                case DungeonGenerationType.Procedural:
-                    DrawProceduralMode();
-                    break;
-            }
+            // 경로 생성 설정
+            DrawProceduralSettings();
 
             serializedObject.ApplyModifiedProperties();
 
@@ -88,63 +62,33 @@ namespace GASPT.Editor
         }
 
 
-        private void DrawPrefabMode()
+        private void DrawProceduralSettings()
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Prefab 방식", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("미리 디자인된 Room Prefab을 순서대로 사용합니다.", MessageType.Info);
-
-            EditorGUILayout.PropertyField(roomPrefabsProp, new GUIContent("Room Prefabs"), true);
-
-            if (roomPrefabsProp.arraySize == 0)
-            {
-                EditorGUILayout.HelpBox("Room Prefab을 추가해주세요!", MessageType.Warning);
-            }
-
-            EditorGUILayout.EndVertical();
-        }
-
-
-        private void DrawDataMode()
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Data 방식", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("RoomData로 Room을 동적 생성합니다.", MessageType.Info);
-
-            EditorGUILayout.PropertyField(roomTemplatePrefabProp, new GUIContent("Room 템플릿"));
-            EditorGUILayout.PropertyField(roomDataListProp, new GUIContent("Room Data 목록"), true);
-
-            if (roomTemplatePrefabProp.objectReferenceValue == null)
-            {
-                EditorGUILayout.HelpBox("Room 템플릿 Prefab을 설정해주세요!", MessageType.Warning);
-            }
-
-            if (roomDataListProp.arraySize == 0)
-            {
-                EditorGUILayout.HelpBox("RoomData를 추가해주세요!", MessageType.Warning);
-            }
-
-            EditorGUILayout.EndVertical();
-        }
-
-
-        private void DrawProceduralMode()
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Procedural 방식", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("룰 기반으로 던전을 자동 생성합니다. (Slay the Spire 스타일)", MessageType.Info);
+            EditorGUILayout.LabelField("경로 생성 (Procedural)", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("그래프 기반으로 던전 경로를 자동 생성합니다. (Slay the Spire 스타일)", MessageType.Info);
 
             EditorGUILayout.PropertyField(generationRulesProp, new GUIContent("생성 규칙"));
-            EditorGUILayout.PropertyField(roomDataPoolProp, new GUIContent("RoomData 풀"), true);
 
             if (generationRulesProp.objectReferenceValue == null)
             {
                 EditorGUILayout.HelpBox("생성 규칙(RoomGenerationRules)을 설정해주세요!", MessageType.Warning);
             }
 
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("Room 설정", EditorStyles.boldLabel);
+
+            EditorGUILayout.PropertyField(roomDataPoolProp, new GUIContent("RoomData 풀"), true);
+            EditorGUILayout.PropertyField(roomTemplatePrefabProp, new GUIContent("Room 템플릿"));
+
             if (roomDataPoolProp.arraySize == 0)
             {
                 EditorGUILayout.HelpBox("RoomData 풀을 추가해주세요!", MessageType.Warning);
+            }
+
+            if (roomTemplatePrefabProp.objectReferenceValue == null)
+            {
+                EditorGUILayout.HelpBox("Room 템플릿 Prefab을 설정해주세요!", MessageType.Warning);
             }
 
             // 빠른 생성 규칙 조정
@@ -214,10 +158,7 @@ namespace GASPT.Editor
                 EditorGUILayout.EndHorizontal();
 
                 // 간단한 통계
-                if (config.generationType == DungeonGenerationType.Procedural)
-                {
-                    DrawQuickStats();
-                }
+                DrawQuickStats();
             }
 
             EditorGUILayout.EndVertical();
@@ -264,9 +205,9 @@ namespace GASPT.Editor
 
         private void PrintGraphToConsole()
         {
-            if (config.generationType != DungeonGenerationType.Procedural)
+            if (config.generationRules == null)
             {
-                Debug.Log("[DungeonConfigEditor] Procedural 타입만 미리보기 가능합니다.");
+                Debug.LogWarning("[DungeonConfigEditor] 생성 규칙이 설정되지 않았습니다.");
                 return;
             }
 

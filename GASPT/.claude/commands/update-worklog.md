@@ -4,14 +4,38 @@
 
 ---
 
+## 🔍 세션 감지
+
+현재 작업 디렉토리와 변경 파일을 기준으로 세션을 자동 감지합니다:
+
+| 작업 디렉토리 | 세션 | 업데이트 파일 |
+|---------------|------|---------------|
+| `_programming` 포함 | 프로그래밍 | `docs/work-logs/programming/LATEST.md` |
+| `_design` 포함 | 기획/아트 | `docs/work-logs/design/LATEST.md` |
+| 그 외 (docs, 설정, 구조 변경) | 공통/인프라 | `docs/work-logs/common/LATEST.md` |
+
+**자동 판별 기준**:
+- `.cs` 파일 변경 → programming
+- `specs/`, `docs/art/` 변경 → design
+- `docs/`, `.claude/`, 설정 파일 변경 → common
+
+---
+
 ## 📋 수행 작업
 
-### 1. 최근 커밋 확인
+### 1. 세션 확인
+- 현재 작업 디렉토리 확인
+- `_programming` 또는 `_design` 키워드로 세션 판별
+
+### 2. 최근 커밋 확인
 - `git log -5 --oneline` 실행
 - `git diff HEAD~1 --stat` 실행하여 변경된 파일 확인
 
-### 2. LATEST.md 업데이트
-**파일**: `docs/work-logs/LATEST.md`
+### 3. 세션별 LATEST.md 업데이트
+
+**프로그래밍 세션**: `docs/work-logs/programming/LATEST.md`
+**기획/아트 세션**: `docs/work-logs/design/LATEST.md`
+**공통/인프라 세션**: `docs/work-logs/common/LATEST.md`
 
 **업데이트 내용**:
 - 날짜를 오늘 날짜로 변경
@@ -22,56 +46,28 @@
   - 주요 변경사항: 변경된 파일 기반
 - 이전 "현재 진행 중" 작업은 "최근 완료" 섹션으로 이동 (최대 3개 유지)
 
-### 3. 월별 상세 로그 생성 (옵션)
+### 4. 월별 상세 로그 생성 (옵션)
 **조건**: 중요한 작업 완료 시 (커밋 메시지에 "기능:", "리팩토링:", "수정:" 포함)
 
-**경로**: `docs/work-logs/YYYY-MM/`
-**파일명**: 커밋 메시지 기반 kebab-case (예: `mvp-pattern-integration.md`)
+**프로그래밍 경로**: `docs/work-logs/programming/YYYY-MM/`
+**기획/아트 경로**: `docs/work-logs/design/YYYY-MM/`
+**공통/인프라 경로**: `docs/work-logs/common/YYYY-MM/`
 
-**내용**:
-```markdown
-# {작업명}
-
-**날짜**: YYYY-MM-DD
-**커밋**: {커밋 해시}
-**브랜치**: {브랜치명}
-
-## 작업 개요
-{커밋 메시지}
-
-## 변경된 파일
-{변경된 파일 목록}
-
-## 주요 변경사항
-- {변경사항 1}
-- {변경사항 2}
-
-## 관련 커밋
-- {관련 커밋들}
-```
-
-### 4. Phase 히스토리 업데이트 (옵션)
-**조건**: 커밋 메시지에 "Phase" 포함 시
-
-**경로**: `docs/work-logs/phase-history/phase-{X}.md`
-**작업**: 해당 Phase 문서에 작업 내역 추가
+**파일명**: 커밋 메시지 기반 kebab-case (예: `dungeon-system-refactor.md`)
 
 ### 5. README.md 갱신
 **파일**: `docs/work-logs/README.md`
 
 **업데이트 내용**:
 - "최근 업데이트" 날짜 갱신
-- 필요시 월별 로그 목록 추가
 
 ---
 
 ## 🎯 옵션 처리
 
-사용자가 다음과 같은 옵션을 제공할 수 있습니다:
-
 ### `--full`
 전체 업데이트 수행:
-- LATEST.md 업데이트
+- 해당 세션 LATEST.md 업데이트
 - 월별 상세 로그 생성 (강제)
 - README.md 갱신
 
@@ -82,7 +78,7 @@ Phase 완료 업데이트:
 
 ### 옵션 없음 (기본)
 빠른 업데이트:
-- LATEST.md만 업데이트
+- 해당 세션 LATEST.md만 업데이트
 - README.md 날짜만 갱신
 
 ---
@@ -94,42 +90,57 @@ Phase 완료 업데이트:
 ```
 ✅ 작업 로그 업데이트 완료!
 
+📂 세션: 프로그래밍 (_programming)
+
 📝 변경된 파일:
-- docs/work-logs/LATEST.md
+- docs/work-logs/programming/LATEST.md
 - docs/work-logs/README.md
-- docs/work-logs/2025-11/mvp-pattern-integration.md (새로 생성)
 
 📌 최신 작업:
-- MVP 패턴 통합 (2025-11-22)
+- 던전 생성 시스템 리팩토링 (2025-11-30)
 
 🎯 다음 작업 제안:
-- [ ] MVP 패턴 Unity 테스트
+- [ ] Unity 컴파일 확인
 ```
 
 ---
 
 ## 📖 사용 예시
 
-### 기본 업데이트
-```
+### 프로그래밍 세션에서
+```bash
+# _programming 폴더에서 실행
 /update-worklog
+# → docs/work-logs/programming/LATEST.md 업데이트
 ```
 
-### 전체 업데이트 (상세 로그 포함)
+### 기획/아트 세션에서
+```bash
+# _design 폴더에서 실행
+/update-worklog
+# → docs/work-logs/design/LATEST.md 업데이트
+```
+
+### 공통/인프라 세션에서
+```bash
+# 프로젝트 루트 또는 docs 폴더에서 실행
+/update-worklog
+# → docs/work-logs/common/LATEST.md 업데이트
+```
+
+### 전체 업데이트
 ```
 /update-worklog --full
-```
-
-### Phase 완료 업데이트
-```
-/update-worklog --phase phase-E
 ```
 
 ---
 
 ## 🔧 주의사항
 
-1. **파일이 없는 경우**: 자동으로 생성하지 말고, 사용자에게 먼저 문서 구조를 생성해야 함을 알림
+1. **세션 자동 감지**: 작업 디렉토리와 변경 파일로 판별
+   - `_programming` → programming
+   - `_design` → design
+   - 그 외 (docs, 설정 변경) → common
 2. **날짜 형식**: YYYY-MM-DD 형식 사용
 3. **한글 인코딩**: UTF-8 사용
 4. **파일명**: kebab-case 사용 (소문자, 하이픈)
@@ -137,4 +148,4 @@ Phase 완료 업데이트:
 
 ---
 
-**이 명령은 작업 로그를 체계적으로 관리하여 프로젝트 히스토리를 추적하기 쉽게 만듭니다.**
+**이 명령은 세션별로 독립적인 작업 로그를 관리하여 프로젝트 히스토리를 추적하기 쉽게 만듭니다.**

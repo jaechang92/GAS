@@ -248,7 +248,6 @@ namespace GASPT.Gameplay.Level
 
             Debug.Log($"========== Dungeon Info ==========");
             Debug.Log($"Dungeon: {currentDungeon.dungeonName}");
-            Debug.Log($"Type: {currentDungeon.generationType}");
             Debug.Log($"Level: {currentDungeon.recommendedLevel}");
             Debug.Log($"Initialized: {isInitialized}");
             Debug.Log($"==================================");

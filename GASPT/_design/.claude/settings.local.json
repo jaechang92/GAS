@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "SlashCommand(/speckit.tasks)",
+      "SlashCommand(/speckit.implement)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

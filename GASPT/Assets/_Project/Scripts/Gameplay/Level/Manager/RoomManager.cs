@@ -140,7 +140,8 @@ namespace GASPT.Gameplay.Level
         // ====== 던전 로딩 ======
 
         /// <summary>
-        /// DungeonConfig 기반으로 던전 로드
+        /// DungeonConfig 기반으로 던전 로드 (그래프 기반 생성)
+        /// 참고: 일반적으로 DungeonGenerator + LoadDungeonGraph를 사용하는 것을 권장
         /// </summary>
         public void LoadDungeon(DungeonConfig config)
         {
@@ -151,7 +152,7 @@ namespace GASPT.Gameplay.Level
             }
 
             currentDungeon = config;
-            Debug.Log($"[RoomManager] 던전 로딩 시작: {config.dungeonName} ({config.generationType} 방식)");
+            Debug.Log($"[RoomManager] 던전 로딩 시작: {config.dungeonName}");
 
             // 기존 방들 정리
             ClearRooms();
@@ -159,21 +160,8 @@ namespace GASPT.Gameplay.Level
             // Room Container 생성
             CreateRoomContainer();
 
-            // 생성 방식에 따라 분기
-            switch (config.generationType)
-            {
-                case DungeonGenerationType.Prefab:
-                    LoadRoomsFromPrefabs(config.roomPrefabs);
-                    break;
-
-                case DungeonGenerationType.Data:
-                    GenerateRoomsFromData(config.roomDataList, config.roomTemplatePrefab);
-                    break;
-
-                case DungeonGenerationType.Procedural:
-                    GenerateProceduralDungeon(config.generationRules, config.roomDataPool, config.roomTemplatePrefab);
-                    break;
-            }
+            // 그래프 기반 던전 생성
+            GenerateProceduralDungeon(config.generationRules, config.roomDataPool, config.roomTemplatePrefab);
 
             // 모든 방 이벤트 구독
             SubscribeRoomEvents();

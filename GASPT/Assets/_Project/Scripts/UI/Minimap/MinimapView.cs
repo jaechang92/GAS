@@ -409,5 +409,28 @@ namespace GASPT.UI.Minimap
         {
             OnNodeHoverExit?.Invoke();
         }
+
+        [ContextMenu("Auto Fill References")]
+        private void AutoFillReferences()
+        {
+            if (rootPanel == null)
+                rootPanel = this.gameObject;
+
+            // MinimapView → Content → (EdgesContainer, NodesContainer)
+            // MinimapView는 Title, Info, Content를 자식으로 가짐
+            Transform content = transform.Find("Content");
+
+            if (content != null)
+            {
+                // Content가 mapContainer 역할 (줌/패닝 적용)
+                if (mapContainer == null)
+                    mapContainer = content as RectTransform;
+
+                if (nodesContainer == null)
+                    nodesContainer = content.Find("NodesContainer") as RectTransform;
+                if (edgesContainer == null)
+                    edgesContainer = content.Find("EdgesContainer") as RectTransform;
+            }
+        }
     }
 }

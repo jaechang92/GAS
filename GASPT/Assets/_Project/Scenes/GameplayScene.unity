@@ -2128,7 +2128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63b9a3a188c18184e9cf79954a72d76e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GASPT.Gameplay.Level.RoomManager
-  currentDungeon: {fileID: 0}
+  currentDungeon: {fileID: 11400000, guid: 21e9898acfe1db84ba8931a5ecdb417b, type: 2}
   autoFindRooms: 0
   manualRooms: []
   autoStartFirstRoom: 1

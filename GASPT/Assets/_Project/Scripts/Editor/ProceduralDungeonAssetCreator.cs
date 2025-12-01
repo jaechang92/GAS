@@ -636,7 +636,6 @@ namespace GASPT.EditorTools
             config.dungeonName = "테스트 던전";
             config.recommendedLevel = 1;
             config.description = "절차적 생성 테스트용 던전입니다.";
-            config.generationType = DungeonGenerationType.Procedural;
 
             // RoomGenerationRules 생성
             CreateTestRoomGenerationRules();
