@@ -52,6 +52,10 @@
 - `5ae0eb4` - Phase 3 완료
 - `2c4c972` - Phase 4 완료
 - `d776d89` - Phase 5 완료
+- `3147442` - Phase 6 완료
+- `741d464` - Unity meta 파일 추가
+
+**PR**: https://github.com/jaechang92/GAS/pull/10
 
 ---
 
@@ -77,7 +81,8 @@
 
 ### 즉시 할 일
 - [ ] 폼 시스템 Unity 테스트 (Play 모드)
-- [ ] 폼 시스템 PR 생성 및 master 머지
+- [x] 폼 시스템 PR 생성 (PR #10)
+- [ ] PR 리뷰 후 master 머지
 - [ ] 기본 폼 5종 밸런스 조정
 
 ### 향후 계획
@@ -134,4 +139,4 @@ Assets/_Project/Scripts/Editor/
 
 ---
 
-*마지막 업데이트: 2025-12-01*
+*마지막 업데이트: 2025-12-05*
