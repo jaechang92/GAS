@@ -3,17 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using GASPT.Core.Pooling;
 
 namespace GASPT.UI.Minimap
 {
-    /// <summary>
-    /// 미니맵 뷰 구현
-    /// 전체 미니맵 UI를 관리하는 메인 컴포넌트
-    /// </summary>
     public class MinimapView : MonoBehaviour, IMinimapView, IDragHandler, IScrollHandler
     {
-        // ====== UI 요소 ======
-
         [Header("컨테이너")]
         [SerializeField] private GameObject rootPanel;
         [SerializeField] private RectTransform mapContainer;
@@ -27,45 +22,32 @@ namespace GASPT.UI.Minimap
         [Header("설정")]
         [SerializeField] private MinimapConfig config;
 
-
-        // ====== 상태 ======
-
         private Dictionary<string, MinimapNodeUI> nodeUIs = new Dictionary<string, MinimapNodeUI>();
         private List<MinimapEdgeUI> edgeUIs = new List<MinimapEdgeUI>();
 
+        private ObjectPool<MinimapNodeUI> nodePool;
+        private ObjectPool<MinimapEdgeUI> edgePool;
+        private bool poolsInitialized = false;
+
         private string currentNodeId;
         private List<string> highlightedNodeIds = new List<string>();
-
         private float currentZoom = 1f;
         private Vector2 panOffset = Vector2.zero;
         private bool isVisible;
-
-
-        // ====== 이벤트 ======
 
         public event Action<string> OnNodeClicked;
         public event Action<string> OnNodeHovered;
         public event Action OnNodeHoverExit;
 
-
-        // ====== 프로퍼티 ======
-
         public bool IsVisible => isVisible;
-
-
-        // ====== Unity 생명주기 ======
 
         private void Awake()
         {
-            if (rootPanel != null)
-            {
-                rootPanel.SetActive(false);
-            }
+            if (rootPanel != null) rootPanel.SetActive(false);
         }
 
         private void OnDestroy()
         {
-            // 노드 이벤트 구독 해제
             foreach (var nodeUI in nodeUIs.Values)
             {
                 if (nodeUI != null)
@@ -77,101 +59,52 @@ namespace GASPT.UI.Minimap
             }
         }
 
-
-        // ====== IMinimapView 구현 ======
-
         public void Show()
         {
-            if (rootPanel != null)
-            {
-                rootPanel.SetActive(true);
-            }
+            if (rootPanel != null) rootPanel.SetActive(true);
             isVisible = true;
-
-            Debug.Log("[MinimapView] 미니맵 표시");
         }
 
         public void Hide()
         {
-            if (rootPanel != null)
-            {
-                rootPanel.SetActive(false);
-            }
+            if (rootPanel != null) rootPanel.SetActive(false);
             isVisible = false;
-
-            Debug.Log("[MinimapView] 미니맵 숨김");
         }
 
         public void SetMapData(List<MinimapNodeData> nodes, List<MinimapEdgeData> edges)
         {
-            // 기존 요소 제거
             ClearAll();
-
-            // 엣지 먼저 생성 (노드 아래에 그려지도록)
-            foreach (var edgeData in edges)
-            {
-                CreateEdgeUI(edgeData);
-            }
-
-            // 노드 생성
-            foreach (var nodeData in nodes)
-            {
-                CreateNodeUI(nodeData);
-            }
-
-            Debug.Log($"[MinimapView] 맵 데이터 설정: 노드 {nodes.Count}개, 엣지 {edges.Count}개");
+            foreach (var edgeData in edges) CreateEdgeUI(edgeData);
+            foreach (var nodeData in nodes) CreateNodeUI(nodeData);
         }
 
         public void UpdateNode(MinimapNodeData node)
         {
-            if (nodeUIs.TryGetValue(node.nodeId, out var nodeUI))
-            {
-                nodeUI.UpdateData(node);
-            }
+            if (nodeUIs.TryGetValue(node.nodeId, out var nodeUI)) nodeUI.UpdateData(node);
         }
 
         public void UpdateNodes(List<MinimapNodeData> nodes)
         {
-            foreach (var node in nodes)
-            {
-                UpdateNode(node);
-            }
+            foreach (var node in nodes) UpdateNode(node);
         }
 
         public void SetCurrentNode(string nodeId)
         {
-            // 이전 현재 노드 해제
             if (!string.IsNullOrEmpty(currentNodeId) && nodeUIs.TryGetValue(currentNodeId, out var prevNode))
-            {
                 prevNode.SetAsCurrent(false);
-            }
-
-            // 새 현재 노드 설정
             currentNodeId = nodeId;
             if (!string.IsNullOrEmpty(nodeId) && nodeUIs.TryGetValue(nodeId, out var newNode))
-            {
                 newNode.SetAsCurrent(true);
-            }
-
-            Debug.Log($"[MinimapView] 현재 노드 설정: {nodeId}");
         }
 
         public void HighlightSelectableNodes(List<string> nodeIds)
         {
-            // 기존 하이라이트 해제
             ClearHighlights();
-
-            // 새 하이라이트 설정
             highlightedNodeIds = new List<string>(nodeIds);
             foreach (var nodeId in nodeIds)
             {
-                if (nodeUIs.TryGetValue(nodeId, out var nodeUI))
-                {
-                    nodeUI.SetSelectable(true);
-                }
+                if (nodeUIs.TryGetValue(nodeId, out var nodeUI)) nodeUI.SetSelectable(true);
             }
-
-            // 관련 엣지 하이라이트
             HighlightEdgesToNodes(nodeIds);
         }
 
@@ -179,88 +112,45 @@ namespace GASPT.UI.Minimap
         {
             foreach (var nodeId in highlightedNodeIds)
             {
-                if (nodeUIs.TryGetValue(nodeId, out var nodeUI))
-                {
-                    nodeUI.SetSelectable(false);
-                }
+                if (nodeUIs.TryGetValue(nodeId, out var nodeUI)) nodeUI.SetSelectable(false);
             }
             highlightedNodeIds.Clear();
-
-            // 엣지 하이라이트 해제
-            foreach (var edgeUI in edgeUIs)
-            {
-                edgeUI.SetHighlighted(false);
-            }
+            foreach (var edgeUI in edgeUIs) edgeUI.SetHighlighted(false);
         }
 
         public void FocusOnNode(string nodeId, bool animate = true)
         {
             if (!nodeUIs.TryGetValue(nodeId, out var nodeUI)) return;
-
-            Vector2 nodePos = nodeUI.Data.position;
-
-            if (animate && config != null)
-            {
-                // 애니메이션으로 이동 (TODO: DOTween 또는 코루틴으로 구현)
-                panOffset = -nodePos;
-            }
-            else
-            {
-                panOffset = -nodePos;
-            }
-
+            panOffset = -nodeUI.Data.position;
             ApplyTransform();
         }
 
         public void FitToView()
         {
             if (nodeUIs.Count == 0) return;
-
-            // 모든 노드의 바운딩 박스 계산
             Vector2 min = Vector2.positiveInfinity;
             Vector2 max = Vector2.negativeInfinity;
-
             foreach (var nodeUI in nodeUIs.Values)
             {
                 Vector2 pos = nodeUI.Data.position;
                 min = Vector2.Min(min, pos);
                 max = Vector2.Max(max, pos);
             }
-
-            // 패딩 적용
-            if (config != null)
-            {
-                min -= config.padding;
-                max += config.padding;
-            }
-
-            // 줌 레벨 계산
+            if (config != null) { min -= config.padding; max += config.padding; }
             Vector2 mapSize = max - min;
             Vector2 viewSize = mapContainer != null ? mapContainer.rect.size : new Vector2(400, 600);
-
             float zoomX = viewSize.x / mapSize.x;
             float zoomY = viewSize.y / mapSize.y;
             currentZoom = Mathf.Min(zoomX, zoomY, 1f);
-
-            if (config != null)
-            {
-                currentZoom = Mathf.Clamp(currentZoom, config.minZoom, config.maxZoom);
-            }
-
-            // 중심점으로 이동
+            if (config != null) currentZoom = Mathf.Clamp(currentZoom, config.minZoom, config.maxZoom);
             Vector2 center = (min + max) / 2f;
             panOffset = -center;
-
             ApplyTransform();
         }
 
         public void SetZoom(float zoomLevel)
         {
-            if (config != null)
-            {
-                zoomLevel = Mathf.Clamp(zoomLevel, config.minZoom, config.maxZoom);
-            }
-
+            if (config != null) zoomLevel = Mathf.Clamp(zoomLevel, config.minZoom, config.maxZoom);
             currentZoom = zoomLevel;
             ApplyTransform();
         }
@@ -274,13 +164,9 @@ namespace GASPT.UI.Minimap
             ApplyTransform();
         }
 
-
-        // ====== 드래그/스크롤 핸들러 ======
-
         public void OnDrag(PointerEventData eventData)
         {
             if (config == null || !config.allowDrag) return;
-
             panOffset += eventData.delta / currentZoom;
             ApplyTransform();
         }
@@ -288,55 +174,69 @@ namespace GASPT.UI.Minimap
         public void OnScroll(PointerEventData eventData)
         {
             if (config == null || !config.allowZoom) return;
-
-            float scrollDelta = eventData.scrollDelta.y;
-            float zoomChange = scrollDelta > 0 ? 1.1f : 0.9f;
-
-            float newZoom = currentZoom * zoomChange;
-            newZoom = Mathf.Clamp(newZoom, config.minZoom, config.maxZoom);
-
-            currentZoom = newZoom;
+            float zoomChange = eventData.scrollDelta.y > 0 ? 1.1f : 0.9f;
+            currentZoom = Mathf.Clamp(currentZoom * zoomChange, config.minZoom, config.maxZoom);
             ApplyTransform();
         }
 
-
-        // ====== 내부 메서드 ======
+        private void InitializePoolsIfNeeded()
+        {
+            if (poolsInitialized) return;
+            if (nodePrefab != null)
+            {
+                var nodeComponent = nodePrefab.GetComponent<MinimapNodeUI>();
+                if (nodeComponent != null)
+                    nodePool = new ObjectPool<MinimapNodeUI>(nodeComponent, nodesContainer, 20, true);
+            }
+            if (edgePrefab != null)
+            {
+                var edgeComponent = edgePrefab.GetComponent<MinimapEdgeUI>();
+                if (edgeComponent != null)
+                    edgePool = new ObjectPool<MinimapEdgeUI>(edgeComponent, edgesContainer, 30, true);
+            }
+            poolsInitialized = true;
+        }
 
         private void CreateNodeUI(MinimapNodeData data)
         {
-            if (nodePrefab == null || nodesContainer == null)
+            if (nodePrefab == null || nodesContainer == null) return;
+            InitializePoolsIfNeeded();
+            MinimapNodeUI nodeUI;
+            if (nodePool != null)
             {
-                Debug.LogWarning("[MinimapView] nodePrefab 또는 nodesContainer가 설정되지 않았습니다.");
-                return;
+                nodeUI = nodePool.Get(Vector3.zero, Quaternion.identity);
+                nodeUI.transform.SetParent(nodesContainer, false);
             }
-
-            var nodeObj = Instantiate(nodePrefab, nodesContainer);
-            var nodeUI = nodeObj.GetComponent<MinimapNodeUI>();
-
+            else
+            {
+                var nodeObj = Instantiate(nodePrefab, nodesContainer);
+                nodeUI = nodeObj.GetComponent<MinimapNodeUI>();
+            }
             if (nodeUI != null)
             {
                 nodeUI.Initialize(data, config);
-
-                // 이벤트 구독
                 nodeUI.OnClicked += HandleNodeClicked;
                 nodeUI.OnHoverEnter += HandleNodeHoverEnter;
                 nodeUI.OnHoverExit += HandleNodeHoverExit;
-
                 nodeUIs[data.nodeId] = nodeUI;
             }
         }
 
         private void CreateEdgeUI(MinimapEdgeData data)
         {
-            if (edgePrefab == null || edgesContainer == null)
+            if (edgePrefab == null || edgesContainer == null) return;
+            InitializePoolsIfNeeded();
+            MinimapEdgeUI edgeUI;
+            if (edgePool != null)
             {
-                Debug.LogWarning("[MinimapView] edgePrefab 또는 edgesContainer가 설정되지 않았습니다.");
-                return;
+                edgeUI = edgePool.Get(Vector3.zero, Quaternion.identity);
+                edgeUI.transform.SetParent(edgesContainer, false);
             }
-
-            var edgeObj = Instantiate(edgePrefab, edgesContainer);
-            var edgeUI = edgeObj.GetComponent<MinimapEdgeUI>();
-
+            else
+            {
+                var edgeObj = Instantiate(edgePrefab, edgesContainer);
+                edgeUI = edgeObj.GetComponent<MinimapEdgeUI>();
+            }
             if (edgeUI != null)
             {
                 edgeUI.Initialize(data, config);
@@ -346,7 +246,6 @@ namespace GASPT.UI.Minimap
 
         private void ClearAll()
         {
-            // 노드 제거
             foreach (var nodeUI in nodeUIs.Values)
             {
                 if (nodeUI != null)
@@ -354,28 +253,26 @@ namespace GASPT.UI.Minimap
                     nodeUI.OnClicked -= HandleNodeClicked;
                     nodeUI.OnHoverEnter -= HandleNodeHoverEnter;
                     nodeUI.OnHoverExit -= HandleNodeHoverExit;
-                    Destroy(nodeUI.gameObject);
+                    if (nodePool != null) nodePool.Release(nodeUI);
+                    else Destroy(nodeUI.gameObject);
                 }
             }
             nodeUIs.Clear();
-
-            // 엣지 제거
             foreach (var edgeUI in edgeUIs)
             {
                 if (edgeUI != null)
                 {
-                    Destroy(edgeUI.gameObject);
+                    if (edgePool != null) edgePool.Release(edgeUI);
+                    else Destroy(edgeUI.gameObject);
                 }
             }
             edgeUIs.Clear();
-
             highlightedNodeIds.Clear();
         }
 
         private void ApplyTransform()
         {
             if (mapContainer == null) return;
-
             mapContainer.localScale = Vector3.one * currentZoom;
             mapContainer.anchoredPosition = panOffset * currentZoom;
         }
@@ -383,54 +280,15 @@ namespace GASPT.UI.Minimap
         private void HighlightEdgesToNodes(List<string> targetNodeIds)
         {
             if (string.IsNullOrEmpty(currentNodeId)) return;
-
             foreach (var edgeUI in edgeUIs)
             {
-                bool shouldHighlight = edgeUI.FromNodeId == currentNodeId &&
-                                       targetNodeIds.Contains(edgeUI.ToNodeId);
+                bool shouldHighlight = edgeUI.FromNodeId == currentNodeId && targetNodeIds.Contains(edgeUI.ToNodeId);
                 edgeUI.SetHighlighted(shouldHighlight);
             }
         }
 
-
-        // ====== 이벤트 핸들러 ======
-
-        private void HandleNodeClicked(string nodeId)
-        {
-            OnNodeClicked?.Invoke(nodeId);
-        }
-
-        private void HandleNodeHoverEnter(string nodeId)
-        {
-            OnNodeHovered?.Invoke(nodeId);
-        }
-
-        private void HandleNodeHoverExit()
-        {
-            OnNodeHoverExit?.Invoke();
-        }
-
-        [ContextMenu("Auto Fill References")]
-        private void AutoFillReferences()
-        {
-            if (rootPanel == null)
-                rootPanel = this.gameObject;
-
-            // MinimapView → Content → (EdgesContainer, NodesContainer)
-            // MinimapView는 Title, Info, Content를 자식으로 가짐
-            Transform content = transform.Find("Content");
-
-            if (content != null)
-            {
-                // Content가 mapContainer 역할 (줌/패닝 적용)
-                if (mapContainer == null)
-                    mapContainer = content as RectTransform;
-
-                if (nodesContainer == null)
-                    nodesContainer = content.Find("NodesContainer") as RectTransform;
-                if (edgesContainer == null)
-                    edgesContainer = content.Find("EdgesContainer") as RectTransform;
-            }
-        }
+        private void HandleNodeClicked(string nodeId) => OnNodeClicked?.Invoke(nodeId);
+        private void HandleNodeHoverEnter(string nodeId) => OnNodeHovered?.Invoke(nodeId);
+        private void HandleNodeHoverExit() => OnNodeHoverExit?.Invoke();
     }
 }

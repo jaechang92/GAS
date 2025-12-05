@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 using GASPT.Gameplay.Level;
+using GASPT.Core.Pooling;
 
 namespace GASPT.UI.Minimap
 {
@@ -11,7 +12,7 @@ namespace GASPT.UI.Minimap
     /// 미니맵 노드 UI 컴포넌트
     /// 개별 노드의 시각적 표현을 담당
     /// </summary>
-    public class MinimapNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public class MinimapNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, IPoolable
     {
         // ====== UI 요소 ======
 
@@ -293,6 +294,39 @@ namespace GASPT.UI.Minimap
             if (!isSelectable && !isCurrent) return;
 
             OnClicked?.Invoke(nodeData.nodeId);
+        }
+
+        // ====== IPoolable 구현 ======
+
+        /// <summary>
+        /// 풀에서 꺼내질 때 호출
+        /// </summary>
+        public void OnSpawn()
+        {
+            // 이벤트는 MinimapView에서 다시 등록됨
+            isHighlighted = false;
+            isSelectable = false;
+            isCurrent = false;
+            pulseTimer = 0f;
+        }
+
+        /// <summary>
+        /// 풀로 반환될 때 호출
+        /// </summary>
+        public void OnDespawn()
+        {
+            // 이벤트 정리
+            OnClicked = null;
+            OnHoverEnter = null;
+            OnHoverExit = null;
+
+            // 마커 숨김
+            if (currentMarker != null) currentMarker.SetActive(false);
+            if (selectableMarker != null) selectableMarker.SetActive(false);
+            if (highlightImage != null) highlightImage.enabled = false;
+
+            // 스케일 초기화
+            transform.localScale = Vector3.one;
         }
     }
 }

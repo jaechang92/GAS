@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using GASPT.Gameplay.Level.Graph;
+using GASPT.Core.Pooling;
 
 namespace GASPT.UI.Minimap
 {
@@ -9,7 +10,7 @@ namespace GASPT.UI.Minimap
     /// 노드 간 연결을 시각적으로 표현
     /// </summary>
     [RequireComponent(typeof(Image))]
-    public class MinimapEdgeUI : MonoBehaviour
+    public class MinimapEdgeUI : MonoBehaviour, IPoolable
     {
         // ====== UI 요소 ======
 
@@ -166,6 +167,23 @@ namespace GASPT.UI.Minimap
                     size.y = config.lineWidth;
                     rectTransform.sizeDelta = size;
                 }
+            }
+        }
+
+        // ====== IPoolable 구현 ======
+
+        public void OnSpawn()
+        {
+            // 풀에서 꺼내질 때 초기화
+        }
+
+        public void OnDespawn()
+        {
+            // 풀로 반환될 때 정리
+            if (rectTransform != null)
+            {
+                rectTransform.sizeDelta = Vector2.one;
+                rectTransform.rotation = Quaternion.identity;
             }
         }
     }
