@@ -7,6 +7,7 @@ using GASPT.Level;
 using GASPT.UI;
 using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
+using GASPT.Meta;
 using Core.Enums;
 
 namespace GASPT.Gameplay.Enemy
@@ -237,6 +238,9 @@ namespace GASPT.Gameplay.Enemy
             // 아이템 드롭
             DropLoot();
 
+            // 메타 재화 드롭 (Bone/Soul)
+            DropMetaCurrency();
+
             // 사망 이벤트 발생
             OnDeath?.Invoke(this);
 
@@ -361,6 +365,44 @@ namespace GASPT.Gameplay.Enemy
             else
             {
                 Debug.LogError("[Enemy] LootSystem을 찾을 수 없습니다. 아이템 드롭 실패");
+            }
+        }
+
+
+        // ====== 메타 재화 드롭 ======
+
+        /// <summary>
+        /// 메타 재화 (Bone/Soul) 드롭 처리
+        /// </summary>
+        private void DropMetaCurrency()
+        {
+            if (enemyData == null) return;
+
+            // MetaProgressionManager가 없거나 런 진행 중이 아니면 스킵
+            if (!MetaProgressionManager.HasInstance || !MetaProgressionManager.Instance.IsInRun)
+            {
+                return;
+            }
+
+            var meta = MetaProgressionManager.Instance;
+
+            // Bone 드롭 (일반 적 포함 모든 적)
+            int boneDrop = enemyData.GetRandomBoneDrop();
+            if (boneDrop > 0)
+            {
+                meta.Currency.AddTempBone(boneDrop);
+                Debug.Log($"[Enemy] {enemyData.enemyName} Bone 드롭: +{boneDrop}");
+            }
+
+            // Soul 드롭 (보스 전용)
+            if (enemyData.enemyType == EnemyType.Boss)
+            {
+                int soulDrop = enemyData.GetSoulDrop();
+                if (soulDrop > 0)
+                {
+                    meta.Currency.AddTempSoul(soulDrop);
+                    Debug.Log($"[Enemy] {enemyData.enemyName} Soul 드롭: +{soulDrop}");
+                }
             }
         }
 

@@ -62,6 +62,22 @@ namespace GASPT.Data
         public LootTable lootTable;
 
 
+        // ====== 메타 재화 보상 ======
+
+        [Header("메타 재화 보상")]
+        [Tooltip("최소 Bone 드롭")]
+        [Range(0, 100)]
+        public int minBoneDrop = 0;
+
+        [Tooltip("최대 Bone 드롭")]
+        [Range(0, 100)]
+        public int maxBoneDrop = 0;
+
+        [Tooltip("Soul 드롭량 (보스 전용)")]
+        [Range(0, 100)]
+        public int soulDrop = 0;
+
+
         // ====== 플랫포머 설정 ======
 
         [Header("플랫포머 설정")]
@@ -210,6 +226,13 @@ namespace GASPT.Data
                 Debug.LogWarning($"[EnemyData] {enemyName}: minGoldDrop이 maxGoldDrop보다 큽니다. minGoldDrop을 {maxGoldDrop}(으)로 조정했습니다.");
             }
 
+            // 최소 Bone 드랍이 최대 Bone 드랍보다 크면 조정
+            if (minBoneDrop > maxBoneDrop)
+            {
+                minBoneDrop = maxBoneDrop;
+                Debug.LogWarning($"[EnemyData] {enemyName}: minBoneDrop이 maxBoneDrop보다 큽니다. minBoneDrop을 {maxBoneDrop}(으)로 조정했습니다.");
+            }
+
             // 타입별 기본값 제안
             switch (enemyType)
             {
@@ -246,6 +269,23 @@ namespace GASPT.Data
         public int GetRandomGoldDrop()
         {
             return Random.Range(minGoldDrop, maxGoldDrop + 1);
+        }
+
+        /// <summary>
+        /// 랜덤 Bone 드랍 계산
+        /// </summary>
+        /// <returns>minBoneDrop ~ maxBoneDrop 사이의 랜덤 Bone</returns>
+        public int GetRandomBoneDrop()
+        {
+            return Random.Range(minBoneDrop, maxBoneDrop + 1);
+        }
+
+        /// <summary>
+        /// Soul 드랍량 반환 (보스 전용)
+        /// </summary>
+        public int GetSoulDrop()
+        {
+            return soulDrop;
         }
 
 
