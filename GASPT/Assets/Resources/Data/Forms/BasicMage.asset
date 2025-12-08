@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abd16fdc39f783a49866c1d6c9570432, type: 3}
+  m_Name: BasicMage
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Forms.FormData
+  formId: form_basic_mage
+  formName: "\uAE30\uBCF8 \uB9C8\uBC95\uC0AC"
+  description: "\uADE0\uD615 \uC7A1\uD78C \uC2A4\uD0EF\uC744 \uAC00\uC9C4 \uAE30\uBCF8
+    \uB9C8\uBC95\uC0AC\uC785\uB2C8\uB2E4.\n\uBAA8\uB4E0 \uC0C1\uD669\uC5D0 \uBB34\uB09C\uD558\uAC8C
+    \uB300\uC751\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  formType: 0
+  baseRarity: 0
+  baseStats:
+    attackPower: 10
+    attackSpeed: 1
+    criticalChance: 0.05
+    criticalDamage: 1.5
+    maxHealthBonus: 0
+    defense: 0
+    moveSpeed: 1
+    jumpPower: 1
+    cooldownReduction: 0
+    manaRegen: 1
+  awakeningStatMultiplier: 1.2
+  maxAwakeningLevel: 3
+  icon: {fileID: 0}
+  formSprite: {fileID: 0}
+  animatorController: {fileID: 0}
+  formColor: {r: 0.6, g: 0.6, b: 1, a: 1}
+  swapEffectPrefab: {fileID: 0}
+  awakeningEffectPrefab: {fileID: 0}
+  maxAwakeningEffectPrefab: {fileID: 0}
+  swapSound: {fileID: 0}
+  awakeningSound: {fileID: 0}
+  maxAwakeningSound: {fileID: 0}
+  primarySkillId: skill_basic_attack
+  secondarySkillId: skill_basic_special
+  dropWeight: 100
+  playstyleHint: "\uADE0\uD615\uD615 - \uCD08\uBCF4\uC790 \uCD94\uCC9C"

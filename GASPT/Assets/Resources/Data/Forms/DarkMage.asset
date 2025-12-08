@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abd16fdc39f783a49866c1d6c9570432, type: 3}
+  m_Name: DarkMage
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Forms.FormData
+  formId: form_dark_mage
+  formName: "\uC554\uD751 \uB9C8\uBC95\uC0AC"
+  description: "\uC704\uD5D8\uD558\uC9C0\uB9CC \uAC15\uB825\uD55C \uC554\uD751 \uB9C8\uBC95\uC0AC\uC785\uB2C8\uB2E4.\n\uCCB4\uB825
+    \uD761\uC218\uB85C \uC804\uC120\uC5D0\uC11C \uBC84\uD2F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  formType: 4
+  baseRarity: 1
+  baseStats:
+    attackPower: 18
+    attackSpeed: 0.85
+    criticalChance: 0.2
+    criticalDamage: 2
+    maxHealthBonus: -30
+    defense: -5
+    moveSpeed: 1
+    jumpPower: 1
+    cooldownReduction: 0
+    manaRegen: 0.8
+  awakeningStatMultiplier: 1.2
+  maxAwakeningLevel: 3
+  icon: {fileID: 0}
+  formSprite: {fileID: 0}
+  animatorController: {fileID: 0}
+  formColor: {r: 0.5, g: 0.2, b: 0.6, a: 1}
+  swapEffectPrefab: {fileID: 0}
+  awakeningEffectPrefab: {fileID: 0}
+  maxAwakeningEffectPrefab: {fileID: 0}
+  swapSound: {fileID: 0}
+  awakeningSound: {fileID: 0}
+  maxAwakeningSound: {fileID: 0}
+  primarySkillId: skill_dark_attack
+  secondarySkillId: skill_dark_drain
+  dropWeight: 30
+  playstyleHint: "\uACE0\uC704\uD5D8 \uACE0\uBCF4\uC0C1 - \uD761\uD608 \uD2B9\uD654"

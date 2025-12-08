@@ -1,7 +1,16 @@
 using UnityEngine;
+using GASPT.Skills;
+using System;
 
 namespace GASPT.Forms
 {
+    [Serializable]
+    public struct AwakeningEffect
+    {
+        public string description;
+        public int unlockLevel; // 1, 2, 3
+    }
+
     /// <summary>
     /// 폼의 정적 데이터를 정의하는 ScriptableObject
     /// 각 폼의 기본 정보, 스탯, 외형 등을 설정
@@ -27,16 +36,12 @@ namespace GASPT.Forms
         public FormRarity baseRarity = FormRarity.Common;
 
 
-        [Header("스탯")]
-        [Tooltip("폼의 기본 스탯")]
-        public FormStats baseStats = FormStats.Default;
-
-        [Tooltip("각성 시 스탯 증가율 (등급당)")]
-        [Range(1.1f, 1.5f)]
-        public float awakeningStatMultiplier = 1.2f;
+        [Header("스탯 (등급별)")]
+        [Tooltip("각성 단계별 스탯 (0:기본, 1:1차강화, 2:2차강화, 3:최종강화")]
+        public FormStats[] statsByRarity; 
 
         [Tooltip("최대 각성 단계")]
-        [Range(1, 5)]
+        [Range(1, 4)]
         public int maxAwakeningLevel = 3;
 
 
@@ -76,12 +81,15 @@ namespace GASPT.Forms
         public AudioClip maxAwakeningSound;
 
 
-        [Header("스킬 (향후 연동)")]
-        [Tooltip("기본 공격 스킬 ID")]
-        public string primarySkillId;
+        [Header("스킬")]
+        [Tooltip("기본 공격 스킬")]
+        public SkillData skill1;
 
-        [Tooltip("특수 공격 스킬 ID")]
-        public string secondarySkillId;
+        [Tooltip("특수 공격 스킬")]
+        public SkillData skill2;
+
+        [Header("각성 효과 설명")]
+        public AwakeningEffect[] awakeningEffects;
 
 
         [Header("밸런스")]
@@ -95,17 +103,17 @@ namespace GASPT.Forms
 
 
         /// <summary>
-        /// 특정 각성 단계의 스탯 계산
+        /// 특정 각성 단계의 스탯 반환
         /// </summary>
         /// <param name="awakeningLevel">각성 단계 (0~3)</param>
         /// <returns>해당 단계의 스탯</returns>
         public FormStats GetStatsAtAwakening(int awakeningLevel)
         {
-            if (awakeningLevel <= 0)
-                return baseStats;
+            if (statsByRarity == null || statsByRarity.Length == 0)
+                return FormStats.Default; // Fallback
 
-            float multiplier = Mathf.Pow(awakeningStatMultiplier, awakeningLevel);
-            return baseStats.ApplyMultiplier(multiplier);
+            int index = Mathf.Clamp(awakeningLevel, 0, statsByRarity.Length - 1);
+            return statsByRarity[index];
         }
 
         /// <summary>
@@ -113,6 +121,9 @@ namespace GASPT.Forms
         /// </summary>
         public FormRarity GetRarityAtAwakening(int awakeningLevel)
         {
+            // BaseRarity가 Common(0)이고 Awakening이 0이면 Common
+            // BaseRarity가 Rare(1)이고 Awakening이 0이면 Rare
+            // Awakening Level 1 증가시마다 Rarity + 1
             int rarityValue = (int)baseRarity + awakeningLevel;
             return (FormRarity)Mathf.Clamp(rarityValue, 0, (int)FormRarity.Legendary);
         }

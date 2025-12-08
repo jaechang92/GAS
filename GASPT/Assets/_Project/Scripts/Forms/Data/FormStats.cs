@@ -15,6 +15,10 @@ namespace GASPT.Forms
         [Range(0f, 100f)]
         public float attackPower;
 
+        [Tooltip("최대 마나 보너스")]
+        [Range(0f, 100f)]
+        public float maxManaBonus;
+
         [Tooltip("공격 속도 배율 (1.0 = 100%)")]
         [Range(0.5f, 2f)]
         public float attackSpeed;
@@ -54,6 +58,10 @@ namespace GASPT.Forms
         [Range(0.5f, 2f)]
         public float manaRegen;
 
+        [Tooltip("흡혈율 (0~1, 데미지의 %만큼 회복)")]
+        [Range(0f, 1f)]
+        public float vampirismRate;
+
 
         /// <summary>
         /// 기본 스탯 생성 (밸런스형)
@@ -69,7 +77,9 @@ namespace GASPT.Forms
             moveSpeed = 1f,
             jumpPower = 1f,
             cooldownReduction = 0f,
-            manaRegen = 1f
+            manaRegen = 1f,
+            maxManaBonus = 0f,
+            vampirismRate = 0f
         };
 
         /// <summary>
@@ -88,7 +98,9 @@ namespace GASPT.Forms
                 moveSpeed = a.moveSpeed * b.moveSpeed,
                 jumpPower = a.jumpPower * b.jumpPower,
                 cooldownReduction = Mathf.Clamp(a.cooldownReduction + b.cooldownReduction, 0f, 0.5f),
-                manaRegen = a.manaRegen * b.manaRegen
+                manaRegen = a.manaRegen * b.manaRegen,
+                maxManaBonus = a.maxManaBonus + b.maxManaBonus,
+                vampirismRate = a.vampirismRate + b.vampirismRate
             };
         }
 
@@ -108,7 +120,9 @@ namespace GASPT.Forms
                 moveSpeed = 1f + (moveSpeed - 1f) * multiplier,
                 jumpPower = 1f + (jumpPower - 1f) * multiplier,
                 cooldownReduction = Mathf.Clamp(cooldownReduction * multiplier, 0f, 0.5f),
-                manaRegen = 1f + (manaRegen - 1f) * multiplier
+                manaRegen = 1f + (manaRegen - 1f) * multiplier,
+                maxManaBonus = maxManaBonus * multiplier,
+                vampirismRate = vampirismRate * multiplier
             };
         }
 

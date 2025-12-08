@@ -213,6 +213,8 @@ namespace GASPT.Editor
             EditorGUILayout.LabelField($"  점프력: {stats.jumpPower:F2}");
             EditorGUILayout.LabelField($"  쿨다운 감소: {stats.cooldownReduction:P0}");
             EditorGUILayout.LabelField($"  마나 회복: {stats.manaRegen:F2}");
+            EditorGUILayout.LabelField($"  최대 마나 보너스: {stats.maxManaBonus:F0}");
+            EditorGUILayout.LabelField($"  흡혈율: {stats.vampirismRate:P1}");
             EditorGUILayout.EndVertical();
 
             // 스탯 연산 테스트

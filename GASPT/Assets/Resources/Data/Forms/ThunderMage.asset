@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abd16fdc39f783a49866c1d6c9570432, type: 3}
+  m_Name: ThunderMage
+  m_EditorClassIdentifier: Assembly-CSharp::GASPT.Forms.FormData
+  formId: form_thunder_mage
+  formName: "\uBC88\uAC1C \uB9C8\uBC95\uC0AC"
+  description: "\uBE60\uB978 \uACF5\uACA9 \uC18D\uB3C4\uC640 \uB192\uC740 \uAE30\uB3D9\uC131\uC744
+    \uAC00\uC9C4 \uBC88\uAC1C \uB9C8\uBC95\uC0AC\uC785\uB2C8\uB2E4.\n\uC801\uC744
+    \uD718\uBAB0\uC544\uCE58\uB4EF \uACF5\uACA9\uD558\uC138\uC694!"
+  formType: 3
+  baseRarity: 0
+  baseStats:
+    attackPower: 7
+    attackSpeed: 1.4
+    criticalChance: 0.15
+    criticalDamage: 1.6
+    maxHealthBonus: -5
+    defense: 0
+    moveSpeed: 1.2
+    jumpPower: 1.15
+    cooldownReduction: 0.15
+    manaRegen: 1.2
+  awakeningStatMultiplier: 1.2
+  maxAwakeningLevel: 3
+  icon: {fileID: 0}
+  formSprite: {fileID: 0}
+  animatorController: {fileID: 0}
+  formColor: {r: 1, g: 1, b: 0.3, a: 1}
+  swapEffectPrefab: {fileID: 0}
+  awakeningEffectPrefab: {fileID: 0}
+  maxAwakeningEffectPrefab: {fileID: 0}
+  swapSound: {fileID: 0}
+  awakeningSound: {fileID: 0}
+  maxAwakeningSound: {fileID: 0}
+  primarySkillId: skill_thunder_attack
+  secondarySkillId: skill_thunder_dash
+  dropWeight: 50
+  playstyleHint: "\uC18D\uACF5\uD615 - \uC5F0\uC18D \uACF5\uACA9"
