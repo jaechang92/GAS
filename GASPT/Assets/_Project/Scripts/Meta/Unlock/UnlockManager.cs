@@ -10,7 +10,7 @@ namespace GASPT.Meta
     /// 폼/아이템 해금 관리자
     /// Soul을 사용하여 새로운 폼을 해금하고 드롭 풀에 추가
     /// </summary>
-    public class UnlockManager : MonoBehaviour
+    public class UnlockManager : SingletonManager<UnlockManager>
     {
         // ====== 설정 ======
 

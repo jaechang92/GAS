@@ -286,16 +286,16 @@ namespace GASPT.Editor
 
             EditorGUI.indentLevel++;
 
-            foreach (var form in unlockManager.AllUnlockableForms)
+            foreach (var form in unlockManager.AllUnlockables)
             {
                 if (form == null) continue;
 
-                bool isUnlocked = unlockManager.IsUnlocked(form.formId);
+                bool isUnlocked = unlockManager.IsUnlocked(form.unlockId);
 
                 EditorGUILayout.BeginHorizontal();
 
                 // 이름
-                EditorGUILayout.LabelField(form.displayName, GUILayout.Width(150));
+                EditorGUILayout.LabelField(form.name, GUILayout.Width(150));
 
                 // 상태
                 if (isUnlocked)
