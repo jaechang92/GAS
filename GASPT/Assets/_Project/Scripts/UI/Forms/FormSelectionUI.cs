@@ -207,7 +207,7 @@ namespace GASPT.UI.Forms
 
             if (newFormStats != null)
             {
-                newFormStats.text = FormatStats(newFormData.baseStats);
+                newFormStats.text = FormatStats(newFormData.GetStatsAtAwakening(0));
             }
         }
 
@@ -230,12 +230,12 @@ namespace GASPT.UI.Forms
 
             if (slot1CompareText != null && currentSlot1 != null)
             {
-                slot1CompareText.text = CompareStats(currentSlot1.CurrentStats, newFormData.baseStats);
+                slot1CompareText.text = CompareStats(currentSlot1.CurrentStats, newFormData.GetStatsAtAwakening(0));
             }
 
             if (slot2CompareText != null && currentSlot2 != null)
             {
-                slot2CompareText.text = CompareStats(currentSlot2.CurrentStats, newFormData.baseStats);
+                slot2CompareText.text = CompareStats(currentSlot2.CurrentStats, newFormData.GetStatsAtAwakening(0));
             }
         }
 
