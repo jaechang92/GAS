@@ -11,6 +11,7 @@ using GASPT.Core;
 using GASPT.DTOs;
 using UnityEngine;
 using GASPT.Gameplay.Enemies;
+using GASPT.Forms.Data;
 
 namespace GASPT.Stats
 {
@@ -48,6 +49,19 @@ namespace GASPT.Stats
         /// 장비된 아이템 (슬롯 → 아이템)
         /// </summary>
         private Dictionary<EquipmentSlot, Item> equippedItems = new Dictionary<EquipmentSlot, Item>();
+
+
+        // ====== 폼 보너스 ======
+
+        /// <summary>
+        /// 현재 적용된 폼 보너스 (기본 스탯: Attack, Defense, HP, Mana)
+        /// </summary>
+        private FormStats formBonus = FormStats.Default;
+
+        /// <summary>
+        /// 폼 보너스 적용 여부
+        /// </summary>
+        private bool hasFormBonus = false;
 
 
         // ====== 최종 스탯 (캐시) ======
@@ -289,6 +303,15 @@ namespace GASPT.Stats
                 }
             }
 
+            // 폼 보너스 합산
+            if (hasFormBonus)
+            {
+                finalHP += Mathf.RoundToInt(formBonus.maxHealthBonus);
+                finalAttack += Mathf.RoundToInt(formBonus.attackPower);
+                finalDefense += Mathf.RoundToInt(formBonus.defense);
+                finalMana += Mathf.RoundToInt(formBonus.maxManaBonus);
+            }
+
             isDirty = false;
 
             // 변경된 스탯에 대해 이벤트 발생
@@ -426,6 +449,50 @@ namespace GASPT.Stats
 
             Debug.Log("[PlayerStats] 모든 아이템 장착 해제 완료");
         }
+
+
+        // ====== 폼 보너스 관리 ======
+
+        /// <summary>
+        /// 폼 보너스 적용 (FormSwapSystem에서 호출)
+        /// </summary>
+        /// <param name="stats">적용할 폼 스탯</param>
+        public void ApplyFormBonus(FormStats stats)
+        {
+            formBonus = stats;
+            hasFormBonus = true;
+            isDirty = true;
+
+            RecalculateIfDirty();
+
+            Debug.Log($"[PlayerStats] 폼 보너스 적용 - HP+{stats.maxHealthBonus}, Attack+{stats.attackPower}, Defense+{stats.defense}, Mana+{stats.maxManaBonus}");
+        }
+
+        /// <summary>
+        /// 폼 보너스 제거 (FormSwapSystem에서 호출)
+        /// </summary>
+        public void RemoveFormBonus()
+        {
+            if (!hasFormBonus) return;
+
+            Debug.Log($"[PlayerStats] 폼 보너스 제거 - HP+{formBonus.maxHealthBonus}, Attack+{formBonus.attackPower}, Defense+{formBonus.defense}, Mana+{formBonus.maxManaBonus}");
+
+            formBonus = FormStats.Default;
+            hasFormBonus = false;
+            isDirty = true;
+
+            RecalculateIfDirty();
+        }
+
+        /// <summary>
+        /// 현재 적용된 폼 보너스 조회
+        /// </summary>
+        public FormStats CurrentFormBonus => formBonus;
+
+        /// <summary>
+        /// 폼 보너스 적용 여부
+        /// </summary>
+        public bool HasFormBonus => hasFormBonus;
 
 
         // ====== 디버그 ======

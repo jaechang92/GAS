@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using GASPT.Stats;
 
 namespace GASPT.Gameplay.Form
 {
@@ -53,6 +54,9 @@ namespace GASPT.Gameplay.Form
         // 현재 적용된 폼 보너스 (되돌리기용)
         private FormStats appliedBonusStats;
         private bool hasBonusApplied;
+
+        // PlayerStats 참조
+        private PlayerStats playerStats;
 
 
         // ====== 프로퍼티 ======
@@ -138,9 +142,11 @@ namespace GASPT.Gameplay.Form
             appliedBonusStats = form.CurrentStats;
             hasBonusApplied = true;
 
-            // TODO: PlayerStats와 연동
-            // PlayerStats에 AddExternalBonus 메서드가 필요
-            // 현재는 이벤트로 전달하여 외부에서 처리하도록 함
+            // PlayerStats에 폼 보너스 적용
+            if (playerStats != null)
+            {
+                playerStats.ApplyFormBonus(appliedBonusStats);
+            }
 
             Log($"폼 보너스 적용: {appliedBonusStats}");
         }
@@ -152,8 +158,11 @@ namespace GASPT.Gameplay.Form
         {
             if (!hasBonusApplied) return;
 
-            // TODO: PlayerStats에서 이전 보너스 제거
-            // PlayerStats.RemoveExternalBonus() 호출 필요
+            // PlayerStats에서 폼 보너스 제거
+            if (playerStats != null)
+            {
+                playerStats.RemoveFormBonus();
+            }
 
             hasBonusApplied = false;
             appliedBonusStats = default;
@@ -318,6 +327,9 @@ namespace GASPT.Gameplay.Form
 
             if (effectSpawnPoint == null)
                 effectSpawnPoint = transform;
+
+            if (playerStats == null)
+                playerStats = FindAnyObjectByType<PlayerStats>();
         }
 
         private void Awake()
