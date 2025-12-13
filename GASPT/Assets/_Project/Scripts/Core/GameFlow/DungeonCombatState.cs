@@ -33,10 +33,12 @@ namespace GASPT.Core.GameFlow
                 Debug.LogError("[DungeonCombatState] RoomManager를 찾을 수 없습니다!");
             }
 
-            // TODO: 전투 UI 표시
-            // - 적 수 표시
-            // - 웨이브 진행도
-            // - 현재 스테이지
+            // 전투 UI는 각 컴포넌트에서 자동으로 표시됨:
+            // - ResourceBarPresenter: HP/마나 (PlayerStats 이벤트 구독)
+            // - SkillUIPanel: 스킬 쿨다운 (SkillSystem 이벤트 구독)
+            // - DamageNumberPool: 데미지/회복 표시 (싱글톤)
+            // - BossHealthBar: 보스 체력 (자동 초기화)
+            // - BuffIcon: 버프/디버프 (StatusEffectManager 이벤트 구독)
 
             await Awaitable.NextFrameAsync(cancellationToken);
         }
