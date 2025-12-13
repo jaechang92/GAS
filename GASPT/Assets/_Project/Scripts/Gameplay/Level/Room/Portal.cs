@@ -533,7 +533,20 @@ namespace GASPT.Gameplay.Level
             // 분기 선택 이벤트 발생 (UI가 구독하여 처리)
             OnBranchSelectionRequired?.Invoke(connectedNodes);
 
-            // TODO: BranchSelectionUI와 연동 (Phase 4의 T041~T046에서 구현)
+            // Fallback: 이벤트 구독자가 없으면 직접 Presenter 찾아서 호출
+            if (OnBranchSelectionRequired == null)
+            {
+                var presenter = FindAnyObjectByType<GASPT.UI.MVP.BranchSelectionPresenter>();
+                if (presenter != null)
+                {
+                    presenter.ShowBranchSelection(connectedNodes, this);
+                    Debug.Log("[Portal] Fallback: BranchSelectionPresenter 직접 호출");
+                }
+                else
+                {
+                    Debug.LogWarning("[Portal] BranchSelectionPresenter를 찾을 수 없습니다!");
+                }
+            }
         }
 
         /// <summary>

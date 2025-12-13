@@ -55,6 +55,32 @@ namespace GASPT.UI.MVP
                 view.OnOptionSelected += HandleOptionSelected;
                 view.OnCancelled += HandleCancelled;
             }
+
+            // 초기 Portal 자동 구독
+            SubscribeToAllPortals();
+
+            // Room 변경 시 새 Portal 구독
+            if (RoomManager.Instance != null)
+            {
+                RoomManager.Instance.OnRoomChanged += OnRoomChanged;
+            }
+        }
+
+        /// <summary>
+        /// Room 변경 시 새 Portal들 구독
+        /// </summary>
+        private void OnRoomChanged(Room newRoom)
+        {
+            if (newRoom == null) return;
+
+            // 새 방의 포탈들 구독
+            var portals = newRoom.GetComponentsInChildren<Portal>();
+            foreach (var portal in portals)
+            {
+                SubscribeToPortal(portal);
+            }
+
+            Debug.Log($"[BranchSelectionPresenter] {newRoom.name}의 Portal {portals.Length}개 구독됨");
         }
 
         private void OnDestroy()
@@ -64,6 +90,12 @@ namespace GASPT.UI.MVP
             {
                 view.OnOptionSelected -= HandleOptionSelected;
                 view.OnCancelled -= HandleCancelled;
+            }
+
+            // RoomManager 이벤트 구독 해제
+            if (RoomManager.Instance != null)
+            {
+                RoomManager.Instance.OnRoomChanged -= OnRoomChanged;
             }
         }
 
