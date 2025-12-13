@@ -92,6 +92,21 @@ namespace GASPT.CameraSystem
         // ====== 상태 ======
         private bool isSearching = false;
         private bool isInitialized = false;
+        private bool isReady = false;  // 카메라 준비 완료 플래그
+
+        // ====== 이벤트 ======
+
+        /// <summary>
+        /// 카메라 준비 완료 이벤트 (Fade In 전에 안전하게 사용 가능)
+        /// </summary>
+        public event System.Action OnCameraReady;
+
+        // ====== 프로퍼티 ======
+
+        /// <summary>
+        /// 카메라가 완전히 준비되었는지 여부
+        /// </summary>
+        public bool IsReady => isReady;
 
 
         // ====== Unity 생명주기 ======
@@ -179,6 +194,9 @@ namespace GASPT.CameraSystem
         private void OnGameStateChanged(string fromState, string toState)
         {
             Debug.Log($"[CinemachinePlayerCamera] GameFlow 상태 변경: {fromState} → {toState}");
+
+            // 상태 변경 시 Ready 플래그 리셋
+            isReady = false;
 
             // StartRoom 또는 DungeonCombat 진입 시 카메라 타겟 탐색
             if (toState == "StartRoom" || toState == "DungeonCombat")
@@ -744,6 +762,9 @@ namespace GASPT.CameraSystem
         {
             Debug.Log("[CinemachinePlayerCamera] ===== 검증 및 재할당 시작 =====");
 
+            // 검증 시작 시 Ready 플래그 리셋
+            isReady = false;
+
             bool playerFound = false;
             bool boundsFound = false;
 
@@ -796,6 +817,11 @@ namespace GASPT.CameraSystem
                 await ResetCameraWithLookaheadDisabled(virtualCamera.Follow.position);
             }
 
+            // 5. 카메라 준비 완료
+            isReady = true;
+            OnCameraReady?.Invoke();
+            Debug.Log("[CinemachinePlayerCamera] 카메라 준비 완료!");
+
             bool success = playerFound; // Player는 필수, Bounds는 선택
             Debug.Log($"[CinemachinePlayerCamera] ===== 검증 완료 (Player: {playerFound}, Bounds: {boundsFound}) =====");
 
@@ -828,15 +854,18 @@ namespace GASPT.CameraSystem
             positionComposer.Lookahead = tempLookahead;
             positionComposer.Damping = Vector3.zero;
 
-            // 3. 한 프레임 대기 (Cinemachine이 새 설정 적용)
+            // 3. 2프레임 대기 (Cinemachine이 새 설정 적용)
+            await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
 
             // 4. 카메라 위치 강제 설정
             ForceCameraPosition(targetPosition);
 
-            // 5. 몇 프레임 대기 (카메라가 안정화)
-            await Awaitable.NextFrameAsync();
-            await Awaitable.NextFrameAsync();
+            // 5. 5프레임 대기 (카메라 완전 안정화 - Fade In 전에 완료 보장)
+            for (int i = 0; i < 5; i++)
+            {
+                await Awaitable.NextFrameAsync();
+            }
 
             // 6. Lookahead와 Damping 복원
             positionComposer.Lookahead = originalLookahead;

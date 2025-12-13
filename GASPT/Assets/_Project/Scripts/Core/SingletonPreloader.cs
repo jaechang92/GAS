@@ -461,8 +461,8 @@ namespace GASPT.Core
             if (instance != null)
             {
                 LogMessage("✓ GameManager 초기화 완료");
-                LogMessage($"  - 메타 골드: {instance.Meta?.TotalGold ?? 0}");
-                LogMessage($"  - 언락 Form: {instance.Meta?.UnlockedFormCount ?? 0}개");
+                LogMessage($"  - Bone: {instance.Meta?.Currency?.Bone ?? 0}");
+                LogMessage($"  - Soul: {instance.Meta?.Currency?.Soul ?? 0}");
             }
             else
             {

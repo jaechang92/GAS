@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 던전에서 드롭되는 폼 픽업 아이템

@@ -3,7 +3,7 @@ using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
 using GASPT.ResourceManagement;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 원거리 공격 적

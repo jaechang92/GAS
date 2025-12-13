@@ -1,5 +1,5 @@
 using UnityEngine;
-using Core.Enums;
+using GASPT.Core.Enums;
 using GASPT.StatusEffects;
 
 namespace GASPT.UI

@@ -3,7 +3,7 @@ using GASPT.Core.Pooling;
 using GASPT.ResourceManagement;
 using GASPT.Gameplay.Effects;
 using GASPT.Gameplay.Projectiles;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Core.Pooling
 {

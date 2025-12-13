@@ -1,7 +1,7 @@
 using UnityEngine;
 using GASPT.Stats;
 using GASPT.Level;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 using GASPT.Data;
 
 namespace GASPT.Tests

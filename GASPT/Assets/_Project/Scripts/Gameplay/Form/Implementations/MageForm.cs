@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 마법사 폼 구현

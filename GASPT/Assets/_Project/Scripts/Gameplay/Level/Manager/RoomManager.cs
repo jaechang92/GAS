@@ -94,6 +94,11 @@ namespace GASPT.Gameplay.Level
         public int CurrentRoomIndex => currentRoomIndex;
 
         /// <summary>
+        /// 클리어한 방 개수 (현재 방 인덱스 = 클리어한 방 수)
+        /// </summary>
+        public int CompletedRoomCount => Mathf.Max(0, currentRoomIndex);
+
+        /// <summary>
         /// 현재 던전 그래프
         /// </summary>
         public DungeonGraph DungeonGraph => dungeonGraph;

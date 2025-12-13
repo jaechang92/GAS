@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 모든 폼이 구현해야 할 인터페이스
@@ -26,16 +26,7 @@ namespace GASPT.Form
         IAbility GetAbility(int slotIndex);
     }
 
-    /// <summary>
-    /// 폼 타입 정의
-    /// </summary>
-    public enum FormType
-    {
-        Mage,      // 마법사 - 원거리 마법 공격
-        Warrior,   // 전사 - 근접 전투
-        Assassin,  // 암살자 - 빠른 공격
-        Tank       // 탱커 - 방어 중심
-    }
+    // FormType은 FormEnums.cs에 정의됨
 
     /// <summary>
     /// 어빌리티 인터페이스 (임시 - 나중에 GAS Core와 통합)

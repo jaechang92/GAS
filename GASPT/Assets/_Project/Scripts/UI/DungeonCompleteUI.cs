@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using GASPT.Core;
 
 namespace GASPT.UI
 {
@@ -129,8 +130,15 @@ namespace GASPT.UI
             // UI 숨김
             Hide();
 
-            // TODO: 다음 던전으로 이동 (현재는 씬 재시작)
-            RestartCurrentScene();
+            // GameFlowStateMachine을 통해 StartRoom으로 복귀 후 던전 재입장
+            if (GameFlowStateMachine.Instance != null)
+            {
+                GameFlowStateMachine.Instance.TriggerReturnToStart();
+            }
+            else
+            {
+                RestartCurrentScene();
+            }
         }
 
         /// <summary>
@@ -143,12 +151,19 @@ namespace GASPT.UI
             // UI 숨김
             Hide();
 
-            // TODO: 메인 메뉴로 이동
-            LoadMainMenu();
+            // GameFlowStateMachine을 통해 StartRoom으로 복귀
+            if (GameFlowStateMachine.Instance != null)
+            {
+                GameFlowStateMachine.Instance.TriggerReturnToStart();
+            }
+            else
+            {
+                LoadMainMenu();
+            }
         }
 
         /// <summary>
-        /// 현재 씬 재시작
+        /// 현재 씬 재시작 (폴백용)
         /// </summary>
         private void RestartCurrentScene()
         {
@@ -161,18 +176,14 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// 메인 메뉴로 이동
+        /// 메인 메뉴로 이동 (폴백용)
         /// </summary>
         private void LoadMainMenu()
         {
             // 시간 재개 (씬 로드 전)
             Time.timeScale = 1f;
 
-            // 메인 메뉴 씬 로드 (씬 이름 수정 필요)
-            // SceneManager.LoadScene("MainMenu");
-
-            // 임시: 현재 씬 재시작
-            Debug.LogWarning("[DungeonCompleteUI] 메인 메뉴 씬이 없으므로 현재 씬 재시작");
+            Debug.LogWarning("[DungeonCompleteUI] 폴백: 현재 씬 재시작");
             RestartCurrentScene();
         }
 

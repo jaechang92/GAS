@@ -5,7 +5,7 @@ using GASPT.Data;
 using GASPT.Inventory;
 using GASPT.Stats;
 using GASPT.Core;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.UI.MVP
 {

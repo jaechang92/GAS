@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼 교체 실행 시스템

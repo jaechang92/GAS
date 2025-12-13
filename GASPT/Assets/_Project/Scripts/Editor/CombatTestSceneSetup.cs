@@ -6,8 +6,9 @@ using GASPT.Testing;
 using GASPT.Stats;
 using GASPT.Data;
 using GASPT.Skills;
-using Core.Enums;
+using GASPT.Core.Enums;
 using System.IO;
+using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Editor
 {
@@ -273,7 +274,7 @@ namespace GASPT.Editor
             GameObject enemy = new GameObject("EnemyPrefab");
 
             // Enemy 컴포넌트 추가
-            enemy.AddComponent<GASPT.Gameplay.Enemy.Enemy>();
+            enemy.AddComponent<Enemy>();
 
             // 비주얼 (임시 Sphere)
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);

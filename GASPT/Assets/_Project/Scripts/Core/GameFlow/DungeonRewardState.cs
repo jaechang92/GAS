@@ -1,7 +1,9 @@
 using System.Threading;
+using System.Collections.Generic;
 using UnityEngine;
 using FSM.Core;
 using GASPT.Gameplay.Level;
+using GASPT.Gameplay.Reward;
 
 namespace GASPT.Core.GameFlow
 {
@@ -15,6 +17,8 @@ namespace GASPT.Core.GameFlow
     {
         public override string Name => "DungeonReward";
 
+        private List<GameObject> spawnedRewards = new List<GameObject>();
+
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
             Debug.Log("[DungeonRewardState] 보상 선택 단계");
@@ -26,17 +30,12 @@ namespace GASPT.Core.GameFlow
                 Room currentRoom = roomManager.CurrentRoom;
                 Debug.Log($"[DungeonRewardState] 클리어한 방: {currentRoom?.name ?? "Unknown"}");
 
-                // TODO: 보상 생성
-                // SpawnRewards(currentRoom);
-                Debug.Log("[DungeonRewardState] 보상 생성 (TODO)");
+                // 보상 생성
+                await SpawnRewardsAsync(currentRoom);
 
-                // TODO: 다음 방 포탈 활성화
-                // ActivateNextPortal(currentRoom);
-                Debug.Log("[DungeonRewardState] 다음 방 포탈 활성화 (TODO)");
+                // 다음 방 포탈 활성화
+                ActivateNextPortal(currentRoom);
             }
-
-            // TODO: 보상 UI 표시
-            // RewardUI.Show();
 
             await Awaitable.NextFrameAsync(cancellationToken);
         }
@@ -45,11 +44,8 @@ namespace GASPT.Core.GameFlow
         {
             Debug.Log("[DungeonRewardState] 보상 단계 종료");
 
-            // TODO: 보상 UI 숨기기
-            // RewardUI.Hide();
-
-            // TODO: 선택되지 않은 보상 제거
-            // ClearRemainingRewards();
+            // 선택되지 않은 보상 제거
+            ClearRemainingRewards();
 
             await Awaitable.NextFrameAsync(cancellationToken);
         }
@@ -62,20 +58,61 @@ namespace GASPT.Core.GameFlow
         }
 
         /// <summary>
-        /// 보상 생성 (TODO: RewardSpawner 구현 후 사용)
+        /// 보상 생성
         /// </summary>
-        private void SpawnRewards(Room room)
+        private async Awaitable SpawnRewardsAsync(Room room)
         {
-            // RewardSpawner.SpawnRewards(room.transform.position, rewardCount: 3);
+            if (room == null) return;
+
+            // RewardSpawner 사용
+            if (RewardSpawner.HasInstance)
+            {
+                int difficulty = room.Data?.difficulty ?? 1;
+                Vector3 spawnCenter = room.transform.position;
+
+                spawnedRewards = await RewardSpawner.Instance.SpawnRoomRewardsAsync(spawnCenter, difficulty);
+                Debug.Log($"[DungeonRewardState] 보상 {spawnedRewards.Count}개 생성 완료");
+            }
+            else
+            {
+                Debug.LogWarning("[DungeonRewardState] RewardSpawner가 없습니다.");
+            }
         }
 
         /// <summary>
-        /// 다음 방 포탈 활성화 (TODO: Portal 시스템 구현 후 사용)
+        /// 다음 방 포탈 활성화
         /// </summary>
         private void ActivateNextPortal(Room room)
         {
-            // RoomPortal portal = room.GetComponentInChildren<RoomPortal>();
-            // portal?.Activate();
+            if (room == null) return;
+
+            // Room 내의 Portal 찾기
+            Portal portal = room.GetComponentInChildren<Portal>(true);
+            if (portal != null)
+            {
+                portal.SetActive(true);
+                Debug.Log("[DungeonRewardState] 다음 방 포탈 활성화 완료");
+            }
+            else
+            {
+                Debug.LogWarning("[DungeonRewardState] Room에서 Portal을 찾을 수 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// 남은 보상 제거
+        /// </summary>
+        private void ClearRemainingRewards()
+        {
+            foreach (var reward in spawnedRewards)
+            {
+                if (reward != null)
+                {
+                    Object.Destroy(reward);
+                }
+            }
+            spawnedRewards.Clear();
+            Debug.Log("[DungeonRewardState] 남은 보상 제거 완료");
         }
     }
 }

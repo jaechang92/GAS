@@ -15,11 +15,7 @@ MonoBehaviour:
   dungeonName: TestDungeon
   recommendedLevel: 1
   description: TestDungeonConfig
-  generationType: 0
-  roomPrefabs:
-  - {fileID: 3192697144037807852, guid: 7adaa7899b6e37f4ea6023a23ddde9be, type: 3}
-  - {fileID: 545200462166501005, guid: 45dd8ec5f9ae31642b1615669a464a32, type: 3}
-  roomDataList: []
-  roomTemplatePrefab: {fileID: 0}
-  generationRules: {fileID: 0}
-  roomDataPool: []
+  generationRules: {fileID: 11400000, guid: 05a67206dc2bdef4595720178d58085a, type: 2}
+  roomDataPool:
+  - {fileID: 11400000, guid: 1e90edc4a8c15b344a4c01339efae392, type: 2}
+  roomTemplatePrefab: {fileID: 3192697144037807852, guid: 7adaa7899b6e37f4ea6023a23ddde9be, type: 3}

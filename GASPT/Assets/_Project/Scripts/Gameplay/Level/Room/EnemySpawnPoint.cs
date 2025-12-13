@@ -1,8 +1,8 @@
 using UnityEngine;
 using GASPT.Data;
 using GASPT.Core.Pooling;
-using GASPT.Gameplay.Enemy;
-using Core.Enums;
+using GASPT.Gameplay.Enemies;
+using GASPT.Core.Enums;
 
 namespace GASPT.Gameplay.Level
 {
@@ -93,7 +93,7 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private GameObject CreateEnemyFromData(EnemyData data)
         {
-            GASPT.Gameplay.Enemy.Enemy enemy;
+            Enemy enemy;
 
             // EnemyClass에 따라 적절한 Enemy 타입 스폰
             switch (data.enemyClass)

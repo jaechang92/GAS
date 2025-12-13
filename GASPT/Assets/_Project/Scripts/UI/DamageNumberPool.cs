@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GASPT.ResourceManagement;
+using GASPT.CameraSystem;
 
 namespace GASPT.UI
 {
@@ -91,13 +92,13 @@ namespace GASPT.UI
         }
 
         /// <summary>
-        /// Main Camera 지연 획득
+        /// Main Camera 지연 획득 (CameraManager 사용)
         /// </summary>
         private Camera GetMainCamera()
         {
             if (mainCamera == null)
             {
-                mainCamera = Camera.main;
+                mainCamera = CameraManager.Instance?.MainCamera;
             }
             return mainCamera;
         }

@@ -15,10 +15,7 @@ MonoBehaviour:
   dungeonName: "\uD14C\uC2A4\uD2B8 \uB358\uC804"
   recommendedLevel: 1
   description: "\uC808\uCC28\uC801 \uC0DD\uC131 \uD14C\uC2A4\uD2B8\uC6A9 \uB358\uC804\uC785\uB2C8\uB2E4."
-  generationType: 2
-  roomPrefabs: []
-  roomDataList: []
-  roomTemplatePrefab: {fileID: 0}
   generationRules: {fileID: 11400000, guid: 6dc8f5ac7fa17ed4db9caa5e86f093a2, type: 2}
   roomDataPool:
   - {fileID: 11400000, guid: 1e90edc4a8c15b344a4c01339efae392, type: 2}
+  roomTemplatePrefab: {fileID: 3192697144037807852, guid: 7adaa7899b6e37f4ea6023a23ddde9be, type: 3}

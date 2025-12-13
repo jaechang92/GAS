@@ -1,12 +1,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using GASPT.Core.Enums;
+using GASPT.Core;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 using GASPT.StatusEffects;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 빙결 - 신규 스킬
@@ -133,16 +135,17 @@ namespace GASPT.Form
         /// </summary>
         private void ApplySlow(GameObject target)
         {
-            // StatusEffectManager를 통한 슬로우 적용
-            if (StatusEffectManager.HasInstance)
+            // IStatusEffectTarget을 통한 슬로우 적용
+            var statusTarget = target.GetComponent<IStatusEffectTarget>();
+            if (statusTarget != null)
             {
-                // StatusEffectData 로드 필요 (TODO: ResourceManager 사용)
-                // 임시로 로그만 출력
+                // 슬로우 효과: 지속시간 2초, 50% 감속
+                statusTarget.ApplyStatusEffect(StatusEffectType.Slow, SlowDuration, SlowAmount * 100f);
                 Debug.Log($"[IceBlast] {target.name}에게 슬로우 적용 (지속시간: {SlowDuration}초, 감소량: {SlowAmount * 100}%)");
-
-                // TODO: 실제 슬로우 StatusEffect 적용
-                // StatusEffectData slowEffect = GameResourceManager.Instance.LoadScriptableObject<StatusEffectData>(...);
-                // StatusEffectManager.Instance.ApplyEffect(target, slowEffect);
+            }
+            else
+            {
+                Debug.Log($"[IceBlast] {target.name}에 IStatusEffectTarget 없음 - 슬로우 미적용");
             }
         }
     }

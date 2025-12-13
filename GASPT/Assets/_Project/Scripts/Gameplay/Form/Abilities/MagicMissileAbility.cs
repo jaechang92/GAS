@@ -4,7 +4,7 @@ using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 마법 미사일 - 마법사의 기본 공격

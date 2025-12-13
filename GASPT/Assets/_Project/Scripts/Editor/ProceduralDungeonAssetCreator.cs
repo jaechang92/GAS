@@ -8,7 +8,7 @@ using GASPT.Gameplay.Level;
 using GASPT.UI.Minimap;
 using GASPT.UI.MVP;
 
-namespace GASPT.EditorTools
+namespace GASPT.Editor
 {
     /// <summary>
     /// 절차적 던전 시스템 에셋 자동 생성 에디터 도구

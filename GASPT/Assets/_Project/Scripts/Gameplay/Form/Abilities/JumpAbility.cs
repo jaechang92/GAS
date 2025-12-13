@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 점프 어빌리티 - 모든 Form의 기본 동작

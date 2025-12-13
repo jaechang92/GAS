@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
+using GASPT.CameraSystem;
 
 namespace GASPT.UI
 {
@@ -40,11 +41,11 @@ namespace GASPT.UI
 
         private void Awake()
         {
-            mainCamera = Camera.main;
+            mainCamera = CameraManager.Instance?.MainCamera;
 
             if (mainCamera == null)
             {
-                Debug.LogWarning("[EnemyNameTag] Main Camera를 찾을 수 없습니다.");
+                Debug.LogWarning("[EnemyNameTag] Main Camera를 찾을 수 없습니다. (CameraManager 초기화 필요)");
             }
 
             ValidateReferences();

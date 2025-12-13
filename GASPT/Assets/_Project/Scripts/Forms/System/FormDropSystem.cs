@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Meta;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼 드롭 시스템

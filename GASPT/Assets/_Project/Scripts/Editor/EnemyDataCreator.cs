@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using GASPT.Data;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.Editor
 {

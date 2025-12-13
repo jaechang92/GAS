@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using GASPT.Forms;
+using GASPT.Gameplay.Form;
 
 namespace GASPT.UI.Forms
 {

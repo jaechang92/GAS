@@ -2,7 +2,7 @@ using GASPT.UI.Forms;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼 시스템 테스트용 UI 컨트롤러

@@ -39,8 +39,8 @@ namespace GASPT.Core.GameFlow
             var gameManager = GameManager.Instance;
             if (gameManager != null)
             {
-                Debug.Log($"[StartRoomState] 메타 골드: {gameManager.Meta?.TotalGold ?? 0}");
-                Debug.Log($"[StartRoomState] 언락 Form: {gameManager.Meta?.UnlockedFormCount ?? 0}개");
+                Debug.Log($"[StartRoomState] Bone: {gameManager.Meta?.Currency?.Bone ?? 0}");
+                Debug.Log($"[StartRoomState] Soul: {gameManager.Meta?.Currency?.Soul ?? 0}");
             }
 
             await Awaitable.NextFrameAsync(cancellationToken);

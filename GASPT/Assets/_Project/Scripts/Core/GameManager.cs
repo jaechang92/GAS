@@ -5,6 +5,7 @@ using GASPT.Economy;
 using GASPT.Save;
 using GASPT.Gameplay.Level;
 using GASPT.Inventory;
+using GASPT.Meta;
 using Random = UnityEngine.Random;
 
 namespace GASPT.Core
@@ -49,9 +50,9 @@ namespace GASPT.Core
         public SaveSystem Save => SaveSystem.Instance;
 
         /// <summary>
-        /// 메타 진행도 관리 (GameManager 하위 컴포넌트)
+        /// 메타 진행도 관리 (싱글톤 참조)
         /// </summary>
-        public MetaProgressionManager Meta { get; private set; }
+        public MetaProgressionManager Meta => MetaProgressionManager.Instance;
 
         /// <summary>
         /// 게임 Flow FSM (싱글톤 참조)
@@ -109,14 +110,8 @@ namespace GASPT.Core
 
         protected override void OnAwake()
         {
-            // MetaProgressionManager 컴포넌트 추가
-            Meta = gameObject.AddComponent<MetaProgressionManager>();
-
-            // 메타 데이터 로드
-            Meta.Load();
-
+            // MetaProgressionManager는 싱글톤으로 자동 초기화됨
             Debug.Log("[GameManager] 초기화 완료");
-            Debug.Log($"[GameManager] 메타 골드: {Meta.TotalGold}, 언락 Form: {Meta.UnlockedFormCount}개");
         }
 
         private void Start()
@@ -165,34 +160,20 @@ namespace GASPT.Core
         // ====== 던전 클리어 처리 ======
 
         /// <summary>
-        /// 던전 클리어 시 메타 골드 저장
+        /// 던전 클리어 시 메타 재화 확정
         /// RoomManager.OnDungeonComplete에서 호출됨
         /// </summary>
         public void OnDungeonCleared()
         {
-            int runGold = CurrentGold;
-
-            // 메타 골드로 이전
-            if (Meta != null && runGold > 0)
+            if (Meta != null)
             {
-                Meta.AddGold(runGold);
-                Debug.Log($"[GameManager] 던전 클리어! 런 골드 {runGold} → 메타 골드 저장 완료");
+                // 임시 재화(Bone)를 영구 재화로 확정
+                Meta.EndRun(cleared: true, stageReached: CurrentStage);
+                Debug.Log("[GameManager] 던전 클리어! 메타 재화 확정 완료");
             }
             else
             {
-                Debug.LogWarning("[GameManager] 메타 골드 저장 실패");
-            }
-        }
-
-        /// <summary>
-        /// Form 언락 (보스 처치 등)
-        /// </summary>
-        /// <param name="formId">언락할 Form ID</param>
-        public void UnlockForm(string formId)
-        {
-            if (Meta != null)
-            {
-                Meta.UnlockForm(formId);
+                Debug.LogWarning("[GameManager] MetaProgressionManager를 찾을 수 없습니다.");
             }
         }
 
@@ -262,29 +243,25 @@ namespace GASPT.Core
             Debug.Log($"Current Stage: {CurrentStage}");
             Debug.Log($"Current Gold: {CurrentGold}");
             Debug.Log($"Player HP: {PlayerStats?.CurrentHP}/{PlayerStats?.MaxHP}");
-            Debug.Log($"Meta Gold: {Meta?.TotalGold}");
-            Debug.Log($"Unlocked Forms: {Meta?.UnlockedFormCount}");
+            Debug.Log($"Meta Bone: {Meta?.Currency?.Bone ?? 0}");
+            Debug.Log($"Meta Soul: {Meta?.Currency?.Soul ?? 0}");
             Debug.Log($"GameFlow State: {GameFlow?.CurrentStateId ?? "None"}");
             Debug.Log($"GameFlow Running: {GameFlow?.IsRunning ?? false}");
             Debug.Log("================================");
         }
 
-        [ContextMenu("테스트: 메타 골드 1000 추가")]
-        private void TestAddMetaGold()
+        [ContextMenu("테스트: Bone 1000 추가")]
+        private void TestAddBone()
         {
-            if (Meta != null)
-            {
-                Meta.AddGold(1000);
-            }
+            Meta?.Currency?.DebugAddBone(1000);
+            Meta?.SaveProgress();
         }
 
-        [ContextMenu("테스트: Form 언락 (TestForm)")]
-        private void TestUnlockForm()
+        [ContextMenu("테스트: Soul 100 추가")]
+        private void TestAddSoul()
         {
-            if (Meta != null)
-            {
-                Meta.UnlockForm("TestForm_" + Random.Range(1, 100));
-            }
+            Meta?.Currency?.DebugAddSoul(100);
+            Meta?.SaveProgress();
         }
 
         [ContextMenu("테스트: 게임 일시정지")]

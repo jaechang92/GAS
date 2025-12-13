@@ -1,0 +1,81 @@
+namespace GASPT.Core
+{
+    /// <summary>
+    /// 대미지를 받을 수 있는 객체 인터페이스
+    /// 적, 플레이어, 파괴 가능한 오브젝트 등에서 구현
+    /// </summary>
+    public interface IDamageable
+    {
+        /// <summary>
+        /// 현재 체력
+        /// </summary>
+        float CurrentHealth { get; }
+
+        /// <summary>
+        /// 최대 체력
+        /// </summary>
+        float MaxHealth { get; }
+
+        /// <summary>
+        /// 생존 여부
+        /// </summary>
+        bool IsAlive { get; }
+
+        /// <summary>
+        /// 대미지 적용
+        /// </summary>
+        /// <param name="damage">대미지 양</param>
+        /// <param name="damageType">대미지 타입</param>
+        void TakeDamage(float damage, DamageType damageType = DamageType.Normal);
+
+        /// <summary>
+        /// 회복
+        /// </summary>
+        /// <param name="amount">회복량</param>
+        void Heal(float amount);
+
+        /// <summary>
+        /// 무적 상태 설정
+        /// </summary>
+        /// <param name="invincible">무적 여부</param>
+        void SetInvincible(bool invincible);
+
+        /// <summary>
+        /// 무적 상태 여부
+        /// </summary>
+        bool IsInvincible { get; }
+    }
+
+    /// <summary>
+    /// 대미지 타입
+    /// </summary>
+    public enum DamageType
+    {
+        /// <summary>일반 대미지</summary>
+        Normal,
+
+        /// <summary>물리 대미지</summary>
+        Physical,
+
+        /// <summary>마법 대미지</summary>
+        Magical,
+
+        /// <summary>화염 대미지</summary>
+        Fire,
+
+        /// <summary>얼음 대미지</summary>
+        Ice,
+
+        /// <summary>번개 대미지</summary>
+        Lightning,
+
+        /// <summary>독 대미지</summary>
+        Poison,
+
+        /// <summary>출혈 대미지</summary>
+        Bleed,
+
+        /// <summary>순수 대미지 (방어 무시)</summary>
+        True
+    }
+}

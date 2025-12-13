@@ -181,8 +181,8 @@ namespace GASPT.CameraSystem
         /// </summary>
         public void ShakeAtPosition(Vector2 position, float intensity = 1f, float maxDistance = 20f)
         {
-            // 카메라 위치에서 거리 계산
-            Camera cam = Camera.main;
+            // CameraManager에서 카메라 가져오기
+            Camera cam = CameraManager.Instance?.MainCamera;
             if (cam == null) return;
 
             float distance = Vector2.Distance(position, cam.transform.position);

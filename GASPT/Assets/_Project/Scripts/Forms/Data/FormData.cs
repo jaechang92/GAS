@@ -2,7 +2,7 @@ using UnityEngine;
 using GASPT.Skills;
 using System;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     [Serializable]
     public struct AwakeningEffect
@@ -127,6 +127,24 @@ namespace GASPT.Forms
             int rarityValue = (int)baseRarity + awakeningLevel;
             return (FormRarity)Mathf.Clamp(rarityValue, 0, (int)FormRarity.Legendary);
         }
+
+        // ===== 편의성 프로퍼티 (기본 스탯 - 각성 레벨 0 기준) =====
+
+        /// <summary>
+        /// 기본 최대 체력 (Base 100 + Bonus)
+        /// </summary>
+        public float BaseMaxHealth => 100f + GetStatsAtAwakening(0).maxHealthBonus;
+
+        /// <summary>
+        /// 기본 이동 속도 (Base 5 * Multiplier)
+        /// </summary>
+        public float BaseMoveSpeed => 5f * GetStatsAtAwakening(0).moveSpeed;
+
+        /// <summary>
+        /// 기본 점프력 (Base 10 * Multiplier)
+        /// </summary>
+        public float BaseJumpPower => 10f * GetStatsAtAwakening(0).jumpPower;
+
 
         /// <summary>
         /// 유효성 검증

@@ -5,7 +5,7 @@ using TMPro;
 using GASPT.UI.MVP;
 using System.IO;
 
-namespace GASPT.EditorTools
+namespace GASPT.Editor
 {
     /// <summary>
     /// ShopView 자동 생성 에디터 도구

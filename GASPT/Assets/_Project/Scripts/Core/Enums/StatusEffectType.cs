@@ -1,4 +1,4 @@
-namespace Core.Enums
+namespace GASPT.Core.Enums
 {
     /// <summary>
     /// 상태 이상 효과 타입

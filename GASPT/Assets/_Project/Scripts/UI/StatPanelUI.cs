@@ -1,6 +1,6 @@
 using UnityEngine;
 using TMPro;
-using Core.Enums;
+using GASPT.Core.Enums;
 using GASPT.Stats;
 using GASPT.StatusEffects;
 

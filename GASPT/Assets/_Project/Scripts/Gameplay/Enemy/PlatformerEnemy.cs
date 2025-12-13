@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 플랫포머용 적 베이스 클래스

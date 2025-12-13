@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 using GASPT.StatusEffects;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.UI
 {

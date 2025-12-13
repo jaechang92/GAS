@@ -1,4 +1,4 @@
-namespace Core.Enums
+namespace GASPT.Core.Enums
 {
     /// <summary>
     /// 적 타입 분류

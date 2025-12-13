@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 using GASPT.Testing;
 using GASPT.Gameplay.Level;
 using GASPT.UI.Minimap;
-using GASPT.EditorTools;
 using TMPro;
 
 namespace GASPT.Editor

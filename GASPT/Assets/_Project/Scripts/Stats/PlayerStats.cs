@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Core.Enums;
+using GASPT.Core.Enums;
 using GASPT.Data;
 using GASPT.Combat;
 using GASPT.Save;
@@ -10,7 +10,7 @@ using GASPT.StatusEffects;
 using GASPT.Core;
 using GASPT.DTOs;
 using UnityEngine;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Stats
 {
@@ -584,6 +584,12 @@ namespace GASPT.Stats
 
             // 이벤트 발생
             OnDeath?.Invoke();
+
+            // GameFlow 상태 전환 (GameOver로)
+            if (GameFlowStateMachine.HasInstance)
+            {
+                GameFlowStateMachine.Instance.TriggerPlayerDied();
+            }
         }
 
         /// <summary>

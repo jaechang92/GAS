@@ -1,5 +1,5 @@
 using System;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.UI
 {

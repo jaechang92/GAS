@@ -2,11 +2,11 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using GASPT.Data;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 using GASPT.Gameplay.Projectiles;
 using GASPT.UI;
 using GASPT.Core.Pooling;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.Editor
 {

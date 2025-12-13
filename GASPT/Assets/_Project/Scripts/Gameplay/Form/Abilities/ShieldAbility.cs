@@ -5,7 +5,7 @@ using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
 using GASPT.StatusEffects;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 보호막 - 신규 스킬

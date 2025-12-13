@@ -4,11 +4,11 @@ using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using GASPT.Data;
 using GASPT.Gameplay.Level;
-using GASPT.Form;
+using GASPT.Gameplay.Form;
 using GASPT.Gameplay.Player;
 using GASPT.Gameplay.Camera;
 using GASPT.Stats;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.Editor
 {

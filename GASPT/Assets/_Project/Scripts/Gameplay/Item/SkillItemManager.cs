@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Data;
-using GASPT.Form;
+using GASPT.Gameplay.Form;
 using GASPT.Loot;
 
 namespace GASPT.Gameplay.Item

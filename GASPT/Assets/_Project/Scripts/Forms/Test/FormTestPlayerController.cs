@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼 시스템 테스트용 간단한 플레이어 컨트롤러

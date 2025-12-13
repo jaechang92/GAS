@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GASPT.Data;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.UI.MVP
 {

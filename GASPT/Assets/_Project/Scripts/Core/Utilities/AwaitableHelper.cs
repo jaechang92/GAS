@@ -1,32 +1,32 @@
-// ÆÄÀÏ À§Ä¡: Assets/Scripts/Helper/AwaitableHelper.cs
+// íŒŒì¼ ìœ„ì¹˜: Assets/_Project/Scripts/Core/Utilities/AwaitableHelper.cs
 using UnityEngine;
 using System;
 using System.Threading;
 
-namespace Helper
+namespace GASPT.Core.Utilities
 {
     /// <summary>
-    /// Unity 6.0 Awaitable À¯Æ¿¸®Æ¼ ÇïÆÛ
-    /// Coroutine ´ë½Å Awaitable »ç¿ëÀ» À§ÇÑ µµ¿ì¹Ì Å¬·¡½º
+    /// Unity 6.0 Awaitable ìœ í‹¸ë¦¬í‹° ëª¨ìŒ
+    /// Coroutine ëŒ€ì‹  Awaitable ì‚¬ìš©ì„ ìœ„í•œ í—¬í¼ í´ë˜ìŠ¤
     /// </summary>
     public static class AwaitableHelper
     {
-        // Áï½Ã ¿Ï·áµÈ AwaitableÀ» À§ÇÑ Á¤Àû ¸â¹ö
+        // ì´ë¯¸ ì™„ë£Œëœ Awaitableì„ ìœ„í•œ ì •ì  ìºì‹œ
         private static readonly AwaitableCompletionSource completedSource = new();
 
         static AwaitableHelper()
         {
-            // Á¤Àû »ı¼ºÀÚ¿¡¼­ Áï½Ã ¿Ï·á »óÅÂ·Î ¼³Á¤
+            // ì •ì  ìƒì„±ìì—ì„œ ì´ë¯¸ ì™„ë£Œ ìƒíƒœë¡œ ì„¤ì •
             completedSource.SetResult();
         }
 
         /// <summary>
-        /// ÀÌ¹Ì ¿Ï·áµÈ Awaitable ¹İÈ¯ (Task.CompletedTask¿Í À¯»ç)
+        /// ì´ë¯¸ ì™„ë£Œëœ Awaitable ë°˜í™˜ (Task.CompletedTaskì™€ ìœ ì‚¬)
         /// </summary>
         public static Awaitable CompletedTask => completedSource.Awaitable;
 
         /// <summary>
-        /// Á¶°ÇÀÌ true°¡ µÉ ¶§±îÁö ´ë±â
+        /// ì¡°ê±´ì´ trueê°€ ë  ë•Œê¹Œì§€ ëŒ€ê¸°
         /// </summary>
         public static async Awaitable WaitUntil(Func<bool> condition, CancellationToken cancellationToken = default)
         {
@@ -42,7 +42,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// Á¶°ÇÀÌ false°¡ µÉ ¶§±îÁö ´ë±â
+        /// ì¡°ê±´ì´ falseê°€ ë  ë•Œê¹Œì§€ ëŒ€ê¸°
         /// </summary>
         public static async Awaitable WaitWhile(Func<bool> condition, CancellationToken cancellationToken = default)
         {
@@ -58,7 +58,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// ÁöÁ¤µÈ ÇÁ·¹ÀÓ ¼ö¸¸Å­ ´ë±â
+        /// ì§€ì •ëœ í”„ë ˆì„ ìˆ˜ë§Œí¼ ëŒ€ê¸°
         /// </summary>
         public static async Awaitable WaitForFrames(int frameCount, CancellationToken cancellationToken = default)
         {
@@ -74,7 +74,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// ¾Ö´Ï¸ŞÀÌ¼Ç Ä¿ºê ±â¹İ °ª º¸°£
+        /// ì• ë‹ˆë©”ì´ì…˜ ì»¤ë¸Œë¥¼ ì‚¬ìš©í•œ ë³´ê°„
         /// </summary>
         public static async Awaitable LerpWithCurve(
             Action<float> onUpdate,
@@ -99,12 +99,12 @@ namespace Helper
                 await Awaitable.NextFrameAsync(cancellationToken);
             }
 
-            // ¸¶Áö¸· °ª Àû¿ë
+            // ë§ˆì§€ë§‰ ê°’ ë³´ì¥
             onUpdate?.Invoke(curve.Evaluate(1f));
         }
 
         /// <summary>
-        /// ¼±Çü º¸°£ ¾Ö´Ï¸ŞÀÌ¼Ç
+        /// ì‹¤ìˆ˜ ê°’ ë³´ê°„ ì• ë‹ˆë©”ì´ì…˜
         /// </summary>
         public static async Awaitable Lerp(
             float from,
@@ -130,12 +130,12 @@ namespace Helper
                 await Awaitable.NextFrameAsync(cancellationToken);
             }
 
-            // ¸¶Áö¸· °ª Àû¿ë
+            // ë§ˆì§€ë§‰ ê°’ ë³´ì¥
             onUpdate?.Invoke(to);
         }
 
         /// <summary>
-        /// Vector3 ¼±Çü º¸°£
+        /// Vector3 ê°’ ë³´ê°„
         /// </summary>
         public static async Awaitable LerpVector3(
             Vector3 from,
@@ -161,12 +161,12 @@ namespace Helper
                 await Awaitable.NextFrameAsync(cancellationToken);
             }
 
-            // ¸¶Áö¸· °ª Àû¿ë
+            // ë§ˆì§€ë§‰ ê°’ ë³´ì¥
             onUpdate?.Invoke(to);
         }
 
         /// <summary>
-        /// Å¸ÀÓ¾Æ¿ô ±â´ÉÀÌ ÀÖ´Â ´ë±â
+        /// íƒ€ì„ì•„ì›ƒ ê¸°ëŠ¥ì´ ìˆëŠ” ëŒ€ê¸°
         /// </summary>
         public static async Awaitable WaitWithTimeout(
             Func<bool> condition,
@@ -195,7 +195,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// ¿©·¯ AwaitableÀ» º´·Ä·Î ½ÇÇà
+        /// ì—¬ëŸ¬ Awaitableì„ ë³‘ë ¬ë¡œ ì‹¤í–‰
         /// </summary>
         public static async Awaitable WhenAll(params Awaitable[] awaitables)
         {
@@ -206,11 +206,11 @@ namespace Helper
         }
 
         /// <summary>
-        /// Ã¹ ¹øÂ°·Î ¿Ï·áµÇ´Â AwaitableÀ» ±â´Ù¸²
+        /// ì²« ë²ˆì§¸ë¡œ ì™„ë£Œë˜ëŠ” Awaitableì„ ê¸°ë‹¤ë¦¼
         /// </summary>
         public static async Awaitable WhenAny(params Awaitable[] awaitables)
         {
-            // °£´ÜÇÑ ±¸Çö (½ÇÁ¦·Î´Â ´õ º¹ÀâÇÑ ·ÎÁ÷ ÇÊ¿ä)
+            // ë‹¨ìˆœí™”ëœ êµ¬í˜„ (ì‹¤ì œë¡œëŠ” ë” ë³µì¡í•œ ë¡œì§ í•„ìš”)
             if (awaitables.Length > 0)
             {
                 await awaitables[0];
@@ -218,7 +218,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// Áö¿¬ ÈÄ ¾×¼Ç ½ÇÇà
+        /// ì§€ì—° í›„ ì•¡ì…˜ ì‹¤í–‰
         /// </summary>
         public static async Awaitable DelayedAction(
             float delay,
@@ -230,7 +230,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// ¹İº¹ ½ÇÇà
+        /// ë°˜ë³µ ì‹¤í–‰
         /// </summary>
         public static async Awaitable RepeatAction(
             Action action,
@@ -251,7 +251,7 @@ namespace Helper
         }
 
         /// <summary>
-        /// ¹«ÇÑ ¹İº¹ ½ÇÇà
+        /// ë¬´í•œ ë°˜ë³µ ì‹¤í–‰
         /// </summary>
         public static async Awaitable RepeatActionForever(
             Action action,

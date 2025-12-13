@@ -3,11 +3,11 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using GASPT.Skills;
 using GASPT.Stats;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 using GASPT.Testing;
 using GASPT.Core;
 using GASPT.Data;
-using Core.Enums;
+using GASPT.Core.Enums;
 
 namespace GASPT.Editor
 {

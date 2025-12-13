@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 기본 근접 공격 적

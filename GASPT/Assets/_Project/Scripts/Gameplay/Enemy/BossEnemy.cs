@@ -3,7 +3,7 @@ using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
 using GASPT.UI;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 보스 적

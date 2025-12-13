@@ -1,4 +1,4 @@
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 어빌리티 타입 Enum
@@ -8,21 +8,27 @@ namespace GASPT.Form
     {
         None,              // 없음 (빈 슬롯)
 
-        // 기본 공격
+        // ===== 마법사 스킬 =====
         MagicMissile,      // 마법 미사일 (기본 공격)
-
-        // 원거리 공격
         Fireball,          // 화염구 (폭발 AOE)
         IceBlast,          // 빙결 (범위 공격 + 슬로우)
         LightningBolt,     // 번개 (관통 공격)
-
-        // 유틸리티
         Teleport,          // 순간이동
         Shield,            // 보호막 (무적)
 
-        // 미래 확장용
-        ShadowStrike,      // 암살자용 스킬
-        Charge,            // 전사용 돌진
+        // ===== 전사 스킬 =====
+        SwordSlash,        // 검 베기 (기본 공격)
+        Charge,            // 돌진 (전방 돌진 + 대미지)
+        ShieldBash,        // 방패 강타 (스턴)
+        WarCry,            // 함성 (공격력 버프)
+
+        // ===== 암살자 스킬 =====
+        DaggerStrike,      // 단검 공격 (기본 공격)
+        ShadowStrike,      // 그림자 일격 (순간이동 + 공격)
+        Backstab,          // 백스탭 (후방 크리티컬)
+        SmokeScreen,       // 연막 (짧은 무적)
+
+        // ===== 공용 스킬 =====
         Heal               // 회복 스킬
     }
 

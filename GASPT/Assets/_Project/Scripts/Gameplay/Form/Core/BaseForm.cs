@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 모든 폼의 기본 구현을 제공하는 추상 클래스
@@ -22,9 +22,9 @@ namespace GASPT.Form
         public abstract string FormName { get; }
         public abstract FormType FormType { get; }
 
-        public virtual float MaxHealth => formData != null ? formData.maxHealth : 100f;
-        public virtual float MoveSpeed => formData != null ? formData.moveSpeed : 5f;
-        public virtual float JumpPower => formData != null ? formData.jumpPower : 10f;
+        public virtual float MaxHealth => formData != null ? formData.BaseMaxHealth : 100f;
+        public virtual float MoveSpeed => formData != null ? formData.BaseMoveSpeed : 5f;
+        public virtual float JumpPower => formData != null ? formData.BaseJumpPower : 10f;
 
         /// <summary>
         /// 폼 활성화 (폼 전환 시 호출)

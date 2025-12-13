@@ -4,7 +4,7 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Stats;
 using GASPT.Save;
-using Core.Enums;
+using GASPT.Core.Enums;
 using GASPT.Core;
 
 namespace GASPT.Inventory

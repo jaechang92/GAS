@@ -36,10 +36,10 @@ namespace GASPT.CameraSystem
         /// </summary>
         public void SetupBrain()
         {
-            // Main Camera 찾기
+            // Main Camera 찾기 (CameraManager 우선, 없으면 Camera.main fallback)
             if (mainCamera == null)
             {
-                mainCamera = Camera.main;
+                mainCamera = CameraManager.Instance?.MainCamera ?? Camera.main;
             }
 
             if (mainCamera == null)

@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using GASPT.Forms;
+using GASPT.Gameplay.Form;
 
 namespace GASPT.Editor
 {

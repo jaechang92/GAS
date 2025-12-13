@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼의 스탯 데이터

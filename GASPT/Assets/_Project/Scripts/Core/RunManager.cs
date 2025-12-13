@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using GASPT.DTOs;
 using GASPT.Stats;
+using GASPT.Meta;
 
 namespace GASPT.Core
 {
@@ -118,15 +119,13 @@ namespace GASPT.Core
 
             Debug.Log($"[RunManager] 런 종료! 승리: {victory}, 최종 골드: {runData?.gold ?? 0}");
 
-            // 승리 시 메타 진행도에 골드 전환
-            if (victory && runData != null)
+            // 메타 진행도에 런 결과 전달
+            var meta = MetaProgressionManager.Instance;
+            if (meta != null)
             {
-                var meta = MetaProgressionManager.Instance;
-                if (meta != null)
-                {
-                    meta.AddGold(runData.gold);
-                    Debug.Log($"[RunManager] 런 골드 {runData.gold} → 메타 골드로 전환");
-                }
+                int stageReached = GameManager.Instance?.CurrentStage ?? 0;
+                meta.EndRun(victory, stageReached);
+                Debug.Log($"[RunManager] 메타 진행도 런 종료 처리 완료 (승리: {victory})");
             }
 
             OnRunEnded?.Invoke(victory);

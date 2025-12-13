@@ -1,6 +1,8 @@
 using System.Threading;
 using UnityEngine;
 using FSM.Core;
+using GASPT.UI;
+using GASPT.Gameplay.Level;
 
 namespace GASPT.Core.GameFlow
 {
@@ -25,34 +27,38 @@ namespace GASPT.Core.GameFlow
                 gameManager.Pause();
             }
 
-            // TODO: 게임 오버 UI 표시
-            // GameOverUI.Show();
+            // 통계 수집
+            int goldEarned = gameManager?.CurrentGold ?? 0;
+            int roomsCount = RoomManager.Instance?.TotalRoomCount ?? 0;
 
-            // TODO: 통계 표시
-            // - 도달한 스테이지
-            // - 획득한 골드 (메타 골드로 전환되지 않음)
-            // - 처치한 적 수
-            // - 플레이 시간
-
-            // 런 골드 손실 (게임 오버 시에는 메타 골드 저장 안 함)
-            if (gameManager != null)
+            // 게임 오버 UI 표시
+            if (GameOverUI.HasInstance)
             {
-                int lostGold = gameManager.CurrentGold;
-                Debug.Log($"[GameOverState] 손실한 골드: {lostGold}");
+                GameOverUI.Instance.ShowGameOver(goldEarned, roomsCount);
+                Debug.Log("[GameOverState] GameOverUI 표시 완료");
+
+                // UI에서 버튼 클릭 시 자동으로 TriggerRestartGame() 호출됨
+                // 무한 대기 (UI에서 처리)
+                while (GameOverUI.Instance.IsVisible && !cancellationToken.IsCancellationRequested)
+                {
+                    await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
+                }
             }
-
-            // 사용자 입력 대기 (재시작 또는 준비실 복귀)
-            // TODO: UI 버튼 클릭 시 처리
-            // - "재시작" 버튼 → TriggerRestartGame()
-            // - "준비실 복귀" 버튼 → TriggerReturnToStart()
-
-            // 임시: 3초 후 자동 준비실 복귀
-            await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
-
-            var gameFlowFSM = GameFlowStateMachine.Instance;
-            if (gameFlowFSM != null)
+            else
             {
-                gameFlowFSM.TriggerReturnToStart();
+                Debug.LogWarning("[GameOverState] GameOverUI가 없습니다. 3초 후 자동 복귀");
+
+                // 런 골드 손실 로그
+                Debug.Log($"[GameOverState] 손실한 골드: {goldEarned}");
+
+                // 폴백: 3초 후 자동 준비실 복귀
+                await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
+
+                var gameFlowFSM = GameFlowStateMachine.Instance;
+                if (gameFlowFSM != null)
+                {
+                    gameFlowFSM.TriggerRestartGame();
+                }
             }
         }
 
@@ -67,8 +73,11 @@ namespace GASPT.Core.GameFlow
                 gameManager.Resume();
             }
 
-            // TODO: 게임 오버 UI 숨기기
-            // GameOverUI.Hide();
+            // 게임 오버 UI 숨기기
+            if (GameOverUI.HasInstance && GameOverUI.Instance.IsVisible)
+            {
+                GameOverUI.Instance.Hide();
+            }
 
             // 던전 데이터 정리
             CleanupDungeonData();

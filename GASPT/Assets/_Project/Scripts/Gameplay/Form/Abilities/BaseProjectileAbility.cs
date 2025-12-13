@@ -1,6 +1,7 @@
 using UnityEngine;
+using GASPT.CameraSystem;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 투사체 기반 Ability의 기본 클래스
@@ -16,7 +17,10 @@ namespace GASPT.Form
         /// <returns>마우스의 월드 좌표 (z = 0)</returns>
         protected Vector3 GetMousePosition()
         {
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            var mainCamera = CameraManager.Instance?.MainCamera;
+            if (mainCamera == null) return Vector3.zero;
+
+            Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
             mousePos.z = 0;
             return mousePos;
         }

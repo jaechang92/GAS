@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼 각성 이펙트 및 사운드 재생 시스템

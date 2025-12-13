@@ -4,7 +4,7 @@ using GASPT.Data;
 using GASPT.Loot;
 using System.IO;
 
-namespace GASPT.EditorTools
+namespace GASPT.Editor
 {
     /// <summary>
     /// LootTable 자동 생성 에디터 도구

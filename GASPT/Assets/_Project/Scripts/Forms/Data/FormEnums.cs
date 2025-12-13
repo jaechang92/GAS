@@ -1,4 +1,4 @@
-namespace GASPT.Forms
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼의 속성 타입
@@ -6,7 +6,7 @@ namespace GASPT.Forms
     /// </summary>
     public enum FormType
     {
-        /// <summary>기본 마법사 - 밸런스형</summary>
+        /// <summary>기본 - 밸런스형</summary>
         Basic = 0,
 
         /// <summary>화염 마법사 - 범위 공격, 높은 데미지</summary>
@@ -19,7 +19,19 @@ namespace GASPT.Forms
         Thunder = 3,
 
         /// <summary>암흑 마법사 - 흡혈, 고위험 고보상</summary>
-        Dark = 4
+        Dark = 4,
+
+        /// <summary>마법사 - 원거리 마법 공격</summary>
+        Mage = 5,
+
+        /// <summary>전사 - 근접 전투</summary>
+        Warrior = 6,
+
+        /// <summary>암살자 - 빠른 공격, 회피</summary>
+        Assassin = 7,
+
+        /// <summary>탱커 - 방어 중심</summary>
+        Tank = 8
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Core.Enums;
+using GASPT.Core.Enums;
 using GASPT.StatusEffects;
 using System.Threading;
 

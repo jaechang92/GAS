@@ -8,9 +8,9 @@ using GASPT.UI;
 using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
 using GASPT.Meta;
-using Core.Enums;
+using GASPT.Core.Enums;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 적 MonoBehaviour (추상 클래스)
@@ -468,19 +468,19 @@ namespace GASPT.Gameplay.Enemy
             if (PoolManager.Instance != null)
             {
                 // Enemy 타입에 맞게 Despawn
-                if (this is GASPT.Gameplay.Enemy.BasicMeleeEnemy basicMelee)
+                if (this is BasicMeleeEnemy basicMelee)
                 {
                     PoolManager.Instance.Despawn(basicMelee);
                 }
-                else if (this is GASPT.Gameplay.Enemy.RangedEnemy rangedEnemy)
+                else if (this is RangedEnemy rangedEnemy)
                 {
                     PoolManager.Instance.Despawn(rangedEnemy);
                 }
-                else if (this is GASPT.Gameplay.Enemy.FlyingEnemy flyingEnemy)
+                else if (this is FlyingEnemy flyingEnemy)
                 {
                     PoolManager.Instance.Despawn(flyingEnemy);
                 }
-                else if (this is GASPT.Gameplay.Enemy.EliteEnemy eliteEnemy)
+                else if (this is EliteEnemy eliteEnemy)
                 {
                     PoolManager.Instance.Despawn(eliteEnemy);
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using Core;
+using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Gameplay.Level
 {
@@ -249,7 +250,7 @@ namespace GASPT.Gameplay.Level
             aliveEnemyCount++;
 
             // Enemy 컴포넌트의 OnDeath 이벤트 구독
-            var enemy = enemyObj.GetComponent<GASPT.Gameplay.Enemy.Enemy>();
+            var enemy = enemyObj.GetComponent<Enemy>();
             if (enemy != null)
             {
                 enemy.OnDeath += OnEnemyDeath;
@@ -259,7 +260,7 @@ namespace GASPT.Gameplay.Level
         /// <summary>
         /// 적 사망 시 호출
         /// </summary>
-        private void OnEnemyDeath(GASPT.Gameplay.Enemy.Enemy enemy)
+        private void OnEnemyDeath(Enemy enemy)
         {
             aliveEnemyCount--;
             OnEnemyCountChanged?.Invoke(this, aliveEnemyCount);
@@ -397,22 +398,10 @@ namespace GASPT.Gameplay.Level
             int maxHp = playerStats.MaxHP;
             int healAmount = Mathf.RoundToInt(maxHp * healPercent);
 
-            // 현재 HP 확인
-            int currentHp = playerStats.CurrentHP;
-            int newHp = Mathf.Min(currentHp + healAmount, maxHp);
-            int actualHealed = newHp - currentHp;
-
-            if (actualHealed > 0)
+            if (healAmount > 0)
             {
-                // PlayerStats.Heal() 메서드가 없으므로 직접 HP 설정
-                // Reflection을 사용하거나, TakeDamage(-healAmount) 사용
-                playerStats.TakeDamage(-healAmount); // 음수 데미지 = 회복
-
-                Debug.Log($"[Room] 체력 회복! +{actualHealed} HP (현재: {playerStats.CurrentHP}/{maxHp})");
-            }
-            else
-            {
-                Debug.Log($"[Room] 이미 체력이 가득 차 있습니다. ({currentHp}/{maxHp})");
+                playerStats.Heal(healAmount);
+                Debug.Log($"[Room] 체력 회복 요청: {healAmount} HP");
             }
         }
 

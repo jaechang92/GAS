@@ -1,4 +1,4 @@
-namespace Core.Enums
+namespace GASPT.Core.Enums
 {
     /// <summary>
     /// 적 클래스 분류 (전투 스타일/행동 패턴 기준)

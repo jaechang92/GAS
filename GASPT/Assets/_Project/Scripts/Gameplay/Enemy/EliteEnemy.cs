@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 정예 적

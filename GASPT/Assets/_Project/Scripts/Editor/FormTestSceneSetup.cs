@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using GASPT.Forms;
+using GASPT.Gameplay.Form;
 using GASPT.UI.Forms;
 
 namespace GASPT.Editor

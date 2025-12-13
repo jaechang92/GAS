@@ -4,7 +4,7 @@ using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 화염구 - 마법사 스킬 2

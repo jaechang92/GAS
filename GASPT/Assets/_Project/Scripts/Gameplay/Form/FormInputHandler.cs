@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Threading;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 폼(Form) 입력 처리기

@@ -1,5 +1,5 @@
 using UnityEngine;
-using GASPT.Form;
+using GASPT.Gameplay.Form;
 
 namespace GASPT.Data
 {

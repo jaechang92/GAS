@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 
-namespace GASPT.Form
+namespace GASPT.Gameplay.Form
 {
     /// <summary>
     /// 번개 - 신규 스킬

@@ -1,3 +1,4 @@
+using GASPT.Gameplay.Enemies;
 using UnityEngine;
 
 namespace GASPT.Core.Pooling
@@ -66,7 +67,7 @@ namespace GASPT.Core.Pooling
             }
 
             // Enemy
-            var basicMelee = GetComponent<GASPT.Gameplay.Enemy.BasicMeleeEnemy>();
+            var basicMelee = GetComponent<BasicMeleeEnemy>();
             if (basicMelee != null)
             {
                 PoolManager.Instance.Despawn(basicMelee);

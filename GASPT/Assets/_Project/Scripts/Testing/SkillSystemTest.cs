@@ -1,7 +1,7 @@
 using UnityEngine;
 using GASPT.Skills;
 using GASPT.Stats;
-using GASPT.Gameplay.Enemy;
+using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Testing
 {

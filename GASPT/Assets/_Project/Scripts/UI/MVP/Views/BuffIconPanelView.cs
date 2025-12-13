@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using Core.Enums;
+using GASPT.Core.Enums;
 using Core;
 
 namespace GASPT.UI

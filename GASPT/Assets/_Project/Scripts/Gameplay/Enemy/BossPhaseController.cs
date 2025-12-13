@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GASPT.Gameplay.Enemy
+namespace GASPT.Gameplay.Enemies
 {
     /// <summary>
     /// 보스 Phase 상태

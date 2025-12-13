@@ -1,4 +1,4 @@
-namespace Core.Enums
+namespace GASPT.Core.Enums
 {
     /// <summary>
     /// 장비 슬롯 타입
