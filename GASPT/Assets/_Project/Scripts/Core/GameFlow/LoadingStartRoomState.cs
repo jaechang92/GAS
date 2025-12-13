@@ -29,8 +29,12 @@ namespace GASPT.Core.GameFlow
                 Debug.Log("[LoadingStartRoomState] Fade Out 완료");
             }
 
-            // TODO: 로딩 UI 표시
-            // LoadingUI.Show();
+            // 로딩 UI 표시
+            var loadingPresenter = LoadingPresenter.Instance;
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.StartStartRoomLoading();
+            }
 
             // 던전 데이터 정리
             CleanupDungeonData();
@@ -55,6 +59,11 @@ namespace GASPT.Core.GameFlow
                 {
                     while (!loadOperation.isDone)
                     {
+                        // 로딩 진행률 업데이트
+                        if (loadingPresenter != null)
+                        {
+                            loadingPresenter.SetProgress(loadOperation.progress * 0.5f);
+                        }
                         await Awaitable.NextFrameAsync(cancellationToken);
                     }
                 }
@@ -65,14 +74,29 @@ namespace GASPT.Core.GameFlow
                 }
             }
 
+            // 씬 로딩 완료 알림
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifySceneLoaded();
+            }
+
             // Player 초기화 대기 (씬 로딩 후 Player 등록 확인)
             await WaitForPlayerReady(cancellationToken);
 
             // ★ Scene 검증 및 재할당 (카메라, UI 등)
             await ValidateSceneReferences(cancellationToken);
 
-            // TODO: 로딩 UI 숨기기
-            // LoadingUI.Hide();
+            // 초기화 완료 알림
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifyInitComplete();
+            }
+
+            // 로딩 UI 숨기기
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifyFinalComplete();
+            }
 
             // Fade In (화면을 밝게)
             if (fadeController != null)
