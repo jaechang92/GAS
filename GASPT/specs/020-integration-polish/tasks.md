@@ -87,9 +87,9 @@
 *"플레이어로서 다양한 마법사 폼으로 변신하여 새로운 스킬을 사용하고 싶다"*
 
 ### 완료 조건
-- [ ] 화염 마법사 폼 플레이 가능
-- [ ] 얼음 마법사 폼 플레이 가능
-- [ ] 각 폼별 고유 스킬 2개 이상
+- [x] 화염 마법사 폼 플레이 가능
+- [x] 얼음 마법사 폼 플레이 가능
+- [x] 각 폼별 고유 스킬 2개 이상
 
 ### 현재 구현된 폼
 | 폼 | 상태 | 스킬 |
@@ -97,15 +97,18 @@
 | MageForm | ✅ | MagicMissile, Fireball, Teleport, Shield |
 | WarriorForm | ✅ | SwordSlash, ShieldBash, Charge, WarCry |
 | AssassinForm | ✅ | DaggerStrike, Backstab, SmokeScreen, ShadowStrike |
+| FlameMageForm | ✅ | Fireball, FireStorm, MeteorStrike |
+| FrostMageForm | ✅ | IceBlast, IceLance, FrozenGround |
 
 ### 태스크 목록
 
-- [ ] T015 [US3] FlameMageForm 구현 in `Assets/_Project/Scripts/Gameplay/Form/Implementations/FlameMageForm.cs`
-- [ ] T016 [P] [US3] FireStorm 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/FireStormAbility.cs`
-- [ ] T017 [P] [US3] MeteorStrike 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/MeteorStrikeAbility.cs`
-- [ ] T018 [US3] FrostMageForm 구현 in `Assets/_Project/Scripts/Gameplay/Form/Implementations/FrostMageForm.cs`
-- [ ] T019 [P] [US3] IceLance 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/IceLanceAbility.cs`
-- [ ] T020 [P] [US3] FrozenGround 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/FrozenGroundAbility.cs`
+- [x] T015 [US3] FlameMageForm 구현 in `Assets/_Project/Scripts/Gameplay/Form/Implementations/FlameMageForm.cs`
+- [x] T016 [P] [US3] FireStorm 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/FireStormAbility.cs`
+- [x] T017 [P] [US3] MeteorStrike 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/MeteorStrikeAbility.cs`
+- [x] T018 [US3] FrostMageForm 구현 in `Assets/_Project/Scripts/Gameplay/Form/Implementations/FrostMageForm.cs`
+- [x] T019 [P] [US3] IceLance 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/IceLanceAbility.cs`
+- [x] T019.1 [P] [US3] IceLanceProjectile 투사체 in `Assets/_Project/Scripts/Gameplay/Projectiles/IceLanceProjectile.cs`
+- [x] T020 [P] [US3] FrozenGround 스킬 구현 in `Assets/_Project/Scripts/Gameplay/Form/Abilities/FrozenGroundAbility.cs`
 
 ---
 
