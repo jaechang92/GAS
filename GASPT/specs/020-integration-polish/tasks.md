@@ -63,17 +63,19 @@
 *"플레이어로서 공격, 피격, 스킬 사용 시 효과음을 듣고 싶다"*
 
 ### 완료 조건
-- [ ] 공격/피격 효과음 재생
-- [ ] 스킬 사용 효과음 재생
-- [ ] UI 인터랙션 효과음 재생
+- [x] 공격/피격 효과음 재생
+- [x] 스킬 사용 효과음 재생
+- [x] UI 인터랙션 효과음 재생
 
 ### 태스크 목록
 
-- [ ] T010 [US2] AudioManager 싱글톤 생성 in `Assets/_Project/Scripts/Audio/AudioManager.cs`
-- [ ] T011 [P] [US2] SFXPool 오디오 풀링 시스템 in `Assets/_Project/Scripts/Audio/SFXPool.cs`
-- [ ] T012 [US2] Combat-Audio 연동 (공격/피격) in `Assets/_Project/Scripts/Combat/`
-- [ ] T013 [US2] Ability-Audio 연동 (스킬 사용) in `Assets/_Project/Scripts/Gameplay/Form/Abilities/`
-- [ ] T014 [US2] UI-Audio 연동 (버튼/전환) in `Assets/_Project/Scripts/UI/`
+- [x] T010 [US2] AudioManager 싱글톤 생성 in `Assets/_Project/Scripts/Audio/AudioManager.cs`
+- [x] T011 [P] [US2] SFXPool 오디오 풀링 시스템 in `Assets/_Project/Scripts/Audio/SFXPool.cs`
+- [x] T012 [US2] Combat-Audio 연동 (공격/피격) in `Assets/_Project/Scripts/Audio/CombatAudioBridge.cs`
+- [x] T012.1 [US2] CombatSoundData 설정 에셋 in `Assets/_Project/Scripts/Data/CombatSoundData.cs`
+- [x] T013 [US2] Ability-Audio 연동 (스킬 사용) - AudioManager.PlaySFX() 직접 호출 방식
+- [x] T014 [US2] UI-Audio 연동 (버튼/전환) in `Assets/_Project/Scripts/Audio/UISoundPlayer.cs`
+- [x] T014.1 [US2] UISoundData 설정 에셋 in `Assets/_Project/Scripts/Data/UISoundData.cs`
 
 ---
 
