@@ -389,6 +389,92 @@ namespace GASPT.StatusEffects
         }
 
 
+        // ====== 시각 효과 테스트 ======
+
+        /// <summary>
+        /// 플레이어에게 Slow 적용 (시각 효과 테스트)
+        /// </summary>
+        [ContextMenu("Test/Visual/Player Slow")]
+        private void TestPlayerSlow()
+        {
+            if (!ValidatePlayer()) return;
+
+            StatusEffectData data = CreateEffectData(StatusEffectType.Slow, "감속", debuffValue, duration, false);
+            StatusEffectManager.Instance.ApplyEffect(playerStats.gameObject, data);
+
+            Debug.Log($"[Test Visual] 플레이어 Slow 적용 - 파란색 오버레이 + VFX");
+        }
+
+        /// <summary>
+        /// 플레이어에게 Stun 적용 (시각 효과 테스트)
+        /// </summary>
+        [ContextMenu("Test/Visual/Player Stun")]
+        private void TestPlayerStun()
+        {
+            if (!ValidatePlayer()) return;
+
+            StatusEffectData data = CreateEffectData(StatusEffectType.Stun, "기절", 0f, duration, false);
+            StatusEffectManager.Instance.ApplyEffect(playerStats.gameObject, data);
+
+            Debug.Log($"[Test Visual] 플레이어 Stun 적용 - 노란색 오버레이 + VFX");
+        }
+
+        /// <summary>
+        /// 적에게 Burn + Slow 동시 적용 (복합 시각 효과 테스트)
+        /// </summary>
+        [ContextMenu("Test/Visual/Enemy Burn+Slow")]
+        private void TestEnemyBurnAndSlow()
+        {
+            if (!ValidateEnemy()) return;
+
+            StatusEffectData burnData = CreateEffectData(StatusEffectType.Burn, "화상", dotTickDamage, duration, false, tickInterval);
+            StatusEffectData slowData = CreateEffectData(StatusEffectType.Slow, "감속", debuffValue, duration, false);
+
+            StatusEffectManager.Instance.ApplyEffect(enemy.gameObject, burnData);
+            StatusEffectManager.Instance.ApplyEffect(enemy.gameObject, slowData);
+
+            Debug.Log($"[Test Visual] 적 Burn+Slow 동시 적용 - 색상 블렌딩 확인");
+        }
+
+        /// <summary>
+        /// 플레이어 StatusEffectVisual 상태 출력
+        /// </summary>
+        [ContextMenu("Test/Visual/Print Player Visual Status")]
+        private void TestPrintPlayerVisualStatus()
+        {
+            if (!ValidatePlayer()) return;
+
+            var visual = playerStats.GetComponent<StatusEffectVisual>();
+            if (visual != null)
+            {
+                visual.SendMessage("DebugPrintStatus", SendMessageOptions.DontRequireReceiver);
+            }
+            else
+            {
+                Debug.LogWarning("[Test Visual] 플레이어에 StatusEffectVisual 컴포넌트가 없습니다.");
+            }
+        }
+
+        /// <summary>
+        /// 적 StatusEffectVisual 상태 출력
+        /// </summary>
+        [ContextMenu("Test/Visual/Print Enemy Visual Status")]
+        private void TestPrintEnemyVisualStatus()
+        {
+            if (!ValidateEnemy()) return;
+
+            var visual = enemy.GetComponent<StatusEffectVisual>();
+            if (visual != null)
+            {
+                visual.SendMessage("DebugPrintStatus", SendMessageOptions.DontRequireReceiver);
+            }
+            else
+            {
+                Debug.LogWarning("[Test Visual] 적에 StatusEffectVisual 컴포넌트가 없습니다.");
+            }
+        }
+
+
         // ====== 유틸리티 메서드 ======
 
         /// <summary>
