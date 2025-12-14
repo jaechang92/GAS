@@ -11,7 +11,7 @@ using GASPT.Core;
 using GASPT.DTOs;
 using UnityEngine;
 using GASPT.Gameplay.Enemies;
-using GASPT.Forms.Data;
+using GASPT.Gameplay.Form;
 
 namespace GASPT.Stats
 {

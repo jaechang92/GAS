@@ -2,6 +2,7 @@ using GASPT.Data;
 using GASPT.Stats;
 using GASPT.Gameplay.Enemies;
 using UnityEngine;
+using GASPT.Core.Enums;
 
 namespace GASPT.Audio
 {
@@ -198,7 +199,7 @@ namespace GASPT.Audio
         /// </summary>
         /// <param name="effectType">효과 타입</param>
         /// <param name="position">재생 위치</param>
-        public void PlayStatusEffectSound(StatusEffects.StatusEffectType effectType, Vector3 position)
+        public void PlayStatusEffectSound(StatusEffectType effectType, Vector3 position)
         {
             if (soundData == null || AudioManager.Instance == null) return;
 
@@ -208,14 +209,14 @@ namespace GASPT.Audio
             AudioManager.Instance.PlaySFXAtPosition(clip, position, soundData.statusEffectVolumeScale);
         }
 
-        private AudioClip GetStatusEffectClip(StatusEffects.StatusEffectType effectType)
+        private AudioClip GetStatusEffectClip(StatusEffectType effectType)
         {
             return effectType switch
             {
-                StatusEffects.StatusEffectType.Burn => soundData.burnApplySound,
-                StatusEffects.StatusEffectType.Freeze => soundData.freezeApplySound,
-                StatusEffects.StatusEffectType.Poison => soundData.poisonApplySound,
-                StatusEffects.StatusEffectType.Stun => soundData.stunApplySound,
+                StatusEffectType.Burn => soundData.burnApplySound,
+                StatusEffectType.Freeze => soundData.freezeApplySound,
+                StatusEffectType.Poison => soundData.poisonApplySound,
+                StatusEffectType.Stun => soundData.stunApplySound,
                 _ => null
             };
         }

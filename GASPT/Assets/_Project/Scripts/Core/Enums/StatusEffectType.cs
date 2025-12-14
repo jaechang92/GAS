@@ -70,6 +70,11 @@ namespace GASPT.Core.Enums
         Burn,
 
         /// <summary>
+        /// 동상 - 슬로우와 지속 데미지
+        /// </summary>
+        Freeze,
+
+        /// <summary>
         /// 출혈 - 지속 데미지
         /// </summary>
         Bleed,
