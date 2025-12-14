@@ -6,6 +6,7 @@ using GASPT.Core.Pooling;
 using GASPT.Gameplay.Effects;
 using GASPT.Gameplay.Enemies;
 using GASPT.StatusEffects;
+using GASPT.Core;
 
 namespace GASPT.Gameplay.Form
 {
@@ -24,7 +25,7 @@ namespace GASPT.Gameplay.Form
 
         // ====== 스킬 설정 ======
 
-        private const int DamagePerTick = 15;
+        private const int DamagePerTick = 18;  // 밸런싱: 15 → 18 (화염 특화 강화)
         private const float StormRadius = 3f;
         private const float StormDuration = 3f;
         private const float TickInterval = 0.5f;

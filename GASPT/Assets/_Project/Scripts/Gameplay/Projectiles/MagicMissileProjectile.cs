@@ -20,7 +20,7 @@ namespace GASPT.Gameplay.Projectiles
             // 기본값 설정
             speed = 15f;
             maxDistance = 10f;
-            damage = 10f;
+            damage = 25f;  // 밸런싱: 10 → 25 (원거리 DPS 50)
             collisionRadius = 0.2f;
 
             SetupVisuals();

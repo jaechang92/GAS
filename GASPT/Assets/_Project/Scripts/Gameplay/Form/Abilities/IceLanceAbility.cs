@@ -21,7 +21,7 @@ namespace GASPT.Gameplay.Form
 
         // ====== 스킬 설정 ======
 
-        private const int Damage = 25;
+        private const int Damage = 30;  // 밸런싱: 25 → 30 (DPS 15)
         private const float ProjectileSpeed = 18f;
         private const float SlowDuration = 1.5f;
         private const float SlowAmount = 40f;  // 40% 슬로우

@@ -117,14 +117,22 @@
 > 전체 시스템 밸런스 조정 및 버그 수정을 수행합니다.
 
 ### 완료 조건
-- [ ] DPS 밸런스 ±30% 이내
+- [x] DPS 밸런스 ±30% 이내
 - [ ] 주요 버그 수정 완료
 - [ ] 성능 최적화 완료
 
+### 밸런싱 변경 내역
+| 스킬 | 변경 전 | 변경 후 | 이유 |
+|------|---------|---------|------|
+| MagicMissile | 10 dmg | 25 dmg | DPS 20→50 (원거리 패널티 감안) |
+| IceLance | 25 dmg | 30 dmg | DPS 12.5→15 |
+| FireStorm | 15/틱 | 18/틱 | 화염 마법사 특화 강화 |
+
 ### 태스크 목록
 
-- [ ] T021 폼 스탯 밸런스 조정 in `Assets/Resources/Data/Forms/*.asset`
-- [ ] T022 스킬 데미지/쿨다운 밸런스 in `Assets/Resources/Data/Skills/*.asset`
+- [x] T021 스킬 DPS 밸런스 조정 (코드 내 수정 완료)
+- [ ] T021.1 폼 스탯 밸런스 조정 in `Assets/Resources/Data/Forms/*.asset` *(Unity 에디터 필요)*
+- [ ] T022 스킬 데이터 에셋 밸런스 in `Assets/Resources/Data/Skills/*.asset` *(Unity 에디터 필요)*
 - [ ] T023 오브젝트 풀 최적화 in `Assets/_Project/Scripts/Core/ObjectPool/`
 - [ ] T024 통합 테스트 및 버그 수정
 

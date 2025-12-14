@@ -2,6 +2,7 @@ using UnityEngine;
 using GASPT.Core.Enums;
 using GASPT.Gameplay.Enemies;
 using GASPT.StatusEffects;
+using GASPT.Core;
 
 namespace GASPT.Gameplay.Projectiles
 {
