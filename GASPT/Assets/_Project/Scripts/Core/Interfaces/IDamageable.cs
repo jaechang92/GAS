@@ -1,3 +1,5 @@
+using GASPT.Core.Enums;
+
 namespace GASPT.Core
 {
     /// <summary>
@@ -44,38 +46,5 @@ namespace GASPT.Core
         /// 무적 상태 여부
         /// </summary>
         bool IsInvincible { get; }
-    }
-
-    /// <summary>
-    /// 대미지 타입
-    /// </summary>
-    public enum DamageType
-    {
-        /// <summary>일반 대미지</summary>
-        Normal,
-
-        /// <summary>물리 대미지</summary>
-        Physical,
-
-        /// <summary>마법 대미지</summary>
-        Magical,
-
-        /// <summary>화염 대미지</summary>
-        Fire,
-
-        /// <summary>얼음 대미지</summary>
-        Ice,
-
-        /// <summary>번개 대미지</summary>
-        Lightning,
-
-        /// <summary>독 대미지</summary>
-        Poison,
-
-        /// <summary>출혈 대미지</summary>
-        Bleed,
-
-        /// <summary>순수 대미지 (방어 무시)</summary>
-        True
     }
 }

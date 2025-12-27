@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Core;
 using GASPT.Core;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level.Graph;
 using GASPT.Gameplay.Level.Generation;
 using Random = UnityEngine.Random;

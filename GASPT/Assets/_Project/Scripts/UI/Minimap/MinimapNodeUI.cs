@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
-using GASPT.Gameplay.Level;
+using GASPT.Core.Enums;
 using GASPT.Core.Pooling;
 
 namespace GASPT.UI.Minimap

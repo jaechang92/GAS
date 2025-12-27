@@ -1,54 +1,8 @@
 using UnityEngine;
+using GASPT.Meta.Enums;
 
 namespace GASPT.Meta
 {
-    /// <summary>
-    /// 업적 타입
-    /// </summary>
-    public enum AchievementType
-    {
-        /// <summary>적 처치 횟수</summary>
-        EnemyKill,
-
-        /// <summary>보스 처치 횟수</summary>
-        BossKill,
-
-        /// <summary>런 클리어 횟수</summary>
-        RunClear,
-
-        /// <summary>총 플레이 시간</summary>
-        PlayTime,
-
-        /// <summary>스테이지 도달</summary>
-        StageReach,
-
-        /// <summary>폼 수집</summary>
-        FormCollect,
-
-        /// <summary>폼 각성</summary>
-        FormAwaken,
-
-        /// <summary>재화 획득</summary>
-        CurrencyEarn,
-
-        /// <summary>업그레이드 구매</summary>
-        UpgradePurchase,
-
-        /// <summary>특수 조건</summary>
-        Special
-    }
-
-    /// <summary>
-    /// 업적 등급
-    /// </summary>
-    public enum AchievementTier
-    {
-        Bronze,
-        Silver,
-        Gold,
-        Platinum
-    }
-
     /// <summary>
     /// 업적 ScriptableObject
     /// </summary>

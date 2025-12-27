@@ -4,6 +4,7 @@ using UnityEngine;
 using Core;
 using GASPT.UI;
 using GASPT.Core;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level.Graph;
 
 namespace GASPT.Gameplay.Level
@@ -626,17 +627,4 @@ namespace GASPT.Gameplay.Level
     }
 
 
-    // ====== 열거형 ======
-
-    /// <summary>
-    /// 포탈 타입
-    /// </summary>
-    public enum PortalType
-    {
-        NextRoom,       // 던전 내 다음 방으로 (GameFlow 사용)
-        SpecificRoom,   // 특정 방으로 (직접 이동)
-        RandomRoom,     // 랜덤 방으로 (직접 이동)
-        DungeonEntrance, // StartRoom → Dungeon 입장 (GameFlow 사용)
-        BranchSelection  // 분기 선택 (그래프 기반 - 다중 목적지)
-    }
 }

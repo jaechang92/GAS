@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level;
 using GASPT.ResourceManagement;
 

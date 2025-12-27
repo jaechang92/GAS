@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using FSM.Core;
+using GASPT.Core.Enums;
 using GASPT.Core.GameFlow;
 
 namespace GASPT.Core
@@ -19,6 +20,9 @@ namespace GASPT.Core
 
         // FSM 컴포넌트
         private StateMachine fsm;
+
+        // 전환 오케스트레이터 (FadeIn/Out, Scene 검증 중앙 관리)
+        private TransitionOrchestrator transitionOrchestrator;
 
         // ====== 이벤트 (외부 구독용) ======
 
@@ -65,6 +69,10 @@ namespace GASPT.Core
             // FSM 컴포넌트 추가
             fsm = gameObject.AddComponent<StateMachine>();
 
+            // 전환 오케스트레이터 생성 (FadeIn/Out, Scene 검증 중앙 관리)
+            transitionOrchestrator = new TransitionOrchestrator();
+            transitionOrchestrator.SetDebugLogs(showDebugLogs);
+
             // 상태 생성 및 추가
             CreateStates();
 
@@ -73,8 +81,10 @@ namespace GASPT.Core
 
             // 이벤트 구독
             fsm.OnStateChanged += OnStateChanged;
+            fsm.OnBeforeTransitionAsync += transitionOrchestrator.BeforeTransitionAsync;
+            fsm.OnAfterTransitionAsync += transitionOrchestrator.AfterTransitionAsync;
 
-            LogMessage("[GameFlowFSM] 초기화 완료");
+            LogMessage("[GameFlowFSM] 초기화 완료 (TransitionOrchestrator 통합)");
         }
 
         private void Update()

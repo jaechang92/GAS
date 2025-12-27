@@ -27,13 +27,7 @@ namespace GASPT.Core.GameFlow
                 Debug.LogWarning($"[StartRoomState] StartRoom 씬이 아닙니다! 현재 씬: {currentScene}");
             }
 
-            // Fade In (초기 진입 시 검은 화면에서 밝아짐)
-            var fadeController = FadeController.Instance;
-            if (fadeController != null && fadeController.IsFadedOut)
-            {
-                await fadeController.FadeIn(1.0f);
-                Debug.Log("[StartRoomState] Fade In 완료");
-            }
+            // FadeIn은 TransitionOrchestrator에서 처리됨
 
             // GameManager 통합
             var gameManager = GameManager.Instance;

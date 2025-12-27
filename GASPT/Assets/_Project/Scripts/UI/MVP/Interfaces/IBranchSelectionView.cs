@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level.Graph;
 
 namespace GASPT.UI.MVP
@@ -82,31 +83,31 @@ namespace GASPT.UI.MVP
             this.rewardHint = GetRewardHint(node.roomType);
         }
 
-        private static string GetTypeName(Gameplay.Level.RoomType type)
+        private static string GetTypeName(RoomType type)
         {
             return type switch
             {
-                Gameplay.Level.RoomType.Normal => "전투",
-                Gameplay.Level.RoomType.Elite => "엘리트",
-                Gameplay.Level.RoomType.Boss => "보스",
-                Gameplay.Level.RoomType.Shop => "상점",
-                Gameplay.Level.RoomType.Rest => "휴식",
-                Gameplay.Level.RoomType.Treasure => "보물",
-                Gameplay.Level.RoomType.Start => "시작",
+                RoomType.Normal => "전투",
+                RoomType.Elite => "엘리트",
+                RoomType.Boss => "보스",
+                RoomType.Shop => "상점",
+                RoomType.Rest => "휴식",
+                RoomType.Treasure => "보물",
+                RoomType.Start => "시작",
                 _ => "알 수 없음"
             };
         }
 
-        private static string GetIconName(Gameplay.Level.RoomType type)
+        private static string GetIconName(RoomType type)
         {
             return type switch
             {
-                Gameplay.Level.RoomType.Normal => "icon_combat",
-                Gameplay.Level.RoomType.Elite => "icon_elite",
-                Gameplay.Level.RoomType.Boss => "icon_boss",
-                Gameplay.Level.RoomType.Shop => "icon_shop",
-                Gameplay.Level.RoomType.Rest => "icon_rest",
-                Gameplay.Level.RoomType.Treasure => "icon_treasure",
+                RoomType.Normal => "icon_combat",
+                RoomType.Elite => "icon_elite",
+                RoomType.Boss => "icon_boss",
+                RoomType.Shop => "icon_shop",
+                RoomType.Rest => "icon_rest",
+                RoomType.Treasure => "icon_treasure",
                 _ => "icon_unknown"
             };
         }
@@ -125,16 +126,16 @@ namespace GASPT.UI.MVP
             };
         }
 
-        private static string GetRewardHint(Gameplay.Level.RoomType type)
+        private static string GetRewardHint(RoomType type)
         {
             return type switch
             {
-                Gameplay.Level.RoomType.Normal => "골드, 경험치",
-                Gameplay.Level.RoomType.Elite => "희귀 보상",
-                Gameplay.Level.RoomType.Boss => "스테이지 클리어",
-                Gameplay.Level.RoomType.Shop => "아이템 구매",
-                Gameplay.Level.RoomType.Rest => "체력 회복",
-                Gameplay.Level.RoomType.Treasure => "보물 상자",
+                RoomType.Normal => "골드, 경험치",
+                RoomType.Elite => "희귀 보상",
+                RoomType.Boss => "스테이지 클리어",
+                RoomType.Shop => "아이템 구매",
+                RoomType.Rest => "체력 회복",
+                RoomType.Treasure => "보물 상자",
                 _ => ""
             };
         }

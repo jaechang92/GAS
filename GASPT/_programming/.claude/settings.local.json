@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(git add:*)"
+      "Bash(git commit -m \"$(cat <<''EOF''\n기능: 018 메타 진행 시스템 Phase 3 완료 - 재화 획득 시스템\n\nPhase 3: 재화 획득 시스템 (T016-T020)\n- T016: 적 처치 시 Bone 드롭 연동\n- T017: 보스 처치 시 Soul 획득 연동\n- T018: 런 종료 시 재화 확정 로직 (기존 구현 확인)\n- T019: RunResultView - 런 결과 화면 UI\n- T020: MetaHUDView - 게임 중 재화 표시 HUD\n\n변경 파일:\n- EnemyData.cs: minBoneDrop, maxBoneDrop, soulDrop 필드 추가\n- Enemy.cs: DropMetaCurrency() 메서드 추가\n- RunResultView.cs: 런 결과 화면 (재화, 통계 표시)\n- MetaHUDView.cs: 실시간 재화 HUD (펄스 효과)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

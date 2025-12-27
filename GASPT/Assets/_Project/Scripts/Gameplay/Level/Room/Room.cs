@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using Core;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Enemies;
 
 namespace GASPT.Gameplay.Level
@@ -446,17 +447,4 @@ namespace GASPT.Gameplay.Level
     }
 
 
-    // ====== 열거형 ======
-
-    /// <summary>
-    /// 방 상태
-    /// </summary>
-    public enum RoomState
-    {
-        Inactive,       // 비활성 (진입 전)
-        Entering,       // 진입 중 (페이드 인)
-        InProgress,     // 진행 중 (전투)
-        Cleared,        // 클리어
-        Failed          // 실패
-    }
 }

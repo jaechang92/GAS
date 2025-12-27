@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEditor;
 using GASPT.Meta;
+using GASPT.Meta.Enums;
 
 namespace GASPT.Editor
 {

@@ -52,4 +52,28 @@ namespace GASPT.Gameplay.Form
         /// <summary>레전더리 등급 - 최종 각성</summary>
         Legendary = 3
     }
+
+    /// <summary>
+    /// 폼 획득 결과
+    /// </summary>
+    public enum AcquireResult
+    {
+        /// <summary>잘못된 폼 데이터</summary>
+        InvalidForm = 0,
+
+        /// <summary>슬롯1에 획득</summary>
+        AcquiredPrimary = 1,
+
+        /// <summary>슬롯2에 획득</summary>
+        AcquiredSecondary = 2,
+
+        /// <summary>동일 폼으로 각성</summary>
+        Awakened = 3,
+
+        /// <summary>이미 최대 각성</summary>
+        MaxAwakening = 4,
+
+        /// <summary>슬롯이 가득 참 (교체 필요)</summary>
+        SlotFull = 5
+    }
 }

@@ -338,28 +338,4 @@ namespace GASPT.Gameplay.Form
         }
     }
 
-
-    /// <summary>
-    /// 폼 획득 결과
-    /// </summary>
-    public enum AcquireResult
-    {
-        /// <summary>잘못된 폼 데이터</summary>
-        InvalidForm,
-
-        /// <summary>슬롯1에 획득</summary>
-        AcquiredPrimary,
-
-        /// <summary>슬롯2에 획득</summary>
-        AcquiredSecondary,
-
-        /// <summary>동일 폼으로 각성</summary>
-        Awakened,
-
-        /// <summary>이미 최대 각성</summary>
-        MaxAwakening,
-
-        /// <summary>슬롯이 가득 참 (교체 필요)</summary>
-        SlotFull
-    }
 }

@@ -275,9 +275,11 @@ namespace GASPT.Core.GameFlow
         {
             Debug.Log("[DungeonTransitionState] Room 검증 시작...");
 
-            if (SceneValidationManager.HasInstance)
+            // Instance 직접 사용 (자동 생성/탐색 보장)
+            var validationManager = SceneValidationManager.Instance;
+            if (validationManager != null)
             {
-                bool success = await SceneValidationManager.Instance.ValidateAllAsync();
+                bool success = await validationManager.ValidateAllAsync();
                 if (success)
                 {
                     Debug.Log("[DungeonTransitionState] Room 검증 완료 - 모든 참조 유효");

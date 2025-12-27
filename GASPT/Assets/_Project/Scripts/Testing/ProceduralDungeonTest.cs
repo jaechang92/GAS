@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level;
 using GASPT.Gameplay.Level.Graph;
 using GASPT.Gameplay.Level.Generation;

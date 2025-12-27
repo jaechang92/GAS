@@ -25,14 +25,7 @@ namespace GASPT.Core.GameFlow
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
             Debug.Log("[LoadingDungeonState] 던전 로딩 시작");
-
-            // Fade Out (화면을 검게)
-            var fadeController = FadeController.Instance;
-            if (fadeController != null)
-            {
-                await fadeController.FadeOut(0.5f);
-                Debug.Log("[LoadingDungeonState] Fade Out 완료");
-            }
+            // FadeOut은 TransitionOrchestrator에서 처리됨
 
             // 로딩 UI 표시
             var loadingPresenter = LoadingPresenter.Instance;
@@ -88,8 +81,7 @@ namespace GASPT.Core.GameFlow
             // 던전 시작 (StageManager 또는 RoomManager 사용)
             await StartDungeonWithStageSystem(cancellationToken);
 
-            // ★ Scene 검증 및 재할당 (카메라, UI 등)
-            await ValidateSceneReferences(cancellationToken);
+            // Scene 검증은 TransitionOrchestrator에서 처리됨
 
             // 초기화 완료 알림
             if (loadingPresenter != null)
@@ -103,44 +95,13 @@ namespace GASPT.Core.GameFlow
                 loadingPresenter.NotifyFinalComplete();
             }
 
-            // Fade In (화면을 밝게)
-            if (fadeController != null)
-            {
-                await fadeController.FadeIn(1.0f);
-                Debug.Log("[LoadingDungeonState] Fade In 완료");
-            }
+            // FadeIn은 TransitionOrchestrator에서 처리됨
 
             // 던전 로딩 완료 알림
             var gameFlowFSM = GameFlowStateMachine.Instance;
             if (gameFlowFSM != null)
             {
                 gameFlowFSM.NotifyDungeonLoaded();
-            }
-        }
-
-        /// <summary>
-        /// Scene 참조 검증 및 재할당
-        /// SceneValidationManager를 통해 모든 등록된 검증기 실행
-        /// </summary>
-        private async Awaitable ValidateSceneReferences(CancellationToken cancellationToken)
-        {
-            Debug.Log("[LoadingDungeonState] Scene 검증 시작...");
-
-            if (SceneValidationManager.HasInstance)
-            {
-                bool success = await SceneValidationManager.Instance.ValidateAllAsync();
-                if (success)
-                {
-                    Debug.Log("[LoadingDungeonState] Scene 검증 완료 - 모든 참조 유효");
-                }
-                else
-                {
-                    Debug.LogWarning("[LoadingDungeonState] Scene 검증 완료 - 일부 참조 실패 (게임 계속 진행)");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[LoadingDungeonState] SceneValidationManager 없음 - 검증 스킵");
             }
         }
 

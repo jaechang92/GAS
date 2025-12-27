@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using GASPT.Core.Enums;
 using GASPT.Gameplay.Level;
 using GASPT.Gameplay.Level.Graph;
 using Core;

@@ -43,6 +43,16 @@ namespace FSM.Core
         public event Action OnStarted;
         public event Action OnStopped;
 
+        /// <summary>
+        /// 상태 전환 전 비동기 이벤트 (FadeOut 등)
+        /// </summary>
+        public event Func<ITransition, Awaitable> OnBeforeTransitionAsync;
+
+        /// <summary>
+        /// 상태 전환 후 비동기 이벤트 (Scene 검증, FadeIn 등)
+        /// </summary>
+        public event Func<ITransition, Awaitable> OnAfterTransitionAsync;
+
         private void Awake()
         {
             cancellationTokenSource = new CancellationTokenSource();
@@ -306,8 +316,20 @@ namespace FSM.Core
         {
             OnTransitionStarted?.Invoke(transition);
 
+            // 전환 전 비동기 처리 (FadeOut 등)
+            if (OnBeforeTransitionAsync != null)
+            {
+                await OnBeforeTransitionAsync.Invoke(transition);
+            }
+
             var fromStateId = CurrentStateId;
             await ChangeStateAsync(transition.ToStateId);
+
+            // 전환 후 비동기 처리 (Scene 검증, FadeIn 등)
+            if (OnAfterTransitionAsync != null)
+            {
+                await OnAfterTransitionAsync.Invoke(transition);
+            }
 
             OnTransitionCompleted?.Invoke(transition);
 

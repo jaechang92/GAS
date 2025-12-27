@@ -1,5 +1,6 @@
 using UnityEngine;
 using GASPT.Data;
+using GASPT.Core.Enums;
 
 namespace GASPT.Gameplay.Level
 {
@@ -99,34 +100,6 @@ namespace GASPT.Gameplay.Level
             return $"[RoomData] {roomName} ({roomType}): " +
                    $"Difficulty={difficulty}, Enemies={minEnemyCount}~{maxEnemyCount}";
         }
-    }
-
-
-    // ====== 열거형 ======
-
-    /// <summary>
-    /// 방 타입
-    /// </summary>
-    public enum RoomType
-    {
-        Start,      // 시작 방
-        Normal,     // 일반 전투 방
-        Elite,      // 엘리트 전투 방
-        Boss,       // 보스 방
-        Rest,       // 휴식 방 (회복)
-        Shop,       // 상점 방
-        Treasure    // 보물 방
-    }
-
-    /// <summary>
-    /// 클리어 조건
-    /// </summary>
-    public enum ClearCondition
-    {
-        KillAllEnemies,     // 모든 적 처치
-        Survival,           // 생존 (시간 제한)
-        BossKill,           // 보스 처치
-        Automatic           // 자동 (시작 방, 휴식 방 등)
     }
 
 

@@ -1,5 +1,5 @@
 using UnityEngine;
-using GASPT.Gameplay.Level;
+using GASPT.Core.Enums;
 
 namespace GASPT.UI.Minimap
 {

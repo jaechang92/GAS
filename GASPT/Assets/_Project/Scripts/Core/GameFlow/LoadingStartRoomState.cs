@@ -1,48 +1,95 @@
 using System.Threading;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using FSM.Core;
 using GASPT.UI;
 using GASPT.Core.SceneManagement;
-using GASPT.CameraSystem;
 
 namespace GASPT.Core.GameFlow
 {
     /// <summary>
     /// 준비실 복귀 로딩 상태
+    /// State를 직접 상속 (FadeIn/Out, Scene 검증은 TransitionOrchestrator에서 처리)
+    ///
+    /// 담당 역할:
     /// - StartRoom 씬 로드 (Additive)
-    /// - 던전 정리 및 초기화
+    /// - 던전 데이터 정리
+    /// - Player 해제 확인 후 재초기화
     /// </summary>
     public class LoadingStartRoomState : State
     {
         public override string Name => "LoadingStartRoom";
 
+
+        // ====== 상태 진입/종료 ======
+
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
-            Debug.Log("[LoadingStartRoomState] 준비실 복귀 로딩 시작");
-
-            // Fade Out (화면을 검게)
-            var fadeController = FadeController.Instance;
-            if (fadeController != null)
-            {
-                await fadeController.FadeOut(0.5f);
-                Debug.Log("[LoadingStartRoomState] Fade Out 완료");
-            }
+            Debug.Log("[LoadingStartRoomState] 준비실 로딩 시작");
+            // FadeOut은 TransitionOrchestrator에서 처리됨
 
             // 로딩 UI 표시
             var loadingPresenter = LoadingPresenter.Instance;
             if (loadingPresenter != null)
             {
-                loadingPresenter.StartStartRoomLoading();
+                loadingPresenter.StartLoading("준비실로 이동 중...");
             }
 
             // 던전 데이터 정리
             CleanupDungeonData();
 
-            // Player 초기화 대기 (씬 로딩 전 Player 해제 확인)
+            // Player 해제 대기 (씬 전환 전 Player 파괴 확인)
             await WaitForPlayerUnregistered(cancellationToken);
 
-            // AdditiveSceneLoader를 통한 씬 전환
+            // StartRoom 씬 로드
+            await LoadStartRoomScene(cancellationToken);
+
+            // 씬 로딩 완료 알림
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifySceneLoaded();
+            }
+
+            // Player 초기화 대기
+            await WaitForPlayerReady(cancellationToken);
+
+            // 초기화 완료 알림
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifyInitComplete();
+            }
+
+            // 로딩 UI 숨김
+            if (loadingPresenter != null)
+            {
+                loadingPresenter.NotifyFinalComplete();
+            }
+
+            // Scene 검증 및 FadeIn은 TransitionOrchestrator에서 처리됨
+
+            // 준비실 로딩 완료 알림
+            var gameFlowFSM = GameFlowStateMachine.Instance;
+            if (gameFlowFSM != null)
+            {
+                gameFlowFSM.NotifyStartRoomLoaded();
+            }
+
+            Debug.Log("[LoadingStartRoomState] 준비실 로딩 완료");
+        }
+
+        protected override async Awaitable OnExitState(CancellationToken cancellationToken)
+        {
+            Debug.Log("[LoadingStartRoomState] 상태 종료");
+            await Awaitable.NextFrameAsync(cancellationToken);
+        }
+
+
+        // ====== 씬 로드 ======
+
+        /// <summary>
+        /// StartRoom 씬 로드
+        /// </summary>
+        private async Awaitable LoadStartRoomScene(CancellationToken cancellationToken)
+        {
             var sceneLoader = AdditiveSceneLoader.Instance;
             if (sceneLoader != null)
             {
@@ -52,98 +99,12 @@ namespace GASPT.Core.GameFlow
             }
             else
             {
-                // Fallback: 기존 Single 모드 로딩
-                Debug.LogWarning("[LoadingStartRoomState] AdditiveSceneLoader 없음 - Single 모드로 로딩");
-                AsyncOperation loadOperation = SceneManager.LoadSceneAsync("StartRoom", LoadSceneMode.Single);
-                if (loadOperation != null)
-                {
-                    while (!loadOperation.isDone)
-                    {
-                        // 로딩 진행률 업데이트
-                        if (loadingPresenter != null)
-                        {
-                            loadingPresenter.SetProgress(loadOperation.progress * 0.5f);
-                        }
-                        await Awaitable.NextFrameAsync(cancellationToken);
-                    }
-                }
-                else
-                {
-                    Debug.LogError("[LoadingStartRoomState] StartRoom 씬 로드 실패!");
-                    return;
-                }
-            }
-
-            // 씬 로딩 완료 알림
-            if (loadingPresenter != null)
-            {
-                loadingPresenter.NotifySceneLoaded();
-            }
-
-            // Player 초기화 대기 (씬 로딩 후 Player 등록 확인)
-            await WaitForPlayerReady(cancellationToken);
-
-            // ★ Scene 검증 및 재할당 (카메라, UI 등)
-            await ValidateSceneReferences(cancellationToken);
-
-            // 초기화 완료 알림
-            if (loadingPresenter != null)
-            {
-                loadingPresenter.NotifyInitComplete();
-            }
-
-            // 로딩 UI 숨기기
-            if (loadingPresenter != null)
-            {
-                loadingPresenter.NotifyFinalComplete();
-            }
-
-            // Fade In (화면을 밝게)
-            if (fadeController != null)
-            {
-                await fadeController.FadeIn(1.0f);
-                Debug.Log("[LoadingStartRoomState] Fade In 완료");
-            }
-
-            // 준비실 로딩 완료 알림
-            var gameFlowFSM = GameFlowStateMachine.Instance;
-            if (gameFlowFSM != null)
-            {
-                gameFlowFSM.NotifyStartRoomLoaded();
+                Debug.LogError("[LoadingStartRoomState] AdditiveSceneLoader 없음 - 씬 로드 실패");
             }
         }
 
-        /// <summary>
-        /// Scene 참조 검증 및 재할당
-        /// SceneValidationManager를 통해 모든 등록된 검증기 실행
-        /// </summary>
-        private async Awaitable ValidateSceneReferences(CancellationToken cancellationToken)
-        {
-            Debug.Log("[LoadingStartRoomState] Scene 검증 시작...");
 
-            if (SceneValidationManager.HasInstance)
-            {
-                bool success = await SceneValidationManager.Instance.ValidateAllAsync();
-                if (success)
-                {
-                    Debug.Log("[LoadingStartRoomState] Scene 검증 완료 - 모든 참조 유효");
-                }
-                else
-                {
-                    Debug.LogWarning("[LoadingStartRoomState] Scene 검증 완료 - 일부 참조 실패 (게임 계속 진행)");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[LoadingStartRoomState] SceneValidationManager 없음 - 검증 스킵");
-            }
-        }
-
-        protected override async Awaitable OnExitState(CancellationToken cancellationToken)
-        {
-            Debug.Log("[LoadingStartRoomState] 준비실 로딩 완료");
-            await Awaitable.NextFrameAsync(cancellationToken);
-        }
+        // ====== 준비실 전용 로직 ======
 
         /// <summary>
         /// 던전 데이터 정리
@@ -158,7 +119,7 @@ namespace GASPT.Core.GameFlow
             // - 런 골드는 이미 메타 골드로 전환됨 (DungeonClearedState에서)
 
             // 플레이어 체력 회복
-            var playerStats = UnityEngine.Object.FindAnyObjectByType<GASPT.Stats.PlayerStats>();
+            var playerStats = Object.FindAnyObjectByType<GASPT.Stats.PlayerStats>();
             if (playerStats != null)
             {
                 playerStats.Revive();
@@ -185,7 +146,7 @@ namespace GASPT.Core.GameFlow
             while (attempts < maxAttempts)
             {
                 // GameManager.PlayerStats가 null이면 해제 완료
-                if (!GASPT.Core.GameManager.HasInstance || GASPT.Core.GameManager.Instance.PlayerStats == null)
+                if (!GameManager.HasInstance || GameManager.Instance.PlayerStats == null)
                 {
                     Debug.Log("[LoadingStartRoomState] Player 해제 확인 완료");
                     return;
@@ -199,7 +160,7 @@ namespace GASPT.Core.GameFlow
         }
 
         /// <summary>
-        /// Player 초기화 대기 (GameManager.PlayerStats가 등록될 때까지)
+        /// Player 초기화 대기
         /// </summary>
         private async Awaitable WaitForPlayerReady(CancellationToken cancellationToken)
         {
@@ -208,8 +169,7 @@ namespace GASPT.Core.GameFlow
 
             while (attempts < maxAttempts)
             {
-                // GameManager.PlayerStats 확인
-                if (GASPT.Core.GameManager.HasInstance && GASPT.Core.GameManager.Instance.PlayerStats != null)
+                if (GameManager.HasInstance && GameManager.Instance.PlayerStats != null)
                 {
                     Debug.Log("[LoadingStartRoomState] Player 초기화 완료");
                     return;

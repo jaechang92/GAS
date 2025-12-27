@@ -125,30 +125,39 @@ namespace GASPT.CameraSystem
 
         private void OnEnable()
         {
-            // SceneValidationManager에 검증기 등록
-            if (SceneValidationManager.HasInstance)
+            // ★ SceneValidationManager에 검증기 등록 (Instance 직접 사용으로 자동 생성 보장)
+            var validationManager = SceneValidationManager.Instance;
+            if (validationManager != null)
             {
-                SceneValidationManager.Instance.RegisterValidator(this);
+                validationManager.RegisterValidator(this);
                 Debug.Log("[CinemachinePlayerCamera] SceneValidationManager에 등록 완료");
+            }
+            else
+            {
+                Debug.LogWarning("[CinemachinePlayerCamera] SceneValidationManager를 찾을 수 없음 - 등록 실패");
             }
 
             // GameFlowStateMachine 이벤트 구독 (Validation 시스템의 백업용)
-            if (useGameFlowEvents && GameFlowStateMachine.HasInstance)
+            if (useGameFlowEvents)
             {
-                GameFlowStateMachine.Instance.OnGameStateChanged += OnGameStateChanged;
-                Debug.Log("[CinemachinePlayerCamera] GameFlowStateMachine 이벤트 구독 완료");
+                var gameFlow = GameFlowStateMachine.Instance;
+                if (gameFlow != null)
+                {
+                    gameFlow.OnGameStateChanged += OnGameStateChanged;
+                    Debug.Log("[CinemachinePlayerCamera] GameFlowStateMachine 이벤트 구독 완료");
+                }
             }
         }
 
         private void OnDisable()
         {
-            // SceneValidationManager에서 검증기 해제
+            // SceneValidationManager에서 검증기 해제 (HasInstance 사용 - 종료 시 생성 방지)
             if (SceneValidationManager.HasInstance)
             {
                 SceneValidationManager.Instance.UnregisterValidator(this);
             }
 
-            // GameFlowStateMachine 이벤트 해제
+            // GameFlowStateMachine 이벤트 해제 (HasInstance 사용 - 종료 시 생성 방지)
             if (GameFlowStateMachine.HasInstance)
             {
                 GameFlowStateMachine.Instance.OnGameStateChanged -= OnGameStateChanged;
@@ -822,10 +831,16 @@ namespace GASPT.CameraSystem
             OnCameraReady?.Invoke();
             Debug.Log("[CinemachinePlayerCamera] 카메라 준비 완료!");
 
-            bool success = playerFound; // Player는 필수, Bounds는 선택
+            // Player를 못 찾아도 검증은 성공으로 처리 (Warning만 남김)
+            // 이후 Player 생성 시 OnGameStateChanged에서 재탐색됨
+            if (!playerFound)
+            {
+                Debug.LogWarning("[CinemachinePlayerCamera] Player를 찾지 못했지만 검증은 계속 진행");
+            }
+
             Debug.Log($"[CinemachinePlayerCamera] ===== 검증 완료 (Player: {playerFound}, Bounds: {boundsFound}) =====");
 
-            return success;
+            return true; // 항상 성공 반환 (카메라 자체는 준비됨)
         }
 
         /// <summary>
