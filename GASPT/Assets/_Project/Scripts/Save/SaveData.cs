@@ -22,14 +22,29 @@ namespace GASPT.Save
         public CurrencyData currency;
 
         /// <summary>
-        /// 인벤토리 시스템 데이터
+        /// 인벤토리 시스템 데이터 (레거시)
         /// </summary>
         public InventoryData inventory;
+
+        /// <summary>
+        /// 인벤토리 시스템 데이터 V2 (슬롯 기반)
+        /// </summary>
+        public InventoryDataV2 inventoryV2;
+
+        /// <summary>
+        /// 장비 시스템 데이터 V2 (7슬롯)
+        /// </summary>
+        public PlayerEquipmentDataV2 equipmentV2;
 
         /// <summary>
         /// 저장 시간 (Ticks)
         /// </summary>
         public long saveTimeTicks;
+
+        /// <summary>
+        /// 저장 데이터 버전
+        /// </summary>
+        public int dataVersion = 2;
 
         /// <summary>
         /// 저장 시간 (DateTime)
@@ -49,6 +64,8 @@ namespace GASPT.Save
             playerStats = new PlayerStatsData();
             currency = new CurrencyData();
             inventory = new InventoryData();
+            inventoryV2 = new InventoryDataV2();
+            equipmentV2 = new PlayerEquipmentDataV2();
             SaveTime = DateTime.Now;
         }
     }
