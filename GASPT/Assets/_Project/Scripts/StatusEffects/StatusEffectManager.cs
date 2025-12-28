@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GASPT.Core.Enums;
+using GASPT.Core.Extensions;
 using GASPT.Data;
 using UnityEngine;
 
@@ -169,6 +170,67 @@ namespace GASPT.StatusEffects
             Debug.Log($"[StatusEffectManager] 모든 효과 제거 - 대상: {target.name}");
         }
 
+        /// <summary>
+        /// 대상의 모든 디버프 제거 (Debuff + DoT)
+        /// </summary>
+        /// <param name="target">대상</param>
+        public void RemoveAllDebuffs(GameObject target)
+        {
+            if (target == null || !activeEffects.ContainsKey(target))
+            {
+                return;
+            }
+
+            List<StatusEffect> targetEffects = activeEffects[target];
+            List<StatusEffect> debuffsToRemove = targetEffects
+                .Where(e => e.EffectType.IsDebuff())
+                .ToList();
+
+            foreach (StatusEffect effect in debuffsToRemove)
+            {
+                effect.Remove();
+                targetEffects.Remove(effect);
+                OnEffectRemoved?.Invoke(target, effect);
+            }
+
+            if (targetEffects.Count == 0)
+            {
+                activeEffects.Remove(target);
+            }
+
+            Debug.Log($"[StatusEffectManager] 모든 디버프 제거 - 대상: {target.name}, 제거 수: {debuffsToRemove.Count}");
+        }
+
+        /// <summary>
+        /// 대상의 모든 버프 제거 (Buff + Special)
+        /// </summary>
+        /// <param name="target">대상</param>
+        public void RemoveAllBuffs(GameObject target)
+        {
+            if (target == null || !activeEffects.ContainsKey(target))
+            {
+                return;
+            }
+
+            List<StatusEffect> targetEffects = activeEffects[target];
+            List<StatusEffect> buffsToRemove = targetEffects
+                .Where(e => e.EffectType.IsBuff())
+                .ToList();
+
+            foreach (StatusEffect effect in buffsToRemove)
+            {
+                effect.Remove();
+                targetEffects.Remove(effect);
+                OnEffectRemoved?.Invoke(target, effect);
+            }
+
+            if (targetEffects.Count == 0)
+            {
+                activeEffects.Remove(target);
+            }
+
+            Debug.Log($"[StatusEffectManager] 모든 버프 제거 - 대상: {target.name}, 제거 수: {buffsToRemove.Count}");
+        }
 
         // ====== 업데이트 ======
 

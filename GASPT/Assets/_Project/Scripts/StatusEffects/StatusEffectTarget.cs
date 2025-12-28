@@ -1,4 +1,5 @@
 using GASPT.Core.Enums;
+using GASPT.Core.Extensions;
 using GASPT.Core;
 using GASPT.Data;
 using UnityEngine;
@@ -107,16 +108,7 @@ namespace GASPT.StatusEffects
         /// </summary>
         public void ClearDebuffs()
         {
-            var effects = StatusEffectManager.Instance?.GetActiveEffects(gameObject);
-            if (effects == null) return;
-
-            foreach (var effect in effects)
-            {
-                if (!effect.IsBuff)
-                {
-                    StatusEffectManager.Instance.RemoveEffect(gameObject, effect.EffectType);
-                }
-            }
+            StatusEffectManager.Instance?.RemoveAllDebuffs(gameObject);
         }
 
         /// <summary>
@@ -124,16 +116,7 @@ namespace GASPT.StatusEffects
         /// </summary>
         public void ClearBuffs()
         {
-            var effects = StatusEffectManager.Instance?.GetActiveEffects(gameObject);
-            if (effects == null) return;
-
-            foreach (var effect in effects)
-            {
-                if (effect.IsBuff)
-                {
-                    StatusEffectManager.Instance.RemoveEffect(gameObject, effect.EffectType);
-                }
-            }
+            StatusEffectManager.Instance?.RemoveAllBuffs(gameObject);
         }
 
         // ===== 내부 메서드 =====
@@ -169,40 +152,16 @@ namespace GASPT.StatusEffects
                 description: $"{effectType} 효과",
                 value: value,
                 duration: duration,
-                tickInterval: IsDoTEffect(effectType) ? 1f : 0f,
+                tickInterval: effectType.IsDoT() ? 1f : 0f,
                 maxStack: 3,
                 icon: null,
-                isBuff: IsBuff(effectType)
+                isBuff: effectType.IsBuff()
             );
 
             effect.Apply(gameObject);
 
             // 즉시 효과 적용
             ApplyImmediateEffect(effectType, value);
-        }
-
-        /// <summary>
-        /// DoT 효과인지 확인
-        /// </summary>
-        private bool IsDoTEffect(StatusEffectType effectType)
-        {
-            return effectType == StatusEffectType.Burn ||
-                   effectType == StatusEffectType.Poison ||
-                   effectType == StatusEffectType.Bleed;
-        }
-
-        /// <summary>
-        /// 버프인지 확인
-        /// </summary>
-        private bool IsBuff(StatusEffectType effectType)
-        {
-            return effectType == StatusEffectType.AttackUp ||
-                   effectType == StatusEffectType.DefenseUp ||
-                   effectType == StatusEffectType.SpeedUp ||
-                   effectType == StatusEffectType.CriticalRateUp ||
-                   effectType == StatusEffectType.Invincible ||
-                   effectType == StatusEffectType.Regeneration ||
-                   effectType == StatusEffectType.Shield;
         }
 
         /// <summary>
@@ -259,7 +218,7 @@ namespace GASPT.StatusEffects
             }
 
             // DoT 효과 틱 구독
-            if (IsDoTEffect(effect.EffectType))
+            if (effect.EffectType.IsDoT())
             {
                 effect.OnTick += HandleDoTTick;
             }
@@ -290,7 +249,7 @@ namespace GASPT.StatusEffects
             }
 
             // DoT 틱 구독 해제
-            if (IsDoTEffect(effect.EffectType))
+            if (effect.EffectType.IsDoT())
             {
                 effect.OnTick -= HandleDoTTick;
             }
