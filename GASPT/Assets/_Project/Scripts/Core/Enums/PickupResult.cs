@@ -23,6 +23,12 @@ namespace GASPT.Core.Enums
         /// <summary>
         /// 거리가 너무 멀음
         /// </summary>
-        TooFar
+        TooFar,
+
+
+        /// <summary>
+        /// 유효하지 않은 아이템
+        /// </summary>
+        InvalidItem
     }
 }

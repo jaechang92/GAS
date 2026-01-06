@@ -28,6 +28,21 @@ namespace GASPT.Core.Enums
         /// <summary>
         /// 아이템 미보유
         /// </summary>
-        NotOwned
+        NotOwned,
+
+        /// <summary>
+        /// 이미 가득 참
+        /// </summary>
+        AlreadyFull,
+
+        /// <summary>
+        /// 타겟 없음
+        /// </summary>
+        NoTarget,
+
+        /// <summary>
+        /// 잘못된 항목
+        /// </summary>
+        InvalidItem
     }
 }

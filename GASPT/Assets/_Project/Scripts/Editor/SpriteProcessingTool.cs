@@ -1,22 +1,53 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GASPT.Editor
 {
     public class SpriteProcessingTool : EditorWindow
     {
-        private Color keyColor = Color.black;
+        private Color keyColor = Color.green; // Default to green screen
         private float tolerance = 0.1f;
+        private float smoothness = 0.05f; // Range 0-1 for edge feathering
         
-        private Texture2D selectedTexture;
-        private Texture2D previewTexture;
+        private List<Texture2D> selectedTextures = new List<Texture2D>();
+        private Texture2D previewOriginal;
+        private Texture2D previewResult;
         private Vector2 scrollPosition;
 
         [MenuItem("Tools/GASPT/Art/Sprite Processor (Background Remover)")]
         public static void ShowWindow()
         {
             GetWindow<SpriteProcessingTool>("Sprite Processor");
+        }
+
+        private void OnEnable()
+        {
+            // Initial selection check
+            UpdateSelection();
+        }
+
+        private void OnSelectionChange()
+        {
+            UpdateSelection();
+            Repaint();
+        }
+
+        private void UpdateSelection()
+        {
+            selectedTextures.Clear();
+            foreach (var obj in Selection.objects)
+            {
+                if (obj is Texture2D tex)
+                {
+                    selectedTextures.Add(tex);
+                }
+            }
+            
+            // Generate preview for the first one if available
+            UpdatePreview();
         }
 
         private void OnGUI()
@@ -26,162 +57,202 @@ namespace GASPT.Editor
             GUILayout.Label("Sprite Background Remover", EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
-            // Settings
-            EditorGUI.BeginChangeCheck();
-            keyColor = EditorGUILayout.ColorField("Background Color", keyColor);
-            tolerance = EditorGUILayout.Slider("Tolerance", tolerance, 0f, 1f);
-            
-            // Selection Handling
-            Texture2D currentSelection = GetSelectedTexture();
-            if (currentSelection != selectedTexture)
+            // Settings Section
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                selectedTexture = currentSelection;
-                UpdatePreview();
-            }
-            
-            if (EditorGUI.EndChangeCheck())
-            {
-                UpdatePreview();
+                GUILayout.Label("Settings", EditorStyles.label);
+                EditorGUI.BeginChangeCheck();
+                
+                keyColor = EditorGUILayout.ColorField(new GUIContent("Key Color", "The background color to remove"), keyColor);
+                tolerance = EditorGUILayout.Slider(new GUIContent("Tolerance", "Color matching sensitivity"), tolerance, 0f, 1f);
+                smoothness = EditorGUILayout.Slider(new GUIContent("Edge Smoothing", "Softness of the transparency edge"), smoothness, 0f, 0.5f);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    UpdatePreview();
+                }
             }
 
             EditorGUILayout.Space();
 
-            // Preview Area
-            if (selectedTexture != null)
+            // Status Section
+            if (selectedTextures.Count > 0)
             {
-                GUILayout.Label($"Selected: {selectedTexture.name} ({selectedTexture.width}x{selectedTexture.height})");
+                EditorGUILayout.HelpBox($"Selected {selectedTextures.Count} texture(s).", MessageType.Info);
+                
+                if (GUILayout.Button($"Process {selectedTextures.Count} File(s)", GUILayout.Height(30)))
+                {
+                    ProcessBatch();
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("Select Texture(s) in the Project window to proceed.", MessageType.Warning);
+            }
+
+            EditorGUILayout.Space();
+
+            // Preview Section (Single Item)
+            if (selectedTextures.Count > 0)
+            {
+                GUILayout.Label($"Preview: {selectedTextures[0].name}", EditorStyles.boldLabel);
                 
                 EditorGUILayout.BeginHorizontal();
                 
                 // Original
-                EditorGUILayout.BeginVertical(GUILayout.Width(position.width * 0.45f));
-                GUILayout.Label("Original");
-                Rect r1 = GUILayoutUtility.GetRect(200, 200);
-                EditorGUI.DrawTextureTransparent(r1, selectedTexture, ScaleMode.ScaleToFit);
-                EditorGUILayout.EndVertical();
+                DisplayPreviewBox("Original", previewOriginal);
+                
+                GUILayout.Space(10);
 
-                // Preview
-                EditorGUILayout.BeginVertical(GUILayout.Width(position.width * 0.45f));
-                GUILayout.Label("Preview (Transparent)");
-                Rect r2 = GUILayoutUtility.GetRect(200, 200);
-                if (previewTexture != null)
-                {
-                    // Draw checkerboard background for transparency
-                    EditorGUI.DrawTextureTransparent(r2, previewTexture, ScaleMode.ScaleToFit);
-                }
-                EditorGUILayout.EndVertical();
+                // Result
+                DisplayPreviewBox("Preview", previewResult, true);
 
                 EditorGUILayout.EndHorizontal();
-            }
-            else
-            {
-                EditorGUILayout.HelpBox("Select a Texture in the Project window to preview.", MessageType.Info);
-            }
-
-            EditorGUILayout.Space();
-
-            // Actions
-            if (GUILayout.Button("Process & Save Selected", GUILayout.Height(30)))
-            {
-                ProcessAndSave();
+                
+                if (selectedTextures.Count > 1)
+                {
+                    EditorGUILayout.LabelField("(Previewing first selected item only)", EditorStyles.miniLabel);
+                }
             }
 
             EditorGUILayout.EndScrollView();
         }
 
-        private Texture2D GetSelectedTexture()
+        private void DisplayPreviewBox(string title, Texture2D tex, bool checkboard = false)
         {
-            if (Selection.activeObject is Texture2D tex)
+            EditorGUILayout.BeginVertical(GUILayout.Width(200));
+            GUILayout.Label(title);
+            Rect r = GUILayoutUtility.GetRect(200, 200);
+            
+            // Draw background for transparency
+            if (checkboard)
             {
-                return tex;
+                EditorGUI.DrawRect(r, Color.gray);
+                // Simple checkerboard simulation can be added here if needed, 
+                // but Unity's DrawTextureTransparent handles alpha blending against the UI background.
             }
-            return null;
+
+            if (tex != null)
+            {
+                 EditorGUI.DrawTextureTransparent(r, tex, ScaleMode.ScaleToFit);
+            }
+            EditorGUILayout.EndVertical();
         }
 
         private void UpdatePreview()
         {
-            if (selectedTexture == null) return;
+            if (previewResult != null) DestroyImmediate(previewResult);
+            previewOriginal = null;
+
+            if (selectedTextures.Count == 0) return;
+
+            Texture2D source = selectedTextures[0];
             
-            // Ensure readable
-            string path = AssetDatabase.GetAssetPath(selectedTexture);
-            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null && !importer.isReadable)
+            // Try to make it readable temporarily for preview without altering asset setting yet if possible.
+            // But realistically, we need isReadable true to access pixels.
+            if (!source.isReadable)
             {
-                // Note: We avoid force-reimporting in OnGUI for performance/UX reasons unless user acts
-                // For preview, we might read a copy if possible, but simplest is asking user to set readable
-                // Or we can try to copy texture if allowed
+                // We show a warning or placeholder, or we can't preview.
+                return;
             }
 
-            try 
-            {
-                if (!selectedTexture.isReadable)
-                {
-                    // If not readable, we can't get pixels. Ask user or skip.
-                    // For specific tool usage, we can just warn or force it on 'Process'.
-                    // For preview, let's try to simulate or just show original if failed.
-                   return; 
-                }
+            previewOriginal = source;
+            previewResult = ProcessTexture(source);
+        }
 
-                if (previewTexture != null) DestroyImmediate(previewTexture);
+        private Texture2D ProcessTexture(Texture2D source)
+        {
+            if (!source.isReadable) return null;
+
+            Texture2D result = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+            Color[] pixels = source.GetPixels();
+            Color[] newPixels = new Color[pixels.Length];
+
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                Color p = pixels[i];
+                float diff = GetColorDiff(p, keyColor);
                 
-                previewTexture = new Texture2D(selectedTexture.width, selectedTexture.height, TextureFormat.RGBA32, false);
-                Color[] pixels = selectedTexture.GetPixels();
+                // alpha calculation
+                // if diff < tolerance -> alpha = 0
+                // if diff > tolerance + smoothness -> alpha = 1
+                // between -> interpolate
                 
-                for (int i = 0; i < pixels.Length; i++)
+                float alpha = Mathf.InverseLerp(tolerance, tolerance + smoothness + 0.001f, diff);
+                
+                // Prepare new pixel - keep original RGB, modify Alpha
+                // Optional: If alpha is low, maybe blend RGB towards white or keeping original to avoid dark edges?
+                // Keeping original RGB usually works best for pre-multiplied alpha shaders or standard blending.
+                newPixels[i] = new Color(p.r, p.g, p.b, alpha);
+            }
+
+            result.SetPixels(newPixels);
+            result.Apply();
+            return result;
+        }
+
+        private float GetColorDiff(Color c1, Color c2)
+        {
+            // Simple Manhattan distance or Euclidean.
+            // Using average difference
+            return (Mathf.Abs(c1.r - c2.r) + Mathf.Abs(c1.g - c2.g) + Mathf.Abs(c1.b - c2.b)) / 3f;
+        }
+
+        private void ProcessBatch()
+        {
+            int processedCount = 0;
+
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+
+                foreach (var tex in selectedTextures)
                 {
-                    if (IsColorMatch(pixels[i], keyColor, tolerance))
+                    string path = AssetDatabase.GetAssetPath(tex);
+                    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                    
+                    if (importer != null)
                     {
-                        pixels[i] = new Color(0, 0, 0, 0);
+                        // 1. Force Readable & RGBA32
+                        bool wasReadable = importer.isReadable;
+                        TextureImporterCompression wasCompression = importer.textureCompression;
+                        
+                        importer.isReadable = true;
+                        importer.textureCompression = TextureImporterCompression.Uncompressed;
+                        importer.SaveAndReimport();
+
+                        // 2. Process
+                        Texture2D processed = ProcessTexture(tex);
+                        if (processed != null)
+                        {
+                            byte[] bytes = processed.EncodeToPNG();
+                            string newPath = path.Replace(".png", "_Transparent.png");
+                            if (path == newPath) newPath = path.Replace(Path.GetExtension(path), "_Alpha" + Path.GetExtension(path));
+
+                            File.WriteAllBytes(newPath, bytes);
+                            processedCount++;
+                            DestroyImmediate(processed);
+                        }
+
+                        // 3. Revert settings if desired? 
+                        // Usually better to keep source clean, but we modified the importer. 
+                        // User might want to revert "Read/Write" after, but let's leave it for now or restore.
+                        // Restoring might be expensive if many files. Let's keep it simple.
                     }
                 }
-                
-                previewTexture.SetPixels(pixels);
-                previewTexture.Apply();
             }
-            catch (UnityException)
+            finally
             {
-               // Texture not readable
-            }
-        }
-
-        private void ProcessAndSave()
-        {
-            if (selectedTexture == null) return;
-
-            string path = AssetDatabase.GetAssetPath(selectedTexture);
-            
-            // Ensure readable before processing
-            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null)
-            {
-                importer.isReadable = true;
-                importer.textureCompression = TextureImporterCompression.Uncompressed;
-                importer.SaveAndReimport();
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.Refresh();
             }
 
-            // Re-run logic on fresh readable texture
-            UpdatePreview(); 
-
-            if (previewTexture == null) return;
-
-            byte[] bytes = previewTexture.EncodeToPNG();
-            string newPath = path.Replace(".png", "_Transparent.png");
-            if (path == newPath) newPath = path.Replace(Path.GetExtension(path), "_Alpha" + Path.GetExtension(path));
-
-            File.WriteAllBytes(newPath, bytes);
-            AssetDatabase.Refresh();
-            Debug.Log($"Saved transparent texture to: {newPath}");
-        }
-
-        private bool IsColorMatch(Color pixel, Color key, float tol)
-        {
-            float diff = Mathf.Abs(pixel.r - key.r) + Mathf.Abs(pixel.g - key.g) + Mathf.Abs(pixel.b - key.b);
-            return diff < tol * 3;
+            Debug.Log($"Processed {processedCount} images successfully.");
         }
 
         private void OnDisable()
         {
-            if (previewTexture != null) DestroyImmediate(previewTexture);
+            if (previewResult != null) DestroyImmediate(previewResult);
         }
     }
 }

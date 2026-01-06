@@ -31,7 +31,12 @@ namespace GASPT.Gameplay.Form
         Assassin = 7,
 
         /// <summary>탱커 - 방어 중심</summary>
-        Tank = 8
+        Tank = 8,
+
+        /// <summary> 제한 없음 </summary>
+        None = 99
+
+
     }
 
     /// <summary>
