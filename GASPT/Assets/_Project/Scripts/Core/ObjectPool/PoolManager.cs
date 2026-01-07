@@ -73,15 +73,15 @@ namespace GASPT.Core.Pooling
         // ====== 풀 가져오기 ======
 
         /// <summary>
-        /// 기존 풀 가져오기
+        /// 기존 풀 가져오기 (TryGetValue 최적화)
         /// </summary>
         public ObjectPool<T> GetPool<T>() where T : Component
         {
             string poolKey = typeof(T).Name;
 
-            if (pools.ContainsKey(poolKey))
+            if (pools.TryGetValue(poolKey, out var pool))
             {
-                return pools[poolKey] as ObjectPool<T>;
+                return pool as ObjectPool<T>;
             }
 
             Debug.LogError($"[PoolManager] {poolKey} 풀이 존재하지 않습니다! CreatePool을 먼저 호출하세요.");
@@ -89,15 +89,15 @@ namespace GASPT.Core.Pooling
         }
 
         /// <summary>
-        /// 기존 풀 가져오기 (런타임 타입)
+        /// 기존 풀 가져오기 (런타임 타입, TryGetValue 최적화)
         /// </summary>
         private object GetPoolByType(System.Type type)
         {
             string poolKey = type.Name;
 
-            if (pools.ContainsKey(poolKey))
+            if (pools.TryGetValue(poolKey, out var pool))
             {
-                return pools[poolKey];
+                return pool;
             }
 
             Debug.LogError($"[PoolManager] {poolKey} 풀이 존재하지 않습니다! CreatePool을 먼저 호출하세요.");
@@ -177,7 +177,7 @@ namespace GASPT.Core.Pooling
         }
 
         /// <summary>
-        /// 오브젝트를 풀로 반환 (편의 메서드)
+        /// 오브젝트를 풀로 반환 (TryGetValue 최적화)
         /// </summary>
         public void Despawn<T>(T obj) where T : Component
         {
@@ -187,8 +187,8 @@ namespace GASPT.Core.Pooling
             System.Type actualType = obj.GetType();
             string poolKey = actualType.Name;
 
-            // 풀 찾기
-            if (!pools.ContainsKey(poolKey))
+            // 풀 찾기 (TryGetValue 최적화)
+            if (!pools.TryGetValue(poolKey, out var pool))
             {
                 Debug.LogWarning($"[PoolManager] {poolKey} 풀이 없습니다. GameObject 파괴합니다.");
                 Destroy(obj.gameObject);
@@ -196,7 +196,6 @@ namespace GASPT.Core.Pooling
             }
 
             // Reflection으로 Release 호출
-            var pool = pools[poolKey];
             var releaseMethod = pool.GetType().GetMethod("Release");
             if (releaseMethod != null)
             {

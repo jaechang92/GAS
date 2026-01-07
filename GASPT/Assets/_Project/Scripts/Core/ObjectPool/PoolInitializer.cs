@@ -130,6 +130,9 @@ namespace GASPT.Core.Pooling
             // MagicMissileProjectile 풀 생성
             InitializeMagicMissilePool();
 
+            // IceLanceProjectile 풀 생성
+            InitializeIceLancePool();
+
             // EnemyProjectile 풀 생성
             InitializeEnemyProjectilePool();
 
@@ -182,6 +185,30 @@ namespace GASPT.Core.Pooling
             );
 
             Debug.Log("[PoolInitializer]   - MagicMissileProjectile 풀 생성 완료");
+        }
+
+        /// <summary>
+        /// IceLanceProjectile 풀 초기화
+        /// </summary>
+        private static void InitializeIceLancePool()
+        {
+            GameObject iceLancePrefab = GameResourceManager.Instance.LoadPrefab(
+                ResourcePaths.Prefabs.Projectiles.IceLanceProjectile
+            );
+
+            if (iceLancePrefab == null)
+            {
+                Debug.LogWarning("[PoolInitializer] IceLanceProjectile 프리팹을 찾을 수 없습니다!");
+                return;
+            }
+
+            PoolManager.Instance.CreatePool(
+                iceLancePrefab.GetComponent<IceLanceProjectile>(),
+                initialSize: 5,
+                canGrow: true
+            );
+
+            Debug.Log("[PoolInitializer]   - IceLanceProjectile 풀 생성 완료");
         }
 
         /// <summary>

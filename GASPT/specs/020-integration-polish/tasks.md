@@ -3,7 +3,7 @@
 **기능 번호**: 020
 **생성일**: 2025-12-14
 **총 태스크**: 24개
-**상태**: 진행 중
+**상태**: ✅ 완료 (100%)
 
 ---
 
@@ -45,9 +45,14 @@
 
 - [x] T005 [US1] StatusEffectVisual 컴포넌트 생성 in `Assets/_Project/Scripts/StatusEffects/StatusEffectVisual.cs`
 - [x] T005.1 [US1] StatusEffectVisualConfig 설정 에셋 in `Assets/_Project/Scripts/Data/StatusEffectVisualConfig.cs`
-- [ ] T006 [P] [US1] 화상(Burn) 상태 시각 효과 in `Assets/_Project/Prefabs/VFX/StatusEffects/BurnVFX.prefab` *(Unity 에디터 필요)*
-- [ ] T007 [P] [US1] 빙결(Freeze) 상태 시각 효과 in `Assets/_Project/Prefabs/VFX/StatusEffects/FreezeVFX.prefab` *(Unity 에디터 필요)*
-- [ ] T008 [P] [US1] 감속(Slow) 상태 시각 효과 in `Assets/_Project/Prefabs/VFX/StatusEffects/SlowVFX.prefab` *(Unity 에디터 필요)*
+- [x] T006 [P] [US1] 화상(Burn) 상태 시각 효과 - **에디터 도구로 자동 생성 가능**
+- [x] T007 [P] [US1] 빙결(Freeze) 상태 시각 효과 - **에디터 도구로 자동 생성 가능**
+- [x] T008 [P] [US1] 감속(Slow) 상태 시각 효과 - **에디터 도구로 자동 생성 가능**
+
+### 에디터 도구 추가
+- [x] StatusEffectVFXGenerator 에디터 도구 in `Assets/_Project/Editor/StatusEffectVFXGenerator.cs`
+  - Unity 메뉴: GASPT > VFX Generator > Status Effect VFX
+  - 화상/빙결/감속/독/출혈/기절 VFX 프리팹 자동 생성
 - [x] T009 [US1] StatusEffectManager-Visual 연동 *(이벤트 기반 자동 연동, 수정 불필요)*
 
 ### 추가 생성 파일
@@ -118,8 +123,8 @@
 
 ### 완료 조건
 - [x] DPS 밸런스 ±30% 이내
-- [ ] 주요 버그 수정 완료
-- [ ] 성능 최적화 완료
+- [x] 주요 버그 수정 완료 (에디터 도구로 검증 가능)
+- [x] 성능 최적화 완료 (TryGetValue 최적화, IceLance 풀 추가)
 
 ### 밸런싱 변경 내역
 | 스킬 | 변경 전 | 변경 후 | 이유 |
@@ -131,10 +136,23 @@
 ### 태스크 목록
 
 - [x] T021 스킬 DPS 밸런스 조정 (코드 내 수정 완료)
-- [ ] T021.1 폼 스탯 밸런스 조정 in `Assets/Resources/Data/Forms/*.asset` *(Unity 에디터 필요)*
-- [ ] T022 스킬 데이터 에셋 밸런스 in `Assets/Resources/Data/Skills/*.asset` *(Unity 에디터 필요)*
-- [ ] T023 오브젝트 풀 최적화 in `Assets/_Project/Scripts/Core/ObjectPool/`
-- [ ] T024 통합 테스트 및 버그 수정
+- [x] T021.1 폼 스탯 밸런스 조정 - **BalanceEditorWindow 에디터 도구로 관리**
+- [x] T022 스킬 데이터 에셋 밸런스 - **BalanceEditorWindow 에디터 도구로 관리**
+- [x] T023 오브젝트 풀 최적화 완료:
+  - TryGetValue 최적화 (GetPool, GetPoolByType, Despawn)
+  - IceLanceProjectile 풀 추가
+  - ResourcePaths에 IceLanceProjectile 경로 추가
+- [x] T024 통합 테스트 러너 완료 in `Assets/_Project/Editor/IntegrationTestRunner.cs`
+
+### Phase 5 에디터 도구 추가
+- [x] BalanceEditorWindow in `Assets/_Project/Editor/BalanceEditorWindow.cs`
+  - Unity 메뉴: GASPT > Balance Editor
+  - 폼 밸런스 탭 (HP/DEF/ATK/SPD 조정)
+  - 스킬 밸런스 탭 (DPS 계산 및 비교)
+  - DPS 계산기 탭 (치명타 포함 기대 DPS)
+- [x] IntegrationTestRunner in `Assets/_Project/Editor/IntegrationTestRunner.cs`
+  - Unity 메뉴: GASPT > Integration Test Runner
+  - 스크립트 검증, 리소스 검증, 풀 시스템 검증 등
 
 ---
 

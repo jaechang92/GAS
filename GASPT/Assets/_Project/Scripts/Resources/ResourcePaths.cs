@@ -119,6 +119,8 @@ namespace GASPT.ResourceManagement
 
                 public const string MagicMissileProjectile = "Prefabs/Projectiles/MagicMissileProjectile";
 
+                public const string IceLanceProjectile = "Prefabs/Projectiles/IceLanceProjectile";
+
                 public const string EnemyProjectile = "Prefabs/Projectiles/EnemyProjectile";
             }
         }
