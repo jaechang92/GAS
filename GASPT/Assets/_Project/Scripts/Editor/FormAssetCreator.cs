@@ -14,11 +14,12 @@ namespace GASPT.Editor
         private const string FORMS_PATH = "Assets/Resources/Data/Forms/";
         private const string SKILLS_PATH = "Assets/Resources/Data/Skills/"; // 가정된 경로
 
-        [MenuItem("Tools/GASPT/Forms/Create Default Forms (Spec 019)", false, 100)]
+        [MenuItem("GASPT/Forms/Create All Form Assets", false, 100)]
         public static void CreateDefaultForms()
         {
             EnsureFolder();
 
+            CreateBasicMage();
             CreateFlameMage();
             CreateFrostMage();
             CreateThunderMage();
@@ -27,8 +28,18 @@ namespace GASPT.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log("[FormAssetCreator] Spec 019 기반 폼 4종 생성 완료!");
-            EditorUtility.DisplayDialog("완료", "폼 4종이 생성되었습니다.\n\n경로: " + FORMS_PATH, "확인");
+            Debug.Log("[FormAssetCreator] 폼 5종 생성 완료!");
+            EditorUtility.DisplayDialog("완료", "폼 5종이 생성되었습니다.\n\n경로: " + FORMS_PATH, "확인");
+        }
+
+        [MenuItem("GASPT/Forms/Create Basic Mage Only", false, 101)]
+        public static void CreateBasicMageOnly()
+        {
+            EnsureFolder();
+            CreateBasicMage();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[FormAssetCreator] BasicMage 폼 생성 완료!");
         }
 
         private static void EnsureFolder()
@@ -68,11 +79,36 @@ namespace GASPT.Editor
             form.formName = name;
             form.formType = type;
             form.baseRarity = rarity;
-            form.maxAwakeningLevel = 3; 
+            form.maxAwakeningLevel = 3;
             return form;
         }
 
+        private static void CreateBasicMage()
+        {
+            var form = CreateFormAssetInstance("form_basic_mage", "기본 마법사", FormType.Basic, FormRarity.Common);
+            form.description = "모든 마법사의 기본이 되는 폼입니다.\n균형 잡힌 스탯으로 안정적인 플레이가 가능합니다.";
+            form.formColor = new Color(0.6f, 0.6f, 0.8f);
+            form.dropWeight = 100;
+            form.playstyleHint = "균형형 - 입문자 추천";
 
+            // Spec: Common → Uncommon → Rare → Unique (4 levels)
+            form.statsByRarity = new FormStats[]
+            {
+                // Lv0 (Common)
+                new FormStats { attackPower = 5f, attackSpeed = 1.0f, moveSpeed = 1.0f, maxHealthBonus = 0f, maxManaBonus = 0f },
+                // Lv1 (Uncommon)
+                new FormStats { attackPower = 8f, attackSpeed = 1.05f, moveSpeed = 1.0f, maxHealthBonus = 10f, maxManaBonus = 10f },
+                // Lv2 (Rare)
+                new FormStats { attackPower = 12f, attackSpeed = 1.1f, moveSpeed = 1.05f, maxHealthBonus = 20f, maxManaBonus = 20f },
+                // Lv3 (Unique)
+                new FormStats { attackPower = 18f, attackSpeed = 1.15f, moveSpeed = 1.1f, maxHealthBonus = 35f, maxManaBonus = 35f }
+            };
+
+            form.skill1 = LoadSkill("MagicMissile");
+            form.skill2 = LoadSkill("ManaShield");
+
+            SaveAsset(form, "BasicMage");
+        }
 
         private static void CreateFlameMage()
         {
