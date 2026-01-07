@@ -312,6 +312,9 @@ namespace GASPT.Stats
                 finalMana += Mathf.RoundToInt(formBonus.maxManaBonus);
             }
 
+            // 메타 업그레이드 보너스 합산
+            ApplyMetaUpgradeBonuses();
+
             isDirty = false;
 
             // 변경된 스탯에 대해 이벤트 발생
@@ -332,6 +335,36 @@ namespace GASPT.Stats
             {
                 OnStatsChanged?.Invoke(statType, oldValue, newValue);
                 Debug.Log($"[PlayerStats] {statType} 변경: {oldValue} → {newValue}");
+            }
+        }
+
+        /// <summary>
+        /// 메타 업그레이드 보너스 적용
+        /// MetaProgressionManager에서 영구 업그레이드 보너스를 가져와 적용
+        /// </summary>
+        private void ApplyMetaUpgradeBonuses()
+        {
+            if (!Meta.MetaProgressionManager.HasInstance) return;
+
+            var meta = Meta.MetaProgressionManager.Instance;
+
+            // HP 보너스 (고정값)
+            int hpBonus = meta.GetMaxHPBonus();
+            finalHP += hpBonus;
+
+            // 공격력 보너스 (% 증가)
+            float attackBonus = meta.GetAttackBonus();
+            if (attackBonus > 0)
+            {
+                finalAttack += Mathf.RoundToInt(finalAttack * attackBonus);
+            }
+
+            // 방어력은 받는 피해 감소로 적용 (PlayerStatsMetaExtension.ApplyMetaDefenseBonus 사용)
+            // finalDefense는 변경하지 않음 - 피해 계산 시 적용
+
+            if (hpBonus > 0 || attackBonus > 0)
+            {
+                Debug.Log($"[PlayerStats] 메타 보너스 적용 - HP: +{hpBonus}, Attack: +{attackBonus * 100}%");
             }
         }
 
