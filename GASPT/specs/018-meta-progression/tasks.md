@@ -3,7 +3,7 @@
 **기능 번호**: 018
 **생성일**: 2025-12-01
 **총 태스크**: 32개
-**상태**: ✅ 코드 구현 완료 (90%)
+**상태**: ✅ 코드 구현 완료 (95%)
 
 ---
 
@@ -91,7 +91,7 @@
 
 ---
 
-## Phase 5: 업그레이드 UI (US4 - Upgrade UI) ⏳ 미구현
+## Phase 5: 업그레이드 UI (US4 - Upgrade UI) ✅ 완료
 
 > 업그레이드 트리 UI를 구현합니다.
 
@@ -99,14 +99,14 @@
 *"플레이어로서 로비에서 업그레이드 트리를 보고 원하는 업그레이드를 구매하고 싶다"*
 
 ### 완료 조건
-- [ ] 업그레이드 트리 UI 표시
-- [ ] 구매 가능/불가 상태 표시
-- [ ] 구매 후 즉시 반영
+- [x] 업그레이드 트리 UI 표시
+- [x] 구매 가능/불가 상태 표시
+- [x] 구매 후 즉시 반영
 
 ### 태스크 목록
 
-- [ ] T025 [US4] UpgradeTreeView 생성 in `Assets/_Project/Scripts/UI/Meta/UpgradeTreeView.cs`
-- [ ] T026 [US4] UpgradeNodeView 생성 in `Assets/_Project/Scripts/UI/Meta/UpgradeNodeView.cs`
+- [x] T025 [US4] UpgradeTreeView 생성 in `Assets/_Project/Scripts/UI/Meta/UpgradeTreeView.cs`
+- [x] T026 [US4] UpgradeNodeView 생성 in `Assets/_Project/Scripts/UI/Meta/UpgradeNodeView.cs`
 - [ ] T027 [US4] UpgradeTree 프리팹 생성 *(Unity 에디터 필요)*
 
 ---
@@ -185,6 +185,12 @@
 |------|------|
 | `Meta/Editor/UpgradeAssetGenerator.cs` | 업그레이드 에셋 자동 생성 |
 
+### UI
+| 파일 | 설명 |
+|------|------|
+| `UI/Meta/UpgradeTreeView.cs` | 업그레이드 트리 메인 UI (카테고리 탭, 노드 목록, 상세 패널) |
+| `UI/Meta/UpgradeNodeView.cs` | 개별 업그레이드 노드 컴포넌트 |
+
 ---
 
 ## 남은 작업
@@ -197,9 +203,9 @@
 2. **업적 에셋 생성** (선택사항)
    - `Assets/Resources/Data/Meta/Achievements/` 경로에 수동 생성
 
-3. **UI 구현** (선택사항)
-   - UpgradeTreeView, UnlockPanelView, AchievementListView
-   - RunResultView, MetaHUDView
+3. **UI 프리팹 연결** (선택사항)
+   - UpgradeTreeView, UpgradeNodeView → UpgradeTree 프리팹 구성
+   - UnlockPanelView, AchievementListView, RunResultView, MetaHUDView
 
 ### 게임플레이 연동 필요
 - 적 처치 시: `MetaProgressionManager.Instance.Currency.AddTempBone(amount)`
@@ -221,15 +227,15 @@ Phase 2 Phase 3 Phase 4
     ↓       ↓       ↓
     └───────┴───┬───┘
                 ↓
-            Phase 5 (UI) ⏳
+            Phase 5 (UI) ✅
                 ↓
             Phase 6 (업적✅)
                 ↓
-            Phase 7 (폴리싱)
+            Phase 7 (폴리싱) ⏳
 ```
 
 ---
 
 *생성: GASPT Task Generator*
 *최종 수정: 2026-01-07*
-*현재 상태: 코드 구현 90% 완료, UI 및 에셋 생성 필요*
+*현재 상태: 코드 구현 95% 완료, 에셋 생성 및 프리팹 연결 필요*
