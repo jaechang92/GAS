@@ -20,6 +20,23 @@ namespace GASPT.Data
         [Tooltip("적 클래스 (어떤 Enemy 컴포넌트를 사용할지 결정)")]
         public EnemyClass enemyClass = EnemyClass.BasicMelee;
 
+        [Tooltip("속성 타입 (Fire, Ice, Thunder, Dark, Light, Poison, Earth)")]
+        public ElementType elementType = ElementType.None;
+
+        [Tooltip("보스 등급 (Boss 타입 전용)")]
+        public BossGrade bossGrade = BossGrade.MiniBoss;
+
+
+        // ====== 스테이지 설정 ======
+
+        [Header("스테이지 설정")]
+        [Tooltip("출현 스테이지 (1-5)")]
+        [Range(1, 5)]
+        public int stageAppearance = 1;
+
+        [Tooltip("추가 출현 스테이지 (선택사항, 여러 스테이지에 등장하는 경우)")]
+        public int[] additionalStages;
+
 
         // ====== 기본 정보 ======
 
