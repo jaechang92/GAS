@@ -1,6 +1,7 @@
 using UnityEngine;
 using GASPT.UI;
 using GASPT.UI.MVP;
+using GASPT.UI.MVP.Views;
 
 namespace GASPT.Core
 {
@@ -31,6 +32,9 @@ namespace GASPT.Core
         [Tooltip("미니맵 UI")]
         [SerializeField] private BaseUI minimapUI;
 
+        [Tooltip("런 결과 UI (MVP 패턴)")]
+        [SerializeField] private RunResultView runResultView;
+
 
         // ====== FullScreen UI 상태 ======
 
@@ -47,6 +51,7 @@ namespace GASPT.Core
         public BaseUI Hud => hudUI;
         public BaseUI Pause => pauseUI;
         public BaseUI Minimap => minimapUI;
+        public RunResultView RunResult => runResultView;
 
         /// <summary>
         /// FullScreen UI가 열려있는지 여부
@@ -67,6 +72,11 @@ namespace GASPT.Core
             if (shopView == null)
             {
                 shopView = FindAnyObjectByType<ShopView>();
+            }
+
+            if (runResultView == null)
+            {
+                runResultView = FindAnyObjectByType<RunResultView>();
             }
 
             // 초기 상태 설정
@@ -257,6 +267,64 @@ namespace GASPT.Core
         }
 
 
+        // ====== 런 결과 UI ======
+
+        /// <summary>
+        /// 런 결과 표시 (외부 API)
+        /// GameOverState, DungeonClearedState에서 호출
+        /// </summary>
+        /// <param name="cleared">클리어 여부</param>
+        /// <param name="stage">도달 스테이지</param>
+        /// <param name="rooms">클리어한 방 수</param>
+        /// <param name="enemies">처치한 적 수</param>
+        /// <param name="time">플레이 시간 (초)</param>
+        /// <param name="gold">획득 골드</param>
+        /// <param name="bone">획득 Bone</param>
+        /// <param name="soul">획득 Soul</param>
+        public void ShowRunResult(bool cleared, int stage, int rooms, int enemies, float time, int gold, int bone, int soul)
+        {
+            if (runResultView == null)
+            {
+                Debug.LogWarning("[UIManager] RunResultView가 없습니다.");
+                return;
+            }
+
+            runResultView.ShowRunResult(cleared, stage, rooms, enemies, time, gold, bone, soul);
+        }
+
+        /// <summary>
+        /// 런 결과 UI 숨기기
+        /// </summary>
+        public void HideRunResult()
+        {
+            if (runResultView != null && runResultView.IsVisible)
+            {
+                runResultView.HideUI();
+            }
+        }
+
+        /// <summary>
+        /// 런 결과 UI에 로비 복귀 콜백 설정
+        /// </summary>
+        public void SetRunResultReturnCallback(System.Action callback)
+        {
+            runResultView?.SetReturnCallback(callback);
+        }
+
+        /// <summary>
+        /// 런 결과 UI에 재시작 콜백 설정
+        /// </summary>
+        public void SetRunResultRestartCallback(System.Action callback)
+        {
+            runResultView?.SetRestartCallback(callback);
+        }
+
+        /// <summary>
+        /// 런 결과 UI가 표시 중인지 확인
+        /// </summary>
+        public bool IsRunResultVisible => runResultView != null && runResultView.IsVisible;
+
+
         // ====== 전체 UI 제어 ======
 
         /// <summary>
@@ -273,6 +341,12 @@ namespace GASPT.Core
             if (shopView != null && shopView.IsVisible)
             {
                 shopView.Close();
+            }
+
+            // 런 결과 UI
+            if (runResultView != null && runResultView.IsVisible)
+            {
+                runResultView.HideUI();
             }
 
             // 기타 UI
@@ -298,6 +372,11 @@ namespace GASPT.Core
             if (shopView != null && shopView.IsVisible)
             {
                 shopView.Close();
+            }
+
+            if (runResultView != null && runResultView.IsVisible)
+            {
+                runResultView.HideUI();
             }
 
             // 카운터 리셋 (안전 처리)
@@ -373,6 +452,7 @@ namespace GASPT.Core
             Debug.Log("========== UI State ==========");
             Debug.Log($"Inventory: {(inventoryView?.IsVisible ?? false)}");
             Debug.Log($"Shop: {(shopView?.IsVisible ?? false)}");
+            Debug.Log($"RunResult: {(runResultView?.IsVisible ?? false)}");
             Debug.Log($"HUD: {(hudUI?.IsVisible ?? false)}");
             Debug.Log($"Pause: {(pauseUI?.IsVisible ?? false)}");
             Debug.Log($"Minimap: {(minimapUI?.IsVisible ?? false)}");

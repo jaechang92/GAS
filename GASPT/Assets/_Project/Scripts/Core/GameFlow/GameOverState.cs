@@ -3,42 +3,96 @@ using UnityEngine;
 using FSM.Core;
 using GASPT.UI;
 using GASPT.Gameplay.Level;
+using GASPT.Meta.System;
 
 namespace GASPT.Core.GameFlow
 {
     /// <summary>
     /// 게임 오버 상태
     /// - 플레이어 사망 시 진입
-    /// - 게임 오버 UI 표시
-    /// - 재시작 또는 준비실 복귀 선택
+    /// - 런 결과 UI 표시 (RunResultView)
+    /// - 메타 재화 확정 및 통계 업데이트
+    /// - 재시작 또는 로비 복귀 선택
     /// </summary>
     public class GameOverState : State
     {
         public override string Name => "GameOver";
 
+        // UI 완료 대기용 플래그
+        private bool isWaitingForUI;
+        private bool shouldRestart;
+
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
             Debug.Log("[GameOverState] 게임 오버!");
 
-            // 게임 일시정지 (Time.timeScale = 0)
+            isWaitingForUI = true;
+            shouldRestart = false;
+
             var gameManager = GameManager.Instance;
-            if (gameManager != null)
-            {
-                gameManager.Pause();
-            }
+
+            // 게임 일시정지는 RunResultView에서 처리
+            // (NotifyFullScreenUIOpened 호출)
 
             // 통계 수집
             int goldEarned = gameManager?.CurrentGold ?? 0;
             int roomsCount = RoomManager.Instance?.TotalRoomCount ?? 0;
+            int stage = gameManager?.CurrentStage ?? 1;
+            int enemiesKilled = 0; // TODO: EnemyManager에서 추적
+            float playTime = Time.time; // TODO: RunManager에서 정확한 시간 추적
 
-            // 게임 오버 UI 표시
-            if (GameOverUI.HasInstance)
+            // 메타 재화 수집 (확정 전)
+            int tempBone = 0;
+            int tempSoul = 0;
+
+            if (MetaProgressionManager.HasInstance)
             {
-                GameOverUI.Instance.ShowGameOver(goldEarned, roomsCount);
-                Debug.Log("[GameOverState] GameOverUI 표시 완료");
+                tempBone = MetaProgressionManager.Instance.Currency.TempBone;
+                tempSoul = MetaProgressionManager.Instance.Currency.TempSoul;
 
-                // UI에서 버튼 클릭 시 자동으로 TriggerRestartGame() 호출됨
-                // 무한 대기 (UI에서 처리)
+                // 런 종료 및 재화 확정
+                MetaProgressionManager.Instance.EndRun(cleared: false, stageReached: stage, enemiesKilled: enemiesKilled);
+            }
+
+            // UIManager를 통해 런 결과 표시
+            if (UIManager.HasInstance)
+            {
+                // 콜백 설정
+                UIManager.Instance.SetRunResultReturnCallback(() =>
+                {
+                    shouldRestart = false;
+                    isWaitingForUI = false;
+                });
+
+                UIManager.Instance.SetRunResultRestartCallback(() =>
+                {
+                    shouldRestart = true;
+                    isWaitingForUI = false;
+                });
+
+                // 결과 표시
+                UIManager.Instance.ShowRunResult(
+                    cleared: false,
+                    stage: stage,
+                    rooms: roomsCount,
+                    enemies: enemiesKilled,
+                    time: playTime,
+                    gold: goldEarned,
+                    bone: tempBone,
+                    soul: tempSoul
+                );
+
+                // UI 버튼 클릭 대기
+                while (isWaitingForUI && !cancellationToken.IsCancellationRequested)
+                {
+                    await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
+                }
+            }
+            else if (GameOverUI.HasInstance)
+            {
+                // 폴백: 기존 GameOverUI 사용
+                GameOverUI.Instance.ShowGameOver(goldEarned, roomsCount);
+
                 while (GameOverUI.Instance.IsVisible && !cancellationToken.IsCancellationRequested)
                 {
                     await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
@@ -46,18 +100,22 @@ namespace GASPT.Core.GameFlow
             }
             else
             {
-                Debug.LogWarning("[GameOverState] GameOverUI가 없습니다. 3초 후 자동 복귀");
-
-                // 런 골드 손실 로그
-                Debug.Log($"[GameOverState] 손실한 골드: {goldEarned}");
-
-                // 폴백: 3초 후 자동 준비실 복귀
+                // 폴백: 3초 후 자동 복귀
+                Debug.LogWarning("[GameOverState] UI가 없습니다. 3초 후 자동 복귀");
                 await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
+            }
 
-                var gameFlowFSM = GameFlowStateMachine.Instance;
-                if (gameFlowFSM != null)
+            // 상태 전환
+            var gameFlowFSM = GameFlowStateMachine.Instance;
+            if (gameFlowFSM != null)
+            {
+                if (shouldRestart)
                 {
                     gameFlowFSM.TriggerRestartGame();
+                }
+                else
+                {
+                    gameFlowFSM.TriggerRestartGame(); // 로비로 복귀
                 }
             }
         }
@@ -66,14 +124,13 @@ namespace GASPT.Core.GameFlow
         {
             Debug.Log("[GameOverState] 게임 오버 상태 종료");
 
-            // 게임 재개 (Time.timeScale = 1)
-            var gameManager = GameManager.Instance;
-            if (gameManager != null)
+            // 런 결과 UI 숨기기
+            if (UIManager.HasInstance)
             {
-                gameManager.Resume();
+                UIManager.Instance.HideRunResult();
             }
 
-            // 게임 오버 UI 숨기기
+            // 기존 GameOverUI 숨기기 (폴백)
             if (GameOverUI.HasInstance && GameOverUI.Instance.IsVisible)
             {
                 GameOverUI.Instance.Hide();
@@ -90,14 +147,11 @@ namespace GASPT.Core.GameFlow
         /// </summary>
         private void CleanupDungeonData()
         {
-            Debug.Log("[GameOverState] 던전 데이터 정리");
-
             // 플레이어 부활
-            var playerStats = UnityEngine.Object.FindAnyObjectByType<GASPT.Stats.PlayerStats>();
+            var playerStats = Object.FindAnyObjectByType<GASPT.Stats.PlayerStats>();
             if (playerStats != null)
             {
                 playerStats.Revive();
-                Debug.Log("[GameOverState] 플레이어 부활");
             }
 
             // 런 골드 리셋
@@ -105,10 +159,7 @@ namespace GASPT.Core.GameFlow
             if (currencySystem != null)
             {
                 currencySystem.ResetGold();
-                Debug.Log("[GameOverState] 런 골드 리셋");
             }
-
-            // TODO: 던전 전용 버프/아이템 제거
         }
     }
 }
