@@ -139,8 +139,6 @@ namespace GASPT.Gameplay.Enemies
 
             enemyData = data;
             Initialize();
-
-            Debug.Log($"[Enemy] {enemyData.enemyName} 외부 초기화 완료");
         }
 
         /// <summary>
@@ -162,8 +160,6 @@ namespace GASPT.Gameplay.Enemies
 
             // 이벤트 발생
             OnHpChanged?.Invoke(currentHp, enemyData.maxHp);
-
-            Debug.Log($"[Enemy] {enemyData.enemyName} 초기화 완료: HP={currentHp}/{enemyData.maxHp}, Attack={enemyData.attack}");
         }
 
         /// <summary>
@@ -183,8 +179,6 @@ namespace GASPT.Gameplay.Enemies
 
             // 이벤트 발생
             OnHpChanged?.Invoke(currentHp, scaledMaxHp);
-
-            Debug.Log($"[Enemy] {enemyData?.enemyName} 스케일링 적용: HP={scaledMaxHp}, Attack={scaledAttack}, Gold={scaledMinGold}-{scaledMaxGold}, EXP={scaledExp}");
         }
 
 
@@ -215,8 +209,6 @@ namespace GASPT.Gameplay.Enemies
                 enemyData.elementType
             );
 
-            Debug.Log($"[Enemy] {enemyData.enemyName}: 속성 데미지 계산 - 기본 {baseDamage}, 공격속성 {attackElement}, 방어속성 {enemyData.elementType} → 최종 {finalDamage}");
-
             // 기존 TakeDamage 호출
             TakeDamage(finalDamage);
         }
@@ -240,11 +232,8 @@ namespace GASPT.Gameplay.Enemies
             }
 
             // HP 감소
-            int previousHp = currentHp;
             currentHp -= damage;
             currentHp = Mathf.Max(0, currentHp);
-
-            Debug.Log($"[Enemy] {enemyData.enemyName}: {damage} 데미지 받음 ({previousHp} → {currentHp})");
 
             // DamageNumber 표시
             if (DamageNumberPool.Instance != null)
@@ -278,8 +267,6 @@ namespace GASPT.Gameplay.Enemies
             }
 
             isDead = true;
-
-            Debug.Log($"[Enemy] {enemyData.enemyName} 사망!");
 
             // 골드 드롭
             DropGold();
@@ -330,12 +317,9 @@ namespace GASPT.Gameplay.Enemies
             // DamageCalculator를 사용하여 데미지 계산
             int damage = DamageCalculator.CalculateDamageDealt(Attack);
 
-            Debug.Log($"[Enemy] {enemyData.enemyName}이(가) 플레이어를 공격! 공격력 {Attack} → 데미지 {damage}");
-
             // 플레이어에게 데미지 적용
             target.TakeDamage(damage);
         }
-
 
         // ====== 골드 드롭 ======
 
@@ -350,7 +334,7 @@ namespace GASPT.Gameplay.Enemies
             int goldDrop;
             if (scaledMinGold > 0 && scaledMaxGold > 0)
             {
-                goldDrop = Random.Range(scaledMinGold, scaledMaxGold + 1);
+                goldDrop = UnityEngine.Random.Range(scaledMinGold, scaledMaxGold + 1);
             }
             else
             {
@@ -363,7 +347,6 @@ namespace GASPT.Gameplay.Enemies
             if (currencySystem != null)
             {
                 currencySystem.AddGold(goldDrop);
-                Debug.Log($"[Enemy] {enemyData.enemyName} 골드 드롭: {goldDrop} 골드");
             }
             else
             {
@@ -390,7 +373,6 @@ namespace GASPT.Gameplay.Enemies
             if (playerLevel != null)
             {
                 playerLevel.AddExp(expReward);
-                Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {expReward} EXP");
 
                 // EXP Number 표시
                 if (DamageNumberPool.Instance != null)
@@ -423,7 +405,6 @@ namespace GASPT.Gameplay.Enemies
             if (GASPT.Loot.LootSystem.HasInstance)
             {
                 GASPT.Loot.LootSystem.Instance.DropLoot(enemyData.lootTable, transform.position);
-                Debug.Log($"[Enemy] {enemyData.enemyName} 아이템 드롭 시도");
             }
             else
             {
@@ -454,7 +435,6 @@ namespace GASPT.Gameplay.Enemies
             if (boneDrop > 0)
             {
                 meta.Currency.AddTempBone(boneDrop);
-                Debug.Log($"[Enemy] {enemyData.enemyName} Bone 드롭: +{boneDrop}");
             }
 
             // Soul 드롭 (보스 전용)
@@ -464,7 +444,6 @@ namespace GASPT.Gameplay.Enemies
                 if (soulDrop > 0)
                 {
                     meta.Currency.AddTempSoul(soulDrop);
-                    Debug.Log($"[Enemy] {enemyData.enemyName} Soul 드롭: +{soulDrop}");
                 }
             }
         }
@@ -500,8 +479,6 @@ namespace GASPT.Gameplay.Enemies
                 currentHp = enemyData.maxHp;
                 OnHpChanged?.Invoke(currentHp, enemyData.maxHp);
             }
-
-            Debug.Log($"[Enemy] {enemyData?.enemyName} 풀에서 스폰");
         }
 
         /// <summary>
@@ -515,8 +492,6 @@ namespace GASPT.Gameplay.Enemies
             // 이벤트 구독자 정리
             OnHpChanged = null;
             OnDeath = null;
-
-            Debug.Log($"[Enemy] {enemyData?.enemyName} 풀로 반환");
         }
 
         /// <summary>
@@ -580,8 +555,6 @@ namespace GASPT.Gameplay.Enemies
                 // 구독
                 manager.OnEffectApplied += OnEffectApplied;
                 manager.OnEffectRemoved += OnEffectRemoved;
-
-                Debug.Log($"[Enemy] {enemyData?.enemyName} StatusEffectManager 이벤트 구독 완료");
             }
             else
             {
@@ -598,8 +571,6 @@ namespace GASPT.Gameplay.Enemies
             {
                 StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
                 StatusEffectManager.Instance.OnEffectRemoved -= OnEffectRemoved;
-
-                Debug.Log($"[Enemy] {enemyData?.enemyName} StatusEffectManager 이벤트 구독 해제");
             }
         }
 
@@ -615,8 +586,6 @@ namespace GASPT.Gameplay.Enemies
             {
                 effect.OnTick += OnStatusEffectTick;
             }
-
-            Debug.Log($"[Enemy] {enemyData.enemyName} StatusEffect 적용: {effect.DisplayName}");
         }
 
         /// <summary>
@@ -631,8 +600,6 @@ namespace GASPT.Gameplay.Enemies
             {
                 effect.OnTick -= OnStatusEffectTick;
             }
-
-            Debug.Log($"[Enemy] {enemyData.enemyName} StatusEffect 제거: {effect.DisplayName}");
         }
 
         /// <summary>
@@ -646,13 +613,8 @@ namespace GASPT.Gameplay.Enemies
             if (effect.EffectType == StatusEffectType.Regeneration)
             {
                 int healAmount = Mathf.RoundToInt(tickValue);
-                int previousHp = currentHp;
                 currentHp += healAmount;
                 currentHp = Mathf.Min(currentHp, MaxHp);
-
-                int actualHealed = currentHp - previousHp;
-
-                Debug.Log($"[Enemy] {enemyData.enemyName} 회복: {actualHealed} (HP {previousHp} → {currentHp})");
 
                 OnHpChanged?.Invoke(currentHp, MaxHp);
             }
@@ -662,11 +624,8 @@ namespace GASPT.Gameplay.Enemies
                      effect.EffectType == StatusEffectType.Bleed)
             {
                 int damage = Mathf.RoundToInt(Mathf.Abs(tickValue));
-                int previousHp = currentHp;
                 currentHp -= damage;
                 currentHp = Mathf.Max(0, currentHp);
-
-                Debug.Log($"[Enemy] {enemyData.enemyName} {effect.DisplayName} 틱 데미지: {damage} (HP {previousHp} → {currentHp})");
 
                 // DamageNumber 표시
                 if (DamageNumberPool.Instance != null)

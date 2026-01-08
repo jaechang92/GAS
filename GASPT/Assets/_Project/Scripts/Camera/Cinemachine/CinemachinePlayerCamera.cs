@@ -130,7 +130,6 @@ namespace GASPT.CameraSystem
             if (validationManager != null)
             {
                 validationManager.RegisterValidator(this);
-                Debug.Log("[CinemachinePlayerCamera] SceneValidationManager에 등록 완료");
             }
             else
             {
@@ -144,7 +143,6 @@ namespace GASPT.CameraSystem
                 if (gameFlow != null)
                 {
                     gameFlow.OnGameStateChanged += OnGameStateChanged;
-                    Debug.Log("[CinemachinePlayerCamera] GameFlowStateMachine 이벤트 구독 완료");
                 }
             }
         }
@@ -191,7 +189,6 @@ namespace GASPT.CameraSystem
                 string currentState = GameFlowStateMachine.Instance.CurrentStateId;
                 if (currentState == "StartRoom" || currentState == "DungeonCombat")
                 {
-                    Debug.Log($"[CinemachinePlayerCamera] 이미 {currentState} 상태 - 즉시 탐색 시작");
                     StartAutoSearch();
                 }
             }
@@ -202,8 +199,6 @@ namespace GASPT.CameraSystem
         /// </summary>
         private void OnGameStateChanged(string fromState, string toState)
         {
-            Debug.Log($"[CinemachinePlayerCamera] GameFlow 상태 변경: {fromState} → {toState}");
-
             // 상태 변경 시 Ready 플래그 리셋
             isReady = false;
 
@@ -250,7 +245,6 @@ namespace GASPT.CameraSystem
                 if (playerObj != null)
                 {
                     SetFollowTargetImmediate(playerObj.transform);
-                    Debug.Log($"[CinemachinePlayerCamera] Player 자동 탐색 완료: {playerObj.name}");
                     return;
                 }
 
@@ -311,13 +305,28 @@ namespace GASPT.CameraSystem
 
             while (confiner.BoundingShape2D == null && attempts < maxFindAttempts)
             {
-                // 1. CameraBounds 태그로 찾기
-                GameObject boundsObj = GameObject.FindGameObjectWithTag("CameraBounds");
+                // 1. CameraBounds 태그로 찾기 (태그 미정의 시 안전 처리)
+                GameObject boundsObj = null;
+                try
+                {
+                    boundsObj = GameObject.FindGameObjectWithTag("CameraBounds");
+                }
+                catch (UnityException)
+                {
+                    // CameraBounds 태그가 정의되지 않음
+                }
 
-                // 2. Background 태그로 찾기
+                // 2. Background 태그로 찾기 (태그 미정의 시 안전 처리)
                 if (boundsObj == null)
                 {
-                    boundsObj = GameObject.FindGameObjectWithTag("Background");
+                    try
+                    {
+                        boundsObj = GameObject.FindGameObjectWithTag("Background");
+                    }
+                    catch (UnityException)
+                    {
+                        // Background 태그가 정의되지 않음
+                    }
                 }
 
                 // 3. 이름으로 찾기
@@ -337,7 +346,6 @@ namespace GASPT.CameraSystem
                     {
                         confiner.BoundingShape2D = boundsCollider;
                         confiner.InvalidateBoundingShapeCache();
-                        Debug.Log($"[CinemachinePlayerCamera] Bounds 자동 탐색 완료: {boundsObj.name}");
                         return;
                     }
                 }
@@ -361,7 +369,6 @@ namespace GASPT.CameraSystem
             {
                 confiner.BoundingShape2D = boundsCollider;
                 confiner.InvalidateBoundingShapeCache();
-                Debug.Log($"[CinemachinePlayerCamera] Bounds 수동 설정: {boundsCollider?.name ?? "null"}");
             }
         }
 
@@ -425,7 +432,6 @@ namespace GASPT.CameraSystem
             orthoSize = 5f;
 
             ApplyCurrentSettings();
-            Debug.Log("[CinemachinePlayerCamera] Metroidvania 프리셋 적용");
         }
 
         private void SetActionPreset()
@@ -444,7 +450,6 @@ namespace GASPT.CameraSystem
             orthoSize = 5f;
 
             ApplyCurrentSettings();
-            Debug.Log("[CinemachinePlayerCamera] Action 프리셋 적용");
         }
 
         private void SetExplorationPreset()
@@ -463,7 +468,6 @@ namespace GASPT.CameraSystem
             orthoSize = 6f;
 
             ApplyCurrentSettings();
-            Debug.Log("[CinemachinePlayerCamera] Exploration 프리셋 적용");
         }
 
         private void SetBossFightPreset()
@@ -482,7 +486,6 @@ namespace GASPT.CameraSystem
             orthoSize = 7f;
 
             ApplyCurrentSettings();
-            Debug.Log("[CinemachinePlayerCamera] BossFight 프리셋 적용");
         }
 
 
@@ -548,8 +551,6 @@ namespace GASPT.CameraSystem
                 composition.ScreenPosition = new Vector2(screenX, screenY);
 
                 positionComposer.Composition = composition;
-
-                Debug.Log($"[CinemachinePlayerCamera] PositionComposer 설정 완료 - CenterOnActivate: {centerOnActivate}, TargetOffset: {targetOffset}");
             }
         }
 
@@ -561,7 +562,6 @@ namespace GASPT.CameraSystem
             if (positionComposer != null)
             {
                 positionComposer.CameraDistance = Mathf.Abs(cameraDistance);
-                Debug.Log($"[CinemachinePlayerCamera] CameraDistance 설정: {positionComposer.CameraDistance}");
             }
         }
 
@@ -576,7 +576,6 @@ namespace GASPT.CameraSystem
             if (virtualCamera != null)
             {
                 virtualCamera.Follow = target;
-                Debug.Log($"[CinemachinePlayerCamera] Follow 대상 설정: {target?.name ?? "null"}");
             }
         }
 
@@ -595,8 +594,6 @@ namespace GASPT.CameraSystem
                 // 카메라 위치를 타겟 위치로 즉시 스냅
                 ForceCameraPosition(target.position);
             }
-
-            Debug.Log($"[CinemachinePlayerCamera] Follow 대상 즉시 설정: {target?.name ?? "null"}");
         }
 
         /// <summary>
@@ -614,7 +611,6 @@ namespace GASPT.CameraSystem
                 // OnTargetObjectWarped: 타겟이 순간이동했음을 알려 내부 상태 리셋
                 // 이를 통해 Lookahead, Damping 계산용 이전 위치 데이터가 초기화됨
                 positionComposer.OnTargetObjectWarped(virtualCamera.Follow, targetPosition - (virtualCamera.Follow?.position ?? targetPosition));
-                Debug.Log("[CinemachinePlayerCamera] PositionComposer 내부 상태 리셋 (OnTargetObjectWarped)");
             }
 
             // TargetOffset을 고려한 실제 카메라 위치 계산
@@ -629,8 +625,6 @@ namespace GASPT.CameraSystem
 
             // ★ 2단계: Cinemachine 3.x ForceCameraPosition 사용
             virtualCamera.ForceCameraPosition(cameraPosition, Quaternion.identity);
-
-            Debug.Log($"[CinemachinePlayerCamera] 카메라 위치 강제 설정: {cameraPosition} (타겟: {targetPosition}, 오프셋: {targetOffset})");
         }
 
         /// <summary>
@@ -731,8 +725,6 @@ namespace GASPT.CameraSystem
 
                 // 강제 스냅
                 ForceCameraPosition(virtualCamera.Follow.position);
-
-                Debug.Log("[CinemachinePlayerCamera] Player 중심으로 강제 이동 완료");
             }
             else
             {
@@ -769,8 +761,6 @@ namespace GASPT.CameraSystem
         /// </summary>
         public async Awaitable<bool> ValidateAndReassignAsync()
         {
-            Debug.Log("[CinemachinePlayerCamera] ===== 검증 및 재할당 시작 =====");
-
             // 검증 시작 시 Ready 플래그 리셋
             isReady = false;
 
@@ -783,12 +773,10 @@ namespace GASPT.CameraSystem
                 // 기존 Follow가 null이거나 Missing인 경우
                 if (virtualCamera.Follow == null || !IsValidReference(virtualCamera.Follow))
                 {
-                    Debug.Log("[CinemachinePlayerCamera] Follow 타겟이 없거나 Missing - 재탐색 시작");
                     playerFound = await FindAndAssignPlayerAsync();
                 }
                 else
                 {
-                    Debug.Log($"[CinemachinePlayerCamera] Follow 타겟 유효: {virtualCamera.Follow.name}");
                     playerFound = true;
                 }
             }
@@ -799,12 +787,10 @@ namespace GASPT.CameraSystem
                 // 기존 BoundingShape2D가 null이거나 Missing인 경우
                 if (confiner.BoundingShape2D == null || !IsValidReference(confiner.BoundingShape2D))
                 {
-                    Debug.Log("[CinemachinePlayerCamera] BoundingShape2D가 없거나 Missing - 재탐색 시작");
                     boundsFound = await FindAndAssignBoundsAsync();
                 }
                 else
                 {
-                    Debug.Log($"[CinemachinePlayerCamera] BoundingShape2D 유효: {confiner.BoundingShape2D.name}");
                     boundsFound = true;
                 }
             }
@@ -817,7 +803,6 @@ namespace GASPT.CameraSystem
             // 3. Position Composer 설정 재적용 (CenterOnActivate, TargetOffset 등)
             ApplyCurrentSettings();
             ApplyCameraDistance();
-            Debug.Log("[CinemachinePlayerCamera] PositionComposer 설정 재적용 완료");
 
             // 4. Player가 있으면 카메라 위치 즉시 스냅
             if (playerFound && virtualCamera.Follow != null)
@@ -829,7 +814,6 @@ namespace GASPT.CameraSystem
             // 5. 카메라 준비 완료
             isReady = true;
             OnCameraReady?.Invoke();
-            Debug.Log("[CinemachinePlayerCamera] 카메라 준비 완료!");
 
             // Player를 못 찾아도 검증은 성공으로 처리 (Warning만 남김)
             // 이후 Player 생성 시 OnGameStateChanged에서 재탐색됨
@@ -837,8 +821,6 @@ namespace GASPT.CameraSystem
             {
                 Debug.LogWarning("[CinemachinePlayerCamera] Player를 찾지 못했지만 검증은 계속 진행");
             }
-
-            Debug.Log($"[CinemachinePlayerCamera] ===== 검증 완료 (Player: {playerFound}, Bounds: {boundsFound}) =====");
 
             return true; // 항상 성공 반환 (카메라 자체는 준비됨)
         }
@@ -859,8 +841,6 @@ namespace GASPT.CameraSystem
             // 1. 현재 Lookahead 설정 백업
             var originalLookahead = positionComposer.Lookahead;
             var originalDamping = positionComposer.Damping;
-
-            Debug.Log($"[CinemachinePlayerCamera] Lookahead 일시 비활성화 (원래값: Time={originalLookahead.Time})");
 
             // 2. Lookahead와 Damping 일시 비활성화
             var tempLookahead = originalLookahead;
@@ -885,8 +865,6 @@ namespace GASPT.CameraSystem
             // 6. Lookahead와 Damping 복원
             positionComposer.Lookahead = originalLookahead;
             positionComposer.Damping = originalDamping;
-
-            Debug.Log($"[CinemachinePlayerCamera] Lookahead 복원 완료 (Time={originalLookahead.Time})");
         }
 
         /// <summary>
@@ -911,7 +889,6 @@ namespace GASPT.CameraSystem
                 if (playerObj != null)
                 {
                     virtualCamera.Follow = playerObj.transform;
-                    Debug.Log($"[CinemachinePlayerCamera] Player 재할당 완료: {playerObj.name}");
                     return true;
                 }
 
@@ -935,12 +912,27 @@ namespace GASPT.CameraSystem
             while (attempts < maxFindAttempts)
             {
                 // 1. CameraBounds 태그로 찾기
-                GameObject boundsObj = GameObject.FindGameObjectWithTag("CameraBounds");
+                GameObject boundsObj = null;
+                try
+                {
+                    boundsObj = GameObject.FindGameObjectWithTag("CameraBounds");
+                }
+                catch (UnityException)
+                {
+                    // CameraBounds 태그가 정의되지 않음 - 무시
+                }
 
                 // 2. Background 태그로 찾기
                 if (boundsObj == null)
                 {
-                    boundsObj = GameObject.FindGameObjectWithTag("Background");
+                    try
+                    {
+                        boundsObj = GameObject.FindGameObjectWithTag("Background");
+                    }
+                    catch (UnityException)
+                    {
+                        // Background 태그가 정의되지 않음 - 무시
+                    }
                 }
 
                 // 3. 이름으로 찾기
@@ -960,7 +952,6 @@ namespace GASPT.CameraSystem
                     {
                         confiner.BoundingShape2D = boundsCollider;
                         confiner.InvalidateBoundingShapeCache();
-                        Debug.Log($"[CinemachinePlayerCamera] Bounds 재할당 완료: {boundsObj.name}");
                         return true;
                     }
                 }

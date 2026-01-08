@@ -48,7 +48,6 @@ namespace GASPT.StatusEffects
 
         protected override void OnAwake()
         {
-            Debug.Log("[StatusEffectManager] 초기화 완료");
         }
 
         private void Update()
@@ -89,7 +88,6 @@ namespace GASPT.StatusEffects
                 // 중첩 처리
                 existingEffect.Stack();
                 int newStackCount = existingEffect.StackCount;
-                Debug.Log($"[StatusEffectManager] {effectData.displayName} 효과 중첩 - 대상: {target.name}, 스택: {newStackCount}");
 
                 // 중첩 이벤트 발생
                 OnEffectStacked?.Invoke(target, existingEffect, newStackCount);
@@ -103,8 +101,6 @@ namespace GASPT.StatusEffects
 
             // 효과 목록에 추가
             targetEffects.Add(newEffect);
-
-            Debug.Log($"[StatusEffectManager] {effectData.displayName} 효과 적용 - 대상: {target.name}");
 
             OnEffectApplied?.Invoke(target, newEffect);
 
@@ -133,8 +129,6 @@ namespace GASPT.StatusEffects
             {
                 effect.Remove();
                 targetEffects.Remove(effect);
-
-                Debug.Log($"[StatusEffectManager] {effect.DisplayName} 효과 제거 - 대상: {target.name}");
 
                 OnEffectRemoved?.Invoke(target, effect);
 
@@ -166,8 +160,6 @@ namespace GASPT.StatusEffects
             }
 
             activeEffects.Remove(target);
-
-            Debug.Log($"[StatusEffectManager] 모든 효과 제거 - 대상: {target.name}");
         }
 
         /// <summary>
@@ -197,8 +189,6 @@ namespace GASPT.StatusEffects
             {
                 activeEffects.Remove(target);
             }
-
-            Debug.Log($"[StatusEffectManager] 모든 디버프 제거 - 대상: {target.name}, 제거 수: {debuffsToRemove.Count}");
         }
 
         /// <summary>
@@ -228,8 +218,6 @@ namespace GASPT.StatusEffects
             {
                 activeEffects.Remove(target);
             }
-
-            Debug.Log($"[StatusEffectManager] 모든 버프 제거 - 대상: {target.name}, 제거 수: {buffsToRemove.Count}");
         }
 
         // ====== 업데이트 ======

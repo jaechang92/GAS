@@ -235,16 +235,8 @@ namespace GASPT.Level.Spawn
                 return null;
             }
 
-            // 오브젝트 풀링 또는 직접 생성
-            GameObject monsterObj;
-            if (PoolManager.Instance != null)
-            {
-                monsterObj = PoolManager.Instance.Spawn(prefab, position, Quaternion.identity);
-            }
-            else
-            {
-                monsterObj = Instantiate(prefab, position, Quaternion.identity);
-            }
+            // 오브젝트 생성 (풀링은 Enemy 타입별로 별도 관리 필요)
+            GameObject monsterObj = Instantiate(prefab, position, Quaternion.identity);
 
             if (monsterObj == null) return null;
 
@@ -354,7 +346,7 @@ namespace GASPT.Level.Spawn
 
                     if (PoolManager.Instance != null)
                     {
-                        PoolManager.Instance.Despawn(monster.gameObject);
+                        PoolManager.Instance.Despawn(monster);
                     }
                     else
                     {

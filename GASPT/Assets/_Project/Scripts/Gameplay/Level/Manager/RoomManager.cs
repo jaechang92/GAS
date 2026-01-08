@@ -134,12 +134,7 @@ namespace GASPT.Gameplay.Level
             // 자동 시작 옵션이 켜져 있고 GameManager가 없으면 첫 방으로 자동 진입
             if (autoStartFirstRoom && !hasGameManager && rooms.Count > 0)
             {
-                Debug.Log("[RoomManager] GameManager 없음 - 자동으로 던전 시작");
                 StartDungeonAsync().Forget();
-            }
-            else if (hasGameManager)
-            {
-                Debug.Log("[RoomManager] GameManager 감지 - GameManager.StartNewRun()을 기다립니다");
             }
         }
 
@@ -158,7 +153,6 @@ namespace GASPT.Gameplay.Level
             }
 
             currentDungeon = config;
-            Debug.Log($"[RoomManager] 던전 로딩 시작: {config.dungeonName}");
 
             // 기존 방들 정리
             ClearRooms();
@@ -171,8 +165,6 @@ namespace GASPT.Gameplay.Level
 
             // 모든 방 이벤트 구독
             SubscribeRoomEvents();
-
-            Debug.Log($"[RoomManager] 던전 로딩 완료! (총 {rooms.Count}개 방)");
         }
 
         /// <summary>
@@ -188,8 +180,6 @@ namespace GASPT.Gameplay.Level
             GameObject containerObj = new GameObject("RoomContainer");
             roomContainer = containerObj.transform;
             roomContainer.SetParent(transform); // RoomManager의 자식으로
-
-            Debug.Log("[RoomManager] Room Container 생성 완료");
         }
 
         /// <summary>
@@ -203,8 +193,6 @@ namespace GASPT.Gameplay.Level
                 return;
             }
 
-            Debug.Log($"[RoomManager] Prefab 방식으로 {prefabs.Length}개 Room 로딩...");
-
             foreach (var prefab in prefabs)
             {
                 if (prefab == null)
@@ -217,11 +205,7 @@ namespace GASPT.Gameplay.Level
                 Room room = Instantiate(prefab, roomContainer);
                 room.gameObject.SetActive(false); // 초기 비활성화
                 rooms.Add(room);
-
-                Debug.Log($"[RoomManager] Room Prefab 로드: {room.name}");
             }
-
-            Debug.Log($"[RoomManager] Prefab 로딩 완료 (총 {rooms.Count}개)");
         }
 
         /// <summary>
@@ -241,8 +225,6 @@ namespace GASPT.Gameplay.Level
                 return;
             }
 
-            Debug.Log($"[RoomManager] Data 방식으로 {dataList.Length}개 Room 생성...");
-
             foreach (var data in dataList)
             {
                 if (data == null)
@@ -260,11 +242,7 @@ namespace GASPT.Gameplay.Level
                 room.Initialize(data);
 
                 rooms.Add(room);
-
-                Debug.Log($"[RoomManager] Room 생성: {room.name} (Data: {data.roomName})");
             }
-
-            Debug.Log($"[RoomManager] Data 생성 완료 (총 {rooms.Count}개)");
         }
 
         /// <summary>
@@ -290,11 +268,8 @@ namespace GASPT.Gameplay.Level
                 return;
             }
 
-            Debug.Log("[RoomManager] Procedural 방식으로 던전 생성...");
-
             // 방 개수 결정
             int roomCount = Random.Range(rules.minRooms, rules.maxRooms + 1);
-            Debug.Log($"[RoomManager] 생성할 방 개수: {roomCount}개");
 
             // 방 생성
             for (int i = 0; i < roomCount; i++)
@@ -320,8 +295,6 @@ namespace GASPT.Gameplay.Level
                 room.Initialize(selectedData);
 
                 rooms.Add(room);
-
-                Debug.Log($"[RoomManager] Procedural Room 생성: {room.name}");
             }
 
             // 보스 방 추가
@@ -329,8 +302,6 @@ namespace GASPT.Gameplay.Level
             {
                 AddProceduralBossRoom(pool, templatePrefab);
             }
-
-            Debug.Log($"[RoomManager] Procedural 생성 완료 (총 {rooms.Count}개)");
         }
 
         /// <summary>
@@ -391,8 +362,6 @@ namespace GASPT.Gameplay.Level
             bossRoom.Initialize(bossData);
 
             rooms.Add(bossRoom);
-
-            Debug.Log($"[RoomManager] 보스 방 추가: {bossRoom.name}");
         }
 
         /// <summary>
@@ -419,8 +388,6 @@ namespace GASPT.Gameplay.Level
                 Destroy(roomContainer.gameObject);
                 roomContainer = null;
             }
-
-            Debug.Log("[RoomManager] 기존 방들 정리 완료");
         }
 
         /// <summary>
@@ -434,8 +401,6 @@ namespace GASPT.Gameplay.Level
                 room.OnRoomClear += OnRoomClear;
                 room.OnRoomFail += OnRoomFail;
             }
-
-            Debug.Log("[RoomManager] 모든 방 이벤트 구독 완료");
         }
 
 
@@ -453,7 +418,6 @@ namespace GASPT.Gameplay.Level
                 // FindObjectsInactive.Include로 비활성 GameObject도 찾음
                 Room[] foundRooms = FindObjectsByType<Room>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 rooms.AddRange(foundRooms);
-                Debug.Log($"[RoomManager] {foundRooms.Length}개의 방 자동 탐색 (비활성 포함)");
             }
             else
             {
@@ -473,8 +437,6 @@ namespace GASPT.Gameplay.Level
                 room.OnRoomClear += OnRoomClear;
                 room.OnRoomFail += OnRoomFail;
             }
-
-            Debug.Log($"[RoomManager] 총 {rooms.Count}개의 방 초기화 완료");
         }
 
         /// <summary>
@@ -500,13 +462,6 @@ namespace GASPT.Gameplay.Level
                 // 나머지는 X 좌표 또는 이름순으로 정렬 (X 좌표 기준)
                 return a.transform.position.x.CompareTo(b.transform.position.x);
             });
-
-            // 정렬 결과 로그
-            Debug.Log("[RoomManager] 방 순서:");
-            for (int i = 0; i < rooms.Count; i++)
-            {
-                Debug.Log($"  [{i}] {rooms[i].name} (Position: {rooms[i].transform.position})");
-            }
         }
 
         /// <summary>
@@ -514,7 +469,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         public void RefreshRooms()
         {
-            Debug.Log("[RoomManager] 방 목록 새로고침 시작...");
             InitializeRooms();
         }
 
@@ -567,8 +521,6 @@ namespace GASPT.Gameplay.Level
 
             // 방 진입 실행
             await currentRoom.EnterRoomAsync();
-
-            Debug.Log($"[RoomManager] {currentRoom.name}으로 이동 ({currentRoomIndex + 1}/{rooms.Count})");
         }
 
         /// <summary>
@@ -583,7 +535,6 @@ namespace GASPT.Gameplay.Level
             }
 
             await MoveToRoomAsync(0);
-            Debug.Log("[RoomManager] 던전 시작!");
         }
 
 
@@ -594,7 +545,7 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void OnRoomEnter(Room room)
         {
-            Debug.Log($"[RoomManager] 방 진입: {room.name}");
+            // 방 진입 처리
         }
 
         /// <summary>
@@ -602,7 +553,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void OnRoomClear(Room room)
         {
-            Debug.Log($"[RoomManager] 방 클리어: {room.name}");
             OnRoomCleared?.Invoke(room);
 
             // 자동으로 다음 방 이동 (선택사항)
@@ -614,7 +564,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void OnRoomFail(Room room, string reason)
         {
-            Debug.Log($"[RoomManager] 방 실패: {room.name} - {reason}");
             // TODO: 게임 오버 처리
         }
 
@@ -623,7 +572,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void OnDungeonComplete()
         {
-            Debug.Log("[RoomManager] 던전 클리어!");
 
             // 보스 방 여부 확인
             bool isBossRoom = currentRoom != null && currentRoom.name.Contains("Boss");
@@ -651,7 +599,6 @@ namespace GASPT.Gameplay.Level
             GameManager gameManager = GameManager.Instance;
             if (gameManager != null)
             {
-                Debug.Log("[RoomManager] GameManager에 던전 클리어 알림...");
                 gameManager.OnDungeonCleared();
             }
             else
@@ -675,7 +622,6 @@ namespace GASPT.Gameplay.Level
             {
                 currencySystem.AddGold(bonusGold);
                 totalGoldEarned += bonusGold;
-                Debug.Log($"[RoomManager] 던전 완주 보너스 골드 {bonusGold} 획득!");
             }
 
             // 경험치 지급
@@ -684,7 +630,6 @@ namespace GASPT.Gameplay.Level
             {
                 playerLevel.AddExp(bonusExp);
                 totalExpEarned += bonusExp;
-                Debug.Log($"[RoomManager] 던전 완주 보너스 경험치 {bonusExp} 획득!");
             }
         }
 
@@ -703,8 +648,6 @@ namespace GASPT.Gameplay.Level
 
             // 완전 회복 (Revive 메서드 사용)
             playerStats.Revive();
-
-            Debug.Log($"[RoomManager] 플레이어 완전 회복! ({playerStats.CurrentHP}/{playerStats.MaxHP})");
         }
 
 
@@ -731,8 +674,6 @@ namespace GASPT.Gameplay.Level
             // rooms 리스트도 업데이트 (하위 호환성)
             rooms.Clear();
             rooms.AddRange(nodeRoomMap.Values);
-
-            Debug.Log($"[RoomManager] 던전 그래프 로드 완료: {graph.NodeCount}개 노드, {nodeRoomMap.Count}개 Room");
         }
 
         /// <summary>
@@ -758,8 +699,6 @@ namespace GASPT.Gameplay.Level
                 Debug.LogError($"[RoomManager] 노드 {targetNode.nodeId}에 대응하는 Room이 없습니다!");
                 return;
             }
-
-            Debug.Log($"[RoomManager] 노드 이동: {dungeonGraph.currentNodeId} → {targetNode.nodeId}");
 
             // 현재 방 비활성화
             if (currentRoom != null)
@@ -788,8 +727,6 @@ namespace GASPT.Gameplay.Level
 
             // 방 진입 실행
             await currentRoom.EnterRoomAsync();
-
-            Debug.Log($"[RoomManager] 노드 {targetNode.nodeId} ({targetNode.roomType}) 진입 완료");
         }
 
         /// <summary>
@@ -851,7 +788,6 @@ namespace GASPT.Gameplay.Level
                 return;
             }
 
-            Debug.Log("[RoomManager] 그래프 기반 던전 시작!");
             await MoveToNodeAsync(entryNode);
         }
 

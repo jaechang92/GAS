@@ -102,10 +102,6 @@ namespace GASPT.Gameplay.Level
             {
                 Debug.LogWarning($"[Portal] {name}: 부모 Room을 찾을 수 없습니다! Portal은 Room의 자식이어야 합니다.");
             }
-            else if (parentRoom != null)
-            {
-                Debug.Log($"[Portal] {name}: 부모 Room 찾기 성공 - {parentRoom.name}");
-            }
         }
 
         private void Start()
@@ -114,14 +110,8 @@ namespace GASPT.Gameplay.Level
             if (autoActivateOnRoomClear && parentRoom != null)
             {
                 parentRoom.OnRoomClear += OnRoomCleared;
-                Debug.Log($"[Portal] {name}: Room 클리어 이벤트 구독 완료 (AutoActivate: {autoActivateOnRoomClear})");
             }
-            else if (portalType == PortalType.DungeonEntrance)
-            {
-                // DungeonEntrance는 Room 클리어 이벤트 필요 없음 (항상 활성 상태)
-                Debug.Log($"[Portal] {name}: DungeonEntrance 포탈 - Room 클리어 이벤트 구독 생략");
-            }
-            else if (autoActivateOnRoomClear && parentRoom == null)
+            else if (autoActivateOnRoomClear && parentRoom == null && portalType != PortalType.DungeonEntrance)
             {
                 Debug.LogWarning($"[Portal] {name}: Room 클리어 이벤트 구독 실패! (ParentRoom이 null)");
             }
@@ -174,8 +164,6 @@ namespace GASPT.Gameplay.Level
                     portalUI.SetMessage(message);
                     portalUI.Show();
                 }
-
-                Debug.Log($"[Portal] 플레이어가 포탈 범위 진입!");
             }
         }
 
@@ -192,8 +180,6 @@ namespace GASPT.Gameplay.Level
                 {
                     portalUI.Hide();
                 }
-
-                Debug.Log($"[Portal] 플레이어가 포탈 범위 벗어남!");
             }
         }
 
@@ -205,8 +191,6 @@ namespace GASPT.Gameplay.Level
         /// </summary>
         private void OnPlayerUsePortal()
         {
-            Debug.Log($"[Portal] 플레이어가 포탈 사용!");
-
             // PortalUI 숨김
             if (portalUI != null)
             {
@@ -241,7 +225,6 @@ namespace GASPT.Gameplay.Level
                     if (gameFlowFSM != null)
                     {
                         gameFlowFSM.TriggerEnterDungeon();
-                        Debug.Log($"[Portal] 던전 입장 이벤트 트리거!");
                     }
                     else
                     {
@@ -255,7 +238,6 @@ namespace GASPT.Gameplay.Level
                     if (gameFlow != null)
                     {
                         gameFlow.TriggerEnterNextRoom();
-                        Debug.Log($"[Portal] 다음 방 이동 이벤트 트리거!");
                     }
                     else
                     {
@@ -268,7 +250,6 @@ namespace GASPT.Gameplay.Level
                     if (RoomManager.Instance != null)
                     {
                         await RoomManager.Instance.MoveToRoomAsync(targetRoomIndex);
-                        Debug.Log($"[Portal] 특정 방({targetRoomIndex})으로 이동 완료!");
                     }
                     else
                     {
@@ -282,7 +263,6 @@ namespace GASPT.Gameplay.Level
                     {
                         int randomIndex = UnityEngine.Random.Range(0, RoomManager.Instance.TotalRoomCount);
                         await RoomManager.Instance.MoveToRoomAsync(randomIndex);
-                        Debug.Log($"[Portal] 랜덤 방({randomIndex})으로 이동 완료!");
                     }
                     else
                     {
@@ -297,8 +277,6 @@ namespace GASPT.Gameplay.Level
                     ShowBranchSelection();
                     return; // 여기서 리턴 (선택 후 이동은 SelectNode에서 처리)
             }
-
-            Debug.Log($"[Portal] 포탈 사용 완료!");
         }
 
 
@@ -312,7 +290,6 @@ namespace GASPT.Gameplay.Level
             if (autoActivateOnRoomClear)
             {
                 SetActive(true);
-                Debug.Log($"[Portal] 방 클리어 - 포탈 활성화!");
             }
         }
 
@@ -328,7 +305,6 @@ namespace GASPT.Gameplay.Level
             PortalUI existingUI = FindAnyObjectByType<PortalUI>(FindObjectsInactive.Include);
             if (existingUI != null)
             {
-                Debug.Log("[Portal] 기존 PortalUI 찾기 성공!");
                 return existingUI;
             }
 
@@ -360,7 +336,6 @@ namespace GASPT.Gameplay.Level
                 return null;
             }
 
-            Debug.Log("[Portal] PortalUI Prefab을 Resources.Load로 생성 완료!");
             return ui;
         }
 
@@ -406,8 +381,6 @@ namespace GASPT.Gameplay.Level
 
             // 비주얼 업데이트
             UpdateVisual();
-
-            Debug.Log($"[Portal] {name} 포탈 {(active ? "활성화" : "비활성화")}");
         }
 
         /// <summary>
@@ -486,7 +459,6 @@ namespace GASPT.Gameplay.Level
             {
                 connectedNodes.Add(node);
             }
-            Debug.Log($"[Portal] {name}: 대상 노드 설정 - {node?.nodeId} ({node?.roomType})");
         }
 
         /// <summary>
@@ -502,8 +474,6 @@ namespace GASPT.Gameplay.Level
             {
                 portalType = PortalType.BranchSelection;
             }
-
-            Debug.Log($"[Portal] {name}: {connectedNodes.Count}개 노드 연결됨");
         }
 
         /// <summary>
@@ -529,8 +499,6 @@ namespace GASPT.Gameplay.Level
                 return;
             }
 
-            Debug.Log($"[Portal] 분기 선택 UI 표시 - {connectedNodes.Count}개 선택지");
-
             // 분기 선택 이벤트 발생 (UI가 구독하여 처리)
             OnBranchSelectionRequired?.Invoke(connectedNodes);
 
@@ -541,7 +509,6 @@ namespace GASPT.Gameplay.Level
                 if (presenter != null)
                 {
                     presenter.ShowBranchSelection(connectedNodes, this);
-                    Debug.Log("[Portal] Fallback: BranchSelectionPresenter 직접 호출");
                 }
                 else
                 {
@@ -560,8 +527,6 @@ namespace GASPT.Gameplay.Level
                 Debug.LogWarning("[Portal] 선택된 노드가 null입니다!");
                 return;
             }
-
-            Debug.Log($"[Portal] 노드 선택됨: {node.nodeId} ({node.roomType})");
 
             // 이벤트 발생
             OnNodeSelected?.Invoke(node);

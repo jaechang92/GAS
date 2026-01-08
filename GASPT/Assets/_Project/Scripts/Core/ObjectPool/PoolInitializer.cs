@@ -34,8 +34,6 @@ namespace GASPT.Core.Pooling
                 return;
             }
 
-            Debug.Log("[PoolInitializer] ========== 모든 오브젝트 풀 초기화 시작 ==========");
-
             // 1. Effect 풀 초기화
             InitializeEffectPools();
 
@@ -46,7 +44,6 @@ namespace GASPT.Core.Pooling
             InitializeEnemyPools();
 
             isInitialized = true;
-            Debug.Log("[PoolInitializer] ========== 모든 오브젝트 풀 초기화 완료 ==========");
         }
 
         #region Effect 풀 초기화
@@ -56,12 +53,8 @@ namespace GASPT.Core.Pooling
         /// </summary>
         private static void InitializeEffectPools()
         {
-            Debug.Log("[PoolInitializer] Effect 풀 초기화 중...");
-
             // VisualEffect 풀 생성
             InitializeVisualEffectPool();
-
-            Debug.Log("[PoolInitializer] Effect 풀 초기화 완료 ✓");
         }
 
         /// <summary>
@@ -78,8 +71,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 10,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - VisualEffect 풀 생성 완료");
         }
 
         /// <summary>
@@ -122,21 +113,17 @@ namespace GASPT.Core.Pooling
         /// </summary>
         private static void InitializeProjectilePools()
         {
-            Debug.Log("[PoolInitializer] Projectile 풀 초기화 중...");
-
             // FireballProjectile 풀 생성
             InitializeFireballPool();
 
             // MagicMissileProjectile 풀 생성
             InitializeMagicMissilePool();
 
-            // IceLanceProjectile 풀 생성
-            InitializeIceLancePool();
+            // IceLanceProjectile 풀 생성 (프리팹 생성 후 활성화)
+            // InitializeIceLancePool();
 
             // EnemyProjectile 풀 생성
             InitializeEnemyProjectilePool();
-
-            Debug.Log("[PoolInitializer] Projectile 풀 초기화 완료 ✓");
         }
 
         /// <summary>
@@ -159,8 +146,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 5,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - FireballProjectile 풀 생성 완료");
         }
 
         /// <summary>
@@ -183,8 +168,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 10,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - MagicMissileProjectile 풀 생성 완료");
         }
 
         /// <summary>
@@ -207,8 +190,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 5,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - IceLanceProjectile 풀 생성 완료");
         }
 
         /// <summary>
@@ -231,8 +212,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 10,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - EnemyProjectile 풀 생성 완료");
         }
 
         #endregion
@@ -244,8 +223,6 @@ namespace GASPT.Core.Pooling
         /// </summary>
         private static void InitializeEnemyPools()
         {
-            Debug.Log("[PoolInitializer] Enemy 풀 초기화 중...");
-
             // BasicMeleeEnemy 풀 생성
             InitializeBasicMeleeEnemyPool();
 
@@ -257,8 +234,6 @@ namespace GASPT.Core.Pooling
 
             // EliteEnemy 풀 생성
             InitializeEliteEnemyPool();
-
-            Debug.Log("[PoolInitializer] Enemy 풀 초기화 완료 ✓");
         }
 
         /// <summary>
@@ -281,8 +256,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 5,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - BasicMeleeEnemy 풀 생성 완료");
         }
 
         /// <summary>
@@ -305,8 +278,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 3,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - RangedEnemy 풀 생성 완료");
         }
 
         /// <summary>
@@ -329,8 +300,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 3,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - FlyingEnemy 풀 생성 완료");
         }
 
         /// <summary>
@@ -353,8 +322,6 @@ namespace GASPT.Core.Pooling
                 initialSize: 2,
                 canGrow: true
             );
-
-            Debug.Log("[PoolInitializer]   - EliteEnemy 풀 생성 완료");
         }
 
         #endregion

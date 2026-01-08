@@ -62,19 +62,11 @@ namespace GASPT.Core
             if (inventoryView == null)
             {
                 inventoryView = FindAnyObjectByType<InventoryView>();
-                if (inventoryView != null)
-                {
-                    Debug.Log("[UIManager] InventoryView 자동 찾기 완료");
-                }
             }
 
             if (shopView == null)
             {
                 shopView = FindAnyObjectByType<ShopView>();
-                if (shopView != null)
-                {
-                    Debug.Log("[UIManager] ShopView 자동 찾기 완료");
-                }
             }
 
             // 초기 상태 설정
@@ -82,8 +74,6 @@ namespace GASPT.Core
 
             // HUD는 항상 표시 (게임 플레이 중)
             hudUI?.Show();
-
-            Debug.Log("[UIManager] 초기화 완료");
         }
 
 
@@ -101,7 +91,6 @@ namespace GASPT.Core
             if (activeFullScreenUICount == 1)
             {
                 GameManager.Instance?.Pause();
-                Debug.Log("[UIManager] FullScreen UI 열림 → 게임 일시정지");
             }
         }
 
@@ -123,7 +112,6 @@ namespace GASPT.Core
             if (activeFullScreenUICount == 0)
             {
                 GameManager.Instance?.Resume();
-                Debug.Log("[UIManager] 모든 FullScreen UI 닫힘 → 게임 재개");
             }
         }
 
@@ -143,7 +131,6 @@ namespace GASPT.Core
 
             // Presenter에게 열기 요청 (Presenter가 View 제어)
             inventoryView.Open();
-            Debug.Log("[UIManager] 인벤토리 열기 요청");
         }
 
         /// <summary>
@@ -159,7 +146,6 @@ namespace GASPT.Core
 
             // Presenter에게 닫기 요청 (Presenter가 View 제어)
             inventoryView.Close();
-            Debug.Log("[UIManager] 인벤토리 닫기 요청");
         }
 
         /// <summary>
@@ -195,7 +181,6 @@ namespace GASPT.Core
 
             // Presenter에게 열기 요청 (Presenter가 View 제어)
             shopView.Open();
-            Debug.Log("[UIManager] 상점 열기 요청");
         }
 
         /// <summary>
@@ -211,7 +196,6 @@ namespace GASPT.Core
 
             // Presenter에게 닫기 요청 (Presenter가 View 제어)
             shopView.Close();
-            Debug.Log("[UIManager] 상점 닫기 요청");
         }
 
         /// <summary>
@@ -238,14 +222,12 @@ namespace GASPT.Core
         {
             pauseUI?.Show();
             GameManager.Instance?.Pause();
-            Debug.Log("[UIManager] 일시정지 UI 표시");
         }
 
         public void HidePause()
         {
             pauseUI?.Hide();
             GameManager.Instance?.Resume();
-            Debug.Log("[UIManager] 일시정지 UI 숨김");
         }
 
 
@@ -254,13 +236,11 @@ namespace GASPT.Core
         public void ShowHud()
         {
             hudUI?.Show();
-            Debug.Log("[UIManager] HUD 표시");
         }
 
         public void HideHud()
         {
             hudUI?.Hide();
-            Debug.Log("[UIManager] HUD 숨김");
         }
 
 
@@ -269,13 +249,11 @@ namespace GASPT.Core
         public void ShowMinimap()
         {
             minimapUI?.Show();
-            Debug.Log("[UIManager] 미니맵 표시");
         }
 
         public void HideMinimap()
         {
             minimapUI?.Hide();
-            Debug.Log("[UIManager] 미니맵 숨김");
         }
 
 
@@ -304,8 +282,6 @@ namespace GASPT.Core
 
             // 카운터 리셋 (안전 처리)
             activeFullScreenUICount = 0;
-
-            Debug.Log("[UIManager] 모든 UI 숨김");
         }
 
         /// <summary>
@@ -326,8 +302,6 @@ namespace GASPT.Core
 
             // 카운터 리셋 (안전 처리)
             activeFullScreenUICount = 0;
-
-            Debug.Log("[UIManager] 모든 FullScreen UI 닫힘");
         }
 
         /// <summary>
@@ -338,8 +312,6 @@ namespace GASPT.Core
             HideAllUI();
             hudUI?.Show();
             minimapUI?.Show();
-
-            Debug.Log("[UIManager] 게임플레이 UI 표시");
         }
 
         /// <summary>
@@ -348,8 +320,6 @@ namespace GASPT.Core
         public void ShowMenuUI()
         {
             HideAllUI();
-
-            Debug.Log("[UIManager] 메뉴 UI 표시");
         }
 
 

@@ -226,7 +226,6 @@ namespace GASPT.Stats
             currentMana = MaxMana;
             isDead = false;
 
-            Debug.Log($"[PlayerStats] 초기화 완료 - MaxHP: {MaxHP}, CurrentHP: {CurrentHP}, MaxMana: {MaxMana}, CurrentMana: {CurrentMana}, Attack: {Attack}, Defense: {Defense}");
         }
 
         private void Start()
@@ -323,7 +322,6 @@ namespace GASPT.Stats
             NotifyStatChangedIfDifferent(StatType.Defense, oldDefense, finalDefense);
             NotifyStatChangedIfDifferent(StatType.Mana, oldMana, finalMana);
 
-            Debug.Log($"[PlayerStats] 스탯 재계산 완료 - HP: {finalHP}, Attack: {finalAttack}, Defense: {finalDefense}, Mana: {finalMana}");
         }
 
         /// <summary>
@@ -334,7 +332,6 @@ namespace GASPT.Stats
             if (oldValue != newValue)
             {
                 OnStatsChanged?.Invoke(statType, oldValue, newValue);
-                Debug.Log($"[PlayerStats] {statType} 변경: {oldValue} → {newValue}");
             }
         }
 
@@ -362,10 +359,6 @@ namespace GASPT.Stats
             // 방어력은 받는 피해 감소로 적용 (PlayerStatsMetaExtension.ApplyMetaDefenseBonus 사용)
             // finalDefense는 변경하지 않음 - 피해 계산 시 적용
 
-            if (hpBonus > 0 || attackBonus > 0)
-            {
-                Debug.Log($"[PlayerStats] 메타 보너스 적용 - HP: +{hpBonus}, Attack: +{attackBonus * 100}%");
-            }
         }
 
 
@@ -405,11 +398,6 @@ namespace GASPT.Stats
             }
 
             // 해당 슬롯에 이미 아이템이 있으면 자동으로 교체
-            if (equippedItems.ContainsKey(item.slot))
-            {
-                Item oldItem = equippedItems[item.slot];
-                Debug.Log($"[PlayerStats] {item.slot} 슬롯의 {oldItem.itemName}을(를) {item.itemName}(으)로 교체합니다.");
-            }
 
             // 아이템 장착
             equippedItems[item.slot] = item;
@@ -418,7 +406,6 @@ namespace GASPT.Stats
             // 스탯 재계산 (프로퍼티 접근 시 자동 수행됨)
             RecalculateIfDirty();
 
-            Debug.Log($"[PlayerStats] {item.itemName} 장착 완료 ({item.slot})");
             return true;
         }
 
@@ -442,7 +429,6 @@ namespace GASPT.Stats
             // 스탯 재계산
             RecalculateIfDirty();
 
-            Debug.Log($"[PlayerStats] {removedItem.itemName} 장착 해제 완료 ({slot})");
             return true;
         }
 
@@ -479,8 +465,6 @@ namespace GASPT.Stats
             equippedItems.Clear();
             isDirty = true;
             RecalculateIfDirty();
-
-            Debug.Log("[PlayerStats] 모든 아이템 장착 해제 완료");
         }
 
 
@@ -497,8 +481,6 @@ namespace GASPT.Stats
             isDirty = true;
 
             RecalculateIfDirty();
-
-            Debug.Log($"[PlayerStats] 폼 보너스 적용 - HP+{stats.maxHealthBonus}, Attack+{stats.attackPower}, Defense+{stats.defense}, Mana+{stats.maxManaBonus}");
         }
 
         /// <summary>
@@ -507,8 +489,6 @@ namespace GASPT.Stats
         public void RemoveFormBonus()
         {
             if (!hasFormBonus) return;
-
-            Debug.Log($"[PlayerStats] 폼 보너스 제거 - HP+{formBonus.maxHealthBonus}, Attack+{formBonus.attackPower}, Defense+{formBonus.defense}, Mana+{formBonus.maxManaBonus}");
 
             formBonus = FormStats.Default;
             hasFormBonus = false;
@@ -578,8 +558,6 @@ namespace GASPT.Stats
             currentHP -= actualDamage;
             currentHP = Mathf.Max(currentHP, 0);
 
-            Debug.Log($"[PlayerStats] 데미지 받음: {incomingDamage} → 방어력 {Defense} 적용 → 실제 데미지 {actualDamage} → HP {previousHP} → {currentHP}");
-
             // DamageNumber 표시
             if (DamageNumberPool.Instance != null)
             {
@@ -621,8 +599,6 @@ namespace GASPT.Stats
 
             int actualHealed = currentHP - previousHP;
 
-            Debug.Log($"[PlayerStats] 체력 회복: {actualHealed} (HP {previousHP} → {currentHP})");
-
             // DamageNumber 표시 (회복)
             if (DamageNumberPool.Instance != null && actualHealed > 0)
             {
@@ -660,8 +636,6 @@ namespace GASPT.Stats
 
             // DamageCalculator를 사용하여 데미지 계산
             int damage = DamageCalculator.CalculateDamageDealt(Attack);
-
-            Debug.Log($"[PlayerStats] {target.name}을(를) 공격! 공격력 {Attack} → 데미지 {damage}");
 
             // 적에게 데미지 적용
             target.TakeDamage(damage);
@@ -701,8 +675,6 @@ namespace GASPT.Stats
             int oldHP = currentHP;
             currentHP = MaxHP;
 
-            Debug.Log($"[PlayerStats] 부활! HP {currentHP}/{MaxHP}");
-
             // 회복 이벤트 발생 (UI 업데이트용)
             int healAmount = currentHP - oldHP;
             OnHealed?.Invoke(healAmount, currentHP, MaxHP);
@@ -738,8 +710,6 @@ namespace GASPT.Stats
             // 스탯 재계산
             isDirty = true;
             RecalculateIfDirty();
-
-            Debug.Log($"[PlayerStats] RunData로 초기화 완료 - HP: {currentHP}/{MaxHP}, Mana: {currentMana}/{MaxMana}, Attack: {Attack}, Defense: {Defense}");
 
             // 이벤트 발생
             OnStatsChanged?.Invoke(StatType.HP, oldHP, currentHP);
@@ -786,8 +756,6 @@ namespace GASPT.Stats
             // 상태 효과 클리어 (있다면)
             // ClearAllStatusEffects();
 
-            Debug.Log($"[PlayerStats] 기본 스탯으로 리셋 - HP: {currentHP}/{MaxHP}, Mana: {currentMana}/{MaxMana}");
-
             // OnStatsChanged로 통일된 이벤트 발생
             OnStatsChanged?.Invoke(StatType.HP, oldHP, currentHP);
             OnStatsChanged?.Invoke(StatType.Mana, oldMana, currentMana);
@@ -823,8 +791,6 @@ namespace GASPT.Stats
             int previousMana = currentMana;
             currentMana -= amount;
 
-            Debug.Log($"[PlayerStats] 마나 소비: {amount} (Mana {previousMana} → {currentMana})");
-
             // 이벤트 발생
             OnStatsChanged?.Invoke(StatType.Mana, previousMana, currentMana);
 
@@ -848,8 +814,6 @@ namespace GASPT.Stats
             currentMana = Mathf.Min(currentMana, MaxMana);
 
             int actualRegenerated = currentMana - previousMana;
-
-            Debug.Log($"[PlayerStats] 마나 회복: {actualRegenerated} (Mana {previousMana} → {currentMana})");
 
             // 이벤트 발생
             OnStatsChanged?.Invoke(StatType.Mana, previousMana, currentMana);
@@ -1099,8 +1063,6 @@ namespace GASPT.Stats
                 // 구독
                 manager.OnEffectApplied += OnEffectApplied;
                 manager.OnEffectRemoved += OnEffectRemoved;
-
-                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 완료");
             }
             else
             {
@@ -1117,8 +1079,6 @@ namespace GASPT.Stats
             {
                 StatusEffectManager.Instance.OnEffectApplied -= OnEffectApplied;
                 StatusEffectManager.Instance.OnEffectRemoved -= OnEffectRemoved;
-
-                Debug.Log("[PlayerStats] StatusEffectManager 이벤트 구독 해제");
             }
         }
 
@@ -1134,8 +1094,6 @@ namespace GASPT.Stats
             {
                 effect.OnTick += OnStatusEffectTick;
             }
-
-            Debug.Log($"[PlayerStats] StatusEffect 적용: {effect.DisplayName}");
 
             // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
             TriggerStatChangedForEffect(effect);
@@ -1153,8 +1111,6 @@ namespace GASPT.Stats
             {
                 effect.OnTick -= OnStatusEffectTick;
             }
-
-            Debug.Log($"[PlayerStats] StatusEffect 제거: {effect.DisplayName}");
 
             // 공격력/방어력 관련 효과면 OnStatChanged 이벤트 발생
             TriggerStatChangedForEffect(effect);
@@ -1203,8 +1159,6 @@ namespace GASPT.Stats
                 int previousHP = currentHP;
                 currentHP -= damage;
                 currentHP = Mathf.Max(currentHP, 0);
-
-                Debug.Log($"[PlayerStats] {effect.DisplayName} 틱 데미지: {damage} (HP {previousHP} → {currentHP})");
 
                 // DamageNumber 표시
                 if (DamageNumberPool.Instance != null)
@@ -1321,8 +1275,6 @@ namespace GASPT.Stats
                 }
             }
 
-            Debug.Log($"[PlayerStats] GetSaveData(): CurrentHP={data.currentHP}, EquippedItems={data.equippedItems.Count}");
-
             return data;
         }
 
@@ -1340,8 +1292,6 @@ namespace GASPT.Stats
             // 현재 HP 복원
             currentHP = data.currentHP;
             currentHP = Mathf.Clamp(currentHP, 0, MaxHP);
-
-            Debug.Log($"[PlayerStats] LoadFromSaveData(): CurrentHP={currentHP}");
 
             // 모든 아이템 장착 해제
             equippedItems.Clear();
@@ -1365,7 +1315,6 @@ namespace GASPT.Stats
                     if (item != null)
                     {
                         equippedItems[entry.slot] = item;
-                        Debug.Log($"[PlayerStats] LoadFromSaveData(): 아이템 복원 - 슬롯: {entry.slot}, 아이템: {item.itemName}");
                     }
                     else
                     {
@@ -1380,8 +1329,6 @@ namespace GASPT.Stats
             // 스탯 재계산
             isDirty = true;
             RecalculateIfDirty();
-
-            Debug.Log($"[PlayerStats] LoadFromSaveData() 완료: HP={currentHP}/{MaxHP}, Attack={Attack}, Defense={Defense}");
         }
     }
 }

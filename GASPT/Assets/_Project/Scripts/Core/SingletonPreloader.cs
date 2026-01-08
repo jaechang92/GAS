@@ -41,8 +41,6 @@ namespace GASPT.Core
             if (isInitialized)
                 return;
 
-            Debug.Log("[SingletonPreloader] 자동 초기화 시작...");
-
             // GameObject 생성 및 컴포넌트 추가
             GameObject preloaderObj = new GameObject("SingletonPreloader");
             SingletonPreloader preloader = preloaderObj.AddComponent<SingletonPreloader>();
@@ -55,7 +53,6 @@ namespace GASPT.Core
             preloader.PreloadAllSingletons();
 
             isInitialized = true;
-            Debug.Log("[SingletonPreloader] 자동 초기화 완료");
         }
 
 
