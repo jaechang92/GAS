@@ -5,6 +5,7 @@ using UnityEngine;
 using Core;
 using GASPT.Core.Enums;
 using GASPT.Gameplay.Enemies;
+using GASPT.Level.Spawn;
 
 namespace GASPT.Gameplay.Level
 {
@@ -171,8 +172,13 @@ namespace GASPT.Gameplay.Level
             spawnedEnemies.Clear();
             aliveEnemyCount = 0;
 
+            // MonsterSpawnManager 사용 (존재하면 우선)
+            if (MonsterSpawnManager.HasInstance && roomData != null)
+            {
+                SpawnFromMonsterSpawnManager();
+            }
             // RoomData의 enemySpawns 사용 (RoomData가 있고 enemySpawns가 설정된 경우)
-            if (roomData != null && roomData.enemySpawns != null && roomData.enemySpawns.Length > 0)
+            else if (roomData != null && roomData.enemySpawns != null && roomData.enemySpawns.Length > 0)
             {
                 SpawnFromRoomData();
             }
@@ -188,6 +194,45 @@ namespace GASPT.Gameplay.Level
             }
 
             OnEnemyCountChanged?.Invoke(this, aliveEnemyCount);
+        }
+
+        /// <summary>
+        /// MonsterSpawnManager를 통한 스폰 (스케일링 적용)
+        /// </summary>
+        private void SpawnFromMonsterSpawnManager()
+        {
+            // 스폰 포인트를 Transform 배열로 변환
+            Transform[] spawnTransforms = new Transform[spawnPoints.Length];
+            for (int i = 0; i < spawnPoints.Length; i++)
+            {
+                spawnTransforms[i] = spawnPoints[i].transform;
+            }
+
+            // 방 타입에 따라 스폰
+            List<Enemy> monsters;
+            if (roomData.roomType == RoomType.Elite)
+            {
+                // 엘리트 방: Named 몬스터 포함
+                monsters = MonsterSpawnManager.Instance.SpawnMonstersForEliteRoom(spawnTransforms, 0);
+            }
+            else
+            {
+                // 일반/기타 방
+                monsters = MonsterSpawnManager.Instance.SpawnMonstersForRoom(spawnTransforms, roomData.roomType);
+            }
+
+            // 스폰된 몬스터 등록
+            foreach (var monster in monsters)
+            {
+                if (monster != null)
+                {
+                    spawnedEnemies.Add(monster.gameObject);
+                    aliveEnemyCount++;
+                    monster.OnDeath += OnEnemyDeath;
+                }
+            }
+
+            Debug.Log($"[Room] {name}: MonsterSpawnManager로 {aliveEnemyCount}마리 스폰 (Type: {roomData.roomType})");
         }
 
         /// <summary>

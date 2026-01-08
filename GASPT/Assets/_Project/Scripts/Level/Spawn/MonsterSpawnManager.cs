@@ -294,15 +294,18 @@ namespace GASPT.Level.Spawn
         /// </summary>
         private void ApplyStageScaling(Enemy enemy, EnemyData data)
         {
+            if (enemy == null || data == null) return;
+
             // StageScalingCalculator를 사용하여 스탯 계산
             var scaledStats = StageScalingCalculator.CalculateScaledStats(data, currentStage);
 
             // 난이도 적용
             scaledStats = StageScalingCalculator.ApplyDifficulty(scaledStats, currentDifficulty);
 
-            // 여기서는 로그만 출력 (실제 적용은 Enemy 클래스에서 처리하거나
-            // EnemyData의 스탯을 직접 수정하는 방식으로 구현 필요)
-            Debug.Log($"[MonsterSpawnManager] {data.enemyName} 스케일링 적용: {scaledStats}");
+            // Enemy에 스케일링된 스탯 적용
+            enemy.ApplyScaledStats(scaledStats);
+
+            Debug.Log($"[MonsterSpawnManager] {data.enemyName} 스케일링 완료 (Stage {currentStage}, Difficulty {currentDifficulty})");
         }
 
 

@@ -3,7 +3,7 @@
 **기능 번호**: 023
 **생성일**: 2026-01-07
 **총 태스크**: 45개
-**상태**: ✅ 코드 구현 완료 (70%)
+**상태**: ✅ 코드 구현 완료 (90%)
 
 ---
 
@@ -25,12 +25,12 @@
 | BossEnemy | `Gameplay/Enemy/BossEnemy.cs` | ✅ 페이즈 시스템 |
 
 ### 구현 필요 항목 ❌
-- EnemyData에 ElementType 필드 추가
-- 속성 상성 데미지 계산 시스템
-- MonsterSpawnTable (스테이지별 스폰 테이블)
-- 몬스터 데이터 에셋 37종 (Normal 20, Named 11, Boss 6)
-- 에디터 도구: MonsterAssetGenerator
-- 스테이지별 스폰 테이블 에셋 5종
+- ~~EnemyData에 ElementType 필드 추가~~ ✅
+- ~~속성 상성 데미지 계산 시스템~~ ✅
+- ~~MonsterSpawnTable (스테이지별 스폰 테이블)~~ ✅
+- 몬스터 데이터 에셋 37종 (Normal 20, Named 11, Boss 6) - Unity 에디터 작업 필요
+- ~~에디터 도구: MonsterAssetGenerator~~ ✅
+- 스테이지별 스폰 테이블 에셋 5종 - Unity 에디터 작업 필요
 
 ---
 
@@ -50,7 +50,7 @@
 - [x] T003 EnemyData에 stageAppearance (출현 스테이지) 필드 추가 in `Assets/_Project/Scripts/Data/EnemyData.cs`
 - [x] T004 [P] ElementDamageCalculator 정적 클래스 생성 in `Assets/_Project/Scripts/Combat/ElementDamageCalculator.cs`
 - [x] T005 [P] StageScalingCalculator 정적 클래스 생성 in `Assets/_Project/Scripts/Combat/StageScalingCalculator.cs`
-- [ ] T006 Enemy.TakeDamage()에 속성 데미지 계산 연동 in `Assets/_Project/Scripts/Gameplay/Enemy/Base/Enemy.cs`
+- [x] T006 Enemy.TakeDamage()에 속성 데미지 계산 연동 in `Assets/_Project/Scripts/Gameplay/Enemy/Base/Enemy.cs`
 
 ---
 
@@ -71,7 +71,7 @@
 - [x] T007 [US1] MonsterSpawnEntry 데이터 클래스 생성 in `Assets/_Project/Scripts/Level/Spawn/MonsterSpawnEntry.cs`
 - [x] T008 [US1] MonsterSpawnTable ScriptableObject 생성 in `Assets/_Project/Scripts/Level/Spawn/MonsterSpawnTable.cs`
 - [x] T009 [US1] MonsterSpawnManager 클래스 생성 in `Assets/_Project/Scripts/Level/Spawn/MonsterSpawnManager.cs`
-- [ ] T010 [US1] RoomController에 MonsterSpawnManager 연동 in `Assets/_Project/Scripts/Level/RoomController.cs`
+- [x] T010 [US1] Room.cs에 MonsterSpawnManager 연동 in `Assets/_Project/Scripts/Gameplay/Level/Room/Room.cs`
 
 ---
 
@@ -300,5 +300,5 @@ Phase 1, 2 완료 후 다음 태스크들은 병렬로 실행 가능:
 ---
 
 *생성: Claude Code (speckit.tasks)*
-*최종 수정: 2026-01-07*
-*현재 상태: 구현 시작 전*
+*최종 수정: 2026-01-08*
+*현재 상태: 코드 구현 완료 (90%) - Unity 에셋 생성 대기*

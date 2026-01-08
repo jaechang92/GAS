@@ -67,18 +67,18 @@ namespace GASPT.Gameplay.Enemies
         public int CurrentHp => currentHp;
 
         /// <summary>
-        /// 최대 HP 읽기 전용 프로퍼티
+        /// 최대 HP 읽기 전용 프로퍼티 (스케일링 적용)
         /// </summary>
-        public int MaxHp => enemyData != null ? enemyData.maxHp : 0;
+        public int MaxHp => scaledMaxHp > 0 ? scaledMaxHp : (enemyData != null ? enemyData.maxHp : 0);
 
         /// <summary>
-        /// 공격력 읽기 전용 프로퍼티 (버프/디버프 적용)
+        /// 공격력 읽기 전용 프로퍼티 (스케일링 + 버프/디버프 적용)
         /// </summary>
         public int Attack
         {
             get
             {
-                int baseAttack = enemyData != null ? enemyData.attack : 0;
+                int baseAttack = scaledAttack > 0 ? scaledAttack : (enemyData != null ? enemyData.attack : 0);
                 return ApplyStatusEffects(baseAttack, StatusEffectType.AttackUp, StatusEffectType.AttackDown);
             }
         }
@@ -166,11 +166,63 @@ namespace GASPT.Gameplay.Enemies
             Debug.Log($"[Enemy] {enemyData.enemyName} 초기화 완료: HP={currentHp}/{enemyData.maxHp}, Attack={enemyData.attack}");
         }
 
+        /// <summary>
+        /// 스케일링된 스탯 적용 (MonsterSpawnManager에서 호출)
+        /// </summary>
+        /// <param name="stats">스케일링된 스탯</param>
+        public void ApplyScaledStats(ScaledEnemyStats stats)
+        {
+            scaledMaxHp = stats.maxHp;
+            scaledAttack = stats.attack;
+            scaledMinGold = stats.minGold;
+            scaledMaxGold = stats.maxGold;
+            scaledExp = stats.exp;
+
+            // HP를 스케일링된 최대 HP로 갱신
+            currentHp = scaledMaxHp;
+
+            // 이벤트 발생
+            OnHpChanged?.Invoke(currentHp, scaledMaxHp);
+
+            Debug.Log($"[Enemy] {enemyData?.enemyName} 스케일링 적용: HP={scaledMaxHp}, Attack={scaledAttack}, Gold={scaledMinGold}-{scaledMaxGold}, EXP={scaledExp}");
+        }
+
+
+        // ====== 스케일링된 스탯 (MonsterSpawnManager에서 설정) ======
+
+        private int scaledMaxHp = -1;      // -1 = 미설정 (EnemyData 기본값 사용)
+        private int scaledAttack = -1;
+        private int scaledMinGold = -1;
+        private int scaledMaxGold = -1;
+        private int scaledExp = -1;
+
 
         // ====== 데미지 처리 ======
 
         /// <summary>
-        /// 데미지 받기
+        /// 속성 데미지 받기 (속성 상성 적용)
+        /// </summary>
+        /// <param name="baseDamage">기본 데미지</param>
+        /// <param name="attackElement">공격 속성</param>
+        public void TakeDamage(int baseDamage, ElementType attackElement)
+        {
+            if (enemyData == null) return;
+
+            // ElementDamageCalculator로 속성 상성 계산
+            int finalDamage = ElementDamageCalculator.CalculateDamage(
+                baseDamage,
+                attackElement,
+                enemyData.elementType
+            );
+
+            Debug.Log($"[Enemy] {enemyData.enemyName}: 속성 데미지 계산 - 기본 {baseDamage}, 공격속성 {attackElement}, 방어속성 {enemyData.elementType} → 최종 {finalDamage}");
+
+            // 기존 TakeDamage 호출
+            TakeDamage(finalDamage);
+        }
+
+        /// <summary>
+        /// 데미지 받기 (기본)
         /// </summary>
         /// <param name="damage">받을 데미지</param>
         public void TakeDamage(int damage)
@@ -288,14 +340,22 @@ namespace GASPT.Gameplay.Enemies
         // ====== 골드 드롭 ======
 
         /// <summary>
-        /// 골드 드롭 처리
+        /// 골드 드롭 처리 (스케일링 적용)
         /// </summary>
         private void DropGold()
         {
             if (enemyData == null) return;
 
-            // 랜덤 골드 계산
-            int goldDrop = enemyData.GetRandomGoldDrop();
+            // 스케일링된 골드 또는 기본 골드 계산
+            int goldDrop;
+            if (scaledMinGold > 0 && scaledMaxGold > 0)
+            {
+                goldDrop = Random.Range(scaledMinGold, scaledMaxGold + 1);
+            }
+            else
+            {
+                goldDrop = enemyData.GetRandomGoldDrop();
+            }
 
             // CurrencySystem에 골드 추가
             CurrencySystem currencySystem = CurrencySystem.Instance;
@@ -315,25 +375,28 @@ namespace GASPT.Gameplay.Enemies
         // ====== 경험치 지급 ======
 
         /// <summary>
-        /// 경험치 지급 처리
+        /// 경험치 지급 처리 (스케일링 적용)
         /// </summary>
         private void GiveExp()
         {
             if (enemyData == null) return;
+
+            // 스케일링된 경험치 또는 기본 경험치
+            int expReward = scaledExp > 0 ? scaledExp : enemyData.expReward;
 
             // PlayerLevel에 경험치 추가
             PlayerLevel playerLevel = PlayerLevel.Instance;
 
             if (playerLevel != null)
             {
-                playerLevel.AddExp(enemyData.expReward);
-                Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {enemyData.expReward} EXP");
+                playerLevel.AddExp(expReward);
+                Debug.Log($"[Enemy] {enemyData.enemyName} EXP 지급: {expReward} EXP");
 
                 // EXP Number 표시
                 if (DamageNumberPool.Instance != null)
                 {
                     Vector3 expPosition = transform.position + Vector3.up * 2f;
-                    DamageNumberPool.Instance.ShowExp(enemyData.expReward, expPosition);
+                    DamageNumberPool.Instance.ShowExp(expReward, expPosition);
                 }
             }
             else
