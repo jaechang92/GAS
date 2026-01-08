@@ -2,6 +2,7 @@ using UnityEngine;
 using GASPT.UI;
 using GASPT.UI.MVP;
 using GASPT.UI.MVP.Views;
+using GASPT.UI.Meta;
 
 namespace GASPT.Core
 {
@@ -35,6 +36,9 @@ namespace GASPT.Core
         [Tooltip("런 결과 UI (MVP 패턴)")]
         [SerializeField] private RunResultView runResultView;
 
+        [Tooltip("메타 재화 HUD (Bone/Soul 표시)")]
+        [SerializeField] private MetaHUDView metaHudView;
+
 
         // ====== FullScreen UI 상태 ======
 
@@ -52,6 +56,7 @@ namespace GASPT.Core
         public BaseUI Pause => pauseUI;
         public BaseUI Minimap => minimapUI;
         public RunResultView RunResult => runResultView;
+        public MetaHUDView MetaHud => metaHudView;
 
         /// <summary>
         /// FullScreen UI가 열려있는지 여부
@@ -77,6 +82,11 @@ namespace GASPT.Core
             if (runResultView == null)
             {
                 runResultView = FindAnyObjectByType<RunResultView>();
+            }
+
+            if (metaHudView == null)
+            {
+                metaHudView = FindAnyObjectByType<MetaHUDView>();
             }
 
             // 초기 상태 설정
@@ -325,6 +335,54 @@ namespace GASPT.Core
         public bool IsRunResultVisible => runResultView != null && runResultView.IsVisible;
 
 
+        // ====== 메타 재화 HUD ======
+
+        /// <summary>
+        /// 메타 재화 HUD 표시
+        /// </summary>
+        public void ShowMetaHud()
+        {
+            metaHudView?.Show();
+        }
+
+        /// <summary>
+        /// 메타 재화 HUD 숨기기
+        /// </summary>
+        public void HideMetaHud()
+        {
+            metaHudView?.Hide();
+        }
+
+        /// <summary>
+        /// 메타 재화 HUD 임시 재화 모드 (런 진행 중)
+        /// </summary>
+        public void ShowMetaHudTempMode()
+        {
+            if (metaHudView != null)
+            {
+                metaHudView.ShowTempCurrency();
+                metaHudView.Show();
+            }
+        }
+
+        /// <summary>
+        /// 메타 재화 HUD 영구 재화 모드 (로비)
+        /// </summary>
+        public void ShowMetaHudPermanentMode()
+        {
+            if (metaHudView != null)
+            {
+                metaHudView.ShowPermanentCurrency();
+                metaHudView.Show();
+            }
+        }
+
+        /// <summary>
+        /// 메타 재화 HUD가 표시 중인지 확인
+        /// </summary>
+        public bool IsMetaHudVisible => metaHudView != null && metaHudView.IsVisible;
+
+
         // ====== 전체 UI 제어 ======
 
         /// <summary>
@@ -353,6 +411,7 @@ namespace GASPT.Core
             pauseUI?.Hide();
             minimapUI?.Hide();
             hudUI?.Hide();
+            metaHudView?.Hide();
 
             // 카운터 리셋 (안전 처리)
             activeFullScreenUICount = 0;
@@ -384,13 +443,14 @@ namespace GASPT.Core
         }
 
         /// <summary>
-        /// 게임플레이 UI 표시 (HUD, Minimap)
+        /// 게임플레이 UI 표시 (HUD, Minimap, MetaHUD)
         /// </summary>
         public void ShowGameplayUI()
         {
             HideAllUI();
             hudUI?.Show();
             minimapUI?.Show();
+            ShowMetaHudTempMode();
         }
 
         /// <summary>
@@ -446,6 +506,24 @@ namespace GASPT.Core
             CloseAllFullScreenUI();
         }
 
+        [ContextMenu("테스트: MetaHUD 표시 (임시 재화)")]
+        private void TestShowMetaHudTemp()
+        {
+            ShowMetaHudTempMode();
+        }
+
+        [ContextMenu("테스트: MetaHUD 표시 (영구 재화)")]
+        private void TestShowMetaHudPermanent()
+        {
+            ShowMetaHudPermanentMode();
+        }
+
+        [ContextMenu("테스트: MetaHUD 숨기기")]
+        private void TestHideMetaHud()
+        {
+            HideMetaHud();
+        }
+
         [ContextMenu("디버그: UI 상태 출력")]
         private void DebugLogUIState()
         {
@@ -453,6 +531,7 @@ namespace GASPT.Core
             Debug.Log($"Inventory: {(inventoryView?.IsVisible ?? false)}");
             Debug.Log($"Shop: {(shopView?.IsVisible ?? false)}");
             Debug.Log($"RunResult: {(runResultView?.IsVisible ?? false)}");
+            Debug.Log($"MetaHUD: {(metaHudView?.IsVisible ?? false)}");
             Debug.Log($"HUD: {(hudUI?.IsVisible ?? false)}");
             Debug.Log($"Pause: {(pauseUI?.IsVisible ?? false)}");
             Debug.Log($"Minimap: {(minimapUI?.IsVisible ?? false)}");

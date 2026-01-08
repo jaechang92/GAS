@@ -66,7 +66,7 @@
 - [x] T017 [US2] MetaProgressionManager.StartRun() / EndRun() 구현
 - [x] T018 [US2] 런 종료 시 재화 확정 로직 구현
 - [x] T019 [US2] RunResultView (런 결과 화면) 생성 in `Assets/_Project/Scripts/UI/MVP/Views/RunResultView.cs`
-- [ ] T020 [US2] MetaHUDView (재화 표시) 생성 *(UI 필요)*
+- [x] T020 [US2] MetaHUDView (재화 표시) 생성 in `Assets/_Project/Scripts/UI/Meta/MetaHUDView.cs`
 
 ---
 
@@ -190,6 +190,7 @@
 |------|------|
 | `UI/Meta/UpgradeTreeView.cs` | 업그레이드 트리 메인 UI (카테고리 탭, 노드 목록, 상세 패널) |
 | `UI/Meta/UpgradeNodeView.cs` | 개별 업그레이드 노드 컴포넌트 |
+| `UI/Meta/MetaHUDView.cs` | 메타 재화 HUD (Bone/Soul 표시, 모드 전환) |
 | `UI/MVP/Views/RunResultView.cs` | 런 결과 화면 View (MVP 패턴) |
 | `UI/MVP/Views/IRunResultView.cs` | 런 결과 View 인터페이스 |
 | `UI/MVP/Presenters/RunResultPresenter.cs` | 런 결과 Presenter (비즈니스 로직) |
@@ -210,7 +211,8 @@
 3. **UI 프리팹 연결** (선택사항)
    - UpgradeTreeView, UpgradeNodeView → UpgradeTree 프리팹 구성
    - ~~RunResultView~~ ✅ 완료 - GameOverState/DungeonClearedState에서 자동 사용
-   - UnlockPanelView, AchievementListView, MetaHUDView
+   - ~~MetaHUDView~~ ✅ 완료 - UIManager에서 자동 관리
+   - UnlockPanelView, AchievementListView
 
 ### 게임플레이 연동 필요
 - 적 처치 시: `MetaProgressionManager.Instance.Currency.AddTempBone(amount)`
@@ -243,4 +245,4 @@ Phase 2 Phase 3 Phase 4
 
 *생성: GASPT Task Generator*
 *최종 수정: 2026-01-08*
-*현재 상태: 코드 구현 97% 완료 (RunResultView 추가), 에셋 생성 및 프리팹 연결 필요*
+*현재 상태: 코드 구현 98% 완료 (RunResultView, MetaHUDView 추가), 에셋 생성 및 프리팹 연결 필요*
