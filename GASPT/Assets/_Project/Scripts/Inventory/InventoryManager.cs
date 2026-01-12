@@ -766,40 +766,19 @@ namespace GASPT.Inventory
                 if (string.IsNullOrEmpty(slotData.itemDataPath))
                     continue;
 
-                // ItemInstance 복원
-                ItemInstance instance = new ItemInstance
-                {
-                    instanceId = slotData.instanceId,
-                    itemDataPath = slotData.itemDataPath,
-                    currentDurability = slotData.currentDurability,
-                    isEquipped = slotData.isEquipped,
-                    acquireTimeTicks = slotData.acquireTimeTicks,
-                    randomStats = new List<StatModifier>()
-                };
+                // ItemInstance 복원 (팩토리 메서드 사용)
+                ItemInstance instance = ItemInstance.RestoreFromSaveData(
+                    slotData.instanceId,
+                    slotData.itemDataPath,
+                    slotData.currentDurability,
+                    slotData.isEquipped,
+                    slotData.acquireTimeTicks,
+                    slotData.randomStats
+                );
 
-                // 랜덤 스탯 복원
-                if (slotData.randomStats != null)
-                {
-                    foreach (var statData in slotData.randomStats)
-                    {
-                        instance.randomStats.Add(new StatModifier(
-                            statData.statType,
-                            statData.modifierType,
-                            statData.value
-                        ));
-                    }
-                }
-
-                // ItemData 캐시 로드
-                instance.LoadCachedData();
-
-                if (instance.IsValid)
+                if (instance != null)
                 {
                     slots[slotData.slotIndex].SetItem(instance, slotData.quantity);
-                }
-                else
-                {
-                    Debug.LogWarning($"[InventoryManager] LoadFromSaveData: 아이템 로드 실패. 경로: {slotData.itemDataPath}");
                 }
             }
 

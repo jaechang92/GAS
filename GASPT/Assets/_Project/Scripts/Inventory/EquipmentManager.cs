@@ -383,33 +383,17 @@ namespace GASPT.Inventory
                 if (string.IsNullOrEmpty(data.itemDataPath))
                     continue;
 
-                // ItemInstance 복원
-                ItemInstance instance = new ItemInstance
-                {
-                    instanceId = data.instanceId,
-                    itemDataPath = data.itemDataPath,
-                    currentDurability = data.currentDurability,
-                    isEquipped = true,
-                    randomStats = new List<StatModifier>()
-                };
+                // ItemInstance 복원 (팩토리 메서드 사용)
+                ItemInstance instance = ItemInstance.RestoreFromSaveData(
+                    data.instanceId,
+                    data.itemDataPath,
+                    data.currentDurability,
+                    isEquipped: true,
+                    acquireTimeTicks: 0,
+                    data.randomStats
+                );
 
-                // 랜덤 스탯 복원
-                if (data.randomStats != null)
-                {
-                    foreach (var statData in data.randomStats)
-                    {
-                        instance.randomStats.Add(new StatModifier(
-                            statData.statType,
-                            statData.modifierType,
-                            statData.value
-                        ));
-                    }
-                }
-
-                // ItemData 캐시 로드
-                instance.LoadCachedData();
-
-                if (instance.IsValid)
+                if (instance != null)
                 {
                     equippedItems[data.slot] = instance;
                 }

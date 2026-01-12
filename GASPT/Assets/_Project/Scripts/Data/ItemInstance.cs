@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Core.Enums;
+using GASPT.Save;
 
 namespace GASPT.Data
 {
@@ -147,6 +148,66 @@ namespace GASPT.Data
             }
 
             return new ItemInstance(itemData);
+        }
+
+        /// <summary>
+        /// 저장 데이터로부터 인스턴스 복원
+        /// InventoryManager, EquipmentManager 등에서 공통 사용
+        /// </summary>
+        /// <param name="instanceId">인스턴스 ID</param>
+        /// <param name="itemDataPath">ItemData 에셋 경로</param>
+        /// <param name="currentDurability">현재 내구도</param>
+        /// <param name="isEquipped">장착 상태</param>
+        /// <param name="acquireTimeTicks">획득 시간 (UTC ticks)</param>
+        /// <param name="randomStats">랜덤 스탯 데이터</param>
+        /// <returns>복원된 아이템 인스턴스 (실패 시 null)</returns>
+        public static ItemInstance RestoreFromSaveData(
+            string instanceId,
+            string itemDataPath,
+            int currentDurability,
+            bool isEquipped,
+            long acquireTimeTicks,
+            List<StatModifierData> randomStats)
+        {
+            if (string.IsNullOrEmpty(itemDataPath))
+            {
+                Debug.LogWarning("[ItemInstance] RestoreFromSaveData: itemDataPath가 비어있습니다.");
+                return null;
+            }
+
+            var instance = new ItemInstance
+            {
+                instanceId = string.IsNullOrEmpty(instanceId) ? Guid.NewGuid().ToString() : instanceId,
+                itemDataPath = itemDataPath,
+                currentDurability = currentDurability,
+                isEquipped = isEquipped,
+                acquireTimeTicks = acquireTimeTicks,
+                randomStats = new List<StatModifier>()
+            };
+
+            // 랜덤 스탯 복원
+            if (randomStats != null)
+            {
+                foreach (var statData in randomStats)
+                {
+                    instance.randomStats.Add(new StatModifier(
+                        statData.statType,
+                        statData.modifierType,
+                        statData.value
+                    ));
+                }
+            }
+
+            // ItemData 캐시 로드
+            instance.LoadCachedData();
+
+            if (!instance.IsValid)
+            {
+                Debug.LogWarning($"[ItemInstance] RestoreFromSaveData: 아이템 로드 실패. 경로: {itemDataPath}");
+                return null;
+            }
+
+            return instance;
         }
 
 
