@@ -5,9 +5,14 @@ using GASPT.Data;
 namespace GASPT.Loot
 {
     /// <summary>
-    /// 월드에 드롭된 아이템 MonoBehaviour
+    /// 월드에 드롭된 아이템 MonoBehaviour (V1 - 레거시)
     /// 플레이어가 획득할 수 있는 아이템 오브젝트
     /// </summary>
+    /// <remarks>
+    /// ⚠️ 레거시 코드입니다. DroppedItemV2를 사용하세요.
+    /// V2는 ItemInstance 기반이며 수량 지원을 포함합니다.
+    /// </remarks>
+    [System.Obsolete("Use DroppedItemV2 instead. V2 supports ItemInstance and quantity.")]
     [RequireComponent(typeof(SpriteRenderer))]
     [RequireComponent(typeof(CircleCollider2D))]
     public class DroppedItem : MonoBehaviour

@@ -6,6 +6,7 @@ using GASPT.Economy;
 using GASPT.Level;
 using GASPT.Meta;
 using GASPT.Loot;
+using GASPT.Items;
 using GASPT.Gameplay.Form;
 
 namespace GASPT.Gameplay.Boss
@@ -154,11 +155,8 @@ namespace GASPT.Gameplay.Boss
             // 6. 보상 지급
             GrantRewards(rewardInfo);
 
-            // 7. 아이템 드롭
-            if (bossData.lootTable != null)
-            {
-                DropLoot(bossData.lootTable);
-            }
+            // 7. 아이템 드롭 (V2 우선, V1 폴백)
+            DropLoot(bossData);
 
             Debug.Log($"[BossRewardSystem] 보상 지급 완료: {rewardInfo}");
 
@@ -211,13 +209,40 @@ namespace GASPT.Gameplay.Boss
             // TODO: FormManager.Instance.UnlockForm(formData);
         }
 
-        private void DropLoot(LootTable lootTable)
+        /// <summary>
+        /// 아이템 드롭 (V2 우선, V1 폴백)
+        /// </summary>
+        private void DropLoot(BossData bossData)
         {
+            // V2 LootTableV2 우선 사용
+            if (bossData.lootTableV2 != null)
+            {
+                if (ItemDropManager.HasInstance)
+                {
+                    ItemDropManager.Instance.DropFromTable(bossData.lootTableV2, Vector3.zero);
+                    return;
+                }
+                Debug.LogWarning("[BossRewardSystem] ItemDropManager를 찾을 수 없습니다. V1 폴백 시도...");
+            }
+
+            // V1 폴백
+            DropLootV1Fallback(bossData);
+        }
+
+        /// <summary>
+        /// V1 LootSystem 폴백
+        /// </summary>
+        #pragma warning disable CS0618 // Obsolete 경고 무시
+        private void DropLootV1Fallback(BossData bossData)
+        {
+            if (bossData.lootTable == null) return;
+
             if (LootSystem.HasInstance)
             {
-                LootSystem.Instance.DropLoot(lootTable, Vector3.zero);
+                LootSystem.Instance.DropLoot(bossData.lootTable, Vector3.zero);
             }
         }
+        #pragma warning restore CS0618
 
 
         // ====== 첫 클리어 관리 ======

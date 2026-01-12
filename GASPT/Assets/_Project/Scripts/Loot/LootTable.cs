@@ -5,10 +5,15 @@ using GASPT.Data;
 namespace GASPT.Loot
 {
     /// <summary>
-    /// 드롭 테이블 ScriptableObject
+    /// 드롭 테이블 ScriptableObject (V1 - 레거시)
     /// 확률 기반 아이템 드롭 정의
     /// </summary>
-    [CreateAssetMenu(fileName = "LootTable", menuName = "GASPT/Loot/LootTable")]
+    /// <remarks>
+    /// ⚠️ 레거시 코드입니다. LootTableV2를 사용하세요.
+    /// V2는 가중치 기반 드롭, 다중 드롭, 확정 드롭을 지원합니다.
+    /// </remarks>
+    [System.Obsolete("Use LootTableV2 instead. V2 supports weighted drops, multi-drop, and guaranteed drops.")]
+    [CreateAssetMenu(fileName = "LootTable", menuName = "GASPT/Loot/LootTable (Legacy)")]
     public class LootTable : ScriptableObject
     {
         // ====== 드롭 항목 ======

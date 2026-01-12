@@ -7,9 +7,14 @@ using GASPT.ResourceManagement;
 namespace GASPT.Loot
 {
     /// <summary>
-    /// 루트 시스템 싱글톤
+    /// 루트 시스템 싱글톤 (V1 - 레거시)
     /// 아이템 드롭 및 월드 아이템 생성 관리
     /// </summary>
+    /// <remarks>
+    /// ⚠️ 레거시 코드입니다. ItemDropManager를 사용하세요.
+    /// V2(ItemDropManager)는 ItemInstance 기반 드롭을 지원합니다.
+    /// </remarks>
+    [System.Obsolete("Use ItemDropManager instead. V2 supports ItemInstance-based drops.")]
     public class LootSystem : SingletonManager<LootSystem>
     {
         // ====== 설정 ======

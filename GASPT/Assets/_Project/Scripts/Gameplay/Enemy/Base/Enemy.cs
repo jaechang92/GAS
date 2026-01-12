@@ -9,6 +9,7 @@ using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
 using GASPT.Meta;
 using GASPT.Core.Enums;
+using GASPT.Items;
 
 namespace GASPT.Gameplay.Enemies
 {
@@ -391,17 +392,39 @@ namespace GASPT.Gameplay.Enemies
         // ====== 아이템 드롭 ======
 
         /// <summary>
-        /// 아이템 드롭 처리
+        /// 아이템 드롭 처리 (V2 우선, V1 폴백)
         /// </summary>
         private void DropLoot()
         {
-            if (enemyData == null || enemyData.lootTable == null)
+            if (enemyData == null) return;
+
+            // V2 LootTableV2 우선 사용
+            if (enemyData.lootTableV2 != null)
             {
-                // LootTable이 없으면 아이템 드롭 없음
+                if (ItemDropManager.HasInstance)
+                {
+                    ItemDropManager.Instance.DropFromTable(enemyData.lootTableV2, transform.position);
+                }
+                else
+                {
+                    Debug.LogWarning("[Enemy] ItemDropManager를 찾을 수 없습니다. V1 폴백 시도...");
+                    DropLootV1Fallback();
+                }
                 return;
             }
 
-            // LootSystem에 드롭 요청
+            // V1 폴백 (lootTable)
+            DropLootV1Fallback();
+        }
+
+        /// <summary>
+        /// V1 LootSystem 폴백
+        /// </summary>
+        #pragma warning disable CS0618 // Obsolete 경고 무시
+        private void DropLootV1Fallback()
+        {
+            if (enemyData.lootTable == null) return;
+
             if (GASPT.Loot.LootSystem.HasInstance)
             {
                 GASPT.Loot.LootSystem.Instance.DropLoot(enemyData.lootTable, transform.position);
@@ -411,6 +434,7 @@ namespace GASPT.Gameplay.Enemies
                 Debug.LogError("[Enemy] LootSystem을 찾을 수 없습니다. 아이템 드롭 실패");
             }
         }
+        #pragma warning restore CS0618
 
 
         // ====== 메타 재화 드롭 ======
