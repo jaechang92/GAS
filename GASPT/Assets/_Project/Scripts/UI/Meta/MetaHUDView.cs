@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using GASPT.Meta.System;
+using GASPT.Meta;
 
 namespace GASPT.UI.Meta
 {
