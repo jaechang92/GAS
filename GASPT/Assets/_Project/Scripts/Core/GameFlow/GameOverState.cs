@@ -20,14 +20,12 @@ namespace GASPT.Core.GameFlow
 
         // UI 완료 대기용 플래그
         private bool isWaitingForUI;
-        private bool shouldRestart;
 
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
             Debug.Log("[GameOverState] 게임 오버!");
 
             isWaitingForUI = true;
-            shouldRestart = false;
 
             var gameManager = GameManager.Instance;
 
@@ -57,16 +55,14 @@ namespace GASPT.Core.GameFlow
             // UIManager를 통해 런 결과 표시
             if (UIManager.HasInstance)
             {
-                // 콜백 설정
+                // 콜백 설정 (게임오버 시에는 로비 복귀만 가능)
                 UIManager.Instance.SetRunResultReturnCallback(() =>
                 {
-                    shouldRestart = false;
                     isWaitingForUI = false;
                 });
 
                 UIManager.Instance.SetRunResultRestartCallback(() =>
                 {
-                    shouldRestart = true;
                     isWaitingForUI = false;
                 });
 
@@ -105,18 +101,11 @@ namespace GASPT.Core.GameFlow
                 await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
             }
 
-            // 상태 전환
+            // 상태 전환 (로비로 복귀)
             var gameFlowFSM = GameFlowStateMachine.Instance;
             if (gameFlowFSM != null)
             {
-                if (shouldRestart)
-                {
-                    gameFlowFSM.TriggerRestartGame();
-                }
-                else
-                {
-                    gameFlowFSM.TriggerRestartGame(); // 로비로 복귀
-                }
+                gameFlowFSM.TriggerRestartGame();
             }
         }
 

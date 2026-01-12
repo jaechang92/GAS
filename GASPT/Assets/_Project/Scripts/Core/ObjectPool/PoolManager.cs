@@ -89,22 +89,6 @@ namespace GASPT.Core.Pooling
         }
 
         /// <summary>
-        /// 기존 풀 가져오기 (런타임 타입, TryGetValue 최적화)
-        /// </summary>
-        private object GetPoolByType(System.Type type)
-        {
-            string poolKey = type.Name;
-
-            if (pools.TryGetValue(poolKey, out var pool))
-            {
-                return pool;
-            }
-
-            Debug.LogError($"[PoolManager] {poolKey} 풀이 존재하지 않습니다! CreatePool을 먼저 호출하세요.");
-            return null;
-        }
-
-        /// <summary>
         /// 풀 존재 여부 확인
         /// </summary>
         public bool HasPool<T>() where T : Component

@@ -21,14 +21,12 @@ namespace GASPT.Core.GameFlow
 
         // UI 완료 대기용 플래그
         private bool isWaitingForUI;
-        private bool shouldContinue; // 다음 스테이지로 진행 여부
 
         protected override async Awaitable OnEnterState(CancellationToken cancellationToken)
         {
             Debug.Log("[DungeonClearedState] 던전 클리어!");
 
             isWaitingForUI = true;
-            shouldContinue = false;
 
             var gameManager = GameManager.Instance;
 
@@ -55,17 +53,14 @@ namespace GASPT.Core.GameFlow
             // UIManager를 통해 런 결과 표시
             if (UIManager.HasInstance && UIManager.Instance.RunResult != null)
             {
-                // 콜백 설정
+                // 콜백 설정 (클리어 시에도 로비 복귀, 다음 스테이지 기능은 추후 구현)
                 UIManager.Instance.SetRunResultReturnCallback(() =>
                 {
-                    shouldContinue = false;
                     isWaitingForUI = false;
                 });
 
                 UIManager.Instance.SetRunResultRestartCallback(() =>
                 {
-                    // 클리어 시 "다시 도전"은 다음 스테이지 진행으로 사용
-                    shouldContinue = true;
                     isWaitingForUI = false;
                 });
 

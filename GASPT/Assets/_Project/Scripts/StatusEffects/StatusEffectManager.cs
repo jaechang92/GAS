@@ -46,10 +46,6 @@ namespace GASPT.StatusEffects
 
         // ====== Unity 생명주기 ======
 
-        protected override void OnAwake()
-        {
-        }
-
         private void Update()
         {
             UpdateAllEffects(Time.deltaTime);
