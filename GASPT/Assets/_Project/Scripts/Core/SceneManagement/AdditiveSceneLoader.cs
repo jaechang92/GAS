@@ -36,10 +36,6 @@ namespace GASPT.Core.SceneManagement
 
         // ====== 초기화 ======
 
-        protected override void OnAwake()
-        {
-        }
-
         /// <summary>
         /// Bootstrap에서 호출: PersistentManagers 로드 후 기본 Content Scene 로드
         /// </summary>

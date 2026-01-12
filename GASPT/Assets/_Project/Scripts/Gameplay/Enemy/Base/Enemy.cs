@@ -9,6 +9,7 @@ using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
 using GASPT.Meta;
 using GASPT.Core.Enums;
+using GASPT.Loot;
 
 namespace GASPT.Gameplay.Enemies
 {
