@@ -34,7 +34,7 @@ namespace GASPT.Gameplay.Form
         /// <summary>
         /// 쿨다운 타이머
         /// </summary>
-        protected Utilities.Cooldown cooldownTimer;
+        protected Cooldown cooldownTimer;
 
         /// <summary>
         /// 쿨다운 체크
