@@ -1,6 +1,6 @@
 using System;
 
-namespace Core.Utilities.Interfaces
+namespace GASPT.Core.Interfaces
 {
     /// <summary>
     /// 체력 변경 이벤트를 제공하는 인터페이스

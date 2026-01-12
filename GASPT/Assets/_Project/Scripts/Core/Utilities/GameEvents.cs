@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Core.Utilities
+namespace GASPT.Core.Utilities
 {
     /// <summary>
     /// 중앙화된 게임 이벤트 시스템

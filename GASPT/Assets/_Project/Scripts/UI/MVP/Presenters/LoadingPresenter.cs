@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using UnityEngine;
-using Core;
+using GASPT.Core.Extensions;
 
 namespace GASPT.UI
 {

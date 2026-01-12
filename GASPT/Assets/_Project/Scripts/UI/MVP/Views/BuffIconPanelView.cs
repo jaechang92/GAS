@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using GASPT.Core.Enums;
-using Core;
+using GASPT.Core.Extensions;
 
 namespace GASPT.UI
 {

@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using TMPro;
 
@@ -52,7 +52,7 @@ namespace GASPT.UI
         // ====== 내부 상태 ======
 
         private Vector3 startPosition;
-        private Coroutine animationCoroutine;
+        private CancellationTokenSource animationCts;
 
 
         // ====== Unity 생명주기 ======
@@ -60,6 +60,26 @@ namespace GASPT.UI
         private void Awake()
         {
             ValidateReferences();
+        }
+
+        private void OnDisable()
+        {
+            CancelAnimation();
+        }
+
+        private void OnDestroy()
+        {
+            CancelAnimation();
+        }
+
+        private void CancelAnimation()
+        {
+            if (animationCts != null)
+            {
+                animationCts.Cancel();
+                animationCts.Dispose();
+                animationCts = null;
+            }
         }
 
 
@@ -145,24 +165,24 @@ namespace GASPT.UI
             transform.position = startPosition;
 
             // 애니메이션 시작
-            if (animationCoroutine != null)
-            {
-                StopCoroutine(animationCoroutine);
-            }
-
-            animationCoroutine = StartCoroutine(FloatAndFadeCoroutine());
+            CancelAnimation();
+            animationCts = new CancellationTokenSource();
+            _ = FloatAndFadeAsync(animationCts.Token);
         }
 
         /// <summary>
-        /// 부유 및 페이드 애니메이션
+        /// 부유 및 페이드 애니메이션 (Awaitable)
         /// </summary>
-        private IEnumerator FloatAndFadeCoroutine()
+        private async Awaitable FloatAndFadeAsync(CancellationToken cancellationToken)
         {
             float elapsed = 0f;
             Color startColor = damageText.color;
 
             while (elapsed < duration)
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;
 
@@ -177,11 +197,14 @@ namespace GASPT.UI
                     damageText.color = newColor;
                 }
 
-                yield return null;
+                await Awaitable.NextFrameAsync(cancellationToken);
             }
 
             // 애니메이션 종료 후 비활성화 (풀로 반환)
-            gameObject.SetActive(false);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                gameObject.SetActive(false);
+            }
         }
 
 

@@ -1,4 +1,4 @@
-using Core;
+using GASPT.Core.Extensions;
 using UnityEngine;
 
 namespace GASPT.Gameplay.Camera

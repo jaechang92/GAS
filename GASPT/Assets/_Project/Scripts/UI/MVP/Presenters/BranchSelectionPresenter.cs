@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using GASPT.Gameplay.Level;
 using GASPT.Gameplay.Level.Graph;
-using Core;
+using GASPT.Core.Extensions;
 
 namespace GASPT.UI.MVP
 {

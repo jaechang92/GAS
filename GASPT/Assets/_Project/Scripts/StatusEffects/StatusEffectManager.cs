@@ -164,27 +164,7 @@ namespace GASPT.StatusEffects
         /// <param name="target">대상</param>
         public void RemoveAllDebuffs(GameObject target)
         {
-            if (target == null || !activeEffects.ContainsKey(target))
-            {
-                return;
-            }
-
-            List<StatusEffect> targetEffects = activeEffects[target];
-            List<StatusEffect> debuffsToRemove = targetEffects
-                .Where(e => e.EffectType.IsDebuff())
-                .ToList();
-
-            foreach (StatusEffect effect in debuffsToRemove)
-            {
-                effect.Remove();
-                targetEffects.Remove(effect);
-                OnEffectRemoved?.Invoke(target, effect);
-            }
-
-            if (targetEffects.Count == 0)
-            {
-                activeEffects.Remove(target);
-            }
+            RemoveEffectsByFilter(target, e => e.EffectType.IsDebuff());
         }
 
         /// <summary>
@@ -193,17 +173,25 @@ namespace GASPT.StatusEffects
         /// <param name="target">대상</param>
         public void RemoveAllBuffs(GameObject target)
         {
+            RemoveEffectsByFilter(target, e => e.EffectType.IsBuff());
+        }
+
+        /// <summary>
+        /// 조건에 맞는 효과들을 제거하는 공통 헬퍼 메서드
+        /// </summary>
+        /// <param name="target">대상</param>
+        /// <param name="filter">제거할 효과를 필터링하는 조건</param>
+        private void RemoveEffectsByFilter(GameObject target, Func<StatusEffect, bool> filter)
+        {
             if (target == null || !activeEffects.ContainsKey(target))
             {
                 return;
             }
 
             List<StatusEffect> targetEffects = activeEffects[target];
-            List<StatusEffect> buffsToRemove = targetEffects
-                .Where(e => e.EffectType.IsBuff())
-                .ToList();
+            List<StatusEffect> effectsToRemove = targetEffects.Where(filter).ToList();
 
-            foreach (StatusEffect effect in buffsToRemove)
+            foreach (StatusEffect effect in effectsToRemove)
             {
                 effect.Remove();
                 targetEffects.Remove(effect);

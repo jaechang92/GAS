@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using Core;
+using GASPT.Core.Extensions;
 using GASPT.Core.Enums;
 using GASPT.Gameplay.Enemies;
 using GASPT.Level.Spawn;

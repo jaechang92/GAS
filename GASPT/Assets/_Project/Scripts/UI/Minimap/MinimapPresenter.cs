@@ -5,7 +5,7 @@ using UnityEngine;
 using GASPT.Core.Enums;
 using GASPT.Gameplay.Level;
 using GASPT.Gameplay.Level.Graph;
-using Core;
+using GASPT.Core.Extensions;
 
 namespace GASPT.UI.Minimap
 {

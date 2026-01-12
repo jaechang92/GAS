@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GASPT.Stats;
-using Core;
+using GASPT.Core.Extensions;
 
 namespace GASPT.UI
 {

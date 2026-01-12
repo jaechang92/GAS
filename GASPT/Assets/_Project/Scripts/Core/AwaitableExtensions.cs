@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Core
+namespace GASPT.Core.Extensions
 {
     /// <summary>
     /// Awaitable 확장 메서드

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Core;
+using GASPT.Core.Extensions;
 using GASPT.ResourceManagement;
 
 namespace GASPT.Core.Pooling
