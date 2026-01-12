@@ -4,6 +4,7 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Core.Enums;
 using GASPT.Core;
+using GASPT.Core.Utilities;
 using GASPT.Stats;
 using GASPT.Gameplay.Form;
 
@@ -23,14 +24,9 @@ namespace GASPT.Inventory
         private Dictionary<EquipmentSlot, ItemInstance> equippedItems = new Dictionary<EquipmentSlot, ItemInstance>();
 
         /// <summary>
-        /// 캐시된 장비 스탯 보너스
+        /// 장비 스탯 캐시 (DirtyCache 패턴)
         /// </summary>
-        private Dictionary<StatType, float> cachedEquipmentStats = new Dictionary<StatType, float>();
-
-        /// <summary>
-        /// 스탯 캐시 유효 여부
-        /// </summary>
-        private bool isStatsCacheDirty = true;
+        private DirtyCache<Dictionary<StatType, float>> statsCache;
 
 
         // ====== 이벤트 ======
@@ -79,10 +75,10 @@ namespace GASPT.Inventory
         {
             equippedItems.Clear();
 
-            foreach (StatType statType in Enum.GetValues(typeof(StatType)))
-            {
-                cachedEquipmentStats[statType] = 0f;
-            }
+            // DirtyCache 초기화 (장비 변경 시 재계산)
+            statsCache = new DirtyCache<Dictionary<StatType, float>>(
+                () => StatCalculator.CalculateEquipmentStats(equippedItems.Values)
+            );
         }
 
 
@@ -303,26 +299,14 @@ namespace GASPT.Inventory
         }
 
 
-        // ====== 스탯 계산 ======
+        // ====== 스탯 계산 (DirtyCache 위임) ======
 
         /// <summary>
         /// 스탯 캐시 무효화
         /// </summary>
         private void InvalidateStatsCache()
         {
-            isStatsCacheDirty = true;
-        }
-
-        /// <summary>
-        /// 장비 스탯 캐시 업데이트
-        /// </summary>
-        private void UpdateStatsCache()
-        {
-            if (!isStatsCacheDirty)
-                return;
-
-            cachedEquipmentStats = StatCalculator.CalculateEquipmentStats(equippedItems.Values);
-            isStatsCacheDirty = false;
+            statsCache?.Invalidate();
         }
 
         /// <summary>
@@ -332,8 +316,7 @@ namespace GASPT.Inventory
         /// <returns>보너스 수치</returns>
         public float GetEquipmentBonus(StatType statType)
         {
-            UpdateStatsCache();
-            return cachedEquipmentStats.GetValueOrDefault(statType, 0f);
+            return statsCache.Value.GetValueOrDefault(statType, 0f);
         }
 
         /// <summary>
@@ -342,8 +325,7 @@ namespace GASPT.Inventory
         /// <returns>스탯별 보너스 딕셔너리</returns>
         public Dictionary<StatType, float> GetAllEquipmentBonuses()
         {
-            UpdateStatsCache();
-            return new Dictionary<StatType, float>(cachedEquipmentStats);
+            return new Dictionary<StatType, float>(statsCache.Value);
         }
 
 
@@ -475,11 +457,9 @@ namespace GASPT.Inventory
         [ContextMenu("Print Equipment Stats")]
         public void DebugPrintStats()
         {
-            UpdateStatsCache();
+            Debug.Log($"[EquipmentManager] ========== 장비 스탯 (dirty: {statsCache?.IsDirty ?? true}) ==========");
 
-            Debug.Log("[EquipmentManager] ========== 장비 스탯 ==========");
-
-            foreach (var kvp in cachedEquipmentStats)
+            foreach (var kvp in statsCache.Value)
             {
                 if (kvp.Value != 0)
                 {
