@@ -6,7 +6,6 @@ using GASPT.Economy;
 using GASPT.Level;
 using GASPT.Meta;
 using GASPT.Loot;
-using GASPT.Items;
 using GASPT.Gameplay.Form;
 
 namespace GASPT.Gameplay.Boss
