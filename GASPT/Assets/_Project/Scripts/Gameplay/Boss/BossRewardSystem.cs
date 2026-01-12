@@ -209,39 +209,21 @@ namespace GASPT.Gameplay.Boss
         }
 
         /// <summary>
-        /// 아이템 드롭 (V2 우선, V1 폴백)
+        /// 아이템 드롭
         /// </summary>
         private void DropLoot(BossData bossData)
         {
-            // V2 LootTableV2 우선 사용
-            if (bossData.lootTableV2 != null)
+            if (bossData.lootTableV2 == null) return;
+
+            if (ItemDropManager.HasInstance)
             {
-                if (ItemDropManager.HasInstance)
-                {
-                    ItemDropManager.Instance.DropFromTable(bossData.lootTableV2, Vector3.zero);
-                    return;
-                }
-                Debug.LogWarning("[BossRewardSystem] ItemDropManager를 찾을 수 없습니다. V1 폴백 시도...");
+                ItemDropManager.Instance.DropFromTable(bossData.lootTableV2, Vector3.zero);
             }
-
-            // V1 폴백
-            DropLootV1Fallback(bossData);
-        }
-
-        /// <summary>
-        /// V1 LootSystem 폴백
-        /// </summary>
-        #pragma warning disable CS0618 // Obsolete 경고 무시
-        private void DropLootV1Fallback(BossData bossData)
-        {
-            if (bossData.lootTable == null) return;
-
-            if (LootSystem.HasInstance)
+            else
             {
-                LootSystem.Instance.DropLoot(bossData.lootTable, Vector3.zero);
+                Debug.LogWarning("[BossRewardSystem] ItemDropManager를 찾을 수 없습니다.");
             }
         }
-        #pragma warning restore CS0618
 
 
         // ====== 첫 클리어 관리 ======

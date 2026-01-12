@@ -93,11 +93,7 @@ namespace GASPT.Data
         [Range(0, 2000)]
         public int expReward = 50;
 
-        [Tooltip("아이템 드롭 테이블 V1 (레거시, 추후 제거 예정)")]
-        [System.Obsolete("Use lootTableV2 instead")]
-        public LootTable lootTable;
-
-        [Tooltip("아이템 드롭 테이블 V2 (권장)")]
+        [Tooltip("아이템 드롭 테이블")]
         public LootTableV2 lootTableV2;
 
 
