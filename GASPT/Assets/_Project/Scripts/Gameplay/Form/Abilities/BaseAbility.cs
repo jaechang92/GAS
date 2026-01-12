@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using GASPT.Core.Utilities;
 
 namespace GASPT.Gameplay.Form
 {
@@ -28,12 +29,12 @@ namespace GASPT.Gameplay.Form
         public abstract Task ExecuteAsync(GameObject caster, CancellationToken token);
 
 
-        // ====== 쿨다운 관리 ======
+        // ====== 쿨다운 관리 (Cooldown struct 사용) ======
 
         /// <summary>
-        /// 마지막 사용 시간
+        /// 쿨다운 타이머
         /// </summary>
-        protected float lastUsedTime;
+        protected Utilities.Cooldown cooldownTimer;
 
         /// <summary>
         /// 쿨다운 체크
@@ -41,9 +42,12 @@ namespace GASPT.Gameplay.Form
         /// <returns>사용 가능하면 true, 쿨다운 중이면 false</returns>
         protected bool CheckCooldown()
         {
-            if (Time.time - lastUsedTime < Cooldown)
+            // Duration 동기화
+            cooldownTimer.Duration = Cooldown;
+
+            if (cooldownTimer.IsOnCooldown)
             {
-                Debug.Log($"[{AbilityName}] 쿨다운 중... (남은 시간: {Cooldown - (Time.time - lastUsedTime):F1}초)");
+                Debug.Log($"[{AbilityName}] 쿨다운 중... (남은 시간: {cooldownTimer.RemainingTime:F1}초)");
                 return false;
             }
 
@@ -55,17 +59,23 @@ namespace GASPT.Gameplay.Form
         /// </summary>
         protected void StartCooldown()
         {
-            lastUsedTime = Time.time;
+            cooldownTimer.Duration = Cooldown;
+            cooldownTimer.Start();
         }
 
         /// <summary>
         /// 남은 쿨다운 시간 (초)
         /// </summary>
-        public float RemainingCooldown => Mathf.Max(0f, Cooldown - (Time.time - lastUsedTime));
+        public float RemainingCooldown => cooldownTimer.RemainingTime;
 
         /// <summary>
         /// 사용 가능 여부
         /// </summary>
-        public bool IsReady => Time.time - lastUsedTime >= Cooldown;
+        public bool IsReady => cooldownTimer.IsReady;
+
+        /// <summary>
+        /// 쿨다운 진행률 (0~1, UI용)
+        /// </summary>
+        public float CooldownProgress => cooldownTimer.Progress;
     }
 }

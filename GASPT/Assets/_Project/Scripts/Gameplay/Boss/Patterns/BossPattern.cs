@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using GASPT.Core.Enums;
+using GASPT.Core.Utilities;
 
 namespace GASPT.Gameplay.Boss
 {
@@ -59,7 +60,10 @@ namespace GASPT.Gameplay.Boss
 
         // ====== 상태 ======
 
-        protected float lastUseTime = float.NegativeInfinity;
+        /// <summary>
+        /// 쿨다운 타이머 (Cooldown struct 사용)
+        /// </summary>
+        protected Cooldown cooldownTimer;
         protected bool isExecuting = false;
         protected bool isCancelled = false;
 
@@ -69,12 +73,12 @@ namespace GASPT.Gameplay.Boss
         /// <summary>
         /// 쿨다운 완료 여부
         /// </summary>
-        public bool IsOnCooldown => Time.time - lastUseTime < cooldown;
+        public bool IsOnCooldown => cooldownTimer.IsOnCooldown;
 
         /// <summary>
         /// 쿨다운 남은 시간
         /// </summary>
-        public float RemainingCooldown => Mathf.Max(0f, cooldown - (Time.time - lastUseTime));
+        public float RemainingCooldown => cooldownTimer.RemainingTime;
 
         /// <summary>
         /// 현재 실행 중 여부
@@ -136,11 +140,13 @@ namespace GASPT.Gameplay.Boss
         }
 
         /// <summary>
-        /// 쿨다운 리셋
+        /// 쿨다운 시작 (사용 후 호출)
         /// </summary>
         public void ResetCooldown()
         {
-            lastUseTime = Time.time;
+            // cooldown 필드 값으로 Duration 설정 후 시작
+            cooldownTimer.Duration = cooldown;
+            cooldownTimer.Start();
         }
 
         /// <summary>
@@ -148,7 +154,7 @@ namespace GASPT.Gameplay.Boss
         /// </summary>
         public void ForceCooldownComplete()
         {
-            lastUseTime = float.NegativeInfinity;
+            cooldownTimer.Reset();
         }
 
 
@@ -169,7 +175,7 @@ namespace GASPT.Gameplay.Boss
         protected void EndExecution()
         {
             isExecuting = false;
-            lastUseTime = Time.time;
+            ResetCooldown(); // 쿨다운 시작
         }
 
         /// <summary>

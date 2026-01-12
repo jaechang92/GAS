@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using GASPT.Data;
 using GASPT.Core;
 using GASPT.Core.Enums;
+using GASPT.Core.Utilities;
 using GASPT.Stats;
 using GASPT.StatusEffects;
 
@@ -18,9 +18,9 @@ namespace GASPT.Inventory
         // ====== 쿨다운 데이터 ======
 
         /// <summary>
-        /// 아이템별 쿨다운 종료 시간 (itemId → endTime)
+        /// 아이템별 쿨다운 트래커
         /// </summary>
-        private Dictionary<string, float> cooldowns = new Dictionary<string, float>();
+        private readonly CooldownTracker<string> cooldownTracker = new CooldownTracker<string>();
 
 
         // ====== 이벤트 ======
@@ -32,13 +32,13 @@ namespace GASPT.Inventory
         public event Action<ItemInstance, UseResult> OnItemUsed;
 
         /// <summary>
-        /// 쿨다운 시작 이벤트
+        /// 쿨다운 시작 이벤트 (CooldownTracker에서 전달)
         /// 매개변수: (아이템 ID, 쿨다운 시간)
         /// </summary>
         public event Action<string, float> OnCooldownStarted;
 
         /// <summary>
-        /// 쿨다운 종료 이벤트
+        /// 쿨다운 종료 이벤트 (CooldownTracker에서 전달)
         /// 매개변수: (아이템 ID)
         /// </summary>
         public event Action<string> OnCooldownEnded;
@@ -48,13 +48,17 @@ namespace GASPT.Inventory
 
         protected override void OnAwake()
         {
+            // CooldownTracker 이벤트 연결
+            cooldownTracker.OnCooldownStarted += (id, duration) => OnCooldownStarted?.Invoke(id, duration);
+            cooldownTracker.OnCooldownEnded += (id) => OnCooldownEnded?.Invoke(id);
+
             Debug.Log("[ConsumableManager] 초기화 완료");
         }
 
         private void Update()
         {
             // 쿨다운 만료 체크
-            CheckCooldowns();
+            cooldownTracker.Tick();
         }
 
 
@@ -295,18 +299,14 @@ namespace GASPT.Inventory
         }
 
 
-        // ====== 쿨다운 시스템 ======
+        // ====== 쿨다운 시스템 (CooldownTracker 위임) ======
 
         /// <summary>
         /// 쿨다운 시작
         /// </summary>
         private void StartCooldown(string itemId, float duration)
         {
-            float endTime = Time.time + duration;
-            cooldowns[itemId] = endTime;
-
-            OnCooldownStarted?.Invoke(itemId, duration);
-
+            cooldownTracker.Start(itemId, duration);
             Debug.Log($"[ConsumableManager] 쿨다운 시작: {itemId} ({duration}초)");
         }
 
@@ -315,12 +315,7 @@ namespace GASPT.Inventory
         /// </summary>
         public bool IsOnCooldown(string itemId)
         {
-            if (!cooldowns.TryGetValue(itemId, out float endTime))
-            {
-                return false;
-            }
-
-            return Time.time < endTime;
+            return cooldownTracker.IsOnCooldown(itemId);
         }
 
         /// <summary>
@@ -328,12 +323,7 @@ namespace GASPT.Inventory
         /// </summary>
         public float GetRemainingCooldown(string itemId)
         {
-            if (!cooldowns.TryGetValue(itemId, out float endTime))
-            {
-                return 0f;
-            }
-
-            return Mathf.Max(0f, endTime - Time.time);
+            return cooldownTracker.GetRemainingTime(itemId);
         }
 
         /// <summary>
@@ -341,10 +331,7 @@ namespace GASPT.Inventory
         /// </summary>
         public void ClearCooldown(string itemId)
         {
-            if (cooldowns.Remove(itemId))
-            {
-                OnCooldownEnded?.Invoke(itemId);
-            }
+            cooldownTracker.Reset(itemId);
         }
 
         /// <summary>
@@ -352,40 +339,7 @@ namespace GASPT.Inventory
         /// </summary>
         public void ClearAllCooldowns()
         {
-            List<string> expiredIds = new List<string>(cooldowns.Keys);
-
-            cooldowns.Clear();
-
-            foreach (string itemId in expiredIds)
-            {
-                OnCooldownEnded?.Invoke(itemId);
-            }
-        }
-
-        /// <summary>
-        /// 쿨다운 만료 체크
-        /// </summary>
-        private void CheckCooldowns()
-        {
-            if (cooldowns.Count == 0)
-                return;
-
-            List<string> expiredIds = new List<string>();
-
-            foreach (var kvp in cooldowns)
-            {
-                if (Time.time >= kvp.Value)
-                {
-                    expiredIds.Add(kvp.Key);
-                }
-            }
-
-            foreach (string itemId in expiredIds)
-            {
-                cooldowns.Remove(itemId);
-                OnCooldownEnded?.Invoke(itemId);
-                Debug.Log($"[ConsumableManager] 쿨다운 종료: {itemId}");
-            }
+            cooldownTracker.ResetAll();
         }
 
 
@@ -397,12 +351,11 @@ namespace GASPT.Inventory
         [ContextMenu("Print Cooldowns")]
         public void DebugPrintCooldowns()
         {
-            Debug.Log("[ConsumableManager] ========== 쿨다운 ==========");
+            Debug.Log($"[ConsumableManager] ========== 쿨다운 ({cooldownTracker.ActiveCount}개) ==========");
 
-            foreach (var kvp in cooldowns)
+            foreach (var kvp in cooldownTracker.GetAllCooldowns())
             {
-                float remaining = GetRemainingCooldown(kvp.Key);
-                Debug.Log($"[ConsumableManager] {kvp.Key}: {remaining:F1}초 남음");
+                Debug.Log($"[ConsumableManager] {kvp.Key}: {kvp.Value:F1}초 남음");
             }
 
             Debug.Log("[ConsumableManager] ============================");
