@@ -1,6 +1,7 @@
 using UnityEngine;
 using GASPT.Core.Pooling;
 using GASPT.Gameplay.Projectiles;
+using GASPT.Gameplay.Boss;
 using GASPT.UI;
 
 namespace GASPT.Gameplay.Enemies
@@ -157,6 +158,7 @@ namespace GASPT.Gameplay.Enemies
         /// </summary>
         private void InitializePhaseController()
         {
+            // V2 기본 생성자 사용 (V1 호환 3페이즈)
             phaseController = new BossPhaseController();
 
             // HP 변경 시 Phase 업데이트
@@ -168,7 +170,7 @@ namespace GASPT.Gameplay.Enemies
             // Phase 전환 이벤트 구독
             phaseController.OnPhaseChanged += OnPhaseChanged;
 
-            Debug.Log($"[BossEnemy] Phase Controller 초기화 완료");
+            Debug.Log($"[BossEnemy] Phase Controller 초기화 완료 (V2)");
         }
 
         /// <summary>
@@ -206,23 +208,25 @@ namespace GASPT.Gameplay.Enemies
         /// <summary>
         /// Phase 전환 시 호출
         /// </summary>
-        private void OnPhaseChanged(BossPhase newPhase)
+        /// <param name="newPhaseIndex">새 페이즈 인덱스 (0부터 시작)</param>
+        private void OnPhaseChanged(int newPhaseIndex)
         {
-            Debug.Log($"[BossEnemy] {Data?.enemyName} Phase 전환: {newPhase}");
+            int phaseNumber = newPhaseIndex + 1; // 표시용 (1부터 시작)
+            Debug.Log($"[BossEnemy] {Data?.enemyName} Phase 전환: Phase {phaseNumber}");
 
-            // Phase별 초기화
-            switch (newPhase)
+            // Phase별 초기화 (인덱스 기반)
+            switch (newPhaseIndex)
             {
-                case BossPhase.Phase1:
+                case 0: // Phase 1
                     // Phase 1 진입
                     break;
 
-                case BossPhase.Phase2:
+                case 1: // Phase 2
                     // Phase 2 진입 - 광폭화 이펙트
                     Debug.Log($"[BossEnemy] Phase 2 진입! 공격 속도 증가!");
                     break;
 
-                case BossPhase.Phase3:
+                case 2: // Phase 3
                     // Phase 3 진입 - 최종 광폭화
                     Debug.Log($"[BossEnemy] Phase 3 진입! 광폭화 상태!");
                     break;
@@ -239,20 +243,18 @@ namespace GASPT.Gameplay.Enemies
         {
             if (phaseController == null) return;
 
-            BossPhase currentPhase = phaseController.CurrentPhase;
+            int currentPhaseIndex = phaseController.CurrentPhaseIndex;
 
-            switch (currentPhase)
+            switch (currentPhaseIndex)
             {
-                case BossPhase.Phase1:
-                    // Phase 1: 근접 공격 + 원거리 공격
+                case 0: // Phase 1: 근접 공격 + 원거리 공격
                     if (CanUseRangedAttack())
                     {
                         ExecuteRangedAttack();
                     }
                     break;
 
-                case BossPhase.Phase2:
-                    // Phase 2: 근접 + 원거리 + 돌진 + 소환
+                case 1: // Phase 2: 근접 + 원거리 + 돌진 + 소환
                     if (CanUseRangedAttack())
                     {
                         ExecuteRangedAttack();
@@ -267,8 +269,7 @@ namespace GASPT.Gameplay.Enemies
                     }
                     break;
 
-                case BossPhase.Phase3:
-                    // Phase 3: 근접 + 원거리 + 돌진 + 범위 공격
+                case 2: // Phase 3: 근접 + 원거리 + 돌진 + 범위 공격
                     if (CanUseRangedAttack())
                     {
                         ExecuteRangedAttack();
@@ -580,8 +581,8 @@ namespace GASPT.Gameplay.Enemies
 
             if (!showGizmos || Data == null) return;
 
-            // Phase 2 돌진 경로 시각화
-            if (phaseController != null && phaseController.CurrentPhase == BossPhase.Phase2)
+            // Phase 2 돌진 경로 시각화 (Phase 2 = 인덱스 1)
+            if (phaseController != null && phaseController.CurrentPhaseIndex == 1)
             {
                 if (playerTransform != null && col != null)
                 {
@@ -631,8 +632,8 @@ namespace GASPT.Gameplay.Enemies
                 }
             }
 
-            // Phase 3 범위 공격 범위 (빨간색 원)
-            if (phaseController != null && phaseController.CurrentPhase == BossPhase.Phase3)
+            // Phase 3 범위 공격 범위 (빨간색 원) (Phase 3 = 인덱스 2)
+            if (phaseController != null && phaseController.CurrentPhaseIndex == 2)
             {
                 Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
                 Gizmos.DrawWireSphere(transform.position, Data.bossAreaRadius);

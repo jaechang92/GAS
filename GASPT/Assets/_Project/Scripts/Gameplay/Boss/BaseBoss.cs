@@ -50,7 +50,7 @@ namespace GASPT.Gameplay.Boss
 
         // ====== 페이즈 ======
 
-        protected BossPhaseControllerV2 phaseController;
+        protected BossPhaseController phaseController;
         protected int currentPhaseIndex = 0;
 
 
@@ -217,7 +217,7 @@ namespace GASPT.Gameplay.Boss
         /// </summary>
         protected virtual void InitializePhaseController()
         {
-            phaseController = new BossPhaseControllerV2(bossData);
+            phaseController = new BossPhaseController(bossData);
             phaseController.OnPhaseChanged += HandlePhaseChanged;
         }
 

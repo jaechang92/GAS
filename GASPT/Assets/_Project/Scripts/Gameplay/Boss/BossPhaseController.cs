@@ -8,7 +8,7 @@ namespace GASPT.Gameplay.Boss
     /// 보스 페이즈 컨트롤러 V2
     /// BossData 기반 페이즈 전환 및 스탯 배율 관리
     /// </summary>
-    public class BossPhaseControllerV2
+    public class BossPhaseController
     {
         // ====== 데이터 ======
 
@@ -58,19 +58,79 @@ namespace GASPT.Gameplay.Boss
 
         // ====== 생성자 ======
 
-        public BossPhaseControllerV2(BossData data)
+        /// <summary>
+        /// BossData 기반 생성자
+        /// </summary>
+        public BossPhaseController(BossData data)
         {
             bossData = data;
             phases = data?.phases;
 
             if (phases == null || phases.Length == 0)
             {
-                Debug.LogWarning("[BossPhaseControllerV2] 페이즈 데이터가 없습니다. 기본 페이즈 사용.");
+                Debug.LogWarning("[BossPhaseController] 페이즈 데이터가 없습니다. 기본 페이즈 사용.");
                 phases = new BossPhaseData[] { BossPhaseData.CreateDefault(1, 1f) };
             }
 
             currentPhaseIndex = 0;
             previousPhaseIndex = 0;
+        }
+
+        /// <summary>
+        /// 기본 생성자 (V1 호환용 - 3페이즈 기본값)
+        /// Phase 1: 100%~70%, Attack x1.0, Speed x1.0
+        /// Phase 2: 70%~30%, Attack x1.2, Speed x1.3
+        /// Phase 3: 30%~0%, Attack x1.5, Speed x1.3
+        /// </summary>
+        public BossPhaseController()
+        {
+            bossData = null;
+            phases = CreateDefaultThreePhases();
+            currentPhaseIndex = 0;
+            previousPhaseIndex = 0;
+        }
+
+        /// <summary>
+        /// V1 호환 3페이즈 기본값 생성
+        /// </summary>
+        private static BossPhaseData[] CreateDefaultThreePhases()
+        {
+            return new BossPhaseData[]
+            {
+                new BossPhaseData
+                {
+                    phaseIndex = 1,
+                    healthThreshold = 1f,
+                    attackMultiplier = 1.0f,
+                    speedMultiplier = 1.0f,
+                    attackSpeedMultiplier = 1.0f,
+                    invulnerabilityDuration = 0f,
+                    cameraShakeIntensity = 0f,
+                    availablePatternIndices = new int[0]
+                },
+                new BossPhaseData
+                {
+                    phaseIndex = 2,
+                    healthThreshold = 0.7f,
+                    attackMultiplier = 1.2f,
+                    speedMultiplier = 1.3f,
+                    attackSpeedMultiplier = 1.2f,
+                    invulnerabilityDuration = 1f,
+                    cameraShakeIntensity = 0.3f,
+                    availablePatternIndices = new int[0]
+                },
+                new BossPhaseData
+                {
+                    phaseIndex = 3,
+                    healthThreshold = 0.3f,
+                    attackMultiplier = 1.5f,
+                    speedMultiplier = 1.3f,
+                    attackSpeedMultiplier = 1.4f,
+                    invulnerabilityDuration = 1.5f,
+                    cameraShakeIntensity = 0.5f,
+                    availablePatternIndices = new int[0]
+                }
+            };
         }
 
 
@@ -88,6 +148,23 @@ namespace GASPT.Gameplay.Boss
             {
                 ChangePhase(newPhaseIndex);
             }
+        }
+
+        /// <summary>
+        /// HP 값으로 페이즈 업데이트 (V1 호환)
+        /// </summary>
+        /// <param name="currentHp">현재 HP</param>
+        /// <param name="maxHp">최대 HP</param>
+        public void UpdatePhase(int currentHp, int maxHp)
+        {
+            if (maxHp <= 0)
+            {
+                Debug.LogWarning("[BossPhaseController] maxHp가 0 이하입니다.");
+                return;
+            }
+
+            float healthRatio = (float)currentHp / maxHp;
+            UpdatePhase(healthRatio);
         }
 
         /// <summary>
@@ -117,7 +194,7 @@ namespace GASPT.Gameplay.Boss
             previousPhaseIndex = currentPhaseIndex;
             currentPhaseIndex = newPhaseIndex;
 
-            Debug.Log($"[BossPhaseControllerV2] 페이즈 전환: Phase {previousPhaseIndex + 1} → Phase {currentPhaseIndex + 1}");
+            Debug.Log($"[BossPhaseController] 페이즈 전환: Phase {previousPhaseIndex + 1} → Phase {currentPhaseIndex + 1}");
 
             OnPhaseChanged?.Invoke(currentPhaseIndex);
         }
@@ -191,7 +268,7 @@ namespace GASPT.Gameplay.Boss
         {
             if (phaseIndex < 0 || phaseIndex >= phases.Length)
             {
-                Debug.LogWarning($"[BossPhaseControllerV2] 유효하지 않은 페이즈 인덱스: {phaseIndex}");
+                Debug.LogWarning($"[BossPhaseController] 유효하지 않은 페이즈 인덱스: {phaseIndex}");
                 return;
             }
 
