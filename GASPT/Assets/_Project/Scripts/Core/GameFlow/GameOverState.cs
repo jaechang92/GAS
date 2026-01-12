@@ -84,20 +84,10 @@ namespace GASPT.Core.GameFlow
                     await Awaitable.WaitForSecondsAsync(0.1f, cancellationToken);
                 }
             }
-            else if (GameOverUI.HasInstance)
-            {
-                // 폴백: 기존 GameOverUI 사용
-                GameOverUI.Instance.ShowGameOver(goldEarned, roomsCount);
-
-                while (GameOverUI.Instance.IsVisible && !cancellationToken.IsCancellationRequested)
-                {
-                    await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
-                }
-            }
             else
             {
-                // 폴백: 3초 후 자동 복귀
-                Debug.LogWarning("[GameOverState] UI가 없습니다. 3초 후 자동 복귀");
+                // UIManager가 없으면 3초 후 자동 복귀
+                Debug.LogWarning("[GameOverState] UIManager가 없습니다. 3초 후 자동 복귀");
                 await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
             }
 
@@ -117,12 +107,6 @@ namespace GASPT.Core.GameFlow
             if (UIManager.HasInstance)
             {
                 UIManager.Instance.HideRunResult();
-            }
-
-            // 기존 GameOverUI 숨기기 (폴백)
-            if (GameOverUI.HasInstance && GameOverUI.Instance.IsVisible)
-            {
-                GameOverUI.Instance.Hide();
             }
 
             // 던전 데이터 정리

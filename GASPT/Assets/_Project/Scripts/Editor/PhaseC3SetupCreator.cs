@@ -9,7 +9,7 @@ namespace GASPT.Editor
 {
     /// <summary>
     /// Phase C-3 던전 진행 UI 자동 생성 도구
-    /// PortalUI, DungeonCompleteUI 프리팹 및 연결 자동화
+    /// Portal, PortalUI 프리팹 및 연결 자동화
     /// </summary>
     public class PhaseC3SetupCreator : EditorWindow
     {
@@ -23,7 +23,6 @@ namespace GASPT.Editor
 
         private bool createPortalPrefab = true;
         private bool createPortalUI = true;
-        private bool createDungeonCompleteUI = true;
         private bool setupSceneConnections = false;
 
         private Vector2 scrollPosition;
@@ -55,8 +54,7 @@ namespace GASPT.Editor
                 "생성될 프리팹:\n" +
                 "1. Portal.prefab - 포탈 오브젝트\n" +
                 "2. PortalUI.prefab - E키 안내 UI\n" +
-                "3. DungeonCompleteUI.prefab - 던전 클리어 UI\n" +
-                "4. Scene 연결 및 Portal 자동 배치\n\n" +
+                "3. Scene 연결 및 Portal 자동 배치\n\n" +
                 "⚠️ 기존 프리팹이 있으면 덮어씁니다!",
                 MessageType.Info
             );
@@ -67,7 +65,6 @@ namespace GASPT.Editor
             EditorGUILayout.LabelField("생성할 프리팹 선택:", EditorStyles.boldLabel);
             createPortalPrefab = EditorGUILayout.Toggle("Portal.prefab", createPortalPrefab);
             createPortalUI = EditorGUILayout.Toggle("PortalUI.prefab", createPortalUI);
-            createDungeonCompleteUI = EditorGUILayout.Toggle("DungeonCompleteUI.prefab", createDungeonCompleteUI);
             setupSceneConnections = EditorGUILayout.Toggle("Scene 연결 + Portal 배치 (씬 필요)", setupSceneConnections);
 
             GUILayout.Space(20);
@@ -95,12 +92,7 @@ namespace GASPT.Editor
                 CreatePortalUIPrefab();
             }
 
-            if (GUILayout.Button("3. DungeonCompleteUI.prefab 생성"))
-            {
-                CreateDungeonCompleteUIPrefab();
-            }
-
-            if (GUILayout.Button("4. Scene 연결 + Portal 배치 (씬 필요)"))
+            if (GUILayout.Button("3. Scene 연결 + Portal 배치 (씬 필요)"))
             {
                 SetupSceneConnections();
             }
@@ -110,9 +102,9 @@ namespace GASPT.Editor
             // 도움말
             EditorGUILayout.HelpBox(
                 "생성 순서:\n" +
-                "1. PortalUI.prefab (E키 안내)\n" +
-                "2. DungeonCompleteUI.prefab (클리어 축하)\n" +
-                "3. Scene 연결 (Portal, RoomManager)\n\n" +
+                "1. Portal.prefab (포탈 오브젝트)\n" +
+                "2. PortalUI.prefab (E키 안내)\n" +
+                "3. Scene 연결 (Portal 연결)\n\n" +
                 "⚠️ Scene 연결은 GameplayScene을 열어야 합니다!",
                 MessageType.None
             );
@@ -162,16 +154,7 @@ namespace GASPT.Editor
                 }
             }
 
-            // 3. DungeonCompleteUI 생성
-            if (createDungeonCompleteUI)
-            {
-                if (CreateDungeonCompleteUIPrefab())
-                {
-                    createdCount++;
-                }
-            }
-
-            // 4. Scene 연결
+            // 3. Scene 연결
             if (setupSceneConnections)
             {
                 if (SetupSceneConnections())
@@ -403,117 +386,6 @@ namespace GASPT.Editor
         }
 
 
-        // ====== DungeonCompleteUI 생성 ======
-
-        private bool CreateDungeonCompleteUIPrefab()
-        {
-            Debug.Log("[PhaseC3SetupCreator] DungeonCompleteUI 생성 중 (Scene에 직접 생성)...");
-
-            // UI CANVAS 찾기
-            GameObject uiCanvas = GameObject.Find("=== UI CANVAS ===");
-            if (uiCanvas == null)
-            {
-                Debug.LogError("[PhaseC3SetupCreator] '=== UI CANVAS ===' 오브젝트를 찾을 수 없습니다!");
-                EditorUtility.DisplayDialog("오류", "Scene에 '=== UI CANVAS ===' 오브젝트가 없습니다!", "확인");
-                return false;
-            }
-
-            // DungeonCompleteUI 부모 생성 (항상 활성화, DungeonCompleteUI 컴포넌트 포함)
-            GameObject dungeonUIObj = new GameObject("DungeonCompleteUI");
-            dungeonUIObj.transform.SetParent(uiCanvas.transform, false);
-
-            RectTransform dungeonUIRect = dungeonUIObj.AddComponent<RectTransform>();
-            dungeonUIRect.anchorMin = Vector2.zero;
-            dungeonUIRect.anchorMax = Vector2.one;
-            dungeonUIRect.sizeDelta = Vector2.zero;
-            dungeonUIRect.anchoredPosition = Vector2.zero;
-
-            // Panel 자식 생성 (실제 UI, SetActive로 제어됨, 전체 화면 배경)
-            GameObject panelObj = new GameObject("Panel");
-            panelObj.transform.SetParent(dungeonUIObj.transform, false);
-
-            RectTransform panelRect = panelObj.AddComponent<RectTransform>();
-            panelRect.anchorMin = Vector2.zero;
-            panelRect.anchorMax = Vector2.one;
-            panelRect.offsetMin = Vector2.zero;
-            panelRect.offsetMax = Vector2.zero;
-
-            Image panelImage = panelObj.AddComponent<Image>();
-            panelImage.color = new Color(0, 0, 0, 0.9f);
-
-            // Title Text
-            GameObject titleObj = new GameObject("TitleText");
-            titleObj.transform.SetParent(panelObj.transform, false);
-
-            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.5f, 0.7f);
-            titleRect.anchorMax = new Vector2(0.5f, 0.7f);
-            titleRect.pivot = new Vector2(0.5f, 0.5f);
-            titleRect.anchoredPosition = Vector2.zero;
-            titleRect.sizeDelta = new Vector2(600, 100);
-
-            Text titleText = titleObj.AddComponent<Text>();
-            titleText.text = "던전 클리어!";
-            titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            titleText.fontSize = 48;
-            titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.color = Color.yellow;
-
-            // Reward Text
-            GameObject rewardObj = new GameObject("RewardText");
-            rewardObj.transform.SetParent(panelObj.transform, false);
-
-            RectTransform rewardRect = rewardObj.AddComponent<RectTransform>();
-            rewardRect.anchorMin = new Vector2(0.5f, 0.5f);
-            rewardRect.anchorMax = new Vector2(0.5f, 0.5f);
-            rewardRect.pivot = new Vector2(0.5f, 0.5f);
-            rewardRect.anchoredPosition = Vector2.zero;
-            rewardRect.sizeDelta = new Vector2(500, 200);
-
-            Text rewardText = rewardObj.AddComponent<Text>();
-            rewardText.text = "총 획득 골드: 0\n총 획득 경험치: 0\n\n축하합니다!";
-            rewardText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            rewardText.fontSize = 24;
-            rewardText.alignment = TextAnchor.MiddleCenter;
-            rewardText.color = Color.white;
-
-            // Next Dungeon Button
-            GameObject nextButtonObj = CreateButton("NextDungeonButton", "다음 던전", panelObj.transform);
-            RectTransform nextButtonRect = nextButtonObj.GetComponent<RectTransform>();
-            nextButtonRect.anchorMin = new Vector2(0.5f, 0.3f);
-            nextButtonRect.anchorMax = new Vector2(0.5f, 0.3f);
-            nextButtonRect.anchoredPosition = new Vector2(-120, 0);
-
-            // Main Menu Button
-            GameObject mainMenuButtonObj = CreateButton("MainMenuButton", "메인 메뉴", panelObj.transform);
-            RectTransform mainMenuButtonRect = mainMenuButtonObj.GetComponent<RectTransform>();
-            mainMenuButtonRect.anchorMin = new Vector2(0.5f, 0.3f);
-            mainMenuButtonRect.anchorMax = new Vector2(0.5f, 0.3f);
-            mainMenuButtonRect.anchoredPosition = new Vector2(120, 0);
-
-            // DungeonCompleteUI 컴포넌트 추가 (부모 오브젝트에 추가)
-            DungeonCompleteUI dungeonCompleteUI = dungeonUIObj.AddComponent<DungeonCompleteUI>();
-
-            // SerializedObject를 사용하여 private 필드 설정
-            SerializedObject so = new SerializedObject(dungeonCompleteUI);
-            so.FindProperty("panel").objectReferenceValue = panelObj;
-            so.FindProperty("titleText").objectReferenceValue = titleText;
-            so.FindProperty("rewardText").objectReferenceValue = rewardText;
-            so.FindProperty("nextDungeonButton").objectReferenceValue = nextButtonObj.GetComponent<Button>();
-            so.FindProperty("mainMenuButton").objectReferenceValue = mainMenuButtonObj.GetComponent<Button>();
-            so.FindProperty("titleMessage").stringValue = "던전 클리어!";
-            so.FindProperty("pauseGameOnShow").boolValue = true;
-            so.ApplyModifiedProperties();
-
-            Debug.Log("[PhaseC3SetupCreator] ✅ DungeonCompleteUI 생성 완료 (구조: DungeonCompleteUI > Panel)");
-
-            EditorGUIUtility.PingObject(dungeonUIObj);
-            Selection.activeGameObject = dungeonUIObj;
-
-            return true;
-        }
-
-
         // ====== Button 생성 헬퍼 ======
 
         private GameObject CreateButton(string name, string text, Transform parent)
@@ -567,41 +439,12 @@ namespace GASPT.Editor
                 return false;
             }
 
-            // Scene에서 UI 찾기 (이미 생성되어 있어야 함)
+            // Scene에서 PortalUI 찾기 (이미 생성되어 있어야 함)
             PortalUI portalUI = FindAnyObjectByType<PortalUI>();
-            DungeonCompleteUI dungeonCompleteUI = FindAnyObjectByType<DungeonCompleteUI>();
 
             if (portalUI == null)
             {
                 Debug.LogWarning("[PhaseC3SetupCreator] PortalUI를 찾을 수 없습니다. 먼저 PortalUI를 생성하세요.");
-            }
-
-            if (dungeonCompleteUI == null)
-            {
-                Debug.LogWarning("[PhaseC3SetupCreator] DungeonCompleteUI를 찾을 수 없습니다. 먼저 DungeonCompleteUI를 생성하세요.");
-            }
-
-            // RoomManager 찾기 및 연결
-            RoomManager roomManager = FindAnyObjectByType<RoomManager>();
-            if (roomManager != null && dungeonCompleteUI != null)
-            {
-                SerializedObject rmSo = new SerializedObject(roomManager);
-                rmSo.FindProperty("dungeonCompleteUI").objectReferenceValue = dungeonCompleteUI;
-                rmSo.ApplyModifiedProperties();
-                EditorUtility.SetDirty(roomManager);
-
-                Debug.Log("[PhaseC3SetupCreator] ✅ RoomManager에 DungeonCompleteUI 연결 완료");
-            }
-            else
-            {
-                if (roomManager == null)
-                {
-                    Debug.LogWarning("[PhaseC3SetupCreator] RoomManager를 찾을 수 없습니다.");
-                }
-                if (dungeonCompleteUI == null)
-                {
-                    Debug.LogWarning("[PhaseC3SetupCreator] DungeonCompleteUI가 없어 RoomManager 연결을 건너뜁니다.");
-                }
             }
 
             // 모든 Room 찾기

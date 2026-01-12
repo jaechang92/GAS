@@ -45,9 +45,6 @@ namespace GASPT.Gameplay.Level
         [Tooltip("현재 등록된 방 목록 (자동 업데이트)")]
         [SerializeField] private List<Room> rooms = new List<Room>();
 
-        [Header("UI")]
-        [Tooltip("던전 클리어 UI")]
-        [SerializeField] private GASPT.UI.DungeonCompleteUI dungeonCompleteUI;
 
 
         // ====== 현재 상태 ======
@@ -582,18 +579,8 @@ namespace GASPT.Gameplay.Level
             // 플레이어 완전 회복
             HealPlayerFull();
 
-            // 이벤트 발생
+            // 이벤트 발생 (GameFlowStateMachine이 UI 표시 담당)
             OnDungeonCompleted?.Invoke();
-
-            // DungeonCompleteUI 표시
-            if (dungeonCompleteUI != null)
-            {
-                dungeonCompleteUI.Show(totalGoldEarned, totalExpEarned);
-            }
-            else
-            {
-                Debug.LogWarning("[RoomManager] DungeonCompleteUI가 할당되지 않았습니다.");
-            }
 
             // GameManager에 던전 클리어 알림 (메타 골드 저장)
             GameManager gameManager = GameManager.Instance;

@@ -84,23 +84,9 @@ namespace GASPT.Core.GameFlow
             }
             else
             {
-                // 폴백: 기존 DungeonCompleteUI 사용
-                var dungeonCompleteUI = Object.FindAnyObjectByType<DungeonCompleteUI>();
-                if (dungeonCompleteUI != null)
-                {
-                    dungeonCompleteUI.Show(goldEarned, 0);
-
-                    while (dungeonCompleteUI.IsVisible && !cancellationToken.IsCancellationRequested)
-                    {
-                        await Awaitable.WaitForSecondsAsync(0.5f, cancellationToken);
-                    }
-                }
-                else
-                {
-                    // 폴백: 3초 후 자동 복귀
-                    Debug.LogWarning("[DungeonClearedState] UI가 없습니다. 3초 후 자동 복귀");
-                    await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
-                }
+                // UIManager 또는 RunResultView가 없으면 3초 후 자동 복귀
+                Debug.LogWarning("[DungeonClearedState] UIManager 또는 RunResultView가 없습니다. 3초 후 자동 복귀");
+                await Awaitable.WaitForSecondsAsync(3f, cancellationToken);
             }
 
             // 상태 전환
@@ -120,13 +106,6 @@ namespace GASPT.Core.GameFlow
             if (UIManager.HasInstance)
             {
                 UIManager.Instance.HideRunResult();
-            }
-
-            // 기존 DungeonCompleteUI 숨기기 (폴백)
-            var dungeonCompleteUI = Object.FindAnyObjectByType<DungeonCompleteUI>();
-            if (dungeonCompleteUI != null && dungeonCompleteUI.IsVisible)
-            {
-                dungeonCompleteUI.Hide();
             }
 
             await Awaitable.NextFrameAsync(cancellationToken);
