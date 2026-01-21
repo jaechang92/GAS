@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
+using GASPT.Data;
 using GASPT.Gameplay.Projectiles;
 
 namespace GASPT.Gameplay.Form
@@ -13,10 +14,17 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class MagicMissileAbility : BaseProjectileAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 ======
 
-        public override string AbilityName => "Magic Missile";
-        public override float Cooldown => 0.5f;  // 0.5초 쿨다운
+        protected override string GetDefaultAbilityName() => "Magic Missile";
+        protected override float GetDefaultCooldown() => 0.5f;
+        protected override int GetDefaultBaseDamage() => 10;
+
+
+        // ====== 생성자 ======
+
+        public MagicMissileAbility() : base() { }
+        public MagicMissileAbility(AbilityData data) : base(data) { }
 
 
         // ====== 실행 ======

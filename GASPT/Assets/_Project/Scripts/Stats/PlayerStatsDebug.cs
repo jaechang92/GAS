@@ -1,4 +1,6 @@
 using GASPT.Combat;
+using GASPT.Core.Enums;
+using GASPT.Data;
 using GASPT.StatusEffects;
 using UnityEngine;
 

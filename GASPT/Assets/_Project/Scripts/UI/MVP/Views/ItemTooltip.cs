@@ -137,6 +137,21 @@ namespace GASPT.UI.MVP.Views
         }
 
         /// <summary>
+        /// ItemInstance로 표시
+        /// </summary>
+        public void Show(GASPT.Data.ItemInstance itemInstance)
+        {
+            if (itemInstance == null || !itemInstance.IsValid)
+            {
+                Hide();
+                return;
+            }
+
+            ItemViewModelV2 itemVm = ItemViewModelV2.FromItemInstance(itemInstance);
+            Show(itemVm);
+        }
+
+        /// <summary>
         /// 툴팁 숨기기
         /// </summary>
         public void Hide()

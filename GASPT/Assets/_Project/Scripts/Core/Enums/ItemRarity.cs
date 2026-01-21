@@ -28,6 +28,7 @@ namespace GASPT.Core.Enums
         /// <summary>
         /// 전설 - 주황색
         /// </summary>
-        Legendary = 4
+        Legendary = 4,
+        Mythic = 5
     }
 }

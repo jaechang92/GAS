@@ -3,6 +3,7 @@ using UnityEngine;
 using GASPT.Data;
 using GASPT.Core.Pooling;
 using GASPT.Core.Enums;
+using GASPT.Combat;
 
 namespace GASPT.Gameplay.Enemies
 {

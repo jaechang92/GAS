@@ -28,6 +28,11 @@ namespace GASPT.Core.Enums
         /// <summary>
         /// 퀘스트 아이템
         /// </summary>
-        Quest
+        Quest,
+
+        /// <summary>
+        /// 스킬 아이템 (스킬 부여)
+        /// </summary>
+        Skill
     }
 }

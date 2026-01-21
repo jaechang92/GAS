@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
+using GASPT.Data;
 using GASPT.Gameplay.Effects;
 using GASPT.Gameplay.Enemies;
 
@@ -15,18 +16,26 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class LightningBoltAbility : BaseProjectileAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 ======
 
-        public override string AbilityName => "Lightning Bolt";
-        public override float Cooldown => 4f;  // 4초 쿨다운
+        protected override string GetDefaultAbilityName() => "Lightning Bolt";
+        protected override float GetDefaultCooldown() => 4f;
+        protected override int GetDefaultBaseDamage() => 40;
+        protected override float GetDefaultBaseRange() => 15f;
+
+
+        // ====== 생성자 ======
+
+        public LightningBoltAbility() : base() { }
+        public LightningBoltAbility(AbilityData data) : base(data) { }
 
 
         // ====== 스킬 설정 ======
 
-        private const int BaseDamage = 40;
+        private int Damage => base.BaseDamage > 0 ? base.BaseDamage : 40;
         private const int DamageDecayPerHit = 10;  // 관통할 때마다 -10
         private const int MaxPierceCount = 3;      // 최대 3명
-        private const float LightningRange = 15f;  // 최대 사거리
+        private float LightningRange => base.BaseRange > 0 ? base.BaseRange : 15f;
         private const float LightningWidth = 0.5f; // 번개 두께
 
 

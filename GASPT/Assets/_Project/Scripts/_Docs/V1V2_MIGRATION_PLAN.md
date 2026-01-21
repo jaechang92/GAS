@@ -7,6 +7,7 @@
 | 보스 페이즈 | `BossPhaseController` | `BossPhaseController` (통합) | 하드코딩 → 데이터 드리븐 | **완료** |
 | 드롭 테이블 | `LootTable` + `Item` | `LootTableV2` + `ItemData` | 단일 드롭 → 다중 드롭 | **V2 우선** |
 | 드롭 아이템 | `DroppedItem` + `LootSystem` | `DroppedItemV2` + `ItemDropManager` | Item → ItemInstance | **V2 우선** |
+| 스킬 아이템 | `SkillItem` : `Item` | `SkillItemData` : `ItemData` | Item 상속 → ItemData 상속 | **V2 우선** |
 
 ---
 
@@ -67,7 +68,40 @@
 
 ---
 
-## 3. 현재 아키텍처
+## 3. SkillItem 마이그레이션 - **V2 우선**
+
+### 완료 내용 (2026-01-21)
+
+#### Phase A: V2 클래스 생성
+- [x] `SkillItemData.cs` 생성 (ItemData 상속)
+  - AbilityType, targetSlotIndex, cooldown, damage, range, duration, manaCost
+  - effectPrefab, projectilePrefab, skillSound 필드 추가
+  - CreateAbilityInstance() 팩토리 메서드
+- [x] `ItemCategory.cs`에 `Skill` 카테고리 추가
+
+#### Phase B: SkillItemManager V2 지원
+- [x] V2 메서드 추가: `EquipSkillItemV2()`, `UnequipSkillItemV2()`
+- [x] V2 이벤트 추가: `OnSkillEquippedV2`, `OnSkillUnequippedV2`
+- [x] ItemDropManager.OnItemPickedUp 이벤트 구독
+- [x] V1 메서드에 `[Obsolete]` 표시
+
+### 남은 작업
+
+#### Phase C: 에셋 마이그레이션 (수동)
+- [ ] 기존 SkillItem 에셋을 SkillItemData로 변환
+  - SkillItem_FireBall.asset
+  - SkillItem_IceBlast.asset
+  - SkillItem_LightningBolt.asset
+  - SkillItem_Shield.asset
+  - SkillItem_Teleport.asset
+
+#### Phase D: V1 완전 제거 (에셋 마이그레이션 완료 후)
+- [ ] `Scripts/Data/SkillItem.cs`에 `[Obsolete]` 추가
+- [ ] V1 참조 코드 정리
+
+---
+
+## 4. 현재 아키텍처
 
 ### 드롭 시스템 흐름 (V2)
 ```
@@ -88,6 +122,12 @@ LootSystem.DropLoot()       ItemDropManager.DropItem()
 ```
 V1: Item (ScriptableObject) → LootEntry → LootTable
 V2: ItemData (SO) → ItemInstance (Runtime) → LootEntryV2 → LootTableV2
+```
+
+### 스킬 아이템 모델
+```
+V1: SkillItem : Item → SkillItemManager → Form
+V2: SkillItemData : ItemData → SkillItemManager → Form
 ```
 
 ---
@@ -122,3 +162,4 @@ V2: ItemData (SO) → ItemInstance (Runtime) → LootEntryV2 → LootTableV2
 | 2026-01-12 | Claude | 초안 작성 |
 | 2026-01-12 | Claude | BossPhaseController 마이그레이션 완료 |
 | 2026-01-12 | Claude | LootTable V2 우선 사용 마이그레이션 완료 |
+| 2026-01-21 | Claude | SkillItem V2 마이그레이션 (SkillItemData, SkillItemManager V2 지원) |

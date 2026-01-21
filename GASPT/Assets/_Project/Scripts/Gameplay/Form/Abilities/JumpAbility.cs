@@ -11,10 +11,36 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class JumpAbility : IAbility
     {
+        // ====== IAbility 프로퍼티 (필수) ======
+
         public string AbilityName => "Jump";
+
         public float Cooldown => 0f;  // 쿨다운 없음 (지면 체크로 제한)
 
+
+        // ====== IAbility 프로퍼티 (선택적 확장) ======
+
+        public int BaseDamage => 0;
+
+        public float BaseRange => 0f;
+
+        public int ManaCost => 0;
+
+        public bool IsReady => !isOnCooldown;
+
+        public float RemainingCooldown => remainingCooldown;
+
+        public float CooldownProgress => Cooldown > 0 ? 1f - (remainingCooldown / Cooldown) : 1f;
+
+
+        // ====== 내부 필드 ======
+
         private readonly float jumpForce;
+        private bool isOnCooldown = false;
+        private float remainingCooldown = 0f;
+
+
+        // ====== 생성자 ======
 
         /// <summary>
         /// 생성자
@@ -24,6 +50,9 @@ namespace GASPT.Gameplay.Form
         {
             this.jumpForce = jumpForce;
         }
+
+
+        // ====== IAbility 메서드 ======
 
         public async Task ExecuteAsync(GameObject caster, CancellationToken token)
         {
@@ -36,7 +65,7 @@ namespace GASPT.Gameplay.Form
             }
 
             // PlayerController의 지면 체크 사용 (중복 체크 방지)
-            var controller = caster.GetComponent<GASPT.Gameplay.Player.PlayerController>();
+            var controller = caster.GetComponent<Player.PlayerController>();
             if (controller == null)
             {
                 Debug.LogWarning("[JumpAbility] PlayerController가 없어 점프할 수 없습니다!");
@@ -55,6 +84,9 @@ namespace GASPT.Gameplay.Form
             // 비동기 완료 (즉시 반환)
             await Task.CompletedTask;
         }
+
+
+        // ====== 점프 로직 ======
 
         /// <summary>
         /// 점프 실행

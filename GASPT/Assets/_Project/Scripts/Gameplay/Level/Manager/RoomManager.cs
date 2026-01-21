@@ -4,6 +4,7 @@ using UnityEngine;
 using GASPT.Core.Extensions;
 using GASPT.Core;
 using GASPT.Gameplay.Level.Graph;
+using GASPT.Gameplay.Level.Generation;
 
 namespace GASPT.Gameplay.Level
 {

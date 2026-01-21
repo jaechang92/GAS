@@ -29,12 +29,20 @@ namespace GASPT.Gameplay.Form
     // FormType은 FormEnums.cs에 정의됨
 
     /// <summary>
-    /// 어빌리티 인터페이스 (임시 - 나중에 GAS Core와 통합)
+    /// 어빌리티 인터페이스
     /// </summary>
     public interface IAbility
     {
         string AbilityName { get; }
         float Cooldown { get; }
         System.Threading.Tasks.Task ExecuteAsync(GameObject caster, System.Threading.CancellationToken token);
+
+        // 확장 속성 (선택적)
+        int BaseDamage { get; }
+        float BaseRange { get; }
+        int ManaCost { get; }
+        bool IsReady { get; }
+        float RemainingCooldown { get; }
+        float CooldownProgress { get; }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using GASPT.CameraSystem;
+using GASPT.Data;
 
 namespace GASPT.Gameplay.Form
 {
@@ -9,6 +10,23 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public abstract class BaseProjectileAbility : BaseAbility
     {
+        // ====== 생성자 ======
+
+        /// <summary>
+        /// 기본 생성자
+        /// </summary>
+        protected BaseProjectileAbility() : base()
+        {
+        }
+
+        /// <summary>
+        /// 데이터 기반 생성자
+        /// </summary>
+        protected BaseProjectileAbility(AbilityData data) : base(data)
+        {
+        }
+
+
         // ====== 마우스 입력 처리 ======
 
         /// <summary>

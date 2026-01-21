@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using GASPT.Data;
 
 namespace GASPT.Gameplay.Form
 {
@@ -10,15 +11,22 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class TeleportAbility : BaseProjectileAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 ======
 
-        public override string AbilityName => "Teleport";
-        public override float Cooldown => 3f;  // 3초 쿨다운
+        protected override string GetDefaultAbilityName() => "Teleport";
+        protected override float GetDefaultCooldown() => 3f;
+        protected override float GetDefaultBaseRange() => 5f;
+
+
+        // ====== 생성자 ======
+
+        public TeleportAbility() : base() { }
+        public TeleportAbility(AbilityData data) : base(data) { }
 
 
         // ====== 스킬 설정 ======
 
-        private const float TeleportDistance = 5f;  // 텔레포트 거리
+        private float TeleportDistance => BaseRange > 0 ? BaseRange : 5f;
 
 
         // ====== 실행 ======

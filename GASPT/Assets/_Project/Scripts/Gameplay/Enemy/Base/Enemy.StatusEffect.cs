@@ -2,6 +2,7 @@ using UnityEngine;
 using GASPT.StatusEffects;
 using GASPT.Core.Pooling;
 using GASPT.UI;
+using GASPT.Core.Enums;
 
 namespace GASPT.Gameplay.Enemies
 {

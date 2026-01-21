@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
+using GASPT.Data;
 using GASPT.Gameplay.Effects;
 using GASPT.StatusEffects;
 
@@ -15,15 +16,21 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class ShieldAbility : BaseAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 ======
 
-        public override string AbilityName => "Shield";
-        public override float Cooldown => 8f;  // 8초 쿨다운
+        protected override string GetDefaultAbilityName() => "Shield";
+        protected override float GetDefaultCooldown() => 8f;
+
+
+        // ====== 생성자 ======
+
+        public ShieldAbility() : base() { }
+        public ShieldAbility(AbilityData data) : base(data) { }
 
 
         // ====== 스킬 설정 ======
 
-        private const float ShieldDuration = 3f;  // 3초간 무적
+        private float ShieldDuration => abilityData != null && abilityData.duration > 0 ? abilityData.duration : 3f;
 
 
         // ====== 실행 ======

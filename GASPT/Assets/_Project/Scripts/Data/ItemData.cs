@@ -91,7 +91,7 @@ namespace GASPT.Data
 
         // ====== Unity 콜백 ======
 
-        private void OnValidate()
+        protected void OnValidate()
         {
             // 스택 불가능 아이템은 maxStack = 1
             if (!stackable)

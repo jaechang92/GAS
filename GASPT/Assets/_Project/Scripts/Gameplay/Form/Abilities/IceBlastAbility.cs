@@ -4,6 +4,7 @@ using UnityEngine;
 using GASPT.Core.Enums;
 using GASPT.Core;
 using GASPT.Core.Pooling;
+using GASPT.Data;
 using GASPT.Gameplay.Effects;
 using GASPT.Gameplay.Enemies;
 using GASPT.StatusEffects;
@@ -17,16 +18,24 @@ namespace GASPT.Gameplay.Form
     /// </summary>
     public class IceBlastAbility : BaseProjectileAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 ======
 
-        public override string AbilityName => "Ice Blast";
-        public override float Cooldown => 3f;  // 3초 쿨다운
+        protected override string GetDefaultAbilityName() => "Ice Blast";
+        protected override float GetDefaultCooldown() => 3f;
+        protected override int GetDefaultBaseDamage() => 30;
+        protected override float GetDefaultBaseRange() => 2.5f;
 
 
-        // ====== 스킬 설정 ======
+        // ====== 생성자 ======
 
-        private const int Damage = 30;
-        private const float BlastRadius = 2.5f;
+        public IceBlastAbility() : base() { }
+        public IceBlastAbility(AbilityData data) : base(data) { }
+
+
+        // ====== 스킬 설정 (AbilityData가 없을 때 폴백) ======
+
+        private int Damage => BaseDamage > 0 ? BaseDamage : 30;
+        private float BlastRadius => BaseRange > 0 ? BaseRange : 2.5f;
         private const float SlowDuration = 2f;
         private const float SlowAmount = 0.5f;  // 50% 슬로우
 

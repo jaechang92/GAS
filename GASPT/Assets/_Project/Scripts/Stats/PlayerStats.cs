@@ -225,6 +225,9 @@ namespace GASPT.Stats
 
         private void Start()
         {
+            // V2 시스템 초기화
+            InitializeV2System();
+
             // RunManager에 등록 (데이터 주입 포함)
             if (RunManager.HasInstance)
             {
@@ -246,6 +249,9 @@ namespace GASPT.Stats
 
         private void OnDestroy()
         {
+            // V2 이벤트 구독 해제
+            UnsubscribeFromV2Events();
+
             // RunManager에서 해제 (데이터 저장 포함)
             if (RunManager.HasInstance)
             {
@@ -308,6 +314,9 @@ namespace GASPT.Stats
 
             // 메타 업그레이드 보너스 합산
             ApplyMetaUpgradeBonuses();
+
+            // V2 시스템 보너스 적용 (장비 + 세트 효과)
+            ApplyV2Bonuses();
 
             isDirty = false;
 

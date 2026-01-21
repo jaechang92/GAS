@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using GASPT.Core.Pooling;
+using GASPT.Data;
 using GASPT.Gameplay.Projectiles;
 
 namespace GASPT.Gameplay.Form
@@ -10,13 +11,33 @@ namespace GASPT.Gameplay.Form
     /// 화염구 - 마법사 스킬 2
     /// 강력한 화염 투사체 발사 (폭발 범위 데미지)
     /// 오브젝트 풀링 적용
+    /// AbilityData 기반 데이터 드리븐 방식 지원
     /// </summary>
     public class FireballAbility : BaseProjectileAbility
     {
-        // ====== Ability 정보 ======
+        // ====== 기본값 (AbilityData가 없을 때 사용) ======
 
-        public override string AbilityName => "Fireball";
-        public override float Cooldown => 5f;  // 5초 쿨다운
+        protected override string GetDefaultAbilityName() => "Fireball";
+        protected override float GetDefaultCooldown() => 5f;
+        protected override int GetDefaultBaseDamage() => 30;
+        protected override float GetDefaultBaseRange() => 10f;
+
+
+        // ====== 생성자 ======
+
+        /// <summary>
+        /// 기본 생성자 (하드코딩된 값 사용)
+        /// </summary>
+        public FireballAbility() : base()
+        {
+        }
+
+        /// <summary>
+        /// 데이터 기반 생성자
+        /// </summary>
+        public FireballAbility(AbilityData data) : base(data)
+        {
+        }
 
 
         // ====== 실행 ======
